@@ -25,7 +25,11 @@ Vue.component('query', {
   },
   template: `
     <div class="ecs-query">
-      <input ref="input" :class="query_class()" v-model="query" v-on:keyup="changed">
+      <input ref="input" 
+        placeholder="Enter query"
+        :class="query_class()" 
+        v-model="query" 
+        v-on:keyup="changed">
       </input>
     </div>
     `

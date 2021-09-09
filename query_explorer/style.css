@@ -1,5 +1,5 @@
 body {
-  font-family: Consolas;
+  font-family: 'Roboto Mono', monospace;
   font-size: 16px;
   background-color: #1A1D26;
   color: #fff;
@@ -58,7 +58,7 @@ div.editor-box textarea {
   border: none;
   resize: none;
   color: #ddd;
-  font-family: Consolas;
+  font-family: 'Roboto Mono', monospace;
   font-size: 16px;
 }
 
