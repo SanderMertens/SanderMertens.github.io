@@ -1,9 +1,4 @@
 const example_plecs = `Transitive(LocatedIn)
-Final(LocatedIn)
-Final(Continent)
-Final(Country)
-Final(City)
-Final(AuthorOf)
 
 Continent(NorthAmerica)
 Continent(Europe)
@@ -31,11 +26,6 @@ LocatedIn(Michele, Florence)
 AuthorOf(Sander, Flecs)
 AuthorOf(Cart, Bevy)
 AuthorOf(Michele, EnTT)
-
-Language(Flecs, C)
-Language(Flecs, Cpp)
-Language(Bevy, Rust)
-Language(EnTT, Cpp)
 `
 
 Vue.component('editor', {
