@@ -25,12 +25,12 @@ Vue.component('query', {
   },
   template: `
     <div class="ecs-query">
-      <input ref="input" 
-        placeholder="Enter query"
+      <textarea ref="input" 
+        id="query-editor"
         :class="query_class()" 
         v-model="query" 
         v-on:keyup="changed">
-      </input>
+      </textarea>
     </div>
     `
 });

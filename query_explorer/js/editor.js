@@ -1,5 +1,14 @@
-const example_plecs = `Transitive(LocatedIn)
+const example_plecs = `// Transitive makes sure that (LocatedIn,Earth)
+// also returns entities in NorthAmerica, 
+// UnitedStates, SanFrancisco etc.
+Transitive(LocatedIn)
 
+// Final means the query engine doesn't need to
+// look for entities derived from LocatedIn
+Final(LocatedIn)
+
+// Create locations with tags for different kinds
+// so we can filter on it
 Continent(NorthAmerica)
 Continent(Europe)
 
@@ -10,6 +19,7 @@ City(SanFrancisco)
 City(Seattle)
 City(Florence)
 
+// Create location hierarchy
 LocatedIn(NorthAmerica, Earth)
 LocatedIn(UnitedStates, NorthAmerica)
 LocatedIn(SanFrancisco, UnitedStates)
@@ -23,6 +33,7 @@ LocatedIn(Sander, SanFrancisco)
 LocatedIn(Cart, Seattle)
 LocatedIn(Michele, Florence)
 
+// Who's creating what
 AuthorOf(Sander, Flecs)
 AuthorOf(Cart, Bevy)
 AuthorOf(Michele, EnTT)
@@ -69,8 +80,7 @@ Vue.component('editor', {
     },
     template: `
       <div class="editor">
-        <div class="editor-top-bar"></div>
-        <textarea v-model="code" v-on:keyup="text_changed"></textarea>
+        <textarea id="plecs-editor" class="plecs-editor" v-model="code" v-on:keyup="text_changed"></textarea>
         <div :class="msg_css">{{msg}}</div>
         <button :class="button_css" v-on:click="run">Run</button>
       </div>
