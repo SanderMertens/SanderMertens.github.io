@@ -1,4 +1,4 @@
-const example_query = "LocatedIn(_Author, _Location), Country(_Location), AuthorOf(_Author, _Framework)"
+const example_query = "ChildOf(_Planet, Sun), GasGiant(_Planet), ChildOf(_Moon, _Planet), Satellite(_Moon)"
 
 Vue.component('query', {
   props: ['error'],

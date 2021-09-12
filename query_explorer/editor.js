@@ -1,42 +1,50 @@
-const example_plecs = `// Transitive makes sure that (LocatedIn,Earth)
-// also returns entities in NorthAmerica, 
-// UnitedStates, SanFrancisco etc.
-Transitive(LocatedIn)
+const example_plecs = `// These relations enable the query engine to return
+// (for example) all entities with RockyPlanet, GasGiant
+// when asked for Planet.
+IsA(Star, CelestialBody)
+IsA(Satellite, CelestialBody)
+IsA(Planet, CelestialBody)
+IsA(RockyPlanet, Planet)
+IsA(GasGiant, Planet)
 
-// Final means the query engine doesn't need to
-// look for entities derived from LocatedIn
-Final(LocatedIn)
+// Create a hierarchy using the builtin ChildOf relation
+Star(Sun) {
+ // 'with' reduces repetition for similar entities
+ with RockyPlanet {
+  Mercury, Venus, Earth, Mars 
+ }
 
-// Create locations with tags for different kinds
-// so we can filter on it
-Continent(NorthAmerica)
-Continent(Europe)
+ with GasGiant { 
+  Jupiter, Saturn, Neptune, Uranus 
+ }
 
-Country(UnitedStates)
-Country(Italy)
+ with DwarfPlanet { Pluto, Ceres }
+}
 
-City(SanFrancisco)
-City(Seattle)
-City(Florence)
+// Extend the hierarchy with moons
+Sun.Earth {
+ Satellite(Moon)
+}
 
-// Create location hierarchy
-LocatedIn(NorthAmerica, Earth)
-LocatedIn(UnitedStates, NorthAmerica)
-LocatedIn(SanFrancisco, UnitedStates)
-LocatedIn(Seattle, UnitedStates)
+Sun.Mars {
+ with Satellite { Phobos, Deimos }
+}
 
-LocatedIn(Europe, Earth)
-LocatedIn(Italy, Europe)
-LocatedIn(Florence, Italy)
+Sun.Jupiter {
+ with Satellite { Europa, Io, Callisto, Ganymede }
+}
 
-LocatedIn(Sander, SanFrancisco)
-LocatedIn(Cart, Seattle)
-LocatedIn(Michele, Florence)
+Sun.Saturn {
+ with Satellite { Titan, Enceladus }
+}
 
-// Who's creating what
-AuthorOf(Sander, Flecs)
-AuthorOf(Cart, Bevy)
-AuthorOf(Michele, EnTT)
+// Add continents to Earth
+Sun.Earth {
+ with Continent { 
+  Europe, Asia, Africa, NorthAmerica, SouthAmerica,
+  Australia, Antartica
+ }
+}
 `
 
 Vue.component('editor', {

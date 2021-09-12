@@ -46,6 +46,10 @@
 	color: #4981B5;
 }
 
+.ldt pre span.keyword {
+	color: #7D67B5;
+}
+
 /* settings you shouldn't play with unless you have a good reason */
 
 .ldt {

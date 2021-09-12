@@ -34,7 +34,7 @@ pre, pre.span {
 div.app-box {
   position: relative;
   max-width: 100%;
-  width: calc(100% - 450px);
+  width: calc(100% - 500px);
 }
 
 div.editor-box {
@@ -54,8 +54,8 @@ div.editor-box {
 div.plecs-editor {
   position: relative;
   top: 51px;
-  width: 450px;
-  height: calc(100vh - 125px);
+  width: 500px;
+  height: calc(100vh - 130px);
   background-color: #000;
   border: none;
   resize: none;
