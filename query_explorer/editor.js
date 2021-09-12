@@ -1,15 +1,16 @@
 const example_plecs = `// These relations enable the query engine to return
 // (for example) all entities with RockyPlanet, GasGiant
 // when asked for Planet.
-IsA(Star, CelestialBody)
-IsA(Satellite, CelestialBody)
-IsA(Planet, CelestialBody)
+(IsA, CelestialBody) { 
+  Star, Satellite, DwarfPlanet, Planet
+}
+
 IsA(RockyPlanet, Planet)
 IsA(GasGiant, Planet)
 
 // Create a hierarchy using the builtin ChildOf relation
 Star(Sun) {
- // 'with' reduces repetition for similar entities
+ // with reduces repetition for similar entities
  with RockyPlanet {
   Mercury, Venus, Earth, Mars 
  }
@@ -21,13 +22,15 @@ Star(Sun) {
  with DwarfPlanet { Pluto, Ceres }
 }
 
-// Extend the hierarchy with moons
+// Extend the hierarchy with satellites
 Sun.Earth {
  Satellite(Moon)
+ with Satellite, Artificial { HubbleTelescope, ISS }
 }
 
 Sun.Mars {
  with Satellite { Phobos, Deimos }
+ with Satellite, Artificial { MarsOrbiter }
 }
 
 Sun.Jupiter {
@@ -38,11 +41,23 @@ Sun.Saturn {
  with Satellite { Titan, Enceladus }
 }
 
-// Add continents to Earth
+Sun.Pluto {
+  Satellite(Charon)
+}
+
+// Add continents & countries to Earth
 Sun.Earth {
  with Continent { 
   Europe, Asia, Africa, NorthAmerica, SouthAmerica,
   Australia, Antartica
+ }
+
+ with Country {
+   // The extra () here ensures that the identifiers
+   // are interpreted as components, so that Country is
+   // not added to them.
+   NorthAmerica() { UnitedStates, Canada }
+   Europe() { Netherlands, Germany, France, UK }
  }
 }
 `
