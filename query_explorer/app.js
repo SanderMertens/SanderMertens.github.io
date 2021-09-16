@@ -82,7 +82,7 @@ var app = new Vue({
       const query_encoded = wq_encode(query);
       const plecs_encoded = wq_encode(plecs);
       
-      this.url = window.location.protocol + "//" + window.location.host + 
+      this.url = window.location.href + 
         "?q=" + query_encoded + "&p=" + plecs_encoded;
 
       this.$refs.url.show();
