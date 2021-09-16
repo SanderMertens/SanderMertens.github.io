@@ -1,29 +1,73 @@
-// Foo
-Transitive(LocatedIn)
+// Plecs editor
+//
+// Plecs is a simple entity definition language that
+// lets us experiment with entities and queries without
+// having to write & compile C/C++ code.
+//
 
-Continent(NorthAmerica)
-Continent(Europe)
+// These first statements create a basic taxonomy. This 
+// enables us to, for example, query for "Planet" and 
+// find entities that have RockyPlanet or GasGiant.
+(IsA, CelestialBody) { 
+  Star, Satellite, DwarfPlanet, Planet
+}
 
-Country(UnitedStates)
-Country(Italy)
+IsA(RockyPlanet, Planet)
+IsA(GasGiant, Planet)
 
-City(SanFrancisco)
-City(Seattle)
-City(Florence)
+// Create a hierarchy with the sun as root and the
+// planets as children. The { } syntax uses the builtin
+// ChildOf relation to create the hierarchy.
+Star(Sun) {
+ // A 'with' statement lets us add the same component(s)
+ // to multiple entities.
+ with RockyPlanet {
+  Mercury, Venus, Earth, Mars 
+ }
 
-LocatedIn(NorthAmerica, Earth)
-LocatedIn(UnitedStates, NorthAmerica)
-LocatedIn(SanFrancisco, UnitedStates)
-LocatedIn(Seattle, UnitedStates)
+ with GasGiant { 
+  Jupiter, Saturn, Neptune, Uranus 
+ }
 
-LocatedIn(Europe, Earth)
-LocatedIn(Italy, Europe)
-LocatedIn(Florence, Italy)
+ with DwarfPlanet { Pluto, Ceres }
+}
 
-LocatedIn(Sander, SanFrancisco)
-LocatedIn(Cart, Seattle)
-LocatedIn(Michele, Florence)
+// To avoid deep indentation, we can open the scope of
+// a nested entity outside of the initial hierarchy.
+Sun.Earth {
+ Satellite(Moon)
+ with Satellite, Artificial { HubbleTelescope, ISS }
+}
 
-AuthorOf(Sander, Flecs)
-AuthorOf(Cart, Bevy)
-AuthorOf(Michele, EnTT)
+Sun.Mars {
+ with Satellite { Phobos, Deimos }
+ with Satellite, Artificial { MarsOrbiter }
+}
+
+Sun.Jupiter {
+ with Satellite { Europa, Io, Callisto, Ganymede }
+}
+
+Sun.Saturn {
+ with Satellite { Titan, Enceladus }
+}
+
+Sun.Pluto {
+  Satellite(Charon)
+}
+
+// Add continents & countries to Earth
+Sun.Earth {
+ with Continent { 
+  Europe, Asia, Africa, NorthAmerica, SouthAmerica,
+  Australia, Antartica
+ }
+
+ with Country {
+   // To prevent adding 'Country' to NorthAmerica and
+   // Europe we use (), which explicitly marks them as
+   // something we don't want to add anything to.
+   NorthAmerica() { UnitedStates, Canada }
+   Europe() { Netherlands, Germany, France, UK }
+ }
+}

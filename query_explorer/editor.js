@@ -1,6 +1,13 @@
-const example_plecs = `// These relations enable the query engine to return
-// (for example) all entities with RockyPlanet, GasGiant
-// when asked for Planet.
+const example_plecs = `// Plecs editor
+//
+// Plecs is a simple entity definition language that
+// lets us experiment with entities and queries without
+// having to write & compile C/C++ code.
+//
+
+// These first statements create a basic taxonomy. This 
+// enables us to, for example, query for "Planet" and 
+// find entities that have RockyPlanet or GasGiant.
 (IsA, CelestialBody) { 
   Star, Satellite, DwarfPlanet, Planet
 }
@@ -8,9 +15,12 @@ const example_plecs = `// These relations enable the query engine to return
 IsA(RockyPlanet, Planet)
 IsA(GasGiant, Planet)
 
-// Create a hierarchy using the builtin ChildOf relation
+// Create a hierarchy with the sun as root and the
+// planets as children. The { } syntax uses the builtin
+// ChildOf relation to create the hierarchy.
 Star(Sun) {
- // with reduces repetition for similar entities
+ // A 'with' statement lets us add the same component(s)
+ // to multiple entities.
  with RockyPlanet {
   Mercury, Venus, Earth, Mars 
  }
@@ -22,7 +32,8 @@ Star(Sun) {
  with DwarfPlanet { Pluto, Ceres }
 }
 
-// Extend the hierarchy with satellites
+// To avoid deep indentation, we can open the scope of
+// a nested entity outside of the initial hierarchy.
 Sun.Earth {
  Satellite(Moon)
  with Satellite, Artificial { HubbleTelescope, ISS }
@@ -53,9 +64,9 @@ Sun.Earth {
  }
 
  with Country {
-   // The extra () here ensures that the identifiers
-   // are interpreted as components, so that Country is
-   // not added to them.
+   // To prevent adding 'Country' to NorthAmerica and
+   // Europe we use (), which explicitly marks them as
+   // something we don't want to add anything to.
    NorthAmerica() { UnitedStates, Canada }
    Europe() { Netherlands, Germany, France, UK }
  }
@@ -64,25 +75,40 @@ Sun.Earth {
 
 Vue.component('editor', {
     props: ['run_ok', 'run_error', 'run_msg'],
+    mounted: function() {
+      this.ldt = new TextareaDecorator( 
+        document.getElementById('plecs-editor'), syntax_highlighter );
+    },
+    updated: function() {
+      this.ldt.update();
+    },
     methods: {
         run() {
             this.$emit('run-code', this.code);
             this.changed = false;
+            this.last_ran = this.code;
         },
         text_changed() {
-            this.changed = true;
             this.$emit('change-code');
-        }
+        },
+        get_code() {
+            return this.code;
+        },
+        set_code(code) {
+            this.code = code;
+            this.text_changed();
+        },
+        tab_pressed (event) { }
     },
     data: function() {
         return {
-            changed: true,
-            code: example_plecs
+            code: example_plecs,
+            last_ran: undefined
         }
     },
     computed: {
         button_css: function() {
-            if (this.changed && this.code && this.code.length) {
+            if (this.code != this.last_ran) {
                 return "editor-button-run";
             } else {
                 return "editor-button-run button-disabled";
@@ -103,7 +129,13 @@ Vue.component('editor', {
     },
     template: `
       <div class="editor">
-        <textarea id="plecs-editor" class="plecs-editor" v-model="code" v-on:keyup="text_changed"></textarea>
+        <textarea 
+            id="plecs-editor" 
+            class="plecs-editor" 
+            v-model="code" 
+            v-on:keyup="text_changed"
+            v-on:keydown.tab.prevent="tab_pressed($event)">
+        </textarea>
         <div :class="msg_css">{{msg}}</div>
         <button :class="button_css" v-on:click="run">Run</button>
       </div>

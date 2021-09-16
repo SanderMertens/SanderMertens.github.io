@@ -12,11 +12,16 @@
   <body>
     <div id="app">
       <div class="top-box">
-        <query 
-          ref="query" 
-          :error="error"
-          v-on:changed="query_on_changed">
-        </query>
+        <div class="query-box">
+          <query 
+            ref="query" 
+            :error="error"
+            v-on:changed="query_on_changed">
+          </query>
+        </div>
+        <div class="share-button-box">
+          <img src="share_icon.png" v-on:click="show_url">
+        </div>
       </div>
       <div class="app-box">
         <div class="content-box">
@@ -30,7 +35,7 @@
       </div>
       <div class="editor-box">
         <editor 
-          ref="editor"
+          ref="plecs"
           :run_ok="run_ok"
           :run_error="run_error" 
           :run_msg="run_msg" 
@@ -38,6 +43,7 @@
           v-on:change-code="change_code">
         </editor>
       </div>
+      <url-modal ref="url" :url="url"></url-box>
     </div>
 
     <script src="web_queries.js"></script>
@@ -48,14 +54,8 @@
     <script src="SelectHelper.js"></script>
     <script src="TextareaDecorator.js"></script>
 
-    <script src="query.js"></script>
-    <script src="results.js"></script>
-    <script src="entity.js"></script>
-    <script src="editor.js"></script>
-    <script src="app.js"></script>
-
     <script>
-      var parser = new Parser(
+      var syntax_highlighter = new Parser(
         { whitespace: /\s+/,
           comment: /\/\/[^\r\n]*/,
           rel_prop: /\b(Transitive|Final|Inclusive|Tag)\b/,
@@ -66,9 +66,13 @@
           variable: /\b[a-zA-Z_0-9]/,
           operator: /[(),{}]/,
           other: /\S/ } );
-
-      var ldt_1 = new TextareaDecorator( document.getElementById('plecs-editor'), parser );
-      var ldt_2 = new TextareaDecorator( document.getElementById('query-editor'), parser );
     </script>
+
+    <script src="query.js"></script>
+    <script src="results.js"></script>
+    <script src="entity.js"></script>
+    <script src="editor.js"></script>
+    <script src="url_modal.js"></script>
+    <script src="app.js"></script>
   </body>
 </html>

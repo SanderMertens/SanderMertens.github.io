@@ -51,6 +51,86 @@ div.editor-box {
   background-color: #000;
 }
 
+div.top-box {
+  position: absolute;
+  top: 0px;
+  width: 100%;
+  height: 50px;
+  background-color: #232833;
+  border-color: rgba(0, 0, 0, 0.5);
+  border-style: solid;
+  border-width: 0px;
+  border-bottom-width: 1px;
+}
+
+div.query-box {
+  width: calc(100% - 40px);
+}
+
+div.share-button-box {
+  position: absolute;
+  right: 0px;
+  top: 8px;
+  width: 40px;
+  cursor: pointer;
+}
+
+div.share-button-box img {
+  height: 30px;
+}
+
+div.content-box {
+  position: absolute;
+  top: 50px;
+  width: 100%;
+  height: calc(100vh - 50px);
+  overflow-y: auto;
+}
+
+div.entity-box {
+  position: relative;
+}
+
+div.result-box {
+  position: relative;
+}
+
+div.url-modal {
+  position: relative;
+  z-index: 99;
+  background-color: rgb(0, 0, 0, 0.6);
+  width: 100%;
+  height: 100%;
+}
+
+div.url-modal-hidden {
+  display: none;
+}
+
+div.url-modal-content {
+  position: relative;
+  top: 10%;
+  margin: 0 auto;
+  width: 700px;
+  overflow: auto;
+  overflow-wrap: anywhere;
+  background-color: #232833;
+  border-color: #232833;
+  border-style: solid;
+  border-width: 2px;
+  padding: 5px;
+  padding-top: 10px;
+}
+
+div.url-modal-url {
+  background-color: #000;
+  padding: 20px;
+}
+
+div.url-modal-content a {
+  color: #DDE0E6;
+}
+
 div.plecs-editor {
   position: relative;
   top: 51px;
@@ -127,34 +207,6 @@ div.editor-ok-bar {
 
 div.editor-err-bar {
   border-color: #B5494B;
-}
-
-div.top-box {
-  position: absolute;
-  top: 0px;
-  width: 100%;
-  height: 50px;
-  background-color: #232833;
-  border-color: rgba(0, 0, 0, 0.5);
-  border-style: solid;
-  border-width: 0px;
-  border-bottom-width: 1px;
-}
-
-div.content-box {
-  position: absolute;
-  top: 50px;
-  width: 100%;
-  height: calc(100vh - 50px);
-  overflow-y: auto;
-}
-
-div.entity-box {
-  position: relative;
-}
-
-div.result-box {
-  position: relative;
 }
 
 div.box-header {
