@@ -29,9 +29,11 @@ Vue.component('url-modal', {
   template: `
     <div :class="css" v-on:click="hide">
       <div class="url-modal-content" v-on:click.stop> 
-        <div class="box-header">Shareable link</div>
-        <div class="url-modal-url">
-          <a :href="url" target="_blank">{{ url }}</a>
+        <h1>Shareable link</h1>
+        <div class="url-modal-url-container">
+          <div class="url-modal-url">
+            <a :href="url" target="_blank">{{ url }}</a>
+          </div>
         </div>
       </div>
     </div>

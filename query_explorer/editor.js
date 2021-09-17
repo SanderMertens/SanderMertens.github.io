@@ -1,23 +1,20 @@
-const example_plecs = `// Plecs editor
-//
-// Plecs is a simple entity definition language that
-// lets us experiment with entities and queries without
-// having to write & compile C/C++ code.
-//
+const example_plecs = `// This is Plecs, a simple language that lets us create
+// entities and queries without having to write or
+// compile C++ code.
 
-// These first statements create a basic taxonomy. This 
-// enables us to, for example, query for "Planet" and 
-// find entities that have RockyPlanet or GasGiant.
+// With the builtin IsA relation we can make one entity
+// inherit from another. This lets us query for Planet,
+// and get DwarfPlanets, RockyPlanets and GasGiants.
 (IsA, CelestialBody) { 
-  Star, Satellite, DwarfPlanet, Planet
+  Star, Satellite
+  (IsA, Planet) {
+    DwarfPlanet, RockyPlanet, GasGiant
+  }
 }
 
-IsA(RockyPlanet, Planet)
-IsA(GasGiant, Planet)
-
-// Create a hierarchy with the sun as root and the
-// planets as children. The { } syntax uses the builtin
-// ChildOf relation to create the hierarchy.
+// This creates the Sun entity with a Star tag. The { }
+// operators are used to create hierarchies which use the
+// builtin ChildOf relation.
 Star(Sun) {
  // A 'with' statement lets us add the same component(s)
  // to multiple entities.
@@ -56,21 +53,22 @@ Sun.Pluto {
   Satellite(Charon)
 }
 
-// Add continents & countries to Earth
+// Further extend Earth's hierarchy
 Sun.Earth {
  with Continent { 
   Europe, Asia, Africa, NorthAmerica, SouthAmerica,
   Australia, Antartica
  }
 
- with Country {
-   // To prevent adding 'Country' to NorthAmerica and
-   // Europe we use (), which explicitly marks them as
-   // something we don't want to add anything to.
-   NorthAmerica() { UnitedStates, Canada }
-   Europe() { Netherlands, Germany, France, UK }
+ NorthAmerica {
+  with Country { UnitedStates, Canada }
+ }
+
+ Europe {
+  with Country { Netherlands, Germany, France, UK }
  }
 }
+
 `
 
 Vue.component('editor', {

@@ -109,7 +109,7 @@ div.url-modal-hidden {
 
 div.url-modal-content {
   position: relative;
-  top: 10%;
+  top: calc(20% - 64px);
   margin: 0 auto;
   width: 700px;
   overflow: auto;
@@ -117,18 +117,34 @@ div.url-modal-content {
   background-color: #232833;
   border-color: #232833;
   border-style: solid;
-  border-width: 2px;
-  padding: 5px;
-  padding-top: 10px;
+  border-width: 1px;
+  border-radius: 5px;
+  padding: 20px;
+}
+
+div.url-modal-url-container {
+  background-color: #16181E;
+  border-color: #000;
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 5px;
+  padding: 20px;
+  height: 200px;
 }
 
 div.url-modal-url {
-  background-color: #000;
-  padding: 20px;
+  overflow-y: auto;
+  height: 100%;
 }
 
 div.url-modal-content a {
   color: #DDE0E6;
+}
+
+div.url-modal h1 {
+  font-size: 16px;
+  margin: 0px;
+  margin-bottom: 15px;
 }
 
 div.plecs-editor {
@@ -234,7 +250,7 @@ div.ecs-query pre {
   border-color: rgba(0, 0, 0, 0);
   border-width: 1px;
   border-style: solid;
-  border-radius: 3px;
+  border-radius: 5px;
   height: 35px;
 }
 
