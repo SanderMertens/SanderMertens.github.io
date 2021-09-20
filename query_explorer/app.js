@@ -1,4 +1,6 @@
 
+Vue.config.devtools = true;
+
 function getParameterByName(name, url = window.location.href) {
   name = name.replace(/[\[\]]/g, '\\$&');
   var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)'),
@@ -27,6 +29,7 @@ var app = new Vue({
       }
 
       this.$refs.plecs.run();
+      this.$refs.tree.update();
     },
 
     query_on_changed(e) {
@@ -67,6 +70,7 @@ var app = new Vue({
       }
 
       this.$refs.query.changed();
+      this.$refs.tree.update_expanded();
     },
 
     change_code() {

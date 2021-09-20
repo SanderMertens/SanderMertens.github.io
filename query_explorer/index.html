@@ -24,6 +24,9 @@
         </div>
       </div>
       <div class="app-box">
+        <div class="tree-box">
+          <entity-tree ref="tree"></entity-tree>
+        </div>
         <div class="content-box">
           <div class="entity-box">
             <entity-explorer :data="entity_data"></entity-explorer>
@@ -46,8 +49,6 @@
       <url-modal ref="url" :url="url"></url-box>
     </div>
 
-    <script src="web_queries.js"></script>
-    <script src="web_queries_imports.js"></script>
     <script src="vue.js"></script>
     <script src="Keybinder.js"></script>
     <script src="Parser.js"></script>
@@ -68,11 +69,15 @@
           other: /\S/ } );
     </script>
 
+    <script src="tree.js"></script>
     <script src="query.js"></script>
     <script src="results.js"></script>
     <script src="entity.js"></script>
     <script src="editor.js"></script>
     <script src="url_modal.js"></script>
     <script src="app.js"></script>
+
+    <script src="web_queries.js"></script>
+    <script src="web_queries_imports.js"></script>
   </body>
 </html>
