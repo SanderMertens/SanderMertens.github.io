@@ -23,7 +23,6 @@ input {
 textarea {
   -webkit-appearance: none; 
   -moz-appearance: none;
-  border: solid 2px #aaa;
   outline: none;
   padding: 5px;
   padding: 10px;
@@ -70,12 +69,14 @@ div.tree-box {
   position: absolute;
   top: 41px;
   left: 0px;
-  width: 200px;
+  width: 195px;
   height: calc(100vh - 45px);
   border-style: solid;
   border-width: 0px;
+  border-left-color: #232833;
+  border-left-width: 5px;
+  border-right-color: #000;
   border-right-width: 1px;
-  border-color: #000;
 }
 
 div.editor-box {

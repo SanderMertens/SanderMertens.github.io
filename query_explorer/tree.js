@@ -1,6 +1,7 @@
 
+const top_margin = 20;
 const item_height = 24;
-const indent_width = 12;
+const indent_width = 9;
 
 function subtree_height(entity_data) {
   let result = item_height;
@@ -28,26 +29,43 @@ Vue.component('entity-tree-item', {
       this.expand = this.entity_data.expand;
     }
   },
+  computed: {
+    icon_color: function() {
+      if (this.entity_data.is_module) {
+        return "#FFE100";
+      } else if (this.entity_data.is_component) {
+        return "#4981B5";
+      } else {
+        return "#47B576";
+      }
+    }
+  },
   template: `
     <svg>
-      <rect :x="x" :y="y - 5" :width="10" height="1" fill="#44464D"></rect>
       <rect :x="8" :y="y - 14" width="calc(100% - 10px)" height="20px" class="entity-tree-select"></rect>
-      <image v-if="!expand"
-        class="entity-tree-expand" 
-        href="nav-right.png" 
-        :x="x + 7" :y="y - 12" 
-        v-on:click="toggle">
-      </image>
-      <image v-else
-        class="entity-tree-expand" 
-        href="nav-down.png" 
-        :x="x + 7" 
-        :y="y - 12" 
-        v-on:click="toggle">
-      </image>
 
-      <rect :x="x + 22" :y="y - 8" width="8px" height="8px" fill="#47B576"></rect>
-      <text class="entity-tree-text noselect" :x="x + 37" :y="y">{{entity}}</text>
+      <template v-if="entity_data.has_children">
+        <rect :x="x" :y="y - 5" :width="5" height="1" fill="#44464D"></rect>
+        <image v-if="!expand"
+          class="entity-tree-expand" 
+          href="nav-right.png" 
+          :x="x + 2" :y="y - 12" 
+          v-on:click="toggle">
+        </image>
+        <image v-else
+          class="entity-tree-expand" 
+          href="nav-down.png" 
+          :x="x + 2" 
+          :y="y - 12" 
+          v-on:click="toggle">
+        </image>
+      </template>
+      <template v-else>
+        <rect :x="x" :y="y - 5" :width="15" height="1" fill="#44464D"></rect>
+      </template>
+
+      <rect :x="x + 17" :y="y - 8" width="8px" height="8px" :fill="icon_color"></rect>
+      <text class="entity-tree-text noselect" :x="x + 30" :y="y">{{entity}}</text>
     </svg>`
 });
 
@@ -60,12 +78,12 @@ Vue.component('entity-tree-outline', {
   },
   methods: {
     height: function() {
-      return subtree_height(this.entity_data) - item_height - 9;
+      return subtree_height(this.entity_data) - item_height - 7;
     }
   },
   template: `
     <svg>
-      <rect :x="x" :y="y + 5" :width="1" :height="height()" fill="#44464D"></rect>
+      <rect :x="x" :y="y + 2" :width="1" :height="height()" fill="#44464D"></rect>
     </svg>`
 });
 
@@ -74,6 +92,44 @@ Vue.component('entity-tree-list', {
   data: function() {
     return {
       expand: false
+    }
+  },
+  computed: {
+    sorted_entities: function() {
+      let result = [];
+      for (const entity in this.entities) {
+        result.push(this.entities[entity]);
+      }
+
+      result.sort((e1, e2) => {
+        if (e1.is_module == e2.is_module) {
+          if (e1.has_children == e2.has_children) {
+            if (e1.is_component == e2.is_component) {
+              return e1.name.localeCompare(e2.name);
+            } else {
+              if (e1.is_component) {
+                return -1;
+              } else {
+                return 1;
+              }
+            }
+          } else {
+            if (e1.has_children) {
+              return -1;
+            } else {
+              return 1;
+            }
+          }
+        } else {
+          if (e1.is_module) {
+            return -1;
+          } else {
+            return 1;
+          }
+        }
+      });
+
+      return result;
     }
   },
   methods: {
@@ -87,13 +143,13 @@ Vue.component('entity-tree-list', {
       let children = [];
       let height = this.y;
   
-      for (const entity in entities) {
-        const entity_data = entities[entity];
+      for (let i = 0; i < entities.length; i ++) {
+        const entity_data = entities[i];
         let elem = h('entity-tree-item', {
           props: {
             x: this.x,
             y: height,
-            entity: entity,
+            entity: entity_data.name,
             entity_data: entity_data
           },
   
@@ -137,7 +193,7 @@ Vue.component('entity-tree-list', {
     }
   },
   render: function(h) {
-    return h('svg', this.entities_to_elems(h, this.entities));
+    return h('svg', this.entities_to_elems(h, this.sorted_entities));
   }
 });
 
@@ -159,10 +215,15 @@ Vue.component('entity-tree', {
             if (!entity) {
               entity = {
                 expand: false,
+                name: name,
                 path: path,
-                entities: {}
+                entities: {},
               };
             }
+
+            entity.has_children = elem.terms_set[1];
+            entity.is_module = elem.terms_set[2];
+            entity.is_component = elem.terms_set[3];
 
             Vue.set(result, name, entity);
           }
@@ -176,7 +237,7 @@ Vue.component('entity-tree', {
         container = this.root;
       }
 
-      const q = "(ChildOf, " + container.path + ")";
+      const q = "(ChildOf, " + container.path + "), ?ChildOf(*, This), ?Module, ?Component";
       const r = wq_query(q);
       data = JSON.parse(r);
       container.entities = this.update_scope(container.entities, data);
@@ -216,13 +277,16 @@ Vue.component('entity-tree', {
       return this.root.entities.length;
     },
     tree_height: function() {
-      return subtree_height(this.root);
+      return subtree_height(this.root) + 100;
+    },
+    tree_top_margin: function() {
+      return top_margin;
     }
   },
   template: `
     <div class="entity-tree">
       <svg :height="tree_height" width="100%">
-        <entity-tree-list :entities="root.entities" :x="0" :y="30" v-on:toggle="toggle">
+        <entity-tree-list :entities="root.entities" :x="0" :y="tree_top_margin" v-on:toggle="toggle">
         </entity-tree-list>
       </svg>
     </div>

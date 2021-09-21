@@ -1,38 +1,38 @@
-const example_plecs = `// This is Plecs, a simple language that lets us create
-// entities and queries without having to write or
-// compile C++ code.
+const example_plecs = `// This is Plecs, a language for quickly creating entities
+// without having to run and compile C/C++ code. Changing
+// the code will automatically update the viewer.
 
-// With the builtin IsA relation we can make one entity
-// inherit from another. This lets us query for Planet,
-// and get DwarfPlanets, RockyPlanets and GasGiants.
-(IsA, CelestialBody) { 
-  Star, Satellite
-  (IsA, Planet) {
-    DwarfPlanet, RockyPlanet, GasGiant
-  }
+// The example creates a solar system and shows how to
+// use entity hierarchies and relationships.
+
+// This lets us query for "Planet", and still get entities
+// with "DwarfPlanet", "RockyPlanet" and "GasGiant".
+(IsA, Planet) {
+  DwarfPlanet, RockyPlanet, GasGiant
 }
 
-// This creates the Sun entity with a Star tag. The { }
-// operators are used to create hierarchies which use the
-// builtin ChildOf relation.
+// Create a Sun entity that has a Star tag. All entities
+// inside { } are created as child entities of Sun.
 Star(Sun) {
- // A 'with' statement lets us add the same component(s)
- // to multiple entities.
+ // Create entities with RockyPlanet tag
  with RockyPlanet {
   Mercury, Venus, Earth, Mars 
  }
 
+ // Create entities with GasGiant tag
  with GasGiant { 
   Jupiter, Saturn, Neptune, Uranus 
  }
 
+ // Create entities with DwarfPlanet tag
  with DwarfPlanet { Pluto, Ceres }
 }
 
-// To avoid deep indentation, we can open the scope of
-// a nested entity outside of the initial hierarchy.
+// Add moon entities to the planet scopes
 Sun.Earth {
  Satellite(Moon)
+
+ // Create entities with Satellite & Artificial tags
  with Satellite, Artificial { HubbleTelescope, ISS }
 }
 
@@ -50,10 +50,10 @@ Sun.Saturn {
 }
 
 Sun.Pluto {
-  Satellite(Charon)
+ Satellite(Charon)
 }
 
-// Further extend Earth's hierarchy
+// Add more child entities to the scope of Sun.Earth
 Sun.Earth {
  with Continent { 
   Europe, Asia, Africa, NorthAmerica, SouthAmerica,
@@ -64,9 +64,9 @@ Sun.Earth {
   with Country { UnitedStates, Canada }
 
   UnitedStates {
-    with City {
-      SanFrancisco, LosAngeles, NewYorkCity, Seattle 
-    }
+   with City {
+    SanFrancisco, LosAngeles, NewYorkCity, Seattle 
+   }
   }
  }
 
