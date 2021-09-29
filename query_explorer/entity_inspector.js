@@ -42,12 +42,25 @@ Vue.component('entity-base-inspector', {
 
 Vue.component('entity-inspector', {
   props: ['entity', 'selection'],
+  computed: {
+    parent: function() {
+      const pos = this.selection.path.lastIndexOf(".");
+      if (pos != -1) {
+        return this.selection.path.slice(0, pos);
+      } else {
+        return "";
+      }
+    }
+  },
   template: `
     <div class="entity-inspector" v-if="entity">
       <div v-if="entity && entity.valid" class="ecs-table">
         <entity-icon x="0" y="0" :entity_data="selection">
         </entity-icon>
-        {{selection.path}}
+        {{selection.name}}
+        <div class="entity-inspector-parent" v-if="parent.length">
+          {{parent}}
+        </div>
 
         <div class="entity-property-inspector">
           <template v-for="(v, k) in entity.inherit">

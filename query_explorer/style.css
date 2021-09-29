@@ -236,6 +236,13 @@ div.entity-property-header {
   color: #47B576;
 }
 
+div.entity-inspector-parent {
+  font-size: 12px;
+  color: #47B576;
+  padding-top: 5px;
+  padding-left: 12px;
+}
+
 div.url-modal {
   position: absolute;
   top: 0px;
