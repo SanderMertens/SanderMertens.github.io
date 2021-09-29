@@ -47,12 +47,6 @@ pre, pre.span {
 
 /* High level layout */
 
-div.app-box {
-  position: relative;
-  max-width: 100%;
-  width: calc(100% - 400px);
-}
-
 div.top-box {
   position: absolute;
   top: 0px;
@@ -69,8 +63,8 @@ div.tree-box {
   position: absolute;
   top: 41px;
   left: 0px;
-  width: 195px;
-  height: calc(100vh - 45px);
+  width: 194px;
+  height: calc(100vh - 41px);
   border-style: solid;
   border-width: 0px;
   border-left-color: #232833;
@@ -79,28 +73,51 @@ div.tree-box {
   border-right-width: 1px;
 }
 
+div.app-box {
+  position: relative;
+  top: 41px;
+  left: 200px;
+  width: calc(100% - 200px);
+  height: calc(100vh - 191px);
+}
+
+div.content-box {
+  position: relative;
+  top: 0px;
+  left: 0px;
+  width: calc(100% - 400px);
+  height: 100%;
+  overflow-y: auto;
+}
+
 div.editor-box {
   position: absolute;
-  top: 41px;
+  top: 0px;
   right: 0px;
-  height: calc(100vh - 45px);
+  width: 400px;
+  height: 100%;
   border-style: solid;
   border-width: 0px;
   border-left-width: 1px;
   border-color: #000;
 }
 
-div.content-box {
-  position: absolute;
-  top: 40px;
-  left: 200px;
-  width: calc(100% - 200px);
-  height: calc(100vh - 40px);
-  overflow-y: auto;
-}
-
 div.query-box {
   width: calc(100% - 30px);
+}
+
+div.terminal-box {
+  background-color: #232833;
+  border-color: #000;
+  border-style: solid;
+  border-width: 0px;
+  border-top-width: 1px;
+
+  position: absolute;
+  width: calc(100% - 200px);
+  height: 150px;
+  left: 200px;
+  bottom: 0px;
 }
 
 div.play-button-box {
@@ -220,7 +237,7 @@ div.entity-property-header {
 }
 
 div.url-modal {
-  position: relative;
+  position: absolute;
   z-index: 99;
   background-color: rgb(0, 0, 0, 0.6);
   width: 100%;
@@ -242,7 +259,7 @@ div.url-modal-content {
   border-color: #232833;
   border-style: solid;
   border-width: 1px;
-  border-radius: 5px;
+  border-radius: 3px;
   padding: 20px;
 }
 
@@ -251,7 +268,7 @@ div.url-modal-url-container {
   border-color: #000;
   border-width: 1px;
   border-style: solid;
-  border-radius: 5px;
+  border-radius: 3px;
   padding: 20px;
   height: 200px;
 }
@@ -304,7 +321,7 @@ button.editor-button-run {
 
 div.ecs-query {
   position: absolute;
-  border-radius: 0px;
+  border-radius: 3px;
   background-color: #13151A;
   left: 30px;
   width: calc(100% - 80px);
@@ -325,7 +342,7 @@ div.ecs-query pre {
   border-color: rgba(0, 0, 0, 0);
   border-width: 1px;
   border-style: solid;
-  border-radius: 5px;
+  border-radius: 3px;
   height: 30px;
 }
 
@@ -346,6 +363,79 @@ div.error {
 
 div.error span {
   color: #B5494B;
+}
+
+div.terminal {
+  position: relative;
+  top: 5px;
+  height: calc(100% - 5px);
+  font-family: Menlo, Monaco, "Courier New", monospace;
+  font-size: 12px;
+}
+
+div.terminal-content {
+  position: relative;
+  background-color: #101115;
+  width: 100%;
+  height: 100%;
+  overflow-x: auto;
+  overflow-y: auto;
+  white-space: nowrap;
+}
+
+div.terminal-log {
+  height: 22px;
+  border-style: solid;
+  border-width: 0px;
+  border-bottom-width: 1px;
+}
+
+span.terminal-msg {
+  position: relative;
+  top: 5px;
+  left: 5px;
+}
+
+span.terminal-icon img {
+  position: relative;
+  height: 20px;
+  top: 1px;
+}
+
+div.terminal-command {
+  border-color: #232833;
+}
+
+span.terminal-command {
+  color: #4981B5;
+}
+
+span.terminal-command {
+  position: relative;
+  top: -5px;
+  left: -5px;
+}
+
+div.terminal-ok {
+  background-color: #02210A;
+  border-color: #0B4C1C;
+}
+
+span.terminal-ok {
+  color: #47B576;
+}
+
+div.terminal-error {
+  background-color: #250201;
+  border-color: #540C06;
+}
+
+span.terminal-error {
+  color: #EF8784;
+}
+
+div.terminal-info {
+  border-color: #232833;
 }
 
 div.info {
@@ -413,12 +503,12 @@ div.ecs-table {
   border-style: solid;
   border-color: #000;
   border-width: 1px;
-  border-radius: 5px;
+  border-radius: 3px;
 
   background-color: #13151A;
   overflow-x: auto;
   max-width: 100%;
-  margin: 10px;
+  margin: 7px;
 }
 
 div.ecs-table ecs-value {

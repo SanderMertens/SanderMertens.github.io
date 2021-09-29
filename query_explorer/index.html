@@ -11,6 +11,7 @@
   </head>
   <body>
     <div id="app">
+      <!-- Top bar -->
       <div class="top-box">
         <div class="query-box">
           <div class="play-button-box">
@@ -18,7 +19,7 @@
               <img src="flecs_logo.png" alt="Flecs GitHub">
             </a>
           </div>
-          <query 
+          <query
             ref="query" 
             :error="error"
             v-on:changed="query_on_changed">
@@ -28,10 +29,16 @@
           <img src="share_icon.png" v-on:click="show_url">
         </div>
       </div>
+
+      <!-- Tree view -->
+      <div class="tree-box">
+        <entity-tree ref="tree" v-on:select="select"></entity-tree>
+      </div>
+
+      <!-- Application box -->
       <div class="app-box">
-        <div class="tree-box">
-          <entity-tree ref="tree" v-on:select="select"></entity-tree>
-        </div>
+
+        <!-- Query results & Entity inspector -->
         <div class="content-box">
           <div class="entity-box">
             <entity-inspector :entity="entity_data" :selection="selection">
@@ -41,19 +48,28 @@
             <results :data="data"></results>
           </div>
         </div>
+
+        <!-- Editor -->
+        <div class="editor-box">
+          <editor 
+            ref="plecs"
+            :run_ok="run_ok"
+            :run_error="run_error" 
+            :run_msg="run_msg" 
+            v-on:run-code="run_code"
+            v-on:change-code="change_code">
+          </editor>
+        </div>
       </div>
-      <div class="editor-box">
-        <editor 
-          ref="plecs"
-          :run_ok="run_ok"
-          :run_error="run_error" 
-          :run_msg="run_msg" 
-          v-on:run-code="run_code"
-          v-on:change-code="change_code">
-        </editor>
+
+      <!-- Terminal -->
+      <div class="terminal-box">
+        <terminal ref="terminal"></terminal>
       </div>
-      <url-modal ref="url" :url="url"></url-box>
     </div>
+
+    <!-- URL modal -->
+    <url-modal ref="url" :url="url"></url-box>
 
     <script src="vue.js"></script>
     <script src="Keybinder.js"></script>
@@ -82,6 +98,7 @@
     <script src="entity_inspector.js"></script>
     <script src="editor.js"></script>
     <script src="url_modal.js"></script>
+    <script src="terminal.js"></script>
     <script src="app.js"></script>
 
     <script src="web_queries.js"></script>

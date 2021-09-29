@@ -58,7 +58,10 @@ Vue.component('editor', {
   },
   methods: {
     run() {
-      this.$emit('run-code', this.code);
+      if (this.code != this.last_code) {
+        this.$emit('run-code', this.code);
+        this.last_code = this.code;
+      }
     },
     get_code() {
       return this.code;
@@ -71,7 +74,8 @@ Vue.component('editor', {
   },
   data: function() {
     return {
-      code: example_plecs
+      code: example_plecs,
+      last_code: undefined
     }
   },
   computed: {

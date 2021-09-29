@@ -40,26 +40,46 @@ var app = new Vue({
         this.error = false;
         return;
       }
-      
-      const r = wq_query(query);
 
+      this.$refs.terminal.clear();
+
+      this.$refs.terminal.log({
+        text: "Run query \"" + query + "\"",
+        kind: "command"
+      });
+
+      const r = wq_query(query);
       this.data = JSON.parse(r);
+
+      if (this.data.valid == false) {
+        this.$refs.terminal.log({text: this.data.error, kind: "error"});
+      } else {
+        this.$refs.terminal.log({text: "Ok", kind: "ok" });
+      }
+
       this.error = this.data.valid == false;
     },
 
     run_code(code) {
+      this.$refs.terminal.clear();
+
+      this.$refs.terminal.log({
+        text: "Run plecs code",
+        kind: "command"
+      });
+
       const r = wq_run(code);
       const data = JSON.parse(r);
       this.run_ok = data.valid == true;
       this.run_error = data.valid == false;
 
       if (this.run_error) {
-        this.run_msg = "Code contains errors!";
+        this.$refs.terminal.log({text: this.error, kind: "error"});
       } else {
-        this.run_msg = "Code ran successfully!";;
+        this.$refs.terminal.log({text: "Ok", kind: "ok" });
       }
 
-      this.$refs.query.changed();
+      this.$refs.query.refresh();
       this.$refs.tree.update_expanded();
     },
 

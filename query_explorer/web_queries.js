@@ -4828,9 +4828,6 @@ var _query = Module["_query"] = createExportWrapper("query");
 var _get_entity = Module["_get_entity"] = createExportWrapper("get_entity");
 
 /** @type {function(...*):?} */
-var _tick = Module["_tick"] = createExportWrapper("tick");
-
-/** @type {function(...*):?} */
 var _run = Module["_run"] = createExportWrapper("run");
 
 /** @type {function(...*):?} */
