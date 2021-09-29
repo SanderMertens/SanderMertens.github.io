@@ -489,6 +489,7 @@ div.ecs-yesno {
   padding: 10px;
   background-color: #000;
   margin: 10px;
+  font-weight: 600;
 }
 
 div.ecs-results {
