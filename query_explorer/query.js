@@ -1,4 +1,4 @@
-const example_query = "ChildOf(_Planet, Sun), !DwarfPlanet(_Planet), ChildOf(_Moon, _Planet), Satellite(_Moon)"
+const example_query = "ChildOf(_Planet, Sun), Planet(_Planet), ChildOf(_Moon, _Planet), Satellite(_Moon)"
 
 Vue.component('query', {
   props: ['error'],

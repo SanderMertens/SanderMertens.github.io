@@ -45,16 +45,6 @@ var app = new Vue({
 
       this.data = JSON.parse(r);
       this.error = this.data.valid == false;
-
-      if (this.is_entity_query(query)) {
-        const er = wq_get_entity(query);
-        this.entity_data = JSON.parse(er);
-        if (this.entity_data.valid == false) {
-          this.entity_data = undefined;
-        }
-      } else {
-        this.entity_data = undefined;
-      }
     },
 
     run_code(code) {
@@ -92,9 +82,18 @@ var app = new Vue({
       this.$refs.url.show();
     },
 
-    is_entity_query: function(query) {
-      return (query.indexOf(",") == -1) && (query.indexOf("(") == -1);
-    }    
+    select(e) {
+      this.selection = e;
+      if (e) {
+        const r = wq_get_entity(e.path);
+        this.entity_data = JSON.parse(r);
+        if (this.entity_data.valid == false) {
+          this.entity_data = undefined;
+        }
+      } else {
+        this.entity_data = undefined;
+      }
+    }   
   },
 
   data: {
@@ -105,6 +104,7 @@ var app = new Vue({
     run_msg: "Run the code!",
     data: undefined,
     entity_data: undefined,
+    selection: undefined,
     url: undefined
   }
 });

@@ -1,78 +1,48 @@
-const example_plecs = `// This is Plecs, a language for quickly creating entities
-// without having to run and compile C/C++ code. Changing
-// the code will automatically update the viewer.
+const example_plecs = `// This example creates a solar system and shows 
+// how to use entity hierarchies and relations. 
+// Changing the code updates the viewer
 
-// The example creates a solar system and shows how to
-// use entity hierarchies and relationships.
+// Planet queries must match RockyPlanet/GasGiant
+(IsA, Planet) { RockyPlanet, GasGiant }
 
-// This lets us query for "Planet", and still get entities
-// with "DwarfPlanet", "RockyPlanet" and "GasGiant".
-(IsA, Planet) {
-  DwarfPlanet, RockyPlanet, GasGiant
-}
-
-// Create a Sun entity that has a Star tag. All entities
-// inside { } are created as child entities of Sun.
+// Sun entity with Star tag & planets as children
 Star(Sun) {
  // Create entities with RockyPlanet tag
- with RockyPlanet {
-  Mercury, Venus, Earth, Mars 
- }
+ with RockyPlanet { Earth, Mars }
 
  // Create entities with GasGiant tag
- with GasGiant { 
-  Jupiter, Saturn, Neptune, Uranus 
- }
+ with GasGiant { Jupiter, Saturn }
 
  // Create entities with DwarfPlanet tag
  with DwarfPlanet { Pluto, Ceres }
 }
 
-// Add moon entities to the planet scopes
+// Add child entities to planets
 Sun.Earth {
- Satellite(Moon)
-
- // Create entities with Satellite & Artificial tags
- with Satellite, Artificial { HubbleTelescope, ISS }
+ with Satellite { Moon }
+ with Continent {
+  Europe, Asia, Africa, Australia, NorthAmerica, 
+  SouthAmerica, Antartica
+ }
+ 
+ NorthAmerica {
+  with Country { Canada, UnitedStats, Mexico }
+  UnitedStates {
+    with City { SanFrancisco }
+  }
+ }
 }
 
 Sun.Mars {
  with Satellite { Phobos, Deimos }
- with Satellite, Artificial { MarsOrbiter }
 }
 
 Sun.Jupiter {
- with Satellite { Europa, Io, Callisto, Ganymede }
-}
-
-Sun.Saturn {
- with Satellite { Titan, Enceladus }
+ with Satellite { Europa, Io }
 }
 
 Sun.Pluto {
- Satellite(Charon)
-}
-
-// Add more child entities to the scope of Sun.Earth
-Sun.Earth {
- with Continent { 
-  Europe, Asia, Africa, NorthAmerica, SouthAmerica,
-  Australia, Antartica
- }
-
- NorthAmerica {
-  with Country { UnitedStates, Canada }
-
-  UnitedStates {
-   with City {
-    SanFrancisco, LosAngeles, NewYorkCity, Seattle 
-   }
-  }
- }
-
- Europe {
-  with Country { Netherlands, Germany, France, UK }
- }
+ with Satellite { Charon }
 }
 
 `

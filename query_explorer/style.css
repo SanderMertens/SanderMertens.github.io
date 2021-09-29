@@ -1,9 +1,10 @@
 /* HTML element styling */
 
 body {
-  font-family: Menlo, Monaco, "Courier New", monospace;
+  font-family: Arial, Helvetica, sans-serif;
   font-feature-settings: "liga" 0, "calt" 0;
-  font-size: 13px;
+  letter-spacing: 0.5px;
+  font-size: 14px;
   background-color: #232833;
   color: #DDE0E6;
   margin: 0px;
@@ -31,7 +32,6 @@ textarea {
 }
 
 pre, pre.span {
-  font-family: inherit;
   font-size: inherit;
 }
 
@@ -50,7 +50,7 @@ pre, pre.span {
 div.app-box {
   position: relative;
   max-width: 100%;
-  width: calc(100% - 475px);
+  width: calc(100% - 400px);
 }
 
 div.top-box {
@@ -103,12 +103,24 @@ div.query-box {
   width: calc(100% - 30px);
 }
 
+div.play-button-box {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  width: 30px;
+  cursor: pointer;
+}
+
 div.share-button-box {
   position: absolute;
   right: 0px;
   top: 6px;
   width: 35px;
   cursor: pointer;
+}
+
+div.play-button-box img {
+  height: 24px;
 }
 
 div.share-button-box img {
@@ -137,6 +149,14 @@ text.entity-tree-text {
   cursor: pointer;
 }
 
+text.entity-tree-text:hover {
+  fill: #fff;
+}
+
+text.entity-tree-text-select {
+  fill: #fff;
+}
+
 image.entity-tree-expand {
   cursor: pointer;
   width: 15px;
@@ -145,8 +165,58 @@ image.entity-tree-expand {
 
 rect.entity-tree-select {
   fill: rgba(0,0,0,0);
-  rx: 5px;
+  rx: 2px;
   cursor: pointer;
+}
+
+rect.entity-tree-selected {
+  fill: #333A4B;
+}
+
+div.entity-inspector {
+  background-color: #232833;
+}
+
+div.entity-property-inspector {
+  position: relative;
+  /* background-color: #13151A;
+  background-color: #333A4B;
+  background-color: #232833; */
+  /* border-style: solid;
+  border-color: #000;
+  border-width: 1px; */
+  width: calc(100% - 10px);
+  padding: 5px;
+  padding-top: 0px;
+  margin-top: 10px;
+  overflow: auto;
+}
+
+div.entity-property {
+  position: relative;
+  /* border-style: solid;
+  border-color: #000;
+  border-width: 1px;
+  background-color: #232833;
+  background-color: #333A4B; */
+  width: calc(100% - 16px);
+  padding: 5px;
+}
+
+div.entity-property-overridden span.inner {
+  color: #8B909D;
+}
+
+div.entity-property-overridden span.outer {
+  color: #8B909D;
+  text-decoration: line-through;
+}
+
+div.entity-property-header {
+  margin-top: 10px;
+  font-style: italic;
+  color: #8B909D;
+  color: #47B576;
 }
 
 div.url-modal {
@@ -203,14 +273,15 @@ div.url-modal h1 {
 
 div.editor-textarea {
   position: relative;
-  width: 475px;
+  width: 400px;
   height: 100%;
   background-color: #13151A;
   border: none;
   resize: none;
   color: #DDE0E6;
-  font-family: inherit;
-  font-size: inherit;
+  font-family: Menlo, Monaco, "Courier New", monospace;
+  font-size: 13px;
+  letter-spacing: 0.0px;
 }
 
 div.ldt textarea {
@@ -232,12 +303,17 @@ button.editor-button-run {
 }
 
 div.ecs-query {
+  position: absolute;
   border-radius: 0px;
   background-color: #13151A;
-  width: calc(100% - 20px);
+  left: 30px;
+  width: calc(100% - 80px);
   margin-left: 10px;
   margin-top: 5px;
   height: 30px;
+  font-family: Menlo, Monaco, "Courier New", monospace;
+  font-size: 13px;
+  letter-spacing: 0.0px;
 }
 
 div.ecs-query pre {
