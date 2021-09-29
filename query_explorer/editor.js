@@ -26,7 +26,7 @@ Sun.Earth {
  }
  
  NorthAmerica {
-  with Country { Canada, UnitedStats, Mexico }
+  with Country { Canada, UnitedStates, Mexico }
   UnitedStates {
     with City { SanFrancisco }
   }
