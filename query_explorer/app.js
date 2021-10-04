@@ -35,13 +35,13 @@ var app = new Vue({
     query_on_changed(e) {
       const query = e.query;
 
+      this.$refs.terminal.clear();
+
       if (!query || query.length <= 1) {
         this.data = undefined;
         this.error = false;
         return;
       }
-
-      this.$refs.terminal.clear();
 
       this.$refs.terminal.log({
         text: "Run query \"" + query + "\"",
@@ -73,20 +73,14 @@ var app = new Vue({
       this.run_ok = data.valid == true;
       this.run_error = data.valid == false;
 
-      if (this.run_error) {
-        this.$refs.terminal.log({text: this.error, kind: "error"});
-      } else {
-        this.$refs.terminal.log({text: "Ok", kind: "ok" });
-      }
-
       this.$refs.query.refresh();
       this.$refs.tree.update_expanded();
-    },
+      this.select(this.selection);
 
-    change_code() {
-      this.run_msg = "Run the code!";
-      this.run_ok = false;
-      this.run_error = false;
+      if (this.run_error) {
+        this.$refs.terminal.log({text: "Run plecs", kind: "command" });
+        this.$refs.terminal.log({text: data.error, kind: "error"});
+      }
     },
 
     show_url() {
@@ -121,7 +115,6 @@ var app = new Vue({
     error: false,
     run_ok: false,
     run_error: false,
-    run_msg: "Run the code!",
     data: undefined,
     entity_data: undefined,
     selection: undefined,

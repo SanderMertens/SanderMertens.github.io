@@ -48,7 +48,7 @@ Sun.Pluto {
 `
 
 Vue.component('editor', {
-  props: ['run_ok', 'run_error', 'run_msg'],
+  props: ['run_ok', 'run_error'],
   mounted: function() {
     this.ldt = new TextareaDecorator( 
       document.getElementById('plecs-editor'), syntax_highlighter );
