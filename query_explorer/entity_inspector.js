@@ -1,4 +1,28 @@
 
+Vue.component('property-value', {
+  props: ['value'],
+  computed: {
+    is_object: function() {
+      console.log("VALUE = " + this.value);
+      return (typeof this.value) === "object";
+    }
+  },
+  template: `
+    <div class="properties">
+      <template v-if="is_object">
+        <div class="property" v-for="(v, k) in value">
+          <span class="property-key">{{k}}</span>: <span class="property-value">{{v}}</span>
+        </div>
+      </template>
+      <template v-else>
+        <div class="property">
+          <span class="property-key"></span><span class="property-value">{{value}}</span>
+        </div>
+      </template>
+    </div>
+    `
+});
+
 Vue.component('entity-property', {
   props: ['prop'],
   computed: {
@@ -14,7 +38,9 @@ Vue.component('entity-property', {
     <div :class="css">
       <span class="outer">
         <span class="inner">
+          <img src="nav-right.png" class="property-expand">
           <span class="noselect">{{prop.pred}}</span><template v-if="prop.obj">, <span class="noselect">{{prop.obj}}</span></template>
+          <property-value v-if="prop.data" :value="prop.data"></property-value>
         </span>
       </span>
     </div>
