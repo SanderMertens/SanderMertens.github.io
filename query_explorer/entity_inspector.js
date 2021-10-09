@@ -27,7 +27,7 @@ Vue.component('entity-property', {
   props: ['prop'],
   computed: {
     css: function() {
-      if (this.prop.overridden) {
+      if (this.prop.hidden) {
         return "entity-property entity-property-overridden";
       } else {
         return "entity-property";
@@ -89,12 +89,12 @@ Vue.component('entity-inspector', {
         </div>
 
         <div class="entity-property-inspector">
-          <template v-for="(v, k) in entity.inherit">
+          <template v-for="(v, k) in entity.is_a">
             <entity-base-inspector  :path="k" :type="v.type">
             </entity-base-inspector>
           </template>
 
-          <div v-if="entity.inherit" class="entity-property-header">{{selection.path}}</div>
+          <div v-if="entity.is_a" class="entity-property-header">from {{selection.path}}</div>
           <entity-property-inspector :entity="entity">
           </entity-property-inspector>
         </div>

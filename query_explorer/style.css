@@ -223,7 +223,8 @@ div.entity-property-overridden span.outer {
 div.entity-property-header {
   margin-top: 10px;
   font-style: italic;
-  color: #47B576;
+  color: #4981B5;
+  clear: both;
 }
 
 div.properties {
