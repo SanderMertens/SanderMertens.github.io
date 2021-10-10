@@ -45,7 +45,7 @@ var app = new Vue({
       if (!query || query.length <= 1) {
         this.data = undefined;
         this.error = false;
-        if (query.length <= 1) {
+        if (query.length == 1) {
           this.$refs.terminal.log({
             text: "Query is too short \"" + query + "\"",
             kind: "error"
