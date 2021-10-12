@@ -256,13 +256,30 @@ img.property-expand {
   top: 3px;
   width: 15px;
   height: 15px;
+  cursor: pointer;
 }
 
-div.entity-inspector-parent {
+div.property-expand-nodata {
+  position: relative;
+  top: 3px;
+  width: 15px;
+  height: 15px;
+}
+
+span.entity-inspector-parent {
   font-size: 12px;
   color: #47B576;
   padding-top: 5px;
-  padding-left: 12px;
+}
+
+div.entity-inspector-doc {
+  padding-top: 10px;
+}
+
+span.entity-inspector-link a { 
+  color: #47B576;
+  text-decoration: none;
+  cursor: pointer;
 }
 
 div.url-modal {

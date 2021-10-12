@@ -3,7 +3,6 @@ Vue.component('property-value', {
   props: ['value'],
   computed: {
     is_object: function() {
-      console.log("VALUE = " + this.value);
       return (typeof this.value) === "object";
     }
   },
@@ -25,6 +24,16 @@ Vue.component('property-value', {
 
 Vue.component('entity-property', {
   props: ['prop'],
+  data: function() {
+    return {
+      expand: true
+    }
+  },
+  methods: {
+    toggle: function() {
+      this.expand = !this.expand;
+    }
+  },
   computed: {
     css: function() {
       if (this.prop.hidden) {
@@ -32,15 +41,22 @@ Vue.component('entity-property', {
       } else {
         return "entity-property";
       }
+    },
+    hide_property: function() {
+      if (this.prop.pred == "flecs.doc.Description") {
+        return true;
+      }
+      return false;
     }
   },
   template: `
-    <div :class="css">
+    <div :class="css" v-if="!hide_property">
       <span class="outer">
         <span class="inner">
-          <img src="nav-right.png" class="property-expand">
+          <img src="nav-right.png" class="property-expand" v-if="!expand" v-on:click="toggle">
+          <img src="nav-down.png" class="property-expand" v-if="expand" v-on:click="toggle">
           <span class="noselect">{{prop.pred}}</span><template v-if="prop.obj">, <span class="noselect">{{prop.obj}}</span></template>
-          <property-value v-if="prop.data" :value="prop.data"></property-value>
+          <property-value v-if="prop.data !== undefined && expand" :value="prop.data"></property-value>
         </span>
       </span>
     </div>
@@ -76,6 +92,42 @@ Vue.component('entity-inspector', {
       } else {
         return "";
       }
+    },
+    brief_description: function() {
+      console.log(this.entity);
+
+      if (!this.entity) {
+        return undefined;
+      }
+
+      if (!this.entity.type) {
+        return undefined;
+      }
+
+      for (let i = 0; i < this.entity.type.length; i ++) {
+        const obj = this.entity.type[i];
+        if (obj.pred == "flecs.doc.Description" && obj.obj == "flecs.doc.Brief") {
+          return obj.data.value;
+        }
+      }
+    },
+    link: function() {
+      console.log(this.entity);
+
+      if (!this.entity) {
+        return undefined;
+      }
+
+      if (!this.entity.type) {
+        return undefined;
+      }
+
+      for (let i = 0; i < this.entity.type.length; i ++) {
+        const obj = this.entity.type[i];
+        if (obj.pred == "flecs.doc.Description" && obj.obj == "flecs.doc.Link") {
+          return obj.data.value;
+        }
+      }
     }
   },
   template: `
@@ -84,8 +136,18 @@ Vue.component('entity-inspector', {
         <entity-icon x="0" y="0" :entity_data="selection">
         </entity-icon>
         {{selection.name}}
-        <div class="entity-inspector-parent" v-if="parent.length">
-          {{parent}}
+
+        <span class="entity-inspector-parent" v-if="parent.length">
+        - {{parent}}
+        </span>
+
+        <div class="entity-inspector-doc">
+          <span class="entity-inspector-brief" v-if="brief_description">
+            {{brief_description}}
+          </span>
+          <span class="entity-inspector-link" v-if="link">
+            <a :href="link" target="_blank">[link]</a>
+          </span>
         </div>
 
         <div class="entity-property-inspector">
