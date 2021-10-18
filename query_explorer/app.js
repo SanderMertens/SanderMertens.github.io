@@ -71,6 +71,7 @@ var app = new Vue({
 
       const r = wq_run(code);
       const data = JSON.parse(r);
+
       this.run_ok = data.valid == true;
       this.run_error = data.valid == false;
 

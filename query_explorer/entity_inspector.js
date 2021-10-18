@@ -94,8 +94,6 @@ Vue.component('entity-inspector', {
       }
     },
     brief_description: function() {
-      console.log(this.entity);
-
       if (!this.entity) {
         return undefined;
       }
@@ -112,8 +110,6 @@ Vue.component('entity-inspector', {
       }
     },
     link: function() {
-      console.log(this.entity);
-
       if (!this.entity) {
         return undefined;
       }
