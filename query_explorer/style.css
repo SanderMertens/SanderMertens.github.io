@@ -191,15 +191,17 @@ rect.entity-tree-selected {
 }
 
 div.entity-inspector {
+  display: flex;
+  flex-direction: column;
   background-color: #232833;
 }
 
 div.entity-inspector-components {
   display: flex;
+  flex-direction: column;
   width: calc(100% - 10px);
   padding: 5px;
   padding-top: 0px;
-  margin-top: 10px;
   overflow: auto;
 }
 
@@ -237,10 +239,10 @@ div.entity-component-overridden span.outer {
 }
 
 div.entity-property-header {
+  display: flex;
   margin-top: 10px;
   font-style: italic;
   color: #4981B5;
-  clear: both;
 }
 
 div.entity-component-value {
@@ -580,7 +582,6 @@ div.ecs-filter {
 }
 
 div.ecs-table {
-  position: relative;
   margin: auto;
   padding: 10px;
 
