@@ -112,13 +112,18 @@ var app = new Vue({
       if (e) {
         const r = wq_get_entity(e.path);
         this.entity_data = JSON.parse(r);
+        
         if (this.entity_data.valid == false) {
           this.entity_data = undefined;
         }
       } else {
         this.entity_data = undefined;
       }
-    }   
+    },
+
+    evt_select(evt) {
+      this.select({path: evt});
+    }
   },
 
   data: {
