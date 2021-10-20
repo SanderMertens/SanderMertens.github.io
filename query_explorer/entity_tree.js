@@ -295,6 +295,24 @@ Vue.component('entity-tree', {
       }
     },
     select: function(entity) {
+      const elems = entity.split('.');
+      let cur = this.root;
+      for (let i = 0; i < elems.length - 1; i ++) {
+        this.update(cur);
+        cur = cur.entities[elems[i]];
+        if (!cur) {
+          return; // Entity does not exist
+        }
+
+        cur.expand = true;
+      }
+
+      let selected = cur.entities[elems.pop()];
+      if (selected) {
+        this.evt_select(selected);
+      }
+    },
+    evt_select: function(entity) {
       if (this.selection != entity) {
         if (this.selection) {
           this.selection.selected = false;
@@ -338,7 +356,7 @@ Vue.component('entity-tree', {
       <svg :height="tree_height" width="100%">
         <entity-tree-list :entities="root.entities" :x="0" :y="tree_top_margin" 
           v-on:toggle="toggle"
-          v-on:select="select">
+          v-on:select="evt_select">
         </entity-tree-list>
       </svg>
     </div>

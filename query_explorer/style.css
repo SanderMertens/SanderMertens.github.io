@@ -1,9 +1,8 @@
 /* HTML element styling */
 
 body {
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: Inter, Helvetica, sans-serif;
   font-feature-settings: "liga" 0, "calt" 0;
-  letter-spacing: 0.5px;
   font-size: 14px;
   background-color: #232833;
   color: #DDE0E6;
@@ -196,89 +195,110 @@ div.entity-inspector {
   background-color: #232833;
 }
 
+div.entity-inspector-name {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  font-weight: 500;
+  font-size: 16px;
+}
+
+div.entity-inspector-icon {
+  display: flex;
+  width: 15px;
+}
+
 div.entity-inspector-components {
   display: flex;
   flex-direction: column;
   width: calc(100% - 10px);
-  padding: 5px;
-  padding-top: 0px;
   overflow: auto;
+}
+
+span.entity-inspector-brief {
+  display: flex;
+  color: #BDC1CC;
+  margin-bottom: 5px;
 }
 
 div.entity-component {
   display: flex;
   flex-direction: column;
-  width: calc(100% - 16px);
-  padding: 5px;
-  padding-left: 0px;
+  margin-bottom: 20px;
 }
 
 div.entity-component-label {
   display: flex;
+}
+
+div.entity-component-name {
   color: #DDE0E6;
-}
-
-div.entity-component span.inner {
-  display: flex;
-  flex-direction: column;
-}
-
-div.entity-component span.outer {
-  display: flex;
+  font-weight: 500;  
 }
 
 div.entity-component-overridden span.inner {
   display: flex;
-  color: #8B909D;
+  color: #BDC1CC;
 }
 
 div.entity-component-overridden span.outer {
   display: flex;
-  color: #8B909D;
+  color: #BDC1CC;
   text-decoration: line-through;
 }
 
 div.entity-property-header {
   display: flex;
-  margin-top: 10px;
+  margin-top: 4px;
+  margin-bottom: 4px;
   font-style: italic;
-  color: #4981B5;
+  color: #47B576;
+  font-weight: 600;
 }
 
 div.entity-component-value {
   display: flex;
-  padding-top: 7px;
-  padding-left: 7px;
+  margin-top: 2px;
+  margin-left: 20px;
 }
 
 div.entity-property {
-  padding: 2px;
-  font-family: Menlo, Monaco, "Courier New", monospace;
-  font-size: 13px;  
   display: flex;
+  margin-right: 5px;
+}
+
+div.entity-property span {
+  padding: 4px;
+  padding-left: 6px;
+  padding-right: 6px;
+  border-radius: 6px;
 }
 
 span.entity-property-key {
-  margin-left: 10px;
-  color: #51CC84;
+  border-top-right-radius: 0px !important;
+  border-bottom-right-radius: 0px !important;
+  background-color: #333A4B;
 }
 
 span.entity-property-value {
-  padding-left: 4px;
-  padding-right: 4px;
-  border-radius: 3px;
-  background-color: #333A4B;
+  border-top-left-radius: 0px !important;
+  border-bottom-left-radius: 0px !important;
+  padding-right: 10px !important;
+  background-color: #4F5565;
 }
 
 div.entity-component-expand-icon {
   width: 20px;
-  height: 15px;
+  height: 20px;
   cursor: pointer;
 }
 
 div.entity-component-expand-icon img {
-  width: 15px;
-  height: 15px;
+  position: relative;
+  top: -2px;
+  left: -2px;
+  width: 20px;
+  height: 20px;
 }
 
 div.entity-component-expand-nodata {
@@ -582,6 +602,9 @@ div.ecs-filter {
 }
 
 div.ecs-table {
+  display: flex;
+  flex-direction: column;
+  
   margin: auto;
   padding: 10px;
 
@@ -667,4 +690,35 @@ table td {
   border-top-width: 1px;
   font-size: inherit;
   min-width: 100px;
+}
+
+/* Collapsable utils */
+.collapsible-container {
+  display: flex;
+  overflow: hidden;
+}
+.collapsible-container:after {
+  content: '';
+  height: 25px;
+  transition: height 0.1s ease-out, max-height 0s 0.1s ease-out;
+  max-height: 0px;
+}
+.collapsible {
+  display: flex;
+  transition: margin-bottom 0.1s cubic-bezier(0, 0, 0, 1);
+  margin-bottom: 0;
+  max-height: 1000000px;
+}
+.collapsible-container.collapsed > .collapsible {
+  margin-bottom: -2000px;
+  transition: margin-bottom 0.1s cubic-bezier(1, 0, 1, 1),
+              visibility 0s 0.1s, max-height 0s 0.1s;
+  visibility: hidden;
+  max-height: 0;
+}
+.collapsible-container.collapsed:after
+{
+  height: 0;
+  transition: height 0.1s ease-out;
+  max-height: 25px;
 }

@@ -1,23 +1,32 @@
 
 Vue.component('entity-component-value', {
-  props: ['value'],
+  props: ['value', 'expand'],
   computed: {
     is_object: function() {
       return (typeof this.value) === "object";
+    },
+    css: function() {
+      if (this.expand) {
+        return "entity-component-value collapsible-container";
+      } else {
+        return "entity-component-value collapsible-container collapsed";
+      }
     }
   },
   template: `
-    <div class="entity-component-value">
-      <template v-if="is_object">
-        <div class="entity-property" v-for="(v, k) in value">
-          <span class="entity-property-key">{{k}}</span>: <span class="entity-property-value">{{v}}</span>
-        </div>
-      </template>
-      <template v-else>
-        <div class="entity-property-value-kv">
-          <span class="entity-property-key"></span><span class="entity-property-value">{{value}}</span>
-        </div>
-      </template>
+    <div :class="css">
+      <div class="collapsible">
+        <template v-if="is_object">
+          <div class="entity-property" v-for="(v, k) in value">
+            <span class="entity-property-key">{{k}}</span> <span class="entity-property-value">{{v}}</span>
+          </div>
+        </template>
+        <template v-else>
+          <div class="entity-property-value-kv">
+            <span class="entity-property-key"></span> <span class="entity-property-value">{{value}}</span>
+          </div>
+        </template>
+      </div>
     </div>
     `
 });
@@ -35,43 +44,52 @@ Vue.component('entity-component', {
     },
   },
   computed: {
-    css: function() {
+    name_css: function() {
       if (this.prop.hidden) {
-        return "entity-component entity-component-overridden";
+        return "entity-component-name entity-component-overridden";
       } else {
-        return "entity-component";
+        return "entity-component-name";
+      }
+    },
+    height: function() {
+      if (this.expand) {
+        return "auto";
+      } else {
+        return "0px";
       }
     },
     hide_property: function() {
-      if (this.prop.pred == "flecs.doc.Description") {
+      if (this.prop.pred == "flecs.doc.Description" || this.prop.pred == "Identifier") {
         return true;
       }
       return false;
     }
   },
   template: `
-    <div :class="css" v-if="!hide_property">
-      <span class="outer">
-        <span class="inner">
-          <div class="entity-component-label">
-            <template v-if="prop.data">
-              <div class="entity-component-expand-icon">
-                <img src="nav-right.png" class="noselect entity-component-expand" v-if="!expand" v-on:click="toggle">
-                <img src="nav-down.png" class="noselect entity-component-expand" v-if="expand" v-on:click="toggle">
-              </div>
-            </template>
-            <template v-else>
-              <div class="noselect entity-component-expand-nodata"> -&nbsp; </div>
-            </template>
-            <entity-reference :entity="prop.pred" v-on="$listeners"></entity-reference>
-            <template v-if="prop.obj">
-              , <entity-reference :entity="prop.obj" v-on="$listeners"></entity-reference>
-            </template>
+    <div class="entity-component" v-if="!hide_property">
+      <div class="entity-component-label">
+        <template v-if="prop.data">
+          <div class="entity-component-expand-icon">
+            <img src="nav-right.png" class="noselect entity-component-expand" v-if="!expand" v-on:click="toggle">
+            <img src="nav-down.png" class="noselect entity-component-expand" v-if="expand" v-on:click="toggle">
           </div>
-          <entity-component-value v-if="prop.data !== undefined && expand" :value="prop.data">
-          </entity-component-value>
-        </span>
-      </span>
+        </template>
+        <template v-else>
+          <div class="noselect entity-component-expand-nodata"></div>
+        </template>
+        <div :class="name_css">
+          <span class="outer">
+            <span class="inner">
+              <entity-reference :entity="prop.pred" :show_name="true" v-on="$listeners"></entity-reference>
+            </span>
+          </span>
+        </div>
+        <template v-if="prop.obj">
+          , <entity-reference :entity="prop.obj" :show_name="true" v-on="$listeners"></entity-reference>
+        </template>
+      </div>
+      <entity-component-value v-if="prop.data !== undefined" :expand="expand" :value="prop.data">
+      </entity-component-value>
     </div>
     `
 });
@@ -144,9 +162,13 @@ Vue.component('entity-inspector', {
   template: `
     <div class="entity-inspector" v-if="entity">
       <div v-if="entity && entity.valid" class="ecs-table">
-        <entity-icon x="0" y="0" :entity_data="selection">
-        </entity-icon>
-        {{selection.name}}
+        <div class="entity-inspector-name">
+          <div class="entity-inspector-icon">
+            <entity-icon x="0" y="0" :entity_data="selection">
+            </entity-icon>
+          </div>
+          {{selection.name}}
+        </div>
 
         <span class="entity-inspector-parent" v-if="parent.length">
         - {{parent}}
