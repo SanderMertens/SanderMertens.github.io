@@ -1,38 +1,6 @@
 
-Vue.component('entity-component-value', {
-  props: ['value', 'expand'],
-  computed: {
-    is_object: function() {
-      return (typeof this.value) === "object";
-    },
-    css: function() {
-      if (this.expand) {
-        return "entity-component-value collapsible-container";
-      } else {
-        return "entity-component-value collapsible-container collapsed";
-      }
-    }
-  },
-  template: `
-    <div :class="css">
-      <div class="collapsible">
-        <template v-if="is_object">
-          <div class="entity-property" v-for="(v, k) in value">
-            <span class="entity-property-key">{{k}}</span> <span class="entity-property-value">{{v}}</span>
-          </div>
-        </template>
-        <template v-else>
-          <div class="entity-property-value-kv">
-            <span class="entity-property-key"></span> <span class="entity-property-value">{{value}}</span>
-          </div>
-        </template>
-      </div>
-    </div>
-    `
-});
-
-Vue.component('entity-component', {
-  props: ['prop'],
+Vue.component('detail-toggle', {
+  props: ['disable', 'hide_disabled'],
   data: function() {
     return {
       expand: true
@@ -41,21 +9,127 @@ Vue.component('entity-component', {
   methods: {
     toggle: function() {
       this.expand = !this.expand;
-    },
+    }
   },
+  computed: {
+    css: function() {
+      if (this.expand) {
+        return "detail-toggle-img";
+      } else {
+        return "detail-toggle-img detail-toggle-img-collapse";
+      }
+    },
+    toggle_css: function() {
+      if (!this.expand) {
+        return "detail-toggle-hide";
+      } else {
+        return "detail-toggle-show"
+      }
+    }
+  },
+  template: `
+    <div class="detail-toggle">
+      <div class="detail-toggle-summary">
+        <template v-if="!disable">
+          <div :class="css">
+            <img src="nav-right.png" class="noselect entity-component-expand" v-on:click="toggle">
+          </div>
+        </template>
+        <template v-else>
+          <div class="noselect detail-toggle-img" v-if="!hide_disabled">
+            <svg width="20" height="20">
+              <circle r="2" cx="10" cy="10" fill="#4F5565"/>
+            </svg>
+          </div>
+        </template>
+
+        <slot name="summary"></slot>
+      </div>
+
+      <div :class="toggle_css">
+        <slot name="detail"></slot>
+      </div>
+    </div>
+  `
+});
+
+Vue.component('entity-property-value', {
+  props: ['prop_key', 'value'],
+  computed: {
+    is_object: function() {
+      return (typeof this.value) === "object";
+    }
+  },
+  template: `
+    <div class="entity-property-value">
+      <template v-if="is_object">
+        <div class="entity-property-object">
+          <detail-toggle>
+            <template v-slot:summary>
+              <span>{{prop_key}}</span>
+            </template>
+            <template v-slot:detail>
+              <inspector-properties :value="value"></inspector-properties>
+            </template>
+          </detail-toggle>
+        </div>
+      </template>
+      <template v-else>
+        <span class="entity-property-key">{{prop_key}}</span><span class="entity-property-value">{{value}}</span>
+      </template>
+    </div>
+    `
+});
+
+Vue.component('inspector-properties', {
+  props: ['value'],
+  computed: {
+    is_object: function() {
+      return (typeof this.value) === "object";
+    },
+    has_objects: function() {
+      for (let k in this.value) {
+        const v = this.value[k];
+        if ((typeof v) === "object") {
+          return true;
+        }
+      }
+      return false;
+    },
+    css: function() {
+      let result = "inspector-properties";
+      if (this.has_objects) {
+        result += " inspector-properties-vertical";
+      }
+      return result;
+    }
+  },
+  template: `
+    <div :class="css">
+      <template v-if="is_object">
+        <div class="entity-property" v-for="(v, k) in value">
+          <entity-property-value :prop_key="k" :value="v">
+          </entity-property-value>
+        </div>
+      </template>
+      <template v-else>
+        <div class="entity-property-value-kv">
+          <entity-property-value prop_key="" :value="v">
+          </entity-property-value>
+        </div>
+      </template>
+    </div>
+    `
+});
+
+Vue.component('entity-component', {
+  props: ['prop'],
   computed: {
     name_css: function() {
       if (this.prop.hidden) {
         return "entity-component-name entity-component-overridden";
       } else {
         return "entity-component-name";
-      }
-    },
-    height: function() {
-      if (this.expand) {
-        return "auto";
-      } else {
-        return "0px";
       }
     },
     hide_property: function() {
@@ -67,55 +141,78 @@ Vue.component('entity-component', {
   },
   template: `
     <div class="entity-component" v-if="!hide_property">
-      <div class="entity-component-label">
-        <template v-if="prop.data">
-          <div class="entity-component-expand-icon">
-            <img src="nav-right.png" class="noselect entity-component-expand" v-if="!expand" v-on:click="toggle">
-            <img src="nav-down.png" class="noselect entity-component-expand" v-if="expand" v-on:click="toggle">
+      <div class="inspector-component-name">
+        <detail-toggle :disable="prop.data == undefined">
+          <template v-slot:summary>
+            <div :class="name_css">
+              <entity-reference :entity="prop.pred" :show_name="true" v-on="$listeners"></entity-reference>
+              <template v-if="prop.obj">
+                , <entity-reference :entity="prop.obj" :show_name="true" v-on="$listeners"></entity-reference>
+              </template>
+            </div>
+          </template>
+
+          <template v-slot:detail>
+            <inspector-properties v-if="prop.data !== undefined" :value="prop.data">
+            </inspector-properties>
+          </template>
+        </detail-toggle>
+      </div>
+    </div>
+    `
+});
+
+Vue.component('inspector-components', {
+  props: ['entity', 'path', 'type', 'show_header'],
+  computed: {
+    entity_type: function() {
+      if (this.type) {
+        return this.type;
+      }
+
+      if (this.entity.type) {
+        return this.entity.type;
+      }
+      
+      return [];
+    },
+    css: function() {
+      let result = "inspector-components";
+      if (this.show_header) {
+        result += " inspector-components-with-header";
+      }
+      return result;
+    },
+    detail_css: function() {
+      let result = "";
+
+      if (this.show_header) {
+        result += " inspector-components-nested";
+      }
+
+      return result;
+    }
+  },
+  template: `
+    <div :class="css">
+      <detail-toggle :disable="!show_header" :hide_disabled="true">
+        <template v-slot:summary>
+          <div class="inspector-header" v-if="show_header">from {{path}}</div>
+        </template>
+        <template v-slot:detail>
+          <div :class="detail_css">
+            <div class="inspector-components-content">
+              <entity-component v-for="(prop, k) in entity_type" :prop="prop" :key="k" v-on="$listeners">
+              </entity-component>
+            </div>
           </div>
         </template>
-        <template v-else>
-          <div class="noselect entity-component-expand-nodata"></div>
-        </template>
-        <div :class="name_css">
-          <span class="outer">
-            <span class="inner">
-              <entity-reference :entity="prop.pred" :show_name="true" v-on="$listeners"></entity-reference>
-            </span>
-          </span>
-        </div>
-        <template v-if="prop.obj">
-          , <entity-reference :entity="prop.obj" :show_name="true" v-on="$listeners"></entity-reference>
-        </template>
-      </div>
-      <entity-component-value v-if="prop.data !== undefined" :expand="expand" :value="prop.data">
-      </entity-component-value>
+      </detail-toggle>
     </div>
     `
 });
 
-Vue.component('entity-inspector-components', {
-  props: ['entity'],
-  template: `
-    <div>
-      <entity-component v-for="(prop, k) in entity.type" :prop="prop" :key="k" v-on="$listeners">
-      </entity-component>
-    </div>
-    `
-});
-
-Vue.component('entity-inspector-base', {
-  props: ['path', 'type'],
-  template: `
-    <div>
-      <div class="entity-property-header">from {{path}}</div>
-      <entity-component v-for="(prop, k) in type" :prop="prop" :key="k" v-on="$listeners">
-      </entity-component>
-    </div>
-    `
-});
-
-Vue.component('entity-inspector', {
+Vue.component('inspector', {
   props: ['entity', 'selection'],
   computed: {
     parent: function() {
@@ -126,7 +223,7 @@ Vue.component('entity-inspector', {
         return "";
       }
     },
-    brief_description: function() {
+    brief: function() {
       if (!this.entity) {
         return undefined;
       }
@@ -157,41 +254,43 @@ Vue.component('entity-inspector', {
           return obj.data.value;
         }
       }
+    },
+    has_doc: function() {
+      return this.brief || this.link;
     }
   },
   template: `
-    <div class="entity-inspector" v-if="entity">
-      <div v-if="entity && entity.valid" class="ecs-table">
-        <div class="entity-inspector-name">
-          <div class="entity-inspector-icon">
+    <div class="inspector" v-if="entity">
+      <div v-if="entity && entity.valid" class="content-container">
+        <div class="inspector-name">
+          <div class="inspector-icon">
             <entity-icon x="0" y="0" :entity_data="selection">
             </entity-icon>
           </div>
           {{selection.name}}
+          <span class="inspector-parent" v-if="parent.length">
+          - <entity-reference :entity="parent" v-on="$listeners">
+          </entity-reference>
+          </span>
         </div>
 
-        <span class="entity-inspector-parent" v-if="parent.length">
-        - {{parent}}
-        </span>
-
-        <div class="entity-inspector-doc">
-          <span class="entity-inspector-brief" v-if="brief_description">
-            {{brief_description}}
+        <div class="inspector-doc" v-if="has_doc">
+          <span class="inspector-brief" v-if="brief">
+            {{brief}}
           </span>
-          <span class="entity-inspector-link" v-if="link">
+          <span class="inspector-link" v-if="link">
             <a :href="link" target="_blank">[link]</a>
           </span>
         </div>
 
-        <div class="entity-inspector-components">
+        <div class="inspector-content">
           <template v-for="(v, k) in entity.is_a">
-            <entity-inspector-base  :path="k" :type="v.type" v-on="$listeners">
-            </entity-inspector-base>
+            <inspector-components :path="k" :type="v.type" :show_header="true" v-on="$listeners">
+            </inspector-components>
           </template>
 
-          <div v-if="entity.is_a" class="entity-property-header">from {{selection.path}}</div>
-          <entity-inspector-components :entity="entity" v-on="$listeners">
-          </entity-inspector-components>
+          <inspector-components :entity="entity" :path="selection.path" :show_header="entity.is_a" v-on="$listeners">
+          </inspector-components>
         </div>
       </div>
     </div>
