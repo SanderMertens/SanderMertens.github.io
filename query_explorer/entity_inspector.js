@@ -113,8 +113,8 @@ Vue.component('inspector-properties', {
         </div>
       </template>
       <template v-else>
-        <div class="entity-property-value-kv">
-          <entity-property-value prop_key="" :value="v">
+        <div class="entity-property">
+          <entity-property-value prop_key="value" :value="value">
           </entity-property-value>
         </div>
       </template>
