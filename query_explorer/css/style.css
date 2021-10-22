@@ -441,6 +441,7 @@ div.url-modal h1 {
 
 div.editor {
   padding-left: 10px;
+  padding-bottom: 3px;
 }
 
 div.editor-detail {
@@ -493,12 +494,12 @@ div.ecs-query {
   border-radius: 3px;
 }
 
-div.ecs-query pre {
-  min-height: 20px; /* Prevent auto-resizing to 0 height for empty queries */
+div.ecs-query pre, div.editor pre {
+  min-height: 20px;
 }
 
 #query-editor {
-  height: 20px;
+  min-height: 20px;
 }
 
 div.ecs-query-ok {
@@ -651,6 +652,10 @@ div.ecs-yesno {
 
 div.query-results {
   position: relative;
+}
+
+div.query-results-invalid table * {
+  color: #4F5565 !important;
 }
 
 div.ecs-filter {
@@ -831,7 +836,7 @@ div.detail-toggle-img svg {
 div.detail-toggle-divider {
   display: flex;
   flex-grow: 1.0;
-  margin-left: 25px;
+  margin-left: 10px;
   border-top-color: #1B1E25;
   border-top-style: solid;
   border-top-width: 1px;

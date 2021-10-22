@@ -108,6 +108,9 @@ var app = new Vue({
 
       if (data.valid == false) {
         this.$refs.terminal.log({text: "'" + query+ "': " + data.error, kind: "error"});
+        if (this.data) {
+          this.data.valid = false;
+        }
       } else {
         this.$refs.terminal.log({text: "Query OK", kind: "command-ok" });
         this.data = data;

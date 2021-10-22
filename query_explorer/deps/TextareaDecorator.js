@@ -4,9 +4,11 @@
  * Builds and maintains a styled output layer under a textarea input layer
  */
 
-function TextareaDecorator( textarea, parser ){
+function TextareaDecorator( textarea, parser, empty_text ){
 	/* INIT */
 	var api = this;
+
+	api.empty_text = empty_text;
 
 	// construct editor DOM
 	var parent = document.createElement("div");
@@ -59,7 +61,13 @@ function TextareaDecorator( textarea, parser ){
 
 	api.update = function(){
 		var input = textarea.value;
-		if( input ){
+
+		if (!input) {
+			textarea.value = api.empty_text;
+			input = textarea.value;
+		}
+
+		if( input ) {
 			color( input, output, parser );
 			// determine the best size for the textarea
 			var lines = input.split('\n');

@@ -71,16 +71,23 @@ Vue.component('results', {
         } else {
           return [];
         } 
+      },
+      css: function() {
+        let result = "query-results";
+        if (this.data && !this.data.valid) {
+          result += " query-results-invalid";
+        }
+        return result;
       }
     },
     template: `
-      <div class="query-results">
+      <div :class="css">
       <template v-if="data && data.valid && !has_this && (variable_count == 0)">
         <div v-if="data && is_true" class="ecs-yesno ecs-yes"> Yes </div>
         <div v-else class="ecs-yesno ecs-no"> No </div>
       </template>      
       <template>
-        <content-container :disable="!data || !data.valid">
+        <content-container :disable="!data">
           <template v-slot:summary>
             Query results
           </template>

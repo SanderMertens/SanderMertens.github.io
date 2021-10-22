@@ -2,13 +2,13 @@
 Vue.component('editor-textarea', {
   mounted: function() {
     this.ldt = new TextareaDecorator( 
-      document.getElementById('plecs-editor'), syntax_highlighter );
+      document.getElementById('plecs-editor'), syntax_highlighter, '\n' );
   },
   updated: function() {
     this.ldt.update();
   },
   methods: {
-    run() {
+    run() {      
       if (this.code != this.last_code) {
         this.$emit('run-code', this.code);
         this.last_code = this.code;
