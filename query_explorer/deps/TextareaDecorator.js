@@ -4,11 +4,9 @@
  * Builds and maintains a styled output layer under a textarea input layer
  */
 
-function TextareaDecorator( textarea, parser, empty_text ){
+function TextareaDecorator( textarea, parser ){
 	/* INIT */
 	var api = this;
-
-	api.empty_text = empty_text;
 
 	// construct editor DOM
 	var parent = document.createElement("div");
@@ -30,7 +28,7 @@ function TextareaDecorator( textarea, parser, empty_text ){
 	// coloring algorithm
 	var color = function( input, output, parser ){
 		var oldTokens = output.childNodes;
-		var newTokens = parser.tokenize(input);
+		var newTokens = parser.tokenize(input + "\n");
 		var firstDiff, lastDiffNew, lastDiffOld;
 
 		// find the first difference
@@ -62,11 +60,6 @@ function TextareaDecorator( textarea, parser, empty_text ){
 	api.update = function(){
 		var input = textarea.value;
 
-		if (!input) {
-			textarea.value = api.empty_text;
-			input = textarea.value;
-		}
-
 		if( input ) {
 			color( input, output, parser );
 			// determine the best size for the textarea
@@ -84,7 +77,7 @@ function TextareaDecorator( textarea, parser, empty_text ){
 				maxlen = maxlen > curlen ? maxlen : curlen;
 			}
 			textarea.cols = maxlen;
-			textarea.rows = lines.length - 1;
+			textarea.rows = lines.length;
 		} else {
 			// clear the display
 			output.innerHTML = '';

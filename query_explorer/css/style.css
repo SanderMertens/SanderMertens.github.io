@@ -837,6 +837,7 @@ div.detail-toggle-divider {
   display: flex;
   flex-grow: 1.0;
   margin-left: 10px;
+  margin-top: 8px;
   border-top-color: #1B1E25;
   border-top-style: solid;
   border-top-width: 1px;

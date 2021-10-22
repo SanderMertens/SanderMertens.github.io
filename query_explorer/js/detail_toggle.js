@@ -59,7 +59,7 @@ Vue.component('detail-toggle', {
 
         <slot name="summary"></slot>
 
-        <div class="detail-toggle-divider" v-if="show_divider"></div>
+        <div class="detail-toggle-divider" v-if="show_divider && !disable"></div>
       </div>
 
       <div :class="detail_css">

@@ -2,7 +2,7 @@
 Vue.component('editor-textarea', {
   mounted: function() {
     this.ldt = new TextareaDecorator( 
-      document.getElementById('plecs-editor'), syntax_highlighter, '\n' );
+      document.getElementById('plecs-editor'), syntax_highlighter );
   },
   updated: function() {
     this.ldt.update();
