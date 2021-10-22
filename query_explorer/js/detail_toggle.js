@@ -22,13 +22,6 @@ Vue.component('detail-toggle', {
     expanded: function() {
       return this.should_expand && (this.collapse === undefined || this.collapse === false);
     },
-    css: function() {
-      if (this.expanded) {
-        return "detail-toggle-img";
-      } else {
-        return "detail-toggle-img detail-toggle-img-collapse";
-      }
-    },
     summary_css: function() {
       let result = "detail-toggle-summary";
       if (this.summary_toggle) {
@@ -48,9 +41,7 @@ Vue.component('detail-toggle', {
     <div class="detail-toggle">
       <div :class="summary_css" v-on:click.stop="summary_clicked">
         <template v-if="!disable">
-          <div :class="css">
-            <img src="img/nav-right.png" class="noselect icon clickable" v-on:click.stop="toggle">
-          </div>
+          <icon src="img/nav-right.png" v-on:click.stop="toggle" :rotate="expanded"/>
         </template>
         <template v-else>
           <div class="noselect detail-toggle-img" v-if="!hide_disabled">

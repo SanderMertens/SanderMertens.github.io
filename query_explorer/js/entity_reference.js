@@ -29,10 +29,8 @@ Vue.component('entity-reference', {
     },
     template: `
       <span class="entity-reference">
-        {{label}} <span :class="css" v-on:click="entity_clicked">
-          {{name}}
-        </span>
-        <img src="img/open.png" class="noselect icon clickable" v-on:click.self="icon_clicked">
+        {{label}}&nbsp;<span :class="css" v-on:click="entity_clicked">{{name}}</span>
+        <icon src="img/open.png" v-on:click="icon_clicked"/>
       </span>
       `
   });

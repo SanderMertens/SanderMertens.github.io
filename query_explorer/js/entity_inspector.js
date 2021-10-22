@@ -91,8 +91,7 @@ Vue.component('entity-component', {
           <template v-slot:summary>
             <div :class="name_css">
               <entity-reference :entity="prop.pred" show_name="true" icon_link="true" v-on="$listeners"></entity-reference>
-              <template v-if="prop.obj">
-                , <entity-reference :entity="prop.obj" :show_name="true" v-on="$listeners"></entity-reference>
+              <template v-if="prop.obj">, <entity-reference :entity="prop.obj" :show_name="true" v-on="$listeners"></entity-reference>
               </template>
             </div>
           </template>
@@ -142,7 +141,7 @@ Vue.component('inspector-components', {
     <div :class="css">
       <detail-toggle :disable="!show_header" hide_disabled="true" show_divider="true" summary_toggle="true">
         <template v-slot:summary>
-          <div class="inspector-header" v-if="show_header">
+          <span class="inspector-header" v-if="show_header">
             <entity-reference 
               :label="entity == undefined ? 'inherited from' : ''" 
               :entity="path" 
@@ -150,7 +149,7 @@ Vue.component('inspector-components', {
               :disabled="entity != undefined" 
               icon_link="true" 
               v-on="$listeners"/>
-          </div>
+          </span>
         </template>
         <template v-slot:detail>
           <div :class="detail_css">

@@ -27,9 +27,9 @@ Vue.component('content-container', {
         <div class="content-container">
           <detail-toggle summary_toggle="true" :collapse="disable" :disable="disable" ref="toggle">
             <template v-slot:summary>
-              <div class="content-summary" ref="summary">
+              <span class="content-summary" ref="summary">
                 <slot name="summary"></slot>
-              </div>
+              </span>
             </template>
             <template v-slot:detail>
               <div :class="detail_css" ref="detail">

@@ -32,6 +32,14 @@ pre, pre.span {
   font-size: inherit;
 }
 
+span {
+  display: inline-flex;
+}
+
+pre span {
+  display: inline;
+}
+
 .noselect {
   -webkit-touch-callout: none; /* iOS Safari */
     -webkit-user-select: none; /* Safari */
@@ -46,15 +54,34 @@ pre, pre.span {
   cursor: pointer;
 }
 
-img.icon {
-  position: absolute;
-  /* padding-left: 5px; */
-  width: 16px;
-  height: 16px;
-  aspect-ratio: 1;
-  opacity: 0.75;
+span.icon {
+  display: inline-flex;
+  position: relative;
   margin-left: 3px;
   margin-right: 3px;
+}
+
+span.icon img {
+  position: absolute;
+  top: calc(50% - 9px);
+  width: 18px;
+  height: 18px;
+  aspect-ratio: 1;
+  opacity: 0.75;
+}
+
+span.icon::after {
+  content: '';
+  width: 18px;
+}
+
+span.icon img {
+  transform: rotate(0deg);
+  transition: 0.1s transform ease-out;
+}
+
+span.icon-rotate img {
+  transform: rotate(90deg);
 }
 
 /* High level layout */
@@ -263,7 +290,7 @@ div.entity-component-overridden {
   text-decoration: line-through;
 }
 
-div.inspector-header {
+span.inspector-header {
   position: relative;
   font-style: italic;
   color: #47B576;
@@ -271,7 +298,7 @@ div.inspector-header {
   white-space: nowrap;
 }
 
-div.inspector-header:first-child {
+span.inspector-header:first-child {
   margin-top: 10px;
 }
 
@@ -356,7 +383,6 @@ span.inspector-link a {
 
 span.entity-reference span {
   white-space: nowrap;
-  margin-right: 3px;
 }
 
 span.entity-reference-link {
@@ -421,7 +447,7 @@ div.url-modal h1 {
 }
 
 div.editor {
-  padding-left: 5px;
+  padding-left: 10px;
 }
 
 div.editor-detail {
@@ -675,7 +701,7 @@ div.content-container > div.detail-toggle > div.detail-toggle-detail {
   border-top-color: #000;
 }
 
-div.content-summary {
+span.content-summary {
   font-weight: 600;
   font-size: 13px;
   color: #BDC1CC;
@@ -776,7 +802,6 @@ div.detail-toggle {
 div.detail-toggle-summary {
   display: flex;
   flex-direction: row;
-  align-items: center;
   padding-right: 10px;
   flex-grow: 0;
 }
@@ -797,16 +822,6 @@ div.detail-toggle-detail-hide {
   height: 0px;
   /* visibility: hidden; */
   opacity: 0;
-}
-
-div.detail-toggle-img img {
-  position: relative;
-  transform: rotate(90deg);
-  transition: 0.1s transform ease-out;
-}
-
-div.detail-toggle-img-collapse img {
-  transform: rotate(0deg);
 }
 
 div.detail-toggle-img svg {
