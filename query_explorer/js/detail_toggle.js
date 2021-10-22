@@ -38,7 +38,7 @@ Vue.component('detail-toggle', {
         result += " detail-toggle-detail-hide";
       }
       if (this.disable && !this.hide_disable) {
-        result += "detail-toggle-detail-disable";
+        result += " detail-toggle-detail-disable";
       }
       return result;
     }

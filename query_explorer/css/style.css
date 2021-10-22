@@ -386,14 +386,6 @@ span.entity-reference span {
   white-space: nowrap;
 }
 
-span.entity-reference-link {
-  cursor: pointer;
-}
-
-span.entity-reference-link:hover {
-  color: #fff;
-}
-
 div.url-modal {
   position: absolute;
   top: 0px;

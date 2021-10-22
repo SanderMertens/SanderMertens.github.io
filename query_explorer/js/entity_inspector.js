@@ -90,7 +90,7 @@ Vue.component('entity-component', {
         <detail-toggle :disable="prop.data == undefined" summary_toggle="true">
           <template v-slot:summary>
             <div :class="name_css">
-              <entity-reference :entity="prop.pred" show_name="true" icon_link="true" v-on="$listeners"></entity-reference>
+              <entity-reference :entity="prop.pred" show_name="true" v-on="$listeners"></entity-reference>
               <template v-if="prop.obj">, <entity-reference :entity="prop.obj" :show_name="true" v-on="$listeners"></entity-reference>
               </template>
             </div>
