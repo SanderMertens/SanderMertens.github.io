@@ -61,13 +61,13 @@ span.icon {
   margin-right: 3px;
 }
 
-span.icon img {
+span.icon img, span.icon svg {
   position: absolute;
   top: calc(50% - 9px);
   width: 18px;
   height: 18px;
   aspect-ratio: 1;
-  opacity: 0.75;
+  opacity: 0.5;
 }
 
 span.icon::after {
@@ -268,7 +268,7 @@ div.inspector-components-nested {
 div.entity-component {
   display: flex;
   flex-direction: column;
-  margin-bottom: 5px;
+  margin-bottom: 15px;
 }
 
 div.entity-component:last-child {
@@ -288,6 +288,7 @@ div.entity-component-overridden {
   display: flex;
   color: #4F5565;
   text-decoration: line-through;
+  font-weight: 400;
 }
 
 span.inspector-header {
@@ -305,7 +306,7 @@ span.inspector-header:first-child {
 div.inspector-properties {
   display: flex;
   flex-wrap: wrap;
-  margin-left: 20px;
+  margin-left: 26px;
   margin-bottom: 10px;
 }
 
@@ -820,16 +821,19 @@ div.detail-toggle-detail {
 div.detail-toggle-detail-hide {
   padding-top: 0px;
   height: 0px;
-  /* visibility: hidden; */
   opacity: 0;
+}
+
+div.detail-toggle-detail-disable {
+  padding-top: 0px;
 }
 
 div.detail-toggle-img svg {
   position: relative;
   top: -1px;
-  left: -2px;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  margin-left: 3px;
+  margin-right: 3px;
 }
 
 div.detail-toggle-divider {

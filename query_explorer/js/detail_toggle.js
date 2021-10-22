@@ -25,7 +25,10 @@ Vue.component('detail-toggle', {
     summary_css: function() {
       let result = "detail-toggle-summary";
       if (this.summary_toggle) {
-        result += " clickable noselect";
+        result += " noselect";
+      }
+      if (!this.disable) {
+        result += " clickable";
       }
       return result;
     },
@@ -33,6 +36,9 @@ Vue.component('detail-toggle', {
       let result = "detail-toggle-detail"
       if (!this.expanded) {
         result += " detail-toggle-detail-hide";
+      }
+      if (this.disable && !this.hide_disable) {
+        result += "detail-toggle-detail-disable";
       }
       return result;
     }
@@ -44,11 +50,11 @@ Vue.component('detail-toggle', {
           <icon src="img/nav-right.png" v-on:click.stop="toggle" :rotate="expanded"/>
         </template>
         <template v-else>
-          <div class="noselect detail-toggle-img" v-if="!hide_disabled">
+          <span class="icon noselect" v-if="!hide_disabled">
             <svg width="20" height="20">
-              <circle r="2" cx="10" cy="10" fill="#4F5565"/>
+              <circle r="2" cx="10" cy="10" fill="#fff"/>
             </svg>
-          </div>
+          </span>
         </template>
 
         <slot name="summary"></slot>
