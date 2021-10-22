@@ -1,5 +1,5 @@
 Vue.component('detail-toggle', {
-  props: ['disable', 'collapse', 'hide_disabled', 'summary_clickable', "show_divider"],
+  props: ['disable', 'collapse', 'hide_disabled', 'summary_toggle', "show_divider"],
   data: function() {
     return {
       should_expand: true
@@ -9,8 +9,8 @@ Vue.component('detail-toggle', {
     toggle: function() {
       this.should_expand = !this.should_expand;
     },
-    summary_toggle: function() {
-      if (this.summary_clickable && !this.disable) {
+    summary_clicked: function() {
+      if (this.summary_toggle && !this.disable) {
         this.should_expand = !this.should_expand;
       }
     },
@@ -29,27 +29,27 @@ Vue.component('detail-toggle', {
         return "detail-toggle-img detail-toggle-img-collapse";
       }
     },
-    toggle_css: function() {
-      if (!this.expanded) {
-        return "detail-toggle-hide";
-      } else {
-        return "detail-toggle-show"
-      }
-    },
     summary_css: function() {
       let result = "detail-toggle-summary";
-      if (this.summary_clickable) {
+      if (this.summary_toggle) {
         result += " clickable noselect";
+      }
+      return result;
+    },
+    detail_css: function() {
+      let result = "detail-toggle-detail"
+      if (!this.expanded) {
+        result += " detail-toggle-detail-hide";
       }
       return result;
     }
   },
   template: `
     <div class="detail-toggle">
-      <div :class="summary_css" v-on:click.stop="summary_toggle">
+      <div :class="summary_css" v-on:click.stop="summary_clicked">
         <template v-if="!disable">
           <div :class="css">
-            <img src="img/nav-right.png" class="noselect entity-component-should_expand" v-on:click.stop="toggle">
+            <img src="img/nav-right.png" class="noselect icon clickable" v-on:click.stop="toggle">
           </div>
         </template>
         <template v-else>
@@ -65,7 +65,7 @@ Vue.component('detail-toggle', {
         <div class="detail-toggle-divider" v-if="show_divider"></div>
       </div>
 
-      <div :class="toggle_css">
+      <div :class="detail_css">
         <slot name="detail"></slot>
       </div>
     </div>

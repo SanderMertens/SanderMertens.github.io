@@ -91,17 +91,12 @@ var app = new Vue({
 
       this.$refs.terminal.clear();
 
-      this.$refs.terminal.log({
-        text: "Run query \"" + query + "\"",
-        kind: "command"
-      });
-
       if (!query || query.length <= 1) {
         this.data = undefined;
         this.error = false;
         if (query.length == 1) {
           this.$refs.terminal.log({
-            text: "Query is too short \"" + query + "\"",
+            text: "Query is too short '" + query + "'",
             kind: "error"
           });
         }
@@ -109,15 +104,16 @@ var app = new Vue({
       }
 
       const r = wq_query(query);
-      this.data = JSON.parse(r);
+      let data = JSON.parse(r);
 
-      if (this.data.valid == false) {
-        this.$refs.terminal.log({text: this.data.error, kind: "error"});
+      if (data.valid == false) {
+        this.$refs.terminal.log({text: "'" + query+ "': " + data.error, kind: "error"});
       } else {
-        this.$refs.terminal.log({text: "Ok", kind: "ok" });
+        this.$refs.terminal.log({text: "Query OK", kind: "command-ok" });
+        this.data = data;
       }
 
-      this.error = this.data.valid == false;
+      this.error = data.valid == false;
     },
 
     run_code(code) {
@@ -129,23 +125,20 @@ var app = new Vue({
       this.run_ok = data.valid == true;
       this.run_error = data.valid == false;
 
-      if (!this.$refs.query.is_empty()) {
-        this.$refs.query.refresh();
+      if (data.valid == false) {
+        this.$refs.terminal.clear();
+
+        this.$refs.terminal.log({text: data.error, kind: "command-error"});
       } else {
-        this.$refs.terminal.log({
-          text: "Run plecs code",
-          kind: "command"
-        });
-
-        if (!this.run_error) {
-          this.$refs.terminal.log({text: "Ok", kind: "ok" });
-        } else {
-          this.$refs.terminal.log({text: data.error, kind: "error"});
+        if (!this.$refs.query.is_empty()) {
+          this.$refs.query.refresh();
         }
-      }
 
-      this.$refs.tree.update_expanded();
-      this.select(this.selection);
+        this.$refs.terminal.log({text: "Code OK", kind: "command-ok" });
+
+        this.$refs.tree.update_expanded();
+        this.select(this.selection);
+      }
     },
 
     show_url() {
@@ -169,11 +162,9 @@ var app = new Vue({
       this.selection = e;
       if (e) {
         const r = wq_get_entity(e.path);
-        this.entity_data = JSON.parse(r);
+        let entity_data = JSON.parse(r);
         
-        if (this.entity_data.valid == false) {
-          this.entity_data = undefined;
-        }
+        this.entity_data = entity_data;
       } else {
         this.entity_data = undefined;
       }

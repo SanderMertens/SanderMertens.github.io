@@ -14,6 +14,7 @@ function Parser( rules, i ){
 
 	api.add = function( rules ){
 		var ruleSrc = [];
+
 		for( var rule in rules ){
 			var s = rules[rule].source;
 			ruleSrc.push( '(?<' + rule + '>' + s + ')' ); // Named group

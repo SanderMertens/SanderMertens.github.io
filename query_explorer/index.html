@@ -11,6 +11,8 @@
     <link rel="icon" href="img/flecs_logo.png" />
   </head>
   <body>
+    <!-- <script src="js/event_listener.js"></script> -->
+
     <div id="app">
       <!-- Top bar -->
       <div class="top-box">
@@ -54,8 +56,6 @@
         <div class="editor-box">
           <editor 
             ref="plecs"
-            :run_ok="run_ok"
-            :run_error="run_error" 
             v-on:run-code="run_code">
           </editor>
         </div>

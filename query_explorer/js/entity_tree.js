@@ -332,6 +332,11 @@ Vue.component('entity-tree', {
       this.evt_select(cur);
     },
     evt_select: function(entity) {
+      if (!entity) {
+        console.error("entity-tree: invalid entity selected");
+        return;
+      }
+
       if (this.selection != entity) {
         if (this.selection) {
           this.selection.selected = false;

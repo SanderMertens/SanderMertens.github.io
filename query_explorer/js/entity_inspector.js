@@ -87,10 +87,10 @@ Vue.component('entity-component', {
   template: `
     <div class="entity-component" v-if="!hide_property">
       <div class="inspector-component-name">
-        <detail-toggle :disable="prop.data == undefined">
+        <detail-toggle :disable="prop.data == undefined" summary_toggle="true">
           <template v-slot:summary>
             <div :class="name_css">
-              <entity-reference :entity="prop.pred" :show_name="true" v-on="$listeners"></entity-reference>
+              <entity-reference :entity="prop.pred" show_name="true" icon_link="true" v-on="$listeners"></entity-reference>
               <template v-if="prop.obj">
                 , <entity-reference :entity="prop.obj" :show_name="true" v-on="$listeners"></entity-reference>
               </template>
@@ -140,18 +140,22 @@ Vue.component('inspector-components', {
   },
   template: `
     <div :class="css">
-      <detail-toggle :disable="!show_header" :hide_disabled="true" :show_divider="true">
+      <detail-toggle :disable="!show_header" hide_disabled="true" show_divider="true" summary_toggle="true">
         <template v-slot:summary>
           <div class="inspector-header" v-if="show_header">
-            from <entity-reference :entity="path" :show_name="true" :disabled="entity != undefined" v-on="$listeners">
-            </entity-reference>
+            <entity-reference 
+              :label="entity == undefined ? 'inherited from' : ''" 
+              :entity="path" 
+              show_name="true" 
+              :disabled="entity != undefined" 
+              icon_link="true" 
+              v-on="$listeners"/>
           </div>
         </template>
         <template v-slot:detail>
           <div :class="detail_css">
             <div class="inspector-components-content">
-              <entity-component v-for="(prop, k) in entity_type" :prop="prop" :key="k" v-on="$listeners">
-              </entity-component>
+              <entity-component v-for="(prop, k) in entity_type" :prop="prop" :key="k" v-on="$listeners"/>
             </div>
           </div>
         </template>
@@ -221,13 +225,11 @@ Vue.component('inspector', {
         <template v-slot:detail v-if="entity && entity.valid">
           <div class="inspector-name">
             <div class="inspector-icon">
-              <entity-icon x="0" y="0" :entity_data="selection">
-              </entity-icon>
+              <entity-icon x="0" y="0" :entity_data="selection"/>
             </div>
             {{selection.name}}
             <span class="inspector-parent" v-if="parent.length">
-            - <entity-reference :entity="parent" v-on="$listeners">
-            </entity-reference>
+            - <entity-reference :entity="parent" v-on="$listeners"/>
             </span>
           </div>
 
@@ -242,12 +244,14 @@ Vue.component('inspector', {
 
           <div class="inspector-content">
             <template v-for="(v, k) in entity.is_a">
-              <inspector-components :path="k" :type="v.type" :show_header="true" v-on="$listeners">
-              </inspector-components>
+              <inspector-components :path="k" :type="v.type" :show_header="true" v-on="$listeners"/>
             </template>
 
-            <inspector-components :entity="entity" :path="selection.path" :show_header="entity.is_a" v-on="$listeners">
-            </inspector-components>
+            <inspector-components 
+              :entity="entity" 
+              :path="selection.path" 
+              :show_header="entity.is_a" 
+              v-on="$listeners"/>
           </div>
         </template>
       </content-container>

@@ -74,7 +74,7 @@ Vue.component('results', {
       }
     },
     template: `
-      <div class="ecs-results">
+      <div class="query-results">
       <template v-if="data && data.valid && !has_this && (variable_count == 0)">
         <div v-if="data && is_true" class="ecs-yesno ecs-yes"> Yes </div>
         <div v-else class="ecs-yesno ecs-no"> No </div>

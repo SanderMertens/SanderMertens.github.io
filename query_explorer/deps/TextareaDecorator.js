@@ -75,8 +75,8 @@ function TextareaDecorator( textarea, parser ){
 				// store the greatest line length thus far
 				maxlen = maxlen > curlen ? maxlen : curlen;
 			}
-			textarea.cols = maxlen + 1;
-			textarea.rows = lines.length;
+			textarea.cols = maxlen;
+			textarea.rows = lines.length - 1;
 		} else {
 			// clear the display
 			output.innerHTML = '';
