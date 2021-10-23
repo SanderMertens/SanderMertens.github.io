@@ -504,7 +504,6 @@ div.ecs-query pre, div.editor pre {
 
 div.ecs-query-ok {
   border-color: #47B576 !important;
-  width: calc(100% - 20px);
 }
 
 div.ecs-query-error {

@@ -166,7 +166,6 @@ var app = new Vue({
       if (e) {
         const r = wq_get_entity(e.path);
         let entity_data = JSON.parse(r);
-        
         this.entity_data = entity_data;
       } else {
         this.entity_data = undefined;
