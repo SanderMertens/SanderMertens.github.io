@@ -12,7 +12,7 @@ Vue.component('icon', {
   },
   template: `
     <span :class="css">
-      <img :src="src" class="noselect icon clickable" v-on="$listeners"/>
+      <img :class="'noselect icon clickable ' + src" v-on="$listeners"/>
     </span>
     `
 });

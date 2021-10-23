@@ -47,7 +47,7 @@ Vue.component('detail-toggle', {
     <div class="detail-toggle">
       <div :class="summary_css" v-on:click.stop="summary_clicked">
         <template v-if="!disable">
-          <icon src="img/nav-right.png" v-on:click.stop="toggle" :rotate="expanded"/>
+          <icon src="nav" v-on:click.stop="toggle" :rotate="expanded"/>
         </template>
         <template v-else>
           <span class="icon noselect" v-if="!hide_disabled">

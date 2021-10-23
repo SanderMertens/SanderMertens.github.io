@@ -106,7 +106,7 @@ var app = new Vue({
       let data = JSON.parse(r);
 
       if (data.valid == false) {
-        this.$refs.terminal.log({text: "Query '" + query+ "': " + data.error, kind: "command-error"});
+        this.$refs.terminal.log({text: "Query '" + query+ "': error: " + data.error, kind: "command-error"});
         if (this.data) {
           this.data.valid = false;
         }
@@ -126,7 +126,7 @@ var app = new Vue({
 
       if (data.valid == false) {
         this.$refs.terminal.clear();
-        this.$refs.terminal.log({text: "Code " + data.error, kind: "command-error"});
+        this.$refs.terminal.log({text: "Code error: " + data.error, kind: "command-error"});
         if (this.data) {
           this.data.valid = false;
         }

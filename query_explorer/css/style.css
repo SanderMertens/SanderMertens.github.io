@@ -84,6 +84,18 @@ span.icon-rotate img {
   transform: rotate(90deg);
 }
 
+img.follow {
+  content: url('../img/follow.png');
+  padding-top: 2.5px;
+  width: 12px !important;
+  height: 12px !important;
+  transform: rotate(315deg) !important;
+}
+
+img.nav {
+  content: url('../img/nav-right.png');
+}
+
 /* High level layout */
 
 div.top-box {
