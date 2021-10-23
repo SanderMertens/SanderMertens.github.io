@@ -3,7 +3,7 @@ Vue.config.devtools = true;
 
 const example_query = "(ChildOf, my_spaceship)"
 
-const example_plecs = `// Module for organizing game assets
+const example_plecs = `/// Module for organizing game assets
 Module(assets) {
   // flecs.meta enables type creation at runtime
   using flecs.meta
@@ -35,7 +35,7 @@ Module(assets) {
 
 using assets
 
-// A spaceship to play around with
+/// A spaceship to play around with
 my_spaceship : BattleShip {
   (Position){10, 20}
 }
@@ -72,13 +72,12 @@ var app = new Vue({
       if (p_encoded != undefined) {
         const p = wq_decode(p_encoded);
         this.$refs.plecs.set_code(p);
+
+        if (selected) {
+          this.$refs.tree.select(selected);
+        }
       } else {
         this.$refs.plecs.set_code(example_plecs);
-      }
-
-      if (selected) {
-        this.$refs.tree.select(selected);
-      } else {
         this.$refs.tree.select(example_selected);
       }
 
@@ -125,9 +124,6 @@ var app = new Vue({
       const r = wq_run(code);
       const data = JSON.parse(r);
 
-      this.run_ok = data.valid == true;
-      this.run_error = data.valid == false;
-
       if (data.valid == false) {
         this.$refs.terminal.clear();
         this.$refs.terminal.log({text: "Code " + data.error, kind: "command-error"});
@@ -153,8 +149,10 @@ var app = new Vue({
       const query_encoded = wq_encode(query);
       const plecs_encoded = wq_encode(plecs);
       
-      this.url = window.location.href + 
-        "?q=" + query_encoded + "&p=" + plecs_encoded;
+      this.url = window.location.protocol + '//' + 
+                 window.location.host + 
+                 window.location.pathname +
+                 "?q=" + query_encoded + "&p=" + plecs_encoded;
 
       if (this.selection) {
         this.url += "&s=" + this.selection.path;
@@ -187,8 +185,6 @@ var app = new Vue({
   data: {
     query_ok: "",
     error: false,
-    run_ok: false,
-    run_error: false,
     data: undefined,
     entity_data: undefined,
     selection: undefined,

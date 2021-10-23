@@ -17,7 +17,7 @@ Module(assets) {
   }
 
   Prefab(SpaceShip) {
-    (Health){75
+    (Health){75}
   }
 
   Prefab(BattleShip) : SpaceShip {
