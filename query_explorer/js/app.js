@@ -57,6 +57,7 @@ var app = new Vue({
   el: '#app',
 
   methods: {
+    // Called when app is ready
     ready() {
       const q_encoded = getParameterByName("q");
       const p_encoded = getParameterByName("p");
@@ -85,61 +86,128 @@ var app = new Vue({
       this.$refs.tree.update();
     },
 
-    query_on_changed(e) {
-      const query = e.query;
+    // Refresh views
+    refresh(new_query, new_code) {
+      let has_code = this.$refs.plecs.get_code();
+      let has_query = this.$refs.query.get_query();
+      let update_code = new_code != undefined;
+      let update_query = new_query != undefined;
+      let update_inspector = false;
+      let update_tree = false;
 
       this.$refs.terminal.clear();
 
-      if (!query || query.length <= 1) {
-        this.data = undefined;
-        this.error = false;
-        if (query.length == 1) {
-          this.$refs.terminal.log({
-            text: "Query is too short '" + query + "'",
-            kind: "error"
-          });
+      // Update code first, as this can impact all other elements
+      if (update_code) {
+        const reply_json = wq_run(new_code);
+        const reply = JSON.parse(reply_json);
+        if (!reply) {
+          this.code_error = "invalid response from code server";
+        } else if (reply.valid == false) {
+          this.code_error = reply.error;
+        } else {
+          this.code_error = undefined;
+          update_tree = true;
+          update_query = true;
+          update_inspector = true;
         }
-        return;
       }
 
-      const r = wq_query(query);
-      let data = JSON.parse(r);
-
-      if (data.valid == false) {
-        this.$refs.terminal.log({text: "Query '" + query+ "': error: " + data.error, kind: "command-error"});
-        if (this.data) {
-          this.data.valid = false;
-        }
-      } else {
-        this.$refs.terminal.log({text: "Query OK", kind: "command-ok" });
-        this.data = data;
+      // Handle empty queries, make sure results are cleared
+      if (this.$refs.query.is_empty()) {
+        update_query = false;
+        this.query_result = undefined;
+        this.query_error = undefined;
+        has_query = false;
       }
 
-      this.error = data.valid == false;
+      // Update query
+      if (update_query) {
+        if (!new_query) {
+          new_query = this.$refs.query.get_query();
+        }
+
+        if (new_query.trim().length == 1) {
+          this.query_error = "query is too short";
+        } else {
+          const reply_json = wq_query(new_query);
+          let reply = JSON.parse(reply_json);
+          if (!reply) {
+            this.query_error = "invalid response from query server";
+          } else if (reply.valid == false) {
+            this.query_error = reply.error;
+          } else {
+            this.query_result = reply;
+            this.query_error = false;
+          }
+        }
+      }
+
+      // Mark query result as invalid or out of date if error occurred
+      if (this.query_error || this.code_error) {
+        if (this.query_result) {
+          this.query_result.valid = false;
+        }
+      }
+
+      // Update entity tree
+      if (update_tree) {
+        this.$refs.tree.update_expanded();
+      }
+
+      if (update_inspector) {
+        if (this.selected_tree_item) {
+          this.evt_select_tree_item(this.selected_tree_item);
+        }
+      }
+
+      // Update error logging
+      if (has_code) {
+        if (this.code_error) {
+          this.$refs.terminal.log({text: "Code error: " + this.code_error, kind: "command-error" });
+        } else {
+          this.$refs.terminal.log({text: "Code OK", kind: "command-ok" });
+        }
+      }
+
+      if (has_query) {
+        if (this.query_error) {
+          this.$refs.terminal.log({text: "Query error: " + this.query_error, kind: "command-error" });
+        } else {
+          this.$refs.terminal.log({text: "Query OK", kind: "command-ok" });
+        }
+      }
     },
 
-    run_code(code) {
-      this.$refs.terminal.clear();
+    // Query changed event
+    evt_query_changed(e) {
+      this.refresh(e.query, undefined);
+    },
 
-      const r = wq_run(code);
-      const data = JSON.parse(r);
+    // Code changed event
+    evt_code_changed(code) {
+      this.refresh(undefined, code);
+    },
 
-      if (data.valid == false) {
-        this.$refs.terminal.clear();
-        this.$refs.terminal.log({text: "Code error: " + data.error, kind: "command-error"});
-        if (this.data) {
-          this.data.valid = false;
-        }
+    // Entity tree select event
+    evt_select_tree_item(e) {
+      this.selected_tree_item = e;
+      if (e) {
+        const r = wq_get_entity(e.path);
+        let entity_data = JSON.parse(r);
+        this.entity_data = entity_data;
       } else {
-        if (!this.$refs.query.is_empty()) {
-          this.$refs.query.refresh();
-        }
-
-        this.$refs.terminal.log({text: "Code OK", kind: "command-ok" });
-
-        this.$refs.tree.update_expanded();
-        this.select(this.selection);
+        this.entity_data = undefined;
       }
+
+      if (this.entity_data) {
+        this.$refs.inspector.expand();
+      }
+    },
+
+    // Entity select event
+    evt_select(entity) {
+      this.$refs.tree.select(entity);
     },
 
     show_url() {
@@ -154,39 +222,21 @@ var app = new Vue({
                  window.location.pathname +
                  "?q=" + query_encoded + "&p=" + plecs_encoded;
 
-      if (this.selection) {
-        this.url += "&s=" + this.selection.path;
+      if (this.selected_tree_item) {
+        this.url += "&s=" + this.selected_tree_item.path;
       }
 
       this.$refs.url.show();
     },
-
-    select(e) {
-      this.selection = e;
-      if (e) {
-        const r = wq_get_entity(e.path);
-        let entity_data = JSON.parse(r);
-        this.entity_data = entity_data;
-      } else {
-        this.entity_data = undefined;
-      }
-
-      if (this.entity_data) {
-        this.$refs.inspector.expand();
-      }
-    },
-
-    evt_select(entity) {
-      this.$refs.tree.select(entity);
-    }
   },
 
   data: {
     query_ok: "",
-    error: false,
-    data: undefined,
+    query_error: undefined,
+    code_error: undefined,
+    query_result: undefined,
     entity_data: undefined,
-    selection: undefined,
+    selected_tree_item: undefined,
     url: undefined
   }
 });

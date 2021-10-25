@@ -18,7 +18,7 @@ Vue.component('entity-reference', {
     template: `
       <span class="entity-reference">
         {{label}}&nbsp;<span>{{name}}</span>
-        <icon src="follow" v-on:click="icon_clicked" v-if="!disabled"/>
+        <icon src="follow" v-on:click.stop="icon_clicked" v-if="!disabled"/>
       </span>
       `
   });

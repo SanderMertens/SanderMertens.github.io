@@ -14,6 +14,7 @@ Vue.component('terminal', {
       this.messages = [];
     },
     log(msg) {
+      msg.text = msg.text.split('\n')[0];
       this.messages.push(msg);
     },
     css_from_kind(msg) {

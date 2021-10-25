@@ -262,6 +262,13 @@ Vue.component('entity-tree', {
         }
       }
 
+      if (this.selection && scope[this.selection.name] != undefined) {
+        if (!result[this.selection.name]) {
+          // Selected entity is no longer available, clear it
+          this.$emit('select');
+        }
+      }
+
       return result;
     },
     update: function(container) {
