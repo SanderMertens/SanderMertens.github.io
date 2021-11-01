@@ -94,7 +94,11 @@ Vue.component('entity-tree-outline', {
   },
   methods: {
     height: function() {
-      return subtree_height(this.entity_data) - item_height - 7;
+      let result = subtree_height(this.entity_data) - item_height - 7;
+      if (result < 0) {
+        result = 0;
+      }
+      return result;
     }
   },
   template: `
@@ -252,10 +256,10 @@ Vue.component('entity-tree', {
               };
             }
 
-            entity.has_children = elem.terms_set[1];
-            entity.is_module = elem.terms_set[2];
-            entity.is_component = elem.terms_set[3] || elem.terms_set[4];
-            entity.is_prefab = elem.terms_set[5];
+            entity.has_children = elem.is_set[1];
+            entity.is_module = elem.is_set[2];
+            entity.is_component = elem.is_set[3] || elem.is_set[4];
+            entity.is_prefab = elem.is_set[5];
 
             Vue.set(result, name, entity);
           }
@@ -271,29 +275,32 @@ Vue.component('entity-tree', {
 
       return result;
     },
-    update: function(container) {
+    update: function(container, onready) {
       if (!container) {
         container = this.root;
       }
 
       const q = "(ChildOf, " + container.path + "), ?ChildOf(*, This), ?Module, ?Component, ?Tag, ?Prefab";
-      const r = wq_query(q);
-      data = JSON.parse(r);
-      container.entities = this.update_scope(container.entities, data);
+      app.request_query(q, (reply) => {
+        container.entities = this.update_scope(container.entities, reply);
+        if (onready) {
+          onready();
+        }
+      });
     },
     update_expanded: function(container) {
       if (!container) {
         container = this.root;
       }
 
-      this.update(container);
-
-      for (const entity in container.entities) {
-        const entity_data = container.entities[entity];
-        if (entity_data.expand) {
-          this.update_expanded(entity_data);
+      this.update(container, () => {
+        for (const entity in container.entities) {
+          const entity_data = container.entities[entity];
+          if (entity_data.expand) {
+            this.update_expanded(entity_data);
+          }
         }
-      }
+      });
     },
     toggle: function(entity) {
       entity.expand = !entity.expand;
@@ -314,29 +321,41 @@ Vue.component('entity-tree', {
         ent.entities = {};
       }
     },
+    select_recursive(entity, cur, elems, i, onready) {
+      if (!cur) {
+        return;
+      }
+
+      cur.expand = true;
+
+      this.update(cur, () => {
+        let next = cur.entities[elems[i]];
+        if (!next) {
+          if (elems[0] != "flecs" && elems[1] != "core") {
+            this.select("flecs.core." + entity);
+            return;
+          } else {
+            console.error("entity-tree: cannot navigate to entity " + elems[i]);
+            this.collapse_all();
+          }
+        }
+
+        if (i < (elems.length - 1)) {
+          this.select_recursive(entity, next, elems, i + 1, onready);
+        } else if (onready) {
+          onready(next);
+        }
+      });
+    },
     select: function(entity) {
       const elems = entity.split('.');
       let cur = this.root;
 
       this.collapse_all();
 
-      for (let i = 0; i < elems.length; i ++) {
-        cur.expand = true;
-
-        this.update(cur);
-        cur = cur.entities[elems[i]];
-        if (!cur) {          
-          // Entity does not exist, try in core
-          if (elems[0] != "flecs" && elems[1] != "core") {
-            this.select("flecs.core." + entity);
-            return;
-          } else {
-            console.log("cannot navigate to entity " + elems[i]);
-          }
-        }
-      }
-
-      this.evt_select(cur);
+      this.select_recursive(entity, cur, elems, 0, (item) => {
+        this.evt_select(item);
+      });
     },
     evt_select: function(entity) {
       if (!entity) {
