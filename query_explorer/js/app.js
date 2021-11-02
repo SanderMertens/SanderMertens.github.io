@@ -61,9 +61,9 @@ var app = new Vue({
 
     request(method, url, recv, err) {
       const Request = new XMLHttpRequest();
-      
+
       Request.open(method, window.location.protocol + "//" + url);
-      Request.send();
+      Request.timeout = 300;
       Request.onreadystatechange = (reply) => {
         if (Request.readyState == 4) {
           if (Request.status == 0) {
@@ -81,6 +81,8 @@ var app = new Vue({
           }
         }
       }
+
+      Request.send();
     },
 
     remote_request(method, path, recv, err) {
