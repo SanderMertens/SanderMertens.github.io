@@ -62,7 +62,7 @@ var app = new Vue({
     request(method, url, recv, err) {
       const Request = new XMLHttpRequest();
 
-      Request.open(method, "http//" + url);
+      Request.open(method, "http://" + url);
       Request.timeout = 2000;
       Request.onreadystatechange = (reply) => {
         if (Request.readyState == 4) {
