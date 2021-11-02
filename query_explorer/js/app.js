@@ -5,13 +5,15 @@ const example_query = "Position, Velocity"
 
 const example_plecs = `using flecs.meta
 
-Struct(Vec2) {
+Struct(Position) {
   x = {f32}
   y = {f32}
 }
 
-Position : Vec2
-Velocity : Vec2
+Struct(Velocity) {
+  x = {f32}
+  y = {f32}
+}
 
 with Position {
   Bob   = {1, 1}
@@ -42,11 +44,25 @@ function getParameterByName(name, url = window.location.href) {
 var app = new Vue({
   el: '#app',
 
+  mounted: function() {
+    this.is_mounted = true;
+    if (this.is_initialized) {
+      this.ready();
+    }
+  },
+
   methods: {
+    initialized() {
+      this.is_initialized = true;
+      if (this.is_mounted) {
+        this.ready();
+      }
+    },
+
     request(method, url, recv, err) {
       const Request = new XMLHttpRequest();
-
-      Request.open(method, "http://" + url);
+      
+      Request.open(method, window.location.protocol + "//" + url);
       Request.send();
       Request.onreadystatechange = (reply) => {
         if (Request.readyState == 4) {
@@ -105,7 +121,6 @@ var app = new Vue({
       }
     },
 
-    // Called when app is ready
     ready() {
       app.remote_request("GET", "entity/flecs/core/World", (reply) => {
         for (var i = 0; i < reply.type.length; i ++) {
@@ -118,6 +133,12 @@ var app = new Vue({
 
         this.remote = true;
         this.$refs.tree.update();
+
+        this.refresh_timer = window.setInterval(() => {
+          this.refresh_query();
+          this.refresh_entity();
+          this.refresh_tree();
+        }, 1000);
       }, () => {
         console.warn("flecs: unable to connect to remote, running explorer in local mode");
 
@@ -152,7 +173,6 @@ var app = new Vue({
         }
         if (q) {
           this.$refs.query.set_query(q);
-          this.$refs.title.refresh();
         }
 
         this.$refs.tree.update();
@@ -178,6 +198,10 @@ var app = new Vue({
 
     refresh_entity() {
       this.evt_entity_changed(this.selected_tree_item);
+    },
+
+    refresh_tree() {
+      this.$refs.tree.update();
     },
 
     // Query changed event
@@ -246,6 +270,9 @@ var app = new Vue({
   },
 
   data: {
+    is_initialized: false,
+    is_mounted: false,
+
     title: "Flecs Explorer",
     query_error: undefined,
     entity_error: undefined,
@@ -254,6 +281,8 @@ var app = new Vue({
     entity_result: undefined,
     selected_tree_item: undefined,
     url: undefined,
-    remote: false
+    remote: false,
+
+    refresh_timer: undefined
   }
 });

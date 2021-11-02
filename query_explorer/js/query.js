@@ -10,7 +10,7 @@ Vue.component('query', {
   methods: {
     // Query changed event
     evt_query_changed(query) {
-      if (query.length > 1) {
+      if (query && query.length > 1) {
         app.request_query(query, (reply) => {
           this.query_error = reply.error;
           if (reply.error === undefined) {
@@ -32,13 +32,22 @@ Vue.component('query', {
     },
     set_query(q) {
       this.$refs.editor.set_query(q);
+      this.$refs.container.expand();
     },
     get_error() {
       return this.query_error;
+    },
+    evt_close() {
+      this.set_query();
     }
   },
   template: `
-    <content-container :disable="query_result === undefined">
+    <content-container 
+      ref="container" 
+      :disable="query_result === undefined" 
+      closable="true" 
+      v-on:close="evt_close">
+
       <template v-slot:summary>
         Query&nbsp;&nbsp;<query-editor
           ref="editor"

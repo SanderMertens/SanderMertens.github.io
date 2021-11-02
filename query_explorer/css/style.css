@@ -77,11 +77,15 @@ span.icon::after {
 
 span.icon img {
   transform: rotate(0deg);
-  transition: 0.1s transform ease-out;
+  transition: 0.1s transform ease-out, 0.1s opacity ease-out;
 }
 
 span.icon-rotate img {
   transform: rotate(90deg);
+}
+
+span.icon-hide img {
+  opacity: 0;
 }
 
 img.follow {
@@ -103,6 +107,10 @@ img.search {
 
 img.nav {
   content: url('../img/nav-right.png');
+}
+
+img.close {
+  content: url('../img/close.png');
 }
 
 /* High level layout */
@@ -198,9 +206,10 @@ div.app-title {
 
 div.play-button-box {
   position: absolute;
-  left: 8px;
-  top: 6px;
-  width: 30px;
+  left: 10px;
+  top: 8px;
+  width: 26px;
+  height: 26px;
   cursor: pointer;
 }
 
@@ -213,7 +222,7 @@ div.share-button-box {
 }
 
 div.play-button-box img {
-  height: 24px;
+  height: 22px;
 }
 
 div.share-button-box img {
@@ -250,14 +259,19 @@ text.entity-tree-text-select {
   fill: #fff;
 }
 
-image.entity-tree-expand {
+image.entity-tree-icon {
   cursor: pointer;
   width: 15px;
   height: 15px;
+  opacity: 0.7;
+}
+
+image.entity-tree-icon:hover {
+  opacity: 1.0;
 }
 
 rect.entity-tree-select {
-  fill: rgba(0,0,0,0);
+  fill: #13151A;
   border-radius: 2px;
   cursor: pointer;
 }
@@ -517,30 +531,55 @@ button.editor-button-run {
 
 div.ecs-query {
   display: flex;
-  border-radius: 3px;
-  background-color: #13151A;
   
+  margin-left: 10px;
   padding-top: 2px;
-  padding-left: 10px;
-  padding-right: 10px;
+  padding-left: 5px;
+  padding-right: 5px;
 
   font-family: Menlo, Monaco, "Courier New", monospace;
   font-size: 13px;
   letter-spacing: 0.0px;
 
-  border-color: rgba(0, 0, 0, 0);
+  transition: background-color 0.2s;
+  border-radius: 2px;
   border-width: 1px;
   border-style: solid;
-  border-radius: 3px;
-  border-color: #000;
+  border-color: rgb(0, 0, 0, 0);
+
+  color: #DDE0E6;
+}
+
+div.ecs-query::before {
+  position: relative;
+  left: -11px;
+  display: flex;
+  content: '';
+  height: 17px;
+
+  border-width: 0px;
+  border-left-width: 1px;
+  border-style: solid;
+  border-color: rgb(189, 193, 204, 0.5);
+  color: #DDE0E6;
+}
+
+div.ecs-query:hover {
+  background-color: #343B4C;
 }
 
 div.ecs-query pre, div.editor pre {
-  min-height: 19px;
+  min-height: 16px;
+}
+
+div.ecs-query-ok {
+  background-color: #13151A !important;
+  transition: background-color 0s;
 }
 
 div.ecs-query-error {
   border-color: #B5494B !important;
+  background-color: #13151A !important;
 }
 
 div.error {

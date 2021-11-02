@@ -31,7 +31,7 @@
 
       <!-- Tree view -->
       <div class="tree-box">
-        <entity-tree ref="tree" v-on:select="evt_entity_changed"/>
+        <entity-tree ref="tree" v-on:select="evt_entity_changed" v-on:select_query="evt_select_query"/>
       </div>
 
       <!-- Application box -->
@@ -68,7 +68,7 @@
       <url-modal ref="url" :url="url"/>
     </div>
 
-    <script src="deps/vue.js"></script>
+    <script src="deps/vue.min.js"></script>
     <script src="deps/Keybinder.js"></script>
     <script src="deps/Parser.js"></script>
     <script src="deps/SelectHelper.js"></script>
