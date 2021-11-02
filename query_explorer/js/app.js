@@ -62,8 +62,8 @@ var app = new Vue({
     request(method, url, recv, err) {
       const Request = new XMLHttpRequest();
 
-      Request.open(method, window.location.protocol + "//" + url);
-      Request.timeout = 300;
+      Request.open(method, "http://" + url);
+      Request.timeout = 150;
       Request.onreadystatechange = (reply) => {
         if (Request.readyState == 4) {
           if (Request.status == 0) {
@@ -86,7 +86,8 @@ var app = new Vue({
     },
 
     remote_request(method, path, recv, err) {
-      const url = window.location.hostname + ":27750/" + path;
+      // const url = window.location.hostname + ":27750/" + path;
+      const url = "127.0.0.1:27750/" + path;
       this.request(method, url, (r) => {
         const reply = JSON.parse(r);
         recv(reply);
