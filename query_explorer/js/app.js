@@ -86,8 +86,16 @@ var app = new Vue({
     },
 
     remote_request(method, path, recv, err) {
-      // const url = window.location.hostname + ":27750/" + path;
-      const url = "127.0.0.1:27750/" + path;
+      let host = getParameterByName("host");
+      if (!host) {
+        host = "127.0.0.1:27750";
+      } else {
+        if (host.indexOf(":") == -1) {
+          host += ":27750";
+        }
+      }
+
+      const url = host + "/" + path;
       this.request(method, url, (r) => {
         const reply = JSON.parse(r);
         recv(reply);
