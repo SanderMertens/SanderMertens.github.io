@@ -96,8 +96,18 @@ img.follow {
   transform: rotate(315deg) !important;
 }
 
+img.connecting {
+  content: url('../img/connecting.png');
+  opacity: 0.9 !important;
+}
+
 img.connected {
   content: url('../img/connected.png');
+  opacity: 0.9 !important;
+}
+
+img.error {
+  content: url('../img/error.png');
   opacity: 0.9 !important;
 }
 
@@ -160,7 +170,7 @@ div.app-box {
   top: 41px;
   left: 200px;
   width: calc(100% - 200px);
-  height: calc(100vh - 91px);
+  height: calc(100vh - 141px);
 }
 
 div.left-column {
@@ -195,13 +205,38 @@ div.terminal-box {
 
   position: absolute;
   width: calc(100% - 200px);
-  height: 50px;
+  height: 100px;
   left: 200px;
   bottom: 0px;
 }
 
 div.app-title {
   font-weight: 500;
+}
+
+span.app-title-detail {
+  background-color: #250201;
+  border-style: solid;
+  border-width: 1px;
+  border-radius: 10px;
+  /* border-color: #540C06; */
+  color: #EF8784;
+  font-size: 12px;
+
+  padding-left: 5px;
+  padding-right: 5px;  
+
+  font-weight: 300;
+  margin-left: 5px;
+  transition: 0.3s margin-left, 0.3s opacity;
+}
+
+span.app-title-detail-hide {
+  width: 0px;
+  overflow: hidden;
+  margin-left: 0px;
+  padding: 0px;
+  visibility: hidden;
 }
 
 div.play-button-box {
@@ -711,14 +746,17 @@ div.query-results {
   position: relative;
 }
 
-div.query-results-invalid table * {
-  color: #4F5565 !important;
+div.invalid * {
+  color: rgb(189, 193, 204, 0.3) !important;
 }
 
-div.entity-inspector-disabled * {
-  color: #4F5565 !important;
+div.invalid text {
+  fill: #4F5565 !important;
 }
 
+div.invalid rect, div.invalid img, div.invalid image {
+  opacity: 0.0 !important;
+}
 
 div.ecs-filter {
   margin: auto;

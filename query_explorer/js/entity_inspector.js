@@ -268,7 +268,7 @@ Vue.component('inspector', {
     },
     content_css: function() {
       if (!this.valid) {
-        return "entity-inspector-disabled";
+        return "invalid";
       } else {
         return "";
       }

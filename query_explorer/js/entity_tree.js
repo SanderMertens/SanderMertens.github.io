@@ -252,6 +252,7 @@ Vue.component('entity-tree-list', {
 });
 
 Vue.component('entity-tree', {
+  props: ['valid'],
   methods: {
     update_scope: function(scope, data) {
       // Store entities in new scope, so that deleted entities are automatically
@@ -431,10 +432,17 @@ Vue.component('entity-tree', {
     },
     tree_top_margin: function() {
       return top_margin;
+    },
+    css: function() {
+      let result = "entity-tree";
+      if (!this.valid) {
+        result += " invalid";
+      }
+      return result;
     }
   },
   template: `
-    <div class="entity-tree">
+    <div :class="css">
       <svg :height="tree_height" width="100%">
         <entity-tree-list :entities="root.entities" :x="0" :y="tree_top_margin" 
           v-on:toggle="toggle"
