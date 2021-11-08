@@ -219,7 +219,7 @@ span.app-title-detail {
   border-style: solid;
   border-width: 1px;
   border-radius: 10px;
-  /* border-color: #540C06; */
+  border-color: #EF8784;
   color: #EF8784;
   font-size: 12px;
 
@@ -744,6 +744,11 @@ div.query-result-no {
 
 div.query-results {
   position: relative;
+}
+
+span.query-result-count {
+  font-weight: 300;
+  opacity: 0.8;
 }
 
 div.invalid * {
