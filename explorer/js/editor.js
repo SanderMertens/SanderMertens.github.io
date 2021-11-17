@@ -3,6 +3,37 @@ Vue.component('editor-textarea', {
   mounted: function() {
     this.ldt = new TextareaDecorator( 
       document.getElementById('plecs-editor'), syntax_highlighter );
+
+    var editor = new Behave({
+      textarea: document.getElementById('plecs-editor'),
+      replaceTab: true,
+      softTabs: true,
+      tabSize: 2,
+      autoOpen: true,
+      overwrite: true,
+      autoStrip: true,
+      autoIndent: true,
+      fence: false
+    });
+
+    var ldtbehave = this.ldt;
+
+    // Behavejs' event listeners  override some of LDT's, so we use Behavehooks to hook LDT updating to Behavejs' event listeners.
+    BehaveHooks.add('keydown', function(data){
+      setTimeout(function(){
+        ldtbehave.update();
+      })
+    });
+    BehaveHooks.add('keyup', function(data){
+      setTimeout(function(){
+        ldtbehave.update();
+      })
+    });
+    BehaveHooks.add('keypress', function(data){
+      setTimeout(function(){
+        ldtbehave.update();
+      })
+    });
   },
   updated: function() {
     this.ldt.update();
@@ -42,6 +73,9 @@ Vue.component('editor-textarea', {
     <textarea 
       id="plecs-editor" 
       class="editor-textarea" 
+      autocorrect="off" 
+      autocapitalize="off" 
+      spellcheck="false" 
       v-model="code" 
       v-on:keyup="run"
       v-on:keydown.tab.prevent="tab_pressed($event)">
