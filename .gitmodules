@@ -1,0 +1,3 @@
+[submodule "res/explorer"]
+	path = res/explorer
+	url = https://github.com/flecs-hub/explorer
