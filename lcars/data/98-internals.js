@@ -43,7 +43,7 @@ window.FLECS_TOUR.register([
         html: "<p>The child pages walk through the toolbox one drawer at a time:</p><ul><li><strong>Vectors &amp; allocators</strong> — the growable array every column is made of, and the block and stack allocators that feed it.</li><li><strong>Sparse sets</strong> — the trick that turns a huge 64-bit id into an array index in two hops, with pointers that never move.</li><li><strong>Maps &amp; hashmaps</strong> — the two lookup tables, and when Flecs reaches for each.</li><li><strong>String buffer &amp; bitset</strong> — building JSON without a thousand allocations, and storing one bit per entity.</li></ul>"
       }
     ],
-    related: ["storage", "int-command-queue", "world"]
+    related: ["storage", "world", "lif-deferring"]
   },
   {
     id: "int-vec-allocators",
@@ -98,7 +98,7 @@ window.FLECS_TOUR.register([
         }
       }
     ],
-    related: ["int-sparse-sets", "int-command-queue", "storage"]
+    related: ["int-sparse-sets", "storage", "lif-deferring"]
   },
   {
     id: "int-sparse-sets",
@@ -256,124 +256,11 @@ window.FLECS_TOUR.register([
     related: ["remote", "queries", "components"]
   },
   {
-    id: "int-command-queue",
-    parent: "internals",
-    order: 2,
-    title: "The Command Queue",
-    code: "INT-02",
-    tagline: "A to-do list the world writes for itself",
-    intro: "You can't rearrange the seats of a bus while it's driving. In the same way, Flecs can't move entities between tables while a query is walking those tables. So during iteration (and from worker threads), every add, remove, set and delete is not performed — it's <em>recorded</em> as a command, and the whole to-do list is executed in one go when it's safe. This page is about how that list actually works, in <code>src/commands.c</code>.",
-    sections: [
-      {
-        type: "text",
-        heading: "Recording",
-        html: "<p>Each stage (thread context) owns a command queue: a vector of <code>ecs_cmd_t</code> entries, a stack allocator holding temporary component values, and a sparse set for per-entity bookkeeping. When deferred mode is on and you call <code>ecs_add</code>, Flecs appends one command and returns immediately — your call is a sticky note, not an action.</p><p>Values need special care: when you <code>ecs_set</code> while deferred, the component value is copied into the queue's stack allocator (using the component's copy hook if it has one), so it survives until the merge even if your local variable is gone. Actually there's a nicer trick: <code>ecs_ensure</code> while deferred hands you a pointer into that scratch space, so you can write the value directly with no extra copy.</p><p>Each stage carries <em>two</em> command queues (<code>cmd_stack[2]</code> in <code>src/stage.h</code>): while one is being executed, new commands triggered by that execution — an observer reacting to an add, for instance — are recorded into the other. The merge loops until both are empty.</p>"
-      },
-      {
-        type: "struct",
-        heading: "One command",
-        name: "ecs_cmd_t",
-        summary: "From src/commands.h. One recorded operation.",
-        members: [
-          { name: "kind", type: "ecs_cmd_kind_t", desc: "Which operation this is: EcsCmdAdd, EcsCmdRemove, EcsCmdSet, EcsCmdDelete, EcsCmdClear, EcsCmdEvent and friends. EcsCmdSkip marks a command that was cancelled out — see batching below." },
-          { name: "next_for_entity", type: "int32_t", desc: "Index of the next command in the queue that targets the same entity — a linked list threaded through the queue. Negative on the first command of an entity's chain, as a marker." },
-          { name: "id", type: "ecs_id_t", desc: "The component or pair the operation applies to." },
-          { name: "entry", type: "ecs_cmd_entry_t*", desc: "Per-entity bookkeeping in the sparse set: the first and last command index for this entity. A last of -1 means this entity was deleted, so everything else for it can be ignored." },
-          { name: "entity", type: "ecs_entity_t", desc: "The entity the operation targets." },
-          { name: "is._1", type: "ecs_cmd_1_t", desc: "Payload for single-entity operations: a pointer to the stashed component value and its size." },
-          { name: "is._n", type: "ecs_cmd_n_t", desc: "Payload for bulk operations: an array of entity ids and a count." },
-          { name: "system", type: "ecs_entity_t", desc: "Which system enqueued this, so errors during the merge can name the culprit." }
-        ]
-      },
-      {
-        type: "diagram",
-        heading: "The round trip",
-        spec: {
-          type: "flow",
-          lanes: [
-            [ { id: "c1", label: "Your code", sub: "ecs_add / ecs_set / ecs_delete" } ],
-            [ { id: "c2", label: "Command queue", sub: "vec of ecs_cmd_t" },
-              { id: "c3", label: "Stack allocator", sub: "stashed values" },
-              { id: "c4", label: "Entries sparse set", sub: "per-entity chains" } ],
-            [ { id: "c5", label: "defer_end merge", sub: "batch per entity" } ],
-            [ { id: "c6", label: "Tables", sub: "one move per entity" },
-              { id: "c7", label: "Observers", sub: "events fire here" } ]
-          ],
-          edges: [
-            { from: "c1", to: "c2", label: "record" },
-            { from: "c1", to: "c3", dashed: true, label: "value copy" },
-            { from: "c2", to: "c4", dashed: true },
-            { from: "c2", to: "c5", label: "when safe" },
-            { from: "c5", to: "c6" },
-            { from: "c5", to: "c7" }
-          ],
-          note: "Deferred mode turns on automatically during ecs_progress and when using worker threads; you can also open it yourself with ecs_defer_begin."
-        }
-      },
-      {
-        type: "text",
-        heading: "When does it flush?",
-        html: "<p>The queue executes at <code>defer_end</code> — when the outermost <code>ecs_defer_end</code> closes, or at the sync points the pipeline places between systems. Commands replay in order, with one big exception: commands for the same entity are <em>batched</em> so the entity moves tables once instead of once per command. That optimization has its own page.</p>"
-      }
-    ],
-    related: ["int-cmd-batching", "lifecycle", "systems", "int-vec-allocators"]
-  },
-  {
-    id: "int-cmd-batching",
-    parent: "int-command-queue",
-    order: 1,
-    title: "Batching & Merging",
-    code: "INT-02A",
-    tagline: "Ten sticky notes about one entity become a single move",
-    intro: "If a frame adds five components to a freshly spawned entity, replaying those commands naively would move the entity through five different tables — five copies of everything it owns. The merge in <code>src/commands.c</code> avoids this by gathering all commands for one entity, combining them into a single table change, and cancelling out commands that contradict each other.",
-    sections: [
-      {
-        type: "text",
-        heading: "The chain",
-        html: "<p>As commands are recorded, the queue keeps a per-entity chain: a sparse set entry remembers the <em>first</em> and <em>last</em> command index for each entity, and every command's <code>next_for_entity</code> points to that entity's next command. It's like leaving a trail of sticky notes where each one says where the next one is.</p><p>At merge time, <code>flecs_cmd_batch_for_entity</code> walks an entity's whole chain in one pass and builds a single <em>diff</em>: the net set of components to add and remove. Then the entity moves tables exactly once, all the add/remove events fire against that one move, and set commands write their stashed values into the final location.</p>"
-      },
-      {
-        type: "text",
-        heading: "Cancelling out",
-        html: "<p>While walking the chain, the merge collapses commands that make each other pointless, stamping them <code>EcsCmdSkip</code>:</p><ul><li><strong>Add then remove</strong> of the same component within one batch: both disappear — the world never needs to know.</li><li><strong>Two sets</strong> of the same component: work is folded so the component lands with the final value.</li><li><strong>Anything after a delete:</strong> when a delete command is recorded, the entity's entry is marked (last set to -1). Every earlier or later command for that entity in the queue is skipped; only the delete runs. A dead entity needs no new coat of paint.</li><li><strong>Commands on entities that died some other way</strong> (say, cleaned up because their parent was deleted mid-merge) are skipped too, instead of crashing.</li></ul>"
-      },
-      {
-        type: "diagram",
-        heading: "One entity's chain, merged",
-        spec: {
-          type: "flow",
-          lanes: [
-            [ { id: "b1", label: "cmd 0: add Position", sub: "next_for_entity: 2" },
-              { id: "b2", label: "cmd 2: set Velocity", sub: "next_for_entity: 5" },
-              { id: "b3", label: "cmd 5: remove Position", sub: "end of chain" } ],
-            [ { id: "b4", label: "Batch diff", sub: "net: add Velocity" } ],
-            [ { id: "b5", label: "One table move", sub: "[] to [Velocity]" } ]
-          ],
-          edges: [
-            { from: "b1", to: "b4", dashed: true, label: "cancels with cmd 5" },
-            { from: "b2", to: "b4" },
-            { from: "b3", to: "b4", dashed: true },
-            { from: "b4", to: "b5" }
-          ],
-          note: "Position was added and removed in the same batch, so it never existed as far as tables and observers are concerned."
-        }
-      },
-      {
-        type: "code",
-        heading: "Seeing it from the outside",
-        lang: "c",
-        title: "All of this happens between defer_begin and defer_end",
-        src: "ecs_defer_begin(world);\n\necs_entity_t e = ecs_new(world);\necs_add(world, e, Position);\necs_set(world, e, Velocity, {1, 2});\necs_remove(world, e, Position);\n\necs_defer_end(world);"
-      }
-    ],
-    related: ["int-command-queue", "lifecycle", "events"]
-  },
-  {
     id: "int-poly",
     parent: "internals",
-    order: 3,
+    order: 2,
     title: "The Poly Framework",
-    code: "INT-03",
+    code: "INT-02",
     tagline: "How one function can accept a world, a stage, or a query",
     intro: "Several Flecs functions take a mysterious <code>ecs_poly_t*</code> — a pointer that might be a world, a stage, a query, or an observer. The <em>poly</em> framework (<code>src/poly.c</code>) is the tiny type system that makes this safe in plain C: every such object starts with the same header that says what it is and what it can do.",
     sections: [
@@ -418,14 +305,14 @@ window.FLECS_TOUR.register([
         }
       }
     ],
-    related: ["world", "queries", "events", "lifecycle"]
+    related: ["world", "queries", "events", "entities"]
   },
   {
     id: "int-os-api",
     parent: "internals",
-    order: 4,
+    order: 3,
     title: "The OS API",
-    code: "INT-04",
+    code: "INT-03",
     tagline: "Every door to the outside world goes through one table of functions",
     intro: "Flecs never calls the operating system directly. Every allocation, thread, mutex, clock read and log line goes through <code>ecs_os_api_t</code> — one global table of function pointers defined in <code>include/flecs/os_api.h</code>. Swap the entries, and Flecs runs on your game engine's allocator, a console's threading library, or a bare-metal board.",
     sections: [
@@ -479,9 +366,9 @@ window.FLECS_TOUR.register([
   {
     id: "int-parser",
     parent: "internals",
-    order: 5,
+    order: 4,
     title: "The Shared Parser",
-    code: "INT-05",
+    code: "INT-04",
     tagline: "One tokenizer feeds both the query language and Flecs Script",
     intro: "The query string <code>&quot;Position, !Velocity&quot;</code> and a whole Flecs Script scene file are read by the same machinery: a shared <em>parser core</em> in <code>src/addons/parser/</code> that chops text into tokens, with two customers on top — the query DSL addon and Flecs Script.",
     sections: [
@@ -526,8 +413,13 @@ window.FLECS_TOUR.register([
         lang: "c",
         title: "The string version compiles into exactly what the C version declares",
         src: "ecs_query_t *q1 = ecs_query(world, {\n  .expr = \"Position, !Velocity\"\n});\n\necs_query_t *q2 = ecs_query(world, {\n  .terms = {\n    { .id = ecs_id(Position) },\n    { .id = ecs_id(Velocity), .oper = EcsNot }\n  }\n});"
+      },
+      {
+        type: "text",
+        heading: "Why sharing matters",
+        html: "<p>Because the token layer is shared, the two languages agree on the basics: paths use dots (<code>game.Ship</code>), pairs use parentheses (<code>(Likes, Pizza)</code>), variables use <code>$</code>, and strings and numbers are written the same way. Learn one and the other reads naturally — a pair you add in a script is written exactly like the pair you match in a query.</p><p>It also means the fiddly parts — string escapes, number formats, error positions — have one implementation serving both, and both disappear together when the parser addon is compiled out. The <code>q</code> keyword in script leans on this directly: it hands its text straight to the query DSL parser rather than reimplementing terms.</p>"
       }
     ],
-    related: ["queries", "script", "int-strbuf-bitset"]
+    related: ["queries", "script", "scr-internals", "int-strbuf-bitset", "qry-language"]
   }
 ]);

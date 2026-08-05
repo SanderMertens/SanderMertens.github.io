@@ -17,9 +17,11 @@ then visit http://localhost:8787/.
 ## Using the tour
 
 - Click decks in the left panel (or the "Go deeper" cards) to drill into the
-  concept hierarchy.
+  concept hierarchy. "Go deeper" only ever points further down the tree; the
+  dashed "More reading" cards are sidesteps to related pages elsewhere,
+  labelled with the deck they belong to.
 - Arrow keys (or the bottom buttons) walk the entire tour in order.
-- Press `/` to search all 170 pages by name; Enter jumps to the best match.
+- Press `/` to search all 182 pages by name; Enter jumps to the best match.
 - Every page is deep-linkable via its URL hash, e.g. `#/qry-rematching`.
 
 ## Structure

@@ -71,7 +71,7 @@ window.FLECS_TOUR.register([
         html: "<p>The value returned by <code>ecs_system_init</code> is a regular entity id. That means you can look a system up by name, put it in a hierarchy, add tags to it, and — most usefully — disable it by adding the <code>EcsDisabled</code> tag (or calling <code>ecs_enable(world, sys, false)</code>). Disabled systems are skipped by the pipeline, because the pipeline finds systems with an ordinary query and queries ignore disabled entities.</p><p>To change a system after creation (say, its interval or context), use <code>ecs_system_update()</code>. The one thing you cannot change afterwards is the query.</p>"
       }
     ],
-    related: ["queries", "sys-pipeline", "sys-run-vs-callback"]
+    related: ["queries", "sys-pipeline", "sys-run-vs-callback", "qry-anatomy"]
   },
   {
     id: "sys-run-vs-callback",
@@ -161,11 +161,137 @@ window.FLECS_TOUR.register([
     related: ["sys-timers", "world"]
   },
   {
-    id: "sys-pipeline",
+    id: "sys-immediate",
     parent: "systems",
     order: 2,
-    title: "The Pipeline",
+    title: "Immediate Systems",
     code: "SYS-02",
+    tagline: "Turn off readonly mode so the system sees its own changes",
+    intro: "While the pipeline runs, the world is in <em>readonly</em> mode: your structural changes are recorded as commands and applied later, at a sync point. An <em>immediate</em> system opts out. It runs with the world writable, so an operation it performs is visible to the very next thing it does.",
+    sections: [
+      {
+        type: "text",
+        heading: "Assigning plates to waiters",
+        html: "<p>Imagine handing out plates to waiters, with the rule that a waiter who already has a plate should not get another. If the assignment is only applied at the end of the frame, then during the frame every waiter still looks free — and they all end up with a stack of plates.</p><p>That is the case immediate systems exist for. The system needs its own operations to take effect as it goes, because its next decision depends on them. Mark it <code>immediate</code> and Flecs runs it outside readonly mode, so <code>add</code>, <code>remove</code> and <code>set</code> take effect right away instead of being queued.</p>"
+      },
+      {
+        type: "code",
+        heading: "Creating one",
+        lang: "c",
+        title: "One flag on the system descriptor",
+        src: "ecs_system(world, {\n    .entity = ecs_entity(world, {\n        .name = \"AssignPlate\",\n        .add = ecs_ids( ecs_dependson(EcsOnUpdate) )\n    }),\n    .query.terms = {\n        { .id = Plate }\n    },\n    .callback = AssignPlate,\n    .immediate = true\n});"
+      },
+      {
+        type: "diagram",
+        heading: "Two ways a system can run",
+        spec: {
+          type: "flow",
+          lanes: [
+            [ { id: "n", label: "Normal system", sub: "world is readonly" },
+              { id: "i", label: "Immediate system", sub: "world is writable" } ],
+            [ { id: "q", label: "Command queue", sub: "applied at the sync point" },
+              { id: "s", label: "Storage", sub: "changed as the call is made" } ]
+          ],
+          edges: [
+            { from: "n", to: "q" },
+            { from: "i", to: "s" }
+          ],
+          note: "Same operations, different moment of truth: queued for later, or applied on the spot."
+        }
+      },
+      {
+        type: "text",
+        heading: "The price of immediacy",
+        html: "<p>You are giving up the two guarantees readonly mode was buying you, so Flecs puts limits in place:</p><ul><li><strong>Always single threaded.</strong> Without readonly mode there is no safe way to let several worker threads write to the storage at once, so an immediate system never gets split across threads.</li><li><strong>Operations on the entity you are iterating must still be deferred.</strong> Adding or removing a component on the current entity would move it to another table — that is modifying the collection you are walking. Wrap those in <code>ecs_defer_begin</code> / <code>ecs_defer_end</code>, or perform them on <em>other</em> entities. Inside an immediate system, <code>ecs_defer_suspend</code> and <code>ecs_defer_resume</code> let you flip between queued and instant operations for a stretch of code.</li><li><strong>It is a sync point in disguise.</strong> Running with the world writable means pending commands have to be applied first, so an immediate system in the middle of a phase breaks up the batching around it.</li></ul>"
+      },
+      {
+        type: "text",
+        heading: "Reach for it rarely",
+        html: "<p>Most systems that seem to need immediate mode do not. Before setting the flag, check whether one of these fits:</p><ul><li>Split the work into two systems with a sync point between them — the second one sees everything the first one queued.</li><li>Write component <em>values</em> instead of adding and removing components. Value writes are never deferred, even in readonly mode.</li><li>Use a tag plus a <code>Not</code> term so an entity is naturally picked up only once.</li></ul><p>If the decision genuinely depends on changes made moments earlier in the same system, immediate is the right tool — and giving up threading for that system is the cost.</p>"
+      }
+    ],
+    related: ["sys-sync-points", "lif-deferring", "sys-threads"]
+  },
+  {
+    id: "sys-threads",
+    parent: "systems",
+    order: 3,
+    title: "Multithreading",
+    code: "SYS-03",
+    tagline: "Slice each system's entities across worker threads",
+    intro: "Flecs multithreads by splitting <em>data</em>, not systems: with <code>ecs_set_threads(world, 4)</code>, a system marked <code>multi_threaded</code> runs on all four threads at once, each thread processing its own quarter of the matched entities. Systems still run one at a time — it's each system's workload that fans out.",
+    sections: [
+      {
+        type: "text",
+        heading: "The paper route model",
+        html: "<p>Imagine one long street of mailboxes and four paper carriers. You don't give each carrier a different chore — you give them all the same chore (&quot;deliver papers&quot;) and split the street into four segments. That's exactly what the scheduler does: every table matched by a multithreaded system is cut into N slices, one per thread. A table of 1000 entities on 4 threads: thread 0 takes rows 0–249, thread 1 takes 250–499, and so on.</p><p>The slicing is stable: the same entity is handled by the same thread until the next sync point. In the ideal case a whole batch of systems runs to completion with zero locking, because no two threads ever touch the same entity's row — and each thread has its own <strong>stage</strong> with its own command queue, the same staging mechanism from the Commands deck.</p>"
+      },
+      {
+        type: "diagram",
+        heading: "One table, four threads",
+        spec: {
+          type: "grid",
+          title: "Table [Position, Velocity] with 1000 entities",
+          cols: ["Thread", "Entity rows", "Runs"],
+          rows: [
+            ["main (0)", "0 - 249", "Move, slice 1 of 4"],
+            ["worker 1", "250 - 499", "Move, slice 2 of 4"],
+            ["worker 2", "500 - 749", "Move, slice 3 of 4"],
+            ["worker 3", "750 - 999", "Move, slice 4 of 4"]
+          ],
+          note: "Every thread runs the same system on a different slice; single-threaded systems run only on the main thread."
+        }
+      },
+      {
+        type: "code",
+        heading: "Turning it on",
+        lang: "c",
+        title: "Both the world and the system must opt in",
+        src: "ecs_set_threads(world, 4);\n\necs_system(world, {\n  .entity = ecs_entity(world, {\n    .name = \"Move\",\n    .add = ecs_ids( ecs_dependson(EcsOnUpdate) )\n  }),\n  .query.terms = {\n    { ecs_id(Position) },\n    { ecs_id(Velocity), .inout = EcsIn }\n  },\n  .callback = Move,\n  .multi_threaded = true\n});"
+      },
+      {
+        type: "text",
+        heading: "The rules of the road",
+        html: "<p>Things to know before flipping the switch:</p><ul><li><strong>Both switches needed.</strong> <code>ecs_set_threads</code> creates the workers; each system decides with <code>multi_threaded</code> whether it uses them. Systems are single-threaded by default and then run only on the main thread.</li><li><strong>Stages equal threads.</strong> Setting N threads sets the world's stage count to N; the main thread is stage 0 and N−1 worker threads are spawned to run alongside it during the frame.</li><li><strong>Sync points are the meeting places.</strong> At each sync point the threads rendezvous, the per-stage command queues are merged on the main thread, and the workers are released into the next batch.</li><li><strong>immediate excludes multithreading.</strong> A system that runs on the real world can't safely share it with workers, so <code>immediate</code> systems are always single-threaded.</li><li>Calling <code>ecs_set_threads</code> again reconfigures the pool — but never do it while a pipeline is running.</li></ul>"
+      }
+    ],
+    related: ["sys-sync-points", "commands", "sys-task-threads", "lif-staging"]
+  },
+  {
+    id: "sys-task-threads",
+    parent: "sys-threads",
+    order: 1,
+    title: "Task Threads",
+    code: "SYS-03A",
+    tagline: "Borrow your engine's job system instead of owning threads",
+    intro: "Many engines already have a job system — a pool of workers that runs short tasks. <code>ecs_set_task_threads()</code> lets Flecs plug into it: instead of keeping long-lived threads of its own, Flecs asks your job system for short-lived task workers around every world update.",
+    sections: [
+      {
+        type: "text",
+        heading: "Threads vs tasks",
+        html: "<p>With <code>ecs_set_threads</code>, Flecs hires full-time employees: worker threads created once, kept alive across frames. With <code>ecs_set_task_threads</code>, Flecs hires day labor: at each <code>ecs_progress</code>, it calls the OS API's <code>task_new_</code> callback once per task worker needed, and at the end of the update calls <code>task_join_</code> to wind each one down.</p><p>The trick is that the task callbacks live in <code>ecs_os_api_t</code> — Flecs' swappable OS layer — and use the same signatures as the thread callbacks. Point them at your job system and Flecs multithreads through it, so ECS work and your engine's other jobs share one pool instead of fighting over cores.</p>"
+      },
+      {
+        type: "code",
+        heading: "Switching over",
+        lang: "c",
+        title: "Same slicing behavior, different workers",
+        src: "ecs_os_set_api_defaults();\necs_os_api_t api = ecs_os_get_api();\napi.task_new_ = my_job_system_spawn;\napi.task_join_ = my_job_system_wait;\necs_os_set_api(&api);\n\necs_set_task_threads(world, 4);\n\nbool using_tasks = ecs_using_task_threads(world);"
+      },
+      {
+        type: "text",
+        heading: "Ground rules",
+        html: "<p>Systems don't change at all — <code>multi_threaded</code> works identically, and entities are sliced across task workers the same way. The constraints: your job system must be able to run the requested number of simultaneous tasks for the whole duration of <code>ecs_progress</code>, you can't reconfigure while a pipeline runs, and <code>ecs_set_threads</code> and <code>ecs_set_task_threads</code> are mutually exclusive — calling one ends the other's setup.</p>"
+      }
+    ],
+    related: ["sys-threads", "internals"]
+  },
+  {
+    id: "sys-pipeline",
+    parent: "systems",
+    order: 4,
+    title: "The Pipeline",
+    code: "SYS-04",
     tagline: "One call runs the whole frame, in order",
     intro: "The pipeline is the conductor of the frame. When you call <code>ecs_progress()</code>, it figures out which systems should run, in what order, where to pause and merge queued-up changes, and which threads do what — then runs the whole program of the frame from a single call.",
     sections: [
@@ -209,62 +335,14 @@ window.FLECS_TOUR.register([
         html: "<p>The children of this page unpack the pieces: the <strong>built-in phases</strong> that give every system a slot in the frame, how <strong>ordering</strong> between systems is decided, when and why <strong>sync points</strong> are inserted, and how to build a <strong>custom pipeline</strong> with its own rules.</p>"
       }
     ],
-    related: ["sys-phases", "sys-sync-points", "lifecycle", "sys-delta-time"]
-  },
-  {
-    id: "sys-phases",
-    parent: "sys-pipeline",
-    order: 1,
-    title: "Builtin Phases",
-    code: "SYS-02A",
-    tagline: "Named slots in the frame, from load to store",
-    intro: "A phase is a named slot in the frame — &quot;early&quot;, &quot;main update&quot;, &quot;just before rendering&quot; — that systems attach to. Phases are ordinary entities tagged with <code>EcsPhase</code>, and a system joins one through a <code>DependsOn</code> relationship, which the <code>ECS_SYSTEM</code> macro adds for you.",
-    sections: [
-      {
-        type: "diagram",
-        heading: "The frame, top to bottom",
-        spec: {
-          type: "stack",
-          layers: [
-            { label: "OnStart", sub: "only the very first frame" },
-            { label: "OnLoad", sub: "bring data in: input, network receive" },
-            { label: "PostLoad", sub: "process what just came in" },
-            { label: "PreUpdate", sub: "prepare for game logic" },
-            { label: "OnUpdate", sub: "the main event: gameplay, movement" },
-            { label: "OnValidate", sub: "check the results: collision detection" },
-            { label: "PostUpdate", sub: "react to validation: resolve collisions" },
-            { label: "PreStore", sub: "get data ready to leave: transforms for rendering" },
-            { label: "OnStore", sub: "hand data off: rendering, network send" }
-          ],
-          note: "Systems in the same phase run together; phases run in this order."
-        }
-      },
-      {
-        type: "text",
-        heading: "Phases are entities with DependsOn",
-        html: "<p>There is no hard-coded phase list inside the scheduler. Each builtin phase is just an entity with the <code>EcsPhase</code> tag, ordered by <code>DependsOn</code> relationships. The builtin pipeline query walks the <code>DependsOn</code> graph (with the query's <code>cascade</code> feature — a breadth-first walk up a relationship) to sort systems by how deep their phase sits in the graph.</p><p>A subtle trick from the source: the builtin phases do <em>not</em> depend directly on each other. Each one depends on a hidden anonymous entity, and those anonymous entities form the chain. Why? Disabling a phase disables everything that depends on it, transitively. With the hidden chain, you can disable <code>EcsPreUpdate</code> — silencing all its systems — without also knocking out <code>EcsOnUpdate</code> and everything after it.</p><p><code>EcsOnStart</code> is special: systems that depend on it run only once, during the very first <code>ecs_progress()</code> call, via a separate startup pipeline. The main builtin pipeline explicitly excludes them afterwards.</p>"
-      },
-      {
-        type: "code",
-        heading: "Making your own phases",
-        lang: "c",
-        title: "Custom phases slot into the same graph",
-        src: "ecs_entity_t Physics = ecs_new_w_id(world, EcsPhase);\necs_entity_t Collisions = ecs_new_w_id(world, EcsPhase);\n\necs_add_pair(world, Physics, EcsDependsOn, EcsOnUpdate);\necs_add_pair(world, Collisions, EcsDependsOn, Physics);\n\nECS_SYSTEM(world, Collide, Collisions, Position, Velocity);"
-      },
-      {
-        type: "text",
-        heading: "What goes where",
-        html: "<p>The names encode a simple idea: data flows <em>into</em> the world at the start of the frame and <em>out of</em> it at the end.</p><ul><li><strong>OnLoad / PostLoad</strong>: read the outside world — keyboard, gamepad, network packets — and turn it into components.</li><li><strong>PreUpdate / OnUpdate</strong>: the simulation itself. Most gameplay systems live in OnUpdate.</li><li><strong>OnValidate / PostUpdate</strong>: check what the simulation did (find collisions) and fix it up (push entities apart).</li><li><strong>PreStore / OnStore</strong>: prepare and deliver data to the outside — build transforms, issue draw calls, send packets.</li></ul>"
-      }
-    ],
-    related: ["sys-ordering", "components"]
+    related: ["sys-phases", "sys-sync-points", "commands", "sys-delta-time"]
   },
   {
     id: "sys-ordering",
     parent: "sys-pipeline",
-    order: 2,
+    order: 1,
     title: "System Ordering",
-    code: "SYS-02B",
+    code: "SYS-04A",
     tagline: "Who goes first, and how to change it",
     intro: "Within a frame, systems are ordered by two rules: first by phase (a topological sort over the <code>DependsOn</code> graph — dependencies always run before dependents), then within a phase by entity id, which usually means declaration order.",
     sections: [
@@ -289,16 +367,16 @@ window.FLECS_TOUR.register([
   {
     id: "sys-sync-points",
     parent: "sys-pipeline",
-    order: 3,
+    order: 2,
     title: "Sync Points & Merging",
-    code: "SYS-02C",
+    code: "SYS-04B",
     tagline: "Where the frame pauses to apply queued changes",
     intro: "While systems run, structural operations like <code>ecs_add</code> are queued as commands instead of applied. A sync point is a planned pause in the frame where the queue is flushed, so systems after it can see everything that systems before it changed. Flecs inserts them automatically — but only where the systems' declared reads and writes prove one is needed.",
     sections: [
       {
         type: "text",
         heading: "Why commands queue up at all",
-        html: "<p>Systems iterate tightly packed component arrays. If a system could add or remove components mid-iteration, entities would move between tables and arrays could reallocate under the iterator's feet — like remodeling a supermarket aisle while shoppers are in it. So during the frame the world is <strong>readonly</strong>: writes to component values you matched are fine, but structural operations become commands in a per-thread queue. This is the same deferring machinery covered in the lifecycle deck.</p><p>Left alone, all commands would merge at the end of the frame. That's often fine — but sometimes system B genuinely needs to see what system A enqueued. That's what sync points are for.</p>"
+        html: "<p>Systems iterate tightly packed component arrays. If a system could add or remove components mid-iteration, entities would move between tables and arrays could reallocate under the iterator's feet — like remodeling a supermarket aisle while shoppers are in it. So during the frame the world is <strong>readonly</strong>: writes to component values you matched are fine, but structural operations become commands in a per-thread queue. This is the same deferring machinery covered in the Commands deck.</p><p>Left alone, all commands would merge at the end of the frame. That's often fine — but sometimes system B genuinely needs to see what system A enqueued. That's what sync points are for.</p>"
       },
       {
         type: "diagram",
@@ -331,20 +409,16 @@ window.FLECS_TOUR.register([
         title: "Telling the scheduler what it can't see",
         src: "ECS_SYSTEM(world, SetTransform, EcsOnUpdate, Position, [out] Transform());\n\nECS_SYSTEM(world, ReadTransform, EcsOnUpdate, Position, [in] Transform());\n\necs_system(world, {\n  .query.terms = {\n    { ecs_id(Position) },\n    { .id = ecs_id(Transform),\n      .inout = EcsOut,\n      .src.flags = EcsIsEntity,\n      .src.id = 0 }\n  },\n  .callback = SetTransform\n});"
       },
-      {
-        type: "text",
-        heading: "Immediate systems",
-        html: "<p>Sometimes queuing is the wrong tool entirely. Picture assigning plates to waiters: to give a plate only to a free waiter, each assignment must be visible <em>immediately</em>, or you'd hand ten plates to the same person. Setting <code>.immediate = true</code> makes a system run while the world is <em>not</em> readonly, so operations apply on the spot. The costs: immediate systems are always single-threaded, and operations on the entity currently being iterated still have to be deferred (you can't remodel the aisle you're standing in). Inside an immediate system, <code>ecs_defer_suspend()</code> / <code>ecs_defer_resume()</code> let you briefly switch between queued and instant operations.</p>"
-      }
+
     ],
-    related: ["lifecycle", "sys-threads", "internals"]
+    related: ["commands", "sys-threads", "internals", "sys-immediate"]
   },
   {
     id: "sys-custom-pipelines",
     parent: "sys-pipeline",
-    order: 4,
+    order: 3,
     title: "Custom Pipelines",
-    code: "SYS-02D",
+    code: "SYS-04C",
     tagline: "Write your own rules for what runs and when",
     intro: "A pipeline is nothing more than a query over system entities plus the machinery that runs the results in order. That means you can replace the builtin one: write a query that matches the systems you want, wrap it in an <code>ecs_pipeline_desc_t</code>, and tell the world to use it.",
     sections: [
@@ -386,85 +460,59 @@ window.FLECS_TOUR.register([
     related: ["queries", "sys-phases", "sys-ordering"]
   },
   {
-    id: "sys-threads",
+    id: "sys-phases",
     parent: "systems",
-    order: 3,
-    title: "Multithreading",
-    code: "SYS-03",
-    tagline: "Slice each system's entities across worker threads",
-    intro: "Flecs multithreads by splitting <em>data</em>, not systems: with <code>ecs_set_threads(world, 4)</code>, a system marked <code>multi_threaded</code> runs on all four threads at once, each thread processing its own quarter of the matched entities. Systems still run one at a time — it's each system's workload that fans out.",
+    order: 5,
+    title: "Builtin Phases",
+    code: "SYS-05",
+    tagline: "Named slots in the frame, from load to store",
+    intro: "A phase is a named slot in the frame — &quot;early&quot;, &quot;main update&quot;, &quot;just before rendering&quot; — that systems attach to. Phases are ordinary entities tagged with <code>EcsPhase</code>, and a system joins one through a <code>DependsOn</code> relationship, which the <code>ECS_SYSTEM</code> macro adds for you.",
     sections: [
       {
-        type: "text",
-        heading: "The paper route model",
-        html: "<p>Imagine one long street of mailboxes and four paper carriers. You don't give each carrier a different chore — you give them all the same chore (&quot;deliver papers&quot;) and split the street into four segments. That's exactly what the scheduler does: every table matched by a multithreaded system is cut into N slices, one per thread. A table of 1000 entities on 4 threads: thread 0 takes rows 0–249, thread 1 takes 250–499, and so on.</p><p>The slicing is stable: the same entity is handled by the same thread until the next sync point. In the ideal case a whole batch of systems runs to completion with zero locking, because no two threads ever touch the same entity's row — and each thread has its own <strong>stage</strong> with its own command queue, the same staging mechanism from the lifecycle deck.</p>"
-      },
-      {
         type: "diagram",
-        heading: "One table, four threads",
+        heading: "The frame, top to bottom",
         spec: {
-          type: "grid",
-          title: "Table [Position, Velocity] with 1000 entities",
-          cols: ["Thread", "Entity rows", "Runs"],
-          rows: [
-            ["main (0)", "0 - 249", "Move, slice 1 of 4"],
-            ["worker 1", "250 - 499", "Move, slice 2 of 4"],
-            ["worker 2", "500 - 749", "Move, slice 3 of 4"],
-            ["worker 3", "750 - 999", "Move, slice 4 of 4"]
+          type: "stack",
+          layers: [
+            { label: "OnStart", sub: "only the very first frame" },
+            { label: "OnLoad", sub: "bring data in: input, network receive" },
+            { label: "PostLoad", sub: "process what just came in" },
+            { label: "PreUpdate", sub: "prepare for game logic" },
+            { label: "OnUpdate", sub: "the main event: gameplay, movement" },
+            { label: "OnValidate", sub: "check the results: collision detection" },
+            { label: "PostUpdate", sub: "react to validation: resolve collisions" },
+            { label: "PreStore", sub: "get data ready to leave: transforms for rendering" },
+            { label: "OnStore", sub: "hand data off: rendering, network send" }
           ],
-          note: "Every thread runs the same system on a different slice; single-threaded systems run only on the main thread."
+          note: "Systems in the same phase run together; phases run in this order."
         }
       },
       {
-        type: "code",
-        heading: "Turning it on",
-        lang: "c",
-        title: "Both the world and the system must opt in",
-        src: "ecs_set_threads(world, 4);\n\necs_system(world, {\n  .entity = ecs_entity(world, {\n    .name = \"Move\",\n    .add = ecs_ids( ecs_dependson(EcsOnUpdate) )\n  }),\n  .query.terms = {\n    { ecs_id(Position) },\n    { ecs_id(Velocity), .inout = EcsIn }\n  },\n  .callback = Move,\n  .multi_threaded = true\n});"
-      },
-      {
         type: "text",
-        heading: "The rules of the road",
-        html: "<p>Things to know before flipping the switch:</p><ul><li><strong>Both switches needed.</strong> <code>ecs_set_threads</code> creates the workers; each system decides with <code>multi_threaded</code> whether it uses them. Systems are single-threaded by default and then run only on the main thread.</li><li><strong>Stages equal threads.</strong> Setting N threads sets the world's stage count to N; the main thread is stage 0 and N−1 worker threads are spawned to run alongside it during the frame.</li><li><strong>Sync points are the meeting places.</strong> At each sync point the threads rendezvous, the per-stage command queues are merged on the main thread, and the workers are released into the next batch.</li><li><strong>immediate excludes multithreading.</strong> A system that runs on the real world can't safely share it with workers, so <code>immediate</code> systems are always single-threaded.</li><li>Calling <code>ecs_set_threads</code> again reconfigures the pool — but never do it while a pipeline is running.</li></ul>"
-      }
-    ],
-    related: ["sys-sync-points", "lifecycle", "sys-task-threads"]
-  },
-  {
-    id: "sys-task-threads",
-    parent: "sys-threads",
-    order: 1,
-    title: "Task Threads",
-    code: "SYS-03A",
-    tagline: "Borrow your engine's job system instead of owning threads",
-    intro: "Many engines already have a job system — a pool of workers that runs short tasks. <code>ecs_set_task_threads()</code> lets Flecs plug into it: instead of keeping long-lived threads of its own, Flecs asks your job system for short-lived task workers around every world update.",
-    sections: [
-      {
-        type: "text",
-        heading: "Threads vs tasks",
-        html: "<p>With <code>ecs_set_threads</code>, Flecs hires full-time employees: worker threads created once, kept alive across frames. With <code>ecs_set_task_threads</code>, Flecs hires day labor: at each <code>ecs_progress</code>, it calls the OS API's <code>task_new_</code> callback once per task worker needed, and at the end of the update calls <code>task_join_</code> to wind each one down.</p><p>The trick is that the task callbacks live in <code>ecs_os_api_t</code> — Flecs' swappable OS layer — and use the same signatures as the thread callbacks. Point them at your job system and Flecs multithreads through it, so ECS work and your engine's other jobs share one pool instead of fighting over cores.</p>"
+        heading: "Phases are entities with DependsOn",
+        html: "<p>There is no hard-coded phase list inside the scheduler. Each builtin phase is just an entity with the <code>EcsPhase</code> tag, ordered by <code>DependsOn</code> relationships. The builtin pipeline query walks the <code>DependsOn</code> graph (with the query's <code>cascade</code> feature — a breadth-first walk up a relationship) to sort systems by how deep their phase sits in the graph.</p><p>A subtle trick from the source: the builtin phases do <em>not</em> depend directly on each other. Each one depends on a hidden anonymous entity, and those anonymous entities form the chain. Why? Disabling a phase disables everything that depends on it, transitively. With the hidden chain, you can disable <code>EcsPreUpdate</code> — silencing all its systems — without also knocking out <code>EcsOnUpdate</code> and everything after it.</p><p><code>EcsOnStart</code> is special: systems that depend on it run only once, during the very first <code>ecs_progress()</code> call, via a separate startup pipeline. The main builtin pipeline explicitly excludes them afterwards.</p>"
       },
       {
         type: "code",
-        heading: "Switching over",
+        heading: "Making your own phases",
         lang: "c",
-        title: "Same slicing behavior, different workers",
-        src: "ecs_os_set_api_defaults();\necs_os_api_t api = ecs_os_get_api();\napi.task_new_ = my_job_system_spawn;\napi.task_join_ = my_job_system_wait;\necs_os_set_api(&api);\n\necs_set_task_threads(world, 4);\n\nbool using_tasks = ecs_using_task_threads(world);"
+        title: "Custom phases slot into the same graph",
+        src: "ecs_entity_t Physics = ecs_new_w_id(world, EcsPhase);\necs_entity_t Collisions = ecs_new_w_id(world, EcsPhase);\n\necs_add_pair(world, Physics, EcsDependsOn, EcsOnUpdate);\necs_add_pair(world, Collisions, EcsDependsOn, Physics);\n\nECS_SYSTEM(world, Collide, Collisions, Position, Velocity);"
       },
       {
         type: "text",
-        heading: "Ground rules",
-        html: "<p>Systems don't change at all — <code>multi_threaded</code> works identically, and entities are sliced across task workers the same way. The constraints: your job system must be able to run the requested number of simultaneous tasks for the whole duration of <code>ecs_progress</code>, you can't reconfigure while a pipeline runs, and <code>ecs_set_threads</code> and <code>ecs_set_task_threads</code> are mutually exclusive — calling one ends the other's setup.</p>"
+        heading: "What goes where",
+        html: "<p>The names encode a simple idea: data flows <em>into</em> the world at the start of the frame and <em>out of</em> it at the end.</p><ul><li><strong>OnLoad / PostLoad</strong>: read the outside world — keyboard, gamepad, network packets — and turn it into components.</li><li><strong>PreUpdate / OnUpdate</strong>: the simulation itself. Most gameplay systems live in OnUpdate.</li><li><strong>OnValidate / PostUpdate</strong>: check what the simulation did (find collisions) and fix it up (push entities apart).</li><li><strong>PreStore / OnStore</strong>: prepare and deliver data to the outside — build transforms, issue draw calls, send packets.</li></ul>"
       }
     ],
-    related: ["sys-threads", "internals"]
+    related: ["sys-ordering", "components", "qry-cascade"]
   },
   {
     id: "sys-timers",
     parent: "systems",
-    order: 4,
+    order: 6,
     title: "Timers & Tick Sources",
-    code: "SYS-04",
+    code: "SYS-06",
     tagline: "Run systems on a clock instead of every frame",
     intro: "Not everything needs to happen 60 times a second. The timer addon lets a system run on an interval (&quot;once per second&quot;), fire once after a timeout, or follow the beat of another entity — a <em>tick source</em> — like an orchestra section watching the conductor.",
     sections: [
@@ -507,7 +555,7 @@ window.FLECS_TOUR.register([
     parent: "sys-timers",
     order: 1,
     title: "Rate Filters",
-    code: "SYS-04A",
+    code: "SYS-06A",
     tagline: "Tick once every N ticks of something else",
     intro: "A rate filter is a counter, not a clock: it watches a tick source and fires on every Nth tick. Because it counts ticks instead of measuring seconds, it stays perfectly in step with its source — something two independent timers can never promise.",
     sections: [
@@ -565,9 +613,9 @@ window.FLECS_TOUR.register([
   {
     id: "sys-app",
     parent: "systems",
-    order: 5,
+    order: 7,
     title: "The App Addon",
-    code: "SYS-05",
+    code: "SYS-07",
     tagline: "A main loop in a box, friendly to browsers",
     intro: "The app addon wraps the whole &quot;while running, progress the world&quot; loop into one call: <code>ecs_app_run(world, &amp;desc)</code>. It exists because on some platforms — most famously Emscripten, which runs C in a web browser — you are not allowed to write your own blocking main loop, so the platform must be able to take it over.",
     sections: [
@@ -625,9 +673,9 @@ window.FLECS_TOUR.register([
   {
     id: "sys-delta-time",
     parent: "systems",
-    order: 6,
+    order: 8,
     title: "Delta Time & Frame Control",
-    code: "SYS-06",
+    code: "SYS-08",
     tagline: "Keeping the simulation honest about time",
     intro: "Frames never take exactly the same amount of time, so systems scale their work by <code>delta_time</code>: the seconds elapsed since the last frame, delivered in every iterator. Flecs can measure it for you, accept it from your engine, or pin the frame rate by sleeping.",
     sections: [
@@ -659,9 +707,9 @@ window.FLECS_TOUR.register([
   {
     id: "sys-modules",
     parent: "systems",
-    order: 7,
+    order: 9,
     title: "Modules",
-    code: "SYS-07",
+    code: "SYS-09",
     tagline: "Package components and systems into importable units",
     intro: "A module is a shippable box of ECS content: components, systems, phases, prefabs — anything — registered by one import function and stored under one entity. <code>ECS_IMPORT(world, FlecsSystemsPhysics)</code> unpacks the box into the world, exactly once, no matter how many times it's asked.",
     sections: [

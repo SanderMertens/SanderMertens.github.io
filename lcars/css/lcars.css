@@ -450,12 +450,29 @@ code {
   color: #e6d9a8;
 }
 
+.codeblock pre code {
+  padding: 0;
+  background: none;
+  color: inherit;
+  font-size: inherit;
+}
+
+.tok-keyword { color: #ff9cce; }
+.tok-type { color: #7dddf2; }
+.tok-string { color: #b9dc85; }
+.tok-number { color: #ffbf70; }
+.tok-comment { color: #7f8799; font-style: italic; }
+.tok-directive { color: #c9a5ff; }
+.tok-function { color: #80bfff; }
+
 .struct-table, .grid-diagram table {
   width: 100%;
   border-collapse: collapse;
   font-size: 14px;
   margin: 6px 0 10px;
 }
+
+.grid-diagram table { font-size: 15px; }
 
 .struct-name {
   font-family: var(--mono);
@@ -506,14 +523,14 @@ code {
 .diagram-note {
   text-align: center;
   color: var(--text-dim);
-  font-size: 13.5px;
+  font-size: 14.5px;
   margin-top: 12px;
   font-style: italic;
 }
 
 .grid-diagram .grid-title {
   font-family: var(--display);
-  font-size: 15px;
+  font-size: 16.5px;
   letter-spacing: 1.5px;
   text-transform: uppercase;
   color: var(--accent);
@@ -522,12 +539,12 @@ code {
 
 .grid-diagram th {
   font-family: var(--display);
-  font-size: 13px;
+  font-size: 14.5px;
   letter-spacing: 1px;
   text-transform: uppercase;
   color: #000;
   background: var(--accent);
-  padding: 6px 14px;
+  padding: 7px 14px;
   text-align: left;
   transition: background 0.4s;
 }
@@ -537,8 +554,8 @@ code {
 
 .grid-diagram td {
   font-family: var(--mono);
-  font-size: 13px;
-  padding: 7px 14px;
+  font-size: 14.5px;
+  padding: 8px 14px;
   background: var(--panel-2);
   border: 1px solid #000;
   color: var(--text);
@@ -593,27 +610,24 @@ code {
   line-height: 1.45;
 }
 
-.related-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+.child-card.sidestep {
+  background: transparent;
+  border-top-style: dashed;
+  border-right-style: dashed;
+  border-bottom-style: dashed;
+}
+
+.child-card.sidestep:hover { background: var(--panel); }
+
+.child-card .cc-where {
+  font-family: var(--display);
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
   margin-top: 10px;
 }
 
-.related-chip {
-  font-family: var(--display);
-  font-size: 14px;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  text-decoration: none;
-  color: var(--accent);
-  border: 1px solid var(--accent);
-  border-radius: 20px;
-  padding: 4px 16px;
-  transition: background 0.15s, color 0.15s;
-}
-
-.related-chip:hover { background: var(--accent); color: #000; }
+.child-card .cc-where::before { content: "\2197  "; }
 
 #footer {
   grid-column: 2;

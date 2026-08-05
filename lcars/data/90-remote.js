@@ -100,7 +100,7 @@ window.FLECS_TOUR.register([
         ]
       }
     ],
-    related: ["net-json-from", "net-rest-endpoints", "lifecycle"]
+    related: ["net-json-from", "net-rest-endpoints", "entities"]
   },
   {
     id: "net-json-iter",

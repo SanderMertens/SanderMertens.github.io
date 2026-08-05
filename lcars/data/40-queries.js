@@ -88,45 +88,11 @@ window.FLECS_TOUR.register([
     related: ["qry-operators", "qry-access", "qry-sources", "qry-traversal", "qry-language"]
   },
   {
-    id: "qry-operators",
-    parent: "qry-anatomy",
-    order: 1,
-    title: "Operators",
-    code: "QRY-01A",
-    tagline: "And, or, not, maybe — how terms combine",
-    intro: "By default every term on the checklist must pass — that's the <em>And</em> operator. Other operators let a term say &quot;must <em>not</em> have this&quot;, &quot;one of these will do&quot;, or &quot;nice to have, but not required&quot;.",
-    sections: [
-      {
-        type: "text",
-        heading: "The seven operators",
-        html: "<p>Each term has exactly one operator, set with the <code>oper</code> member:</p><ul><li><strong>And</strong> (<code>EcsAnd</code>, the default): the entity must have this. In the query language it's just a comma: <code>Position, Velocity</code>.</li><li><strong>Or</strong> (<code>EcsOr</code>): at least one term in an or-chain must match: <code>Velocity || Speed</code>. Set <code>EcsOr</code> on a term to chain it with the <em>next</em> term.</li><li><strong>Not</strong> (<code>EcsNot</code>): the entity must <em>not</em> have this: <code>!Frozen</code>.</li><li><strong>Optional</strong> (<code>EcsOptional</code>): match whether or not the entity has it: <code>?Velocity</code>. Doesn't change which entities match, but if the component is there, you get it — which is cheaper than a separate <code>ecs_get</code> and saves you from splitting one query into several. Check with <code>ecs_field_is_set</code> before reading.</li><li><strong>AndFrom</strong> (<code>EcsAndFrom</code>): must have <em>all</em> components that some other entity (typically a prefab) has: <code>and|MyType</code>. A checklist that borrows its lines from another entity.</li><li><strong>OrFrom</strong> (<code>EcsOrFrom</code>): must have at least one of them: <code>or|MyType</code>.</li><li><strong>NotFrom</strong> (<code>EcsNotFrom</code>): must have none of them: <code>not|MyType</code>.</li></ul>"
-      },
-      {
-        type: "code",
-        heading: "Or in C, and the field it shares",
-        lang: "c",
-        title: "Four terms, three fields",
-        src: "ecs_query_t *q = ecs_query(world, {\n  .terms = {\n    { ecs_id(Position) },\n    { ecs_id(Velocity), .oper = EcsOr },\n    { ecs_id(Speed) },\n    { ecs_id(Mass) }\n  }\n});\n\necs_iter_t it = ecs_query_iter(world, q);\nwhile (ecs_query_next(&it)) {\n  Position *p = ecs_field(&it, Position, 0);\n  Mass *m = ecs_field(&it, Mass, 2);\n  ecs_id_t vs_id = ecs_field_id(&it, 1);\n}"
-      },
-      {
-        type: "text",
-        heading: "Watch out: Or chains merge fields",
-        html: "<p>Terms in an Or chain can each produce a different component, so they are folded into a <em>single field</em> in the iterator. The query above has 4 terms but only 3 fields: <code>Position</code> is field 0, <code>Velocity || Speed</code> together are field 1, and <code>Mass</code> is field 2 — not 3. Use <code>ecs_field_id</code> to find out which of the two actually matched for the current result.</p>"
-      },
-      {
-        type: "text",
-        heading: "Equality predicates",
-        html: "<p>A special family of operators compares a <em>variable</em> against a value instead of testing for a component. In the query language they look like <code>$this == UssEnterprise</code>, <code>$this != $other</code>, or the fuzzy name match <code>$this ~= &quot;Uss&quot;</code> (matches entities whose name contains the substring). Under the hood these use the builtin <code>EcsPredEq</code>, <code>EcsPredMatch</code> and <code>EcsPredLookup</code> entities as the term's <em>first</em> element. When an equality term is the first place a variable appears, it doesn't test — it <em>assigns</em> the variable.</p><p>There are also <em>query scopes</em>: wrapping terms in <code>!{ ... }</code> negates the result of the whole group, which lets you say things like &quot;spaceships where <em>none</em> of the engines are healthy&quot;.</p>"
-      }
-    ],
-    related: ["qry-language", "qry-variables", "qry-fields"]
-  },
-  {
     id: "qry-access",
     parent: "qry-anatomy",
-    order: 2,
+    order: 1,
     title: "Access Modifiers",
-    code: "QRY-01B",
+    code: "QRY-01A",
     tagline: "Telling Flecs whether you read, write, or just look",
     intro: "An access modifier is a promise about what you'll do with the data a term matches: only read it (<code>[in]</code>), only write it (<code>[out]</code>), both (<code>[inout]</code>), or neither (<code>[none]</code>). Keeping that promise honest pays off, because Flecs uses it to schedule systems and to track what changed.",
     sections: [
@@ -152,9 +118,9 @@ window.FLECS_TOUR.register([
   {
     id: "qry-sources",
     parent: "qry-anatomy",
-    order: 3,
+    order: 2,
     title: "Term Sources",
-    code: "QRY-01C",
+    code: "QRY-01B",
     tagline: "Whose pockets does the query search?",
     intro: "Every term has a <em>source</em>: the entity that must have the component. Usually it's <code>$this</code> — the entity being matched — but a term can also point at one fixed entity (&quot;the Game entity's clock&quot;) or at a query variable that gets filled in during matching.",
     sections: [
@@ -189,11 +155,149 @@ window.FLECS_TOUR.register([
     related: ["qry-variables", "qry-fields", "qry-traversal"]
   },
   {
+    id: "qry-language",
+    parent: "queries",
+    order: 2,
+    title: "The Flecs Query Language",
+    code: "QRY-02",
+    tagline: "Whole queries in one line of text",
+    intro: "The Flecs Query Language is a tiny text format for writing queries: <code>&quot;Position, !Velocity, (Likes, $friend)&quot;</code>. It says nothing the C descriptor can't say — every piece of syntax maps straight onto a term — but text is easy to type, store in files, and send over a network.",
+    sections: [
+      {
+        type: "text",
+        heading: "The syntax in five minutes",
+        html: "<p>An expression is a comma-separated list of terms. Each bit of punctuation sets one member of the corresponding <code>ecs_term_t</code>:</p><ul><li><code>Position</code> — must have Position. <code>(Likes, Bob)</code> — must have the pair.</li><li><code>!Velocity</code> not, <code>?Velocity</code> optional, <code>Velocity || Speed</code> or, <code>and|MyType</code> / <code>or|MyType</code> / <code>not|MyType</code> for the *From operators.</li><li><code>[in] Velocity</code> — access modifiers in square brackets.</li><li><code>SimTime(Game)</code> — explicit source in parentheses; <code>Likes($this, Bob)</code> is the fully spelled-out pair form. Names starting with <code>$</code> are variables; a bare name is an entity looked up at query creation.</li><li><code>Transform(up ChildOf)</code>, <code>Transform(cascade)</code>, <code>Style(self|up)</code> — traversal flags inside the source parentheses.</li><li><code>(Likes, *)</code> — wildcard, one result per matching pair; <code>(Likes, _)</code> — the <em>any</em> wildcard, at most one result no matter how many pairs match.</li><li><code>$this == UssEnterprise</code>, <code>$this ~= &quot;Uss&quot;</code> — equality and fuzzy-name predicates; <code>!{ ... }</code> — a negated scope over several terms; <code>$this.cockpit</code> — a lookup of a named child relative to a variable.</li></ul>"
+      },
+      {
+        type: "code",
+        heading: "The same query, twice",
+        lang: "c",
+        title: "expr and terms produce identical queries",
+        src: "ecs_query_t *q1 = ecs_query(world, {\n  .expr = \"Position, [in] Velocity, !Frozen\"\n});\n\necs_query_t *q2 = ecs_query(world, {\n  .terms = {\n    { ecs_id(Position) },\n    { ecs_id(Velocity), .inout = EcsIn },\n    { ecs_id(Frozen), .oper = EcsNot }\n  }\n});"
+      },
+      {
+        type: "code",
+        heading: "A query with variables",
+        lang: "c",
+        title: "Spaceships docked to planets",
+        src: "ecs_query_t *q = ecs_query(world, {\n  .expr = \"SpaceShip, (DockedTo, $planet), Planet($planet)\"\n});"
+      },
+      {
+        type: "text",
+        heading: "Where the language shows up",
+        html: "<p>Because it's just a string, the query language works anywhere text works:</p><ul><li><strong>C macros</strong>: <code>ECS_SYSTEM(world, Move, EcsOnUpdate, Position, [in] Velocity)</code> — the part after the phase is a query expression.</li><li><strong>The <code>expr</code> member</strong> of <code>ecs_query_desc_t</code>, as above.</li><li><strong>Flecs Script</strong> uses the same expressions for queries inside scripts.</li><li><strong>The REST API and Explorer</strong>: the browser tool sends query strings to your live game and shows the results — the language is what makes runtime, tooling and modding queries possible, since strings can be built when the set of components isn't known at compile time.</li></ul>"
+      }
+    ],
+    related: ["qry-anatomy", "qry-variables", "script", "remote"]
+  },
+  {
+    id: "qry-uncached",
+    parent: "queries",
+    order: 3,
+    title: "Uncached Queries",
+    code: "QRY-03",
+    tagline: "Search fresh every time, own nothing",
+    intro: "An uncached query keeps no list of results — every time you iterate it, it searches the world from scratch. That makes it nearly free to create and free to keep around, which is exactly what you want for one-off questions like &quot;which entities are children of this parent, right now?&quot;.",
+    sections: [
+      {
+        type: "text",
+        heading: "When fresh beats fast",
+        html: "<p>Uncached queries are the mirror image of cached ones:</p><ul><li><strong>Creation is cheap</strong> — no cache to build — so ad-hoc, create-use-destroy queries are fine.</li><li><strong>No memory or bookkeeping</strong>: they're stateless, and add zero overhead to table creation/deletion.</li><li><strong>Iteration costs more</strong>: the query engine searches for matching tables on every iteration, guided by the world's component index (for each component, the list of tables that contain it — the engine starts from the rarest term and checks candidates against the rest).</li><li><strong>No rematching, ever</strong>: traversal results are computed fresh each time, which is also the escape hatch when cached traversal queries suffer rematch storms.</li></ul><p>You get an uncached query with <code>.cache_kind = EcsQueryCacheNone</code>, or simply by creating a query without an associated entity — the Default policy makes entity-less queries uncached. Features that need somewhere to store state — change detection, sorting, grouping, <code>cascade</code> — are cached-only.</p>"
+      },
+      {
+        type: "code",
+        heading: "The ecs_each fast path",
+        lang: "c",
+        title: "One component, minimum machinery",
+        src: "ecs_iter_t it = ecs_each(world, Position);\nwhile (ecs_each_next(&it)) {\n  Position *p = ecs_field(&it, Position, 0);\n  for (int i = 0; i < it.count; i++) {\n    p[i].x += 1;\n  }\n}\n\necs_iter_t cit = ecs_children(world, parent);\nwhile (ecs_children_next(&cit)) {\n  for (int i = 0; i < cit.count; i++) {\n  }\n}"
+      },
+      {
+        type: "text",
+        heading: "How an uncached query runs",
+        html: "<p>For the simplest ask — all entities with one component or pair — <code>ecs_each_id</code> skips query creation entirely and walks the component index directly; <code>ecs_children</code> is the same trick for <code>(ChildOf, parent)</code>. Much lighter than building even an uncached query.</p><p>Everything richer goes through real machinery: when the query is created, a <em>compiler</em> turns the terms into a small program (the query plan), and each iteration a <em>virtual machine</em> — a little program-runner inside Flecs — executes that plan against the world. Cached queries use the same VM with a plan that mostly just reads the cache; for fully-cached trivial queries the plan is empty and the VM is bypassed altogether. The next two pages open up the compiler and the VM.</p>"
+      }
+    ],
+    related: ["qry-compiler", "qry-vm", "qry-cached", "storage", "qry-simple"]
+  },
+  {
+    id: "qry-simple",
+    parent: "qry-uncached",
+    order: 1,
+    title: "Simple Queries",
+    code: "QRY-03A",
+    tagline: "Just list the components you want — this is the case Flecs makes fastest",
+    intro: "Most queries you will ever write are a list of components joined by \"and\": give me everything with a Position and a Velocity. Flecs recognizes that shape and compiles it into a search that does almost nothing per table, which is why the plainest query is also the fastest one.",
+    sections: [
+      {
+        type: "text",
+        heading: "The everyday query",
+        html: "<p>A simple query is a shopping list with no conditions attached: every term names a component, every term must be present, and every term is looked for on the entity itself. No <em>maybe</em>, no <em>not</em>, no \"ask the parent\", no wildcards.</p><p>Written out, it is one line of terms and a loop. The loop gives you a table at a time: <code>it.count</code> entities whose components are laid out in flat arrays you can walk with an index.</p>"
+      },
+      {
+        type: "code",
+        heading: "Write one, run one",
+        lang: "c",
+        title: "Position and Velocity, one table at a time",
+        src: "ecs_query_t *q = ecs_query(world, {\n    .terms = {\n        { .id = ecs_id(Position) },\n        { .id = ecs_id(Velocity) }\n    }\n});\n\necs_iter_t it = ecs_query_iter(world, q);\nwhile (ecs_query_next(&it)) {\n    Position *p = ecs_field(&it, Position, 0);\n    const Velocity *v = ecs_field(&it, Velocity, 1);\n\n    for (int i = 0; i < it.count; i ++) {\n        p[i].x += v[i].x;\n        p[i].y += v[i].y;\n    }\n}\n\necs_query_fini(q);"
+      },
+      {
+        type: "text",
+        heading: "Why simple is fast",
+        html: "<p>When every term is a plain \"has this id, on this entity\", the query compiler stops building a general search plan and emits a <em>trivial search</em>: one instruction that tests a whole table against all the terms at once. The heavy machinery — variables, backtracking, traversal — is never touched.</p><p>Two things make each table cheap to accept or reject:</p><ul><li>The query starts from the id with the fewest tables, so it only ever looks at candidates that already have your rarest component.</li><li>Each candidate table is first tested against a 64-bit fingerprint of its type, which rejects most non-matches without reading a single id.</li></ul><p>Once a table is accepted, the per-entity cost is a pointer walk. There is no per-entity matching at all — matching happened once, for the whole table.</p>"
+      },
+      {
+        type: "text",
+        heading: "Even simpler: one component",
+        html: "<p>If you want exactly one component and nothing else, you do not need to build a query object at all. <code>ecs_each</code> walks the component's tables directly:</p><p><code>ecs_iter_t it = ecs_each(world, Position);</code> then <code>while (ecs_each_next(&it))</code>. It skips query creation entirely, which makes it the right tool for a one-off loop — and the wrong tool for anything you run every frame with more than one term, where a query you keep around is better.</p>"
+      },
+      {
+        type: "text",
+        heading: "When a query stops being simple",
+        html: "<p>Adding any of these takes the query off the fast path and onto the general search plan. That is not a problem — it is what the rest of this deck is about — but it is worth knowing which knob costs what:</p><ul><li><strong>Operators</strong> other than plain and: <code>Not</code>, <code>Or</code>, <code>Optional</code>.</li><li><strong>Traversal</strong>: reading a component from a parent or prefab with <code>up</code> or <code>cascade</code>.</li><li><strong>Wildcards</strong> like <code>(Likes, *)</code>, and query variables.</li><li><strong>Other sources</strong>: a term matched on a fixed entity rather than on <code>$this</code>.</li></ul><p>A query mixing both keeps the benefit for the plain terms: the compiler batches the trivial ones into a single instruction and only runs the general machinery for the rest.</p>"
+      }
+    ],
+    related: ["qry-operators", "qry-compiler", "qry-fields", "qry-performance"]
+  },
+  {
+    id: "qry-operators",
+    parent: "qry-uncached",
+    order: 2,
+    title: "Operators",
+    code: "QRY-03B",
+    tagline: "And, or, not, maybe — how terms combine",
+    intro: "By default every term on the checklist must pass — that's the <em>And</em> operator. Other operators let a term say &quot;must <em>not</em> have this&quot;, &quot;one of these will do&quot;, or &quot;nice to have, but not required&quot;.",
+    sections: [
+      {
+        type: "text",
+        heading: "The seven operators",
+        html: "<p>Each term has exactly one operator, set with the <code>oper</code> member:</p><ul><li><strong>And</strong> (<code>EcsAnd</code>, the default): the entity must have this. In the query language it's just a comma: <code>Position, Velocity</code>.</li><li><strong>Or</strong> (<code>EcsOr</code>): at least one term in an or-chain must match: <code>Velocity || Speed</code>. Set <code>EcsOr</code> on a term to chain it with the <em>next</em> term.</li><li><strong>Not</strong> (<code>EcsNot</code>): the entity must <em>not</em> have this: <code>!Frozen</code>.</li><li><strong>Optional</strong> (<code>EcsOptional</code>): match whether or not the entity has it: <code>?Velocity</code>. Doesn't change which entities match, but if the component is there, you get it — which is cheaper than a separate <code>ecs_get</code> and saves you from splitting one query into several. Check with <code>ecs_field_is_set</code> before reading.</li><li><strong>AndFrom</strong> (<code>EcsAndFrom</code>): must have <em>all</em> components that some other entity (typically a prefab) has: <code>and|MyType</code>. A checklist that borrows its lines from another entity.</li><li><strong>OrFrom</strong> (<code>EcsOrFrom</code>): must have at least one of them: <code>or|MyType</code>.</li><li><strong>NotFrom</strong> (<code>EcsNotFrom</code>): must have none of them: <code>not|MyType</code>.</li></ul>"
+      },
+      {
+        type: "code",
+        heading: "Or in C, and the field it shares",
+        lang: "c",
+        title: "Four terms, three fields",
+        src: "ecs_query_t *q = ecs_query(world, {\n  .terms = {\n    { ecs_id(Position) },\n    { ecs_id(Velocity), .oper = EcsOr },\n    { ecs_id(Speed) },\n    { ecs_id(Mass) }\n  }\n});\n\necs_iter_t it = ecs_query_iter(world, q);\nwhile (ecs_query_next(&it)) {\n  Position *p = ecs_field(&it, Position, 0);\n  Mass *m = ecs_field(&it, Mass, 2);\n  ecs_id_t vs_id = ecs_field_id(&it, 1);\n}"
+      },
+      {
+        type: "text",
+        heading: "Watch out: Or chains merge fields",
+        html: "<p>Terms in an Or chain can each produce a different component, so they are folded into a <em>single field</em> in the iterator. The query above has 4 terms but only 3 fields: <code>Position</code> is field 0, <code>Velocity || Speed</code> together are field 1, and <code>Mass</code> is field 2 — not 3. Use <code>ecs_field_id</code> to find out which of the two actually matched for the current result.</p>"
+      },
+      {
+        type: "text",
+        heading: "Equality predicates",
+        html: "<p>A special family of operators compares a <em>variable</em> against a value instead of testing for a component. In the query language they look like <code>$this == UssEnterprise</code>, <code>$this != $other</code>, or the fuzzy name match <code>$this ~= &quot;Uss&quot;</code> (matches entities whose name contains the substring). Under the hood these use the builtin <code>EcsPredEq</code>, <code>EcsPredMatch</code> and <code>EcsPredLookup</code> entities as the term's <em>first</em> element. When an equality term is the first place a variable appears, it doesn't test — it <em>assigns</em> the variable.</p><p>There are also <em>query scopes</em>: wrapping terms in <code>!{ ... }</code> negates the result of the whole group, which lets you say things like &quot;spaceships where <em>none</em> of the engines are healthy&quot;.</p>"
+      }
+    ],
+    related: ["qry-language", "qry-variables", "qry-fields"]
+  },
+  {
     id: "qry-traversal",
-    parent: "qry-anatomy",
-    order: 4,
+    parent: "qry-uncached",
+    order: 3,
     title: "Traversal",
-    code: "QRY-01D",
+    code: "QRY-03C",
     tagline: "If you don't have it, ask your parents",
     intro: "Traversal lets a term look for a component <em>up a relationship</em>: if the entity doesn't have it, check its parent, then the grandparent, and so on. It's how a transform system finds the parent's Transform, and how entities appear to &quot;have&quot; components they inherit from a prefab.",
     sections: [
@@ -233,269 +337,48 @@ window.FLECS_TOUR.register([
         html: "<p>When a component has the <code>(OnInstantiate, Inherit)</code> trait, plain terms for it silently become <code>self|up</code> over the <code>IsA</code> relationship. That's the whole magic behind prefab inheritance: a query for <code>Style</code> finds the Style stored on the prefab your entity <code>IsA</code>-points to. Add an explicit <code>self</code> to switch that off. And even when you traverse a different relationship like <code>ChildOf</code>, each entity visited along the way is still checked for inherited components.</p><p>Gotchas worth knowing:</p><ul><li><code>cascade</code> and <code>desc</code> require a cached query (cascade is implemented with cache grouping by hierarchy depth).</li><li>Components matched through traversal default to <code>[in]</code> access — they're shared, so writing them is opt-in.</li><li>Cached queries that traverse can trigger <em>rematching</em>, which has a cost — see the cached queries deck.</li></ul>"
       }
     ],
-    related: ["qry-rematching", "qry-grouping", "components", "lifecycle"]
+    related: ["qry-rematching", "qry-grouping", "components", "entities", "wld-hierarchies", "lif-inheritance"]
   },
   {
-    id: "qry-language",
-    parent: "queries",
-    order: 2,
-    title: "The Flecs Query Language",
-    code: "QRY-02",
-    tagline: "Whole queries in one line of text",
-    intro: "The Flecs Query Language is a tiny text format for writing queries: <code>&quot;Position, !Velocity, (Likes, $friend)&quot;</code>. It says nothing the C descriptor can't say — every piece of syntax maps straight onto a term — but text is easy to type, store in files, and send over a network.",
-    sections: [
-      {
-        type: "text",
-        heading: "The syntax in five minutes",
-        html: "<p>An expression is a comma-separated list of terms. Each bit of punctuation sets one member of the corresponding <code>ecs_term_t</code>:</p><ul><li><code>Position</code> — must have Position. <code>(Likes, Bob)</code> — must have the pair.</li><li><code>!Velocity</code> not, <code>?Velocity</code> optional, <code>Velocity || Speed</code> or, <code>and|MyType</code> / <code>or|MyType</code> / <code>not|MyType</code> for the *From operators.</li><li><code>[in] Velocity</code> — access modifiers in square brackets.</li><li><code>SimTime(Game)</code> — explicit source in parentheses; <code>Likes($this, Bob)</code> is the fully spelled-out pair form. Names starting with <code>$</code> are variables; a bare name is an entity looked up at query creation.</li><li><code>Transform(up ChildOf)</code>, <code>Transform(cascade)</code>, <code>Style(self|up)</code> — traversal flags inside the source parentheses.</li><li><code>(Likes, *)</code> — wildcard, one result per matching pair; <code>(Likes, _)</code> — the <em>any</em> wildcard, at most one result no matter how many pairs match.</li><li><code>$this == UssEnterprise</code>, <code>$this ~= &quot;Uss&quot;</code> — equality and fuzzy-name predicates; <code>!{ ... }</code> — a negated scope over several terms; <code>$this.cockpit</code> — a lookup of a named child relative to a variable.</li></ul>"
-      },
-      {
-        type: "code",
-        heading: "The same query, twice",
-        lang: "c",
-        title: "expr and terms produce identical queries",
-        src: "ecs_query_t *q1 = ecs_query(world, {\n  .expr = \"Position, [in] Velocity, !Frozen\"\n});\n\necs_query_t *q2 = ecs_query(world, {\n  .terms = {\n    { ecs_id(Position) },\n    { ecs_id(Velocity), .inout = EcsIn },\n    { ecs_id(Frozen), .oper = EcsNot }\n  }\n});"
-      },
-      {
-        type: "code",
-        heading: "A query with variables",
-        lang: "c",
-        title: "Spaceships docked to planets",
-        src: "ecs_query_t *q = ecs_query(world, {\n  .expr = \"SpaceShip, (DockedTo, $planet), Planet($planet)\"\n});"
-      },
-      {
-        type: "text",
-        heading: "Where the language shows up",
-        html: "<p>Because it's just a string, the query language works anywhere text works:</p><ul><li><strong>C macros</strong>: <code>ECS_SYSTEM(world, Move, EcsOnUpdate, Position, [in] Velocity)</code> — the part after the phase is a query expression.</li><li><strong>The <code>expr</code> member</strong> of <code>ecs_query_desc_t</code>, as above.</li><li><strong>Flecs Script</strong> uses the same expressions for queries inside scripts.</li><li><strong>The REST API and Explorer</strong>: the browser tool sends query strings to your live game and shows the results — the language is what makes runtime, tooling and modding queries possible, since strings can be built when the set of components isn't known at compile time.</li></ul>"
-      }
-    ],
-    related: ["qry-anatomy", "qry-variables", "script", "remote"]
-  },
-  {
-    id: "qry-cached",
-    parent: "queries",
-    order: 3,
-    title: "Cached Queries",
-    code: "QRY-03",
-    tagline: "A saved answer that updates itself",
-    intro: "A cached query does its searching <em>once</em>, writes down the list of matching tables, and afterwards just reads the list. Like a librarian who keeps a card titled &quot;all books about dragons&quot; and updates the card whenever a shelf changes, instead of walking the aisles for every visitor.",
-    sections: [
-      {
-        type: "text",
-        heading: "What exactly is cached",
-        html: "<p>Flecs groups entities with identical component sets into <em>tables</em> (archetypes). A query doesn't match entities one by one — it matches whole tables. And while entities move between tables all the time, the set of tables itself is small and stable: most games settle on a fixed set of component combinations soon after loading.</p><p>That makes the cache cheap and powerful: it's a list of matched tables (each entry remembering where in the table each field's column lives, plus resolved ids and sources for traversal matches). Iterating a cached query is just walking this list — no searching at all. The cache stays current by observing table creation and deletion: each new table is tested once against the query, ever.</p><p>Internally the cache runs a <em>cache query</em> derived from yours: terms that can't be cached are left out (the leftovers are evaluated on the fly each iteration, mapped back through a field map), and fully trivial caches — no wildcards, no traversal, only And/Not/Optional — use a slimmer storage format and a faster iterator.</p>"
-      },
-      {
-        type: "diagram",
-        heading: "The cache is a list of tables",
-        spec: {
-          type: "grid",
-          title: "Cache of query: Position, Velocity",
-          cols: ["Cache entry", "Table (archetype)", "Entities", "Position column", "Velocity column"],
-          rows: [
-            ["0", "[Position, Velocity]", "1,204", "0", "1"],
-            ["1", "[Position, Velocity, Mass]", "310", "0", "1"],
-            ["2", "[Position, Velocity, Turret]", "12", "0", "1"]
-          ],
-          note: "Iteration walks these rows and hands you each table's arrays directly. A new table [Position, Velocity, Shield] would be matched once, on creation, and appended."
-        }
-      },
-      {
-        type: "text",
-        heading: "The four cache kinds",
-        html: "<p>The <code>cache_kind</code> member picks the policy:</p><ul><li><code>EcsQueryCacheDefault</code> — decide from context: cached if the query is associated with an entity (which is why <strong>system queries are cached by default</strong>), uncached otherwise.</li><li><code>EcsQueryCacheAuto</code> — cache every term that can be cached; the rest is evaluated live. Cacheable: plain components, tags and pairs, <code>$this</code> sources, wildcards, operators, traversal.</li><li><code>EcsQueryCacheAll</code> — insist that everything is cacheable, or fail query creation. Requires the <code>FLECS_CACHED_QUERIES</code> addon.</li><li><code>EcsQueryCacheNone</code> — never cache.</li></ul><p>The tradeoff: caches make iteration very fast but cost memory, make query creation slower, and add a little work to every table creation and deletion. Rule of thumb — queries that run every frame (systems) should be cached; ad-hoc, create-and-throw-away queries should not.</p>"
-      },
-      {
-        type: "code",
-        heading: "Requesting a cached query",
-        lang: "c",
-        src: "ecs_query_t *q = ecs_query(world, {\n  .terms = { { ecs_id(Position) }, { ecs_id(Velocity) } },\n  .cache_kind = EcsQueryCacheAuto\n});"
-      },
-      {
-        type: "text",
-        heading: "What lives below this deck",
-        html: "<p>The cache enables features that need somewhere to keep state: <strong>rematching</strong> keeps traversal results honest when parents change, <strong>change detection</strong> tracks which tables were touched, and <strong>sorting</strong> and <strong>grouping</strong> keep results in a chosen order. Each has its own page below.</p>"
-      }
-    ],
-    related: ["qry-uncached", "qry-rematching", "qry-change-detection", "qry-sorting", "qry-grouping", "storage", "systems"]
-  },
-  {
-    id: "qry-rematching",
-    parent: "qry-cached",
-    order: 1,
-    title: "Rematching",
-    code: "QRY-03A",
-    tagline: "When the cache's answer goes stale",
-    intro: "A cache entry normally only depends on the matched table itself, so it never goes stale. But a query that matched a component <em>through traversal</em> — on a parent, or an inherited prefab — depends on an entity outside the table. When that entity changes, the cached answer can be wrong, and Flecs must re-check it. That re-check is rematching.",
-    sections: [
-      {
-        type: "text",
-        heading: "When it happens",
-        html: "<p>Only queries that use <code>up</code> or <code>cascade</code> traversal (including the implicit <code>self|up IsA</code> that inheritable components get) can need rematching. Triggers include:</p><ul><li>A parent (or other traversal target) adds or removes the matched component — say the <code>Transform</code> your children matched via <code>up</code> disappears.</li><li>An entity's <code>IsA</code> target changes, so the set of inherited components changes.</li><li>Hierarchy changes that alter which entity a traversal ends at.</li></ul><p>The machinery: the world keeps <em>component monitors</em> for components matched by traversal queries. Writes to a monitored component set a dirty flag; when the flags are evaluated, every query registered with that monitor re-runs matching for the affected tables and updates its cache entries (each entry carries a <code>rematch_count</code> to track this).</p>"
-      },
-      {
-        type: "diagram",
-        heading: "From parent change to fresh cache",
-        spec: {
-          type: "flow",
-          lanes: [
-            [ { id: "a", label: "Parent changes", sub: "removes Transform" } ],
-            [ { id: "b", label: "Component monitor", sub: "marked dirty" } ],
-            [ { id: "c", label: "Monitors evaluated", sub: "queries flagged for rematch" } ],
-            [ { id: "d", label: "Rematch", sub: "cache entries re-validated" } ]
-          ],
-          edges: [
-            { from: "a", to: "b" },
-            { from: "b", to: "c" },
-            { from: "c", to: "d" }
-          ],
-          note: "Between the change and the rematch, the cache would have handed out a pointer to a component that is no longer there — rematching closes that gap."
-        }
-      },
-      {
-        type: "text",
-        heading: "What it costs, and what to do about it",
-        html: "<p>Rematching re-evaluates matched tables, so its cost grows with the number of archetypes and the number of traversal queries — in a world with many of both, it can show up as real frame time whenever hierarchies churn.</p><ul><li><strong>Measure first.</strong> Import the stats module and open the world statistics page in the Explorer; rematch counts are tracked there.</li><li><strong>If it hurts</strong>, make the traversal queries uncached: iteration gets slower, but the rematch cost disappears entirely, since uncached queries recompute traversal fresh every time.</li><li><strong>Keep hierarchies calm.</strong> Rematching only fires when traversal targets change, so stable parent/prefab structures never pay it.</li></ul><p>The Flecs docs are candid that rematching is a stopgap: it works, but a cheaper mechanism is planned. Until then, it's the one cost of cached traversal queries worth keeping an eye on.</p>"
-      }
-    ],
-    related: ["qry-traversal", "qry-cached", "observability", "lifecycle"]
-  },
-  {
-    id: "qry-change-detection",
-    parent: "qry-cached",
-    order: 2,
-    title: "Change Detection",
-    code: "QRY-03B",
-    tagline: "Skip the tables where nothing happened",
-    intro: "Change detection lets a query ask &quot;did anything I care about change since I last looked?&quot; — and skip entire tables of untouched entities. It's a sticky note on each drawer of the filing cabinet: if nobody moved the note, don't open the drawer.",
-    sections: [
-      {
-        type: "text",
-        heading: "Dirty counters per table column",
-        html: "<p>Tracking every entity would be expensive, so Flecs tracks changes per <em>table, per component column</em>: each tracked table keeps a list of counters — one per component, plus one for entities joining or leaving the table. Any change bumps the matching counter.</p><p>A query with change detection keeps its own copy of those counters (a <em>monitor</em>) for every cached table. &quot;Has anything changed?&quot; is then just comparing numbers; iterating a table syncs the copy, resetting its changed state. Counters are only maintained on tables matched by at least one change-detecting query, so nobody else pays for the feature. It requires a cached query and the <code>FLECS_CACHED_QUERIES</code> addon.</p><p>What bumps the counters: adding/removing components, deleting entities, <code>ecs_set</code>, an explicit <code>ecs_modified</code>, and — importantly — <em>being iterated by a query with <code>inout</code> or <code>out</code> terms</em>. What doesn't: writing through a pointer from <code>ecs_ensure</code> or a cached ref without calling <code>ecs_modified</code>. Flecs can't see raw pointer writes.</p>"
-      },
-      {
-        type: "code",
-        heading: "The API",
-        lang: "c",
-        title: "ecs_query_changed, ecs_iter_changed, ecs_iter_skip",
-        src: "ecs_query_t *q = ecs_query(world, {\n  .terms = {{ ecs_id(Position), .inout = EcsIn }},\n  .flags = EcsQueryDetectChanges\n});\n\nbool any = ecs_query_changed(q);\n\necs_iter_t it = ecs_query_iter(world, q);\nwhile (ecs_query_next(&it)) {\n  if (!ecs_iter_changed(&it)) {\n    ecs_iter_skip(&it);\n    continue;\n  }\n  Position *p = ecs_field(&it, Position, 0);\n  for (int i = 0; i < it.count; i++) {\n  }\n}"
-      },
-      {
-        type: "text",
-        heading: "Rules of the road",
-        html: "<p>Three habits make change detection work well:</p><ul><li><strong>Read with <code>[in]</code>.</strong> A change-detecting query with <code>inout</code>/<code>out</code> terms marks components dirty just by iterating, so it would always see itself as changed. Read-only terms don't.</li><li><strong>Skip honestly.</strong> A writing query that decides not to modify a table should call <code>ecs_iter_skip</code> — otherwise the table's counters are bumped anyway, since Flecs assumes an unskipped <code>inout</code>/<code>out</code> iteration wrote something.</li><li><strong>Changed state is per table</strong> and stays set until that table is iterated by the detecting query, so per-table reactions (recompute a bounding box, re-upload a mesh) fall out naturally from the <code>ecs_iter_changed</code> check.</li></ul>"
-      }
-    ],
-    related: ["qry-access", "qry-sorting", "qry-cached"]
-  },
-  {
-    id: "qry-sorting",
-    parent: "qry-cached",
-    order: 3,
-    title: "Sorting",
-    code: "QRY-03C",
-    tagline: "Results in order, resorted only when needed",
-    intro: "A sorted query returns entities in an order you define — nearest first, lowest depth first — by giving the query a compare function. Sorting is done ahead of time and remembered; iteration stays fast because the query re-sorts only when change detection says the data moved.",
-    sections: [
-      {
-        type: "code",
-        heading: "Creating a sorted query",
-        lang: "c",
-        title: "order_by picks the component, the callback compares",
-        src: "int compare_depth(ecs_entity_t e1, const void *v1,\n                  ecs_entity_t e2, const void *v2) {\n  const Depth *d1 = v1;\n  const Depth *d2 = v2;\n  return (d1->value > d2->value) - (d1->value < d2->value);\n}\n\necs_query_t *q = ecs_query(world, {\n  .terms = {\n    { ecs_id(Depth), .inout = EcsIn }\n  },\n  .order_by = ecs_id(Depth),\n  .order_by_callback = compare_depth\n});"
-      },
-      {
-        type: "text",
-        heading: "How sorting works: sort, then slice",
-        html: "<p>Results can be spread over many tables, and sorted order may interleave them — the entity with the 3rd-smallest depth might live in a different table than the 2nd. Flecs handles this in two steps, both using quicksort:</p><ol><li><strong>Sort each table</strong> that changed, in place, by your compare function.</li><li><strong>Compute slices</strong>: walk the sorted tables to build an ordered list of runs — &quot;entities 0–2 of table A, then 3–4 of table B, then 5 of table C, then 6–7 of table A again&quot;. Iteration then just plays the slices back.</li></ol><p>The whole result is cached; iterating an already-sorted query costs about the same as a normal one. When an iterator is created, the query consults change detection: untouched data means no work at all.</p><p>Leave <code>order_by</code> at zero and the callback receives only entity ids — an easy way to iterate in creation order. And a neat trick: sorting on a component matched through <em>traversal</em> (e.g. from a parent) can order whole tables at once, since every entity in the table shares the value.</p>"
-      },
-      {
-        type: "text",
-        heading: "When re-sorts trigger, and how to avoid them",
-        html: "<ul><li>A re-sort is considered whenever an iterator is created, and happens only for tables whose sorted component (or membership) changed since last time.</li><li><strong>Mark the sort component <code>[in]</code>.</strong> If the sorted query can write it, every iteration invalidates its own order — a treadmill of re-sorts.</li><li><strong>Avoid rival sorted queries</strong> that order the same tables differently; each one's sort invalidates the other's, forcing a re-sort per iterator.</li><li>The slicing step scans matched tables repeatedly, so sorting queries that match many tables with frequently-changing data is the worst case. For coarse ordering, <em>grouping</em> is far cheaper.</li></ul>"
-      }
-    ],
-    related: ["qry-change-detection", "qry-grouping", "qry-performance"]
-  },
-  {
-    id: "qry-grouping",
-    parent: "qry-cached",
+    id: "qry-variables",
+    parent: "qry-uncached",
     order: 4,
-    title: "Grouping",
+    title: "Query Variables",
     code: "QRY-03D",
-    tagline: "Buckets of tables, iterable one bucket at a time",
-    intro: "Grouping gives every matched table a number — a <em>group id</em> — and stores tables with the same number together in the cache. You can then iterate everything bucket by bucket in ascending order, or jump straight to one bucket: &quot;just the entities in the world cell near the player, please&quot;.",
+    tagline: "Unknowns that lock in as the search proceeds",
+    intro: "A query variable like <code>$planet</code> starts out meaning &quot;someone, we don't know who yet&quot;. As the VM finds matches, the variable gets <em>bound</em> — pinned to one concrete entity — and every later term must agree with that binding. If a later term can't, the VM backtracks, unpins the variable, and tries the next candidate. Solving for unknowns this way is called reification.",
     sections: [
       {
         type: "text",
-        heading: "How groups work",
-        html: "<p>You supply a <code>group_by_callback</code> that computes a 64-bit id from a table's components — for example, the target of a <code>(Region, *)</code> pair. Because the id depends only on the table's type, it's computed once per table, when the table enters the cache.</p><p>The cache keeps one list of tables per group and an index mapping group id to its list, so inserting a table is constant-time and groups stay sorted by id. That makes grouping the <em>coarsest, cheapest</em> ordering tool Flecs has: no entities are compared, no tables are sorted — real sorting only happens in the sense that a brand-new group id must be slotted into place, which is rare. Group ids are local to the query; the tables themselves are untouched, so different queries can group the same tables differently.</p><p>Two hooks let you attach state: <code>on_group_create</code> runs when a group id first appears (its return value becomes the group's context), <code>on_group_delete</code> when its last table leaves. Combine grouping with sorting and grouping wins: tables are bucketed first, then each bucket is sorted internally.</p>"
+        heading: "A worked example",
+        html: "<p>Take <code>SpaceShip, (DockedTo, $planet), Planet($planet)</code> — ships docked to something that really is a planet:</p><ol><li>The <code>and</code> instruction for <code>SpaceShip</code> binds <code>$this</code> to a table of ships.</li><li>The instruction for <code>(DockedTo, $planet)</code> finds a DockedTo pair on those ships. Its target — say <code>Earth</code> — is written into <code>$planet</code>. The variable is now <em>bound</em>.</li><li><code>Planet($planet)</code> no longer searches anything: <code>$planet</code> is known, so it's a cheap check — does Earth have Planet?</li><li>If Earth isn't a Planet, control falls back to step 2 with <code>redo</code>: the pair instruction produces the ship's <em>next</em> DockedTo target, rebinding <code>$planet</code>. Out of targets? Fall back further to the next table of ships.</li></ol><p>Whether a term <em>searches</em> or merely <em>checks</em> is decided by what's bound when it runs — the compiler tracks this with a <code>written</code> bitset per instruction, so the plan is laid out to bind variables as early and cheaply as possible. This is also why term order can change performance: bind selective variables first, and later terms collapse into cheap checks.</p>"
       },
       {
-        type: "diagram",
-        heading: "A grouped cache",
-        spec: {
-          type: "grid",
-          title: "Query: Unit, grouped by (Region, *) target",
-          cols: ["Group id", "Tables in group", "Iterated"],
-          rows: [
-            ["Region_01", "[Unit, (Region,Region_01)], [Unit, Turret, (Region,Region_01)]", "1st"],
-            ["Region_02", "[Unit, (Region,Region_02)]", "2nd"],
-            ["Region_03", "[Unit, Ghost, (Region,Region_03)]", "3rd"]
-          ],
-          note: "Groups are iterated in ascending group id order. ecs_iter_set_group jumps the iterator to exactly one bucket."
-        }
+        type: "text",
+        heading: "Two shapes, and the tricks they enable",
+        html: "<p>A variable can hold a whole <em>table range</em> (many entities at once — how <code>$this</code> usually travels, for speed) or a single <em>entity</em>. The VM keeps both forms and converts only when needed: the <code>each</code> instruction fans a table out into individual entities when some term — a parent lookup, an equality test — needs one at a time.</p><ul><li>Variables named with a leading underscore (<code>$_x</code>) are <em>anonymous</em>: they constrain matching but aren't returned.</li><li>Lookup variables like <code>$this.cockpit</code> resolve a named child of whatever the variable is bound to.</li><li>Terms that use a variable first bound inside an optional or Or branch only run when that branch actually bound it — free conditional logic.</li></ul>"
       },
       {
         type: "code",
-        heading: "Group by region, iterate one region",
+        heading: "Reading and pre-binding variables",
         lang: "c",
-        src: "uint64_t group_by_target(ecs_world_t *world, ecs_table_t *table,\n    ecs_id_t id, void *ctx)\n{\n  ecs_id_t pair = 0;\n  if (ecs_search(world, table, ecs_pair(id, EcsWildcard), &pair) != -1) {\n    return ecs_pair_second(world, pair);\n  }\n  return 0;\n}\n\necs_query_t *q = ecs_query(world, {\n  .terms = {{ Unit }},\n  .group_by = Region,\n  .group_by_callback = group_by_target\n});\n\necs_iter_t it = ecs_query_iter(world, q);\necs_iter_set_group(&it, Region_01);\nwhile (ecs_query_next(&it)) {\n}"
+        title: "ecs_iter_set_var turns a search into a lookup",
+        src: "ecs_query_t *q = ecs_query(world, {\n  .expr = \"SpaceShip, (DockedTo, $planet), Planet($planet)\"\n});\n\nint planet_var = ecs_query_find_var(q, \"planet\");\n\necs_iter_t it = ecs_query_iter(world, q);\nwhile (ecs_query_next(&it)) {\n  ecs_entity_t planet = ecs_iter_get_var(&it, planet_var);\n  for (int i = 0; i < it.count; i++) {\n  }\n}\n\nit = ecs_query_iter(world, q);\necs_iter_set_var(&it, planet_var, earth);\nwhile (ecs_query_next(&it)) {\n}"
       },
       {
         type: "text",
-        heading: "Why this is a big deal",
-        html: "<p>Group iteration with <code>ecs_iter_set_group</code> gives you the speed of a dedicated cached query <em>per bucket</em> without maintaining a cache per bucket. Whether a group holds ten tables or ten thousand doesn't matter — the iterator walks only that group's list. Classic uses: world cells in an open world (only process cells near the player), day/night entity sets, editor-only entities.</p><p>Flecs itself runs on this feature: <code>cascade</code> traversal is grouping with hierarchy-depth as the group id, and the pipeline groups systems by their depth in the <code>DependsOn</code> tree, sorted by entity id within each group.</p>"
+        heading: "Why pre-binding is fast",
+        html: "<p><code>ecs_iter_set_var</code> pins a variable <em>before</em> iteration starts. Every instruction that would have searched for <code>$planet</code> now just checks against your value — the query runs a much smaller search. One parameterized query (&quot;ships docked to $planet&quot;) can replace a whole family of specialized ones, created once and reused with different bindings. <code>$this</code> itself is variable zero, so the same trick can constrain a query to a single entity or table.</p>"
       }
     ],
-    related: ["qry-sorting", "qry-traversal", "systems"]
-  },
-  {
-    id: "qry-uncached",
-    parent: "queries",
-    order: 4,
-    title: "Uncached Queries",
-    code: "QRY-04",
-    tagline: "Search fresh every time, own nothing",
-    intro: "An uncached query keeps no list of results — every time you iterate it, it searches the world from scratch. That makes it nearly free to create and free to keep around, which is exactly what you want for one-off questions like &quot;which entities are children of this parent, right now?&quot;.",
-    sections: [
-      {
-        type: "text",
-        heading: "When fresh beats fast",
-        html: "<p>Uncached queries are the mirror image of cached ones:</p><ul><li><strong>Creation is cheap</strong> — no cache to build — so ad-hoc, create-use-destroy queries are fine.</li><li><strong>No memory or bookkeeping</strong>: they're stateless, and add zero overhead to table creation/deletion.</li><li><strong>Iteration costs more</strong>: the query engine searches for matching tables on every iteration, guided by the world's component index (for each component, the list of tables that contain it — the engine starts from the rarest term and checks candidates against the rest).</li><li><strong>No rematching, ever</strong>: traversal results are computed fresh each time, which is also the escape hatch when cached traversal queries suffer rematch storms.</li></ul><p>You get an uncached query with <code>.cache_kind = EcsQueryCacheNone</code>, or simply by creating a query without an associated entity — the Default policy makes entity-less queries uncached. Features that need somewhere to store state — change detection, sorting, grouping, <code>cascade</code> — are cached-only.</p>"
-      },
-      {
-        type: "code",
-        heading: "The ecs_each fast path",
-        lang: "c",
-        title: "One component, minimum machinery",
-        src: "ecs_iter_t it = ecs_each(world, Position);\nwhile (ecs_each_next(&it)) {\n  Position *p = ecs_field(&it, Position, 0);\n  for (int i = 0; i < it.count; i++) {\n    p[i].x += 1;\n  }\n}\n\necs_iter_t cit = ecs_children(world, parent);\nwhile (ecs_children_next(&cit)) {\n  for (int i = 0; i < cit.count; i++) {\n  }\n}"
-      },
-      {
-        type: "text",
-        heading: "How an uncached query runs",
-        html: "<p>For the simplest ask — all entities with one component or pair — <code>ecs_each_id</code> skips query creation entirely and walks the component index directly; <code>ecs_children</code> is the same trick for <code>(ChildOf, parent)</code>. Much lighter than building even an uncached query.</p><p>Everything richer goes through real machinery: when the query is created, a <em>compiler</em> turns the terms into a small program (the query plan), and each iteration a <em>virtual machine</em> — a little program-runner inside Flecs — executes that plan against the world. Cached queries use the same VM with a plan that mostly just reads the cache; for fully-cached trivial queries the plan is empty and the VM is bypassed altogether. The next two pages open up the compiler and the VM.</p>"
-      }
-    ],
-    related: ["qry-compiler", "qry-vm", "qry-cached", "storage"]
+    related: ["qry-vm", "qry-language", "qry-sources"]
   },
   {
     id: "qry-compiler",
     parent: "qry-uncached",
-    order: 1,
+    order: 5,
     title: "The Query Compiler",
-    code: "QRY-04A",
+    code: "QRY-03E",
     tagline: "From checklist to step-by-step search plan",
     intro: "When you create a query, Flecs doesn't store your terms as-is — it <em>compiles</em> them into a plan: an ordered list of small instructions that say exactly how to search. Like turning a shopping list into an efficient route through the store, aisle by aisle.",
     sections: [
@@ -544,9 +427,9 @@ window.FLECS_TOUR.register([
   {
     id: "qry-vm",
     parent: "qry-uncached",
-    order: 2,
+    order: 6,
     title: "The Query VM",
-    code: "QRY-04B",
+    code: "QRY-03F",
     tagline: "A tiny machine that searches by trial and error",
     intro: "The query engine is a small virtual machine: it runs the compiled plan one instruction at a time, moving <em>forward</em> when an instruction finds a match and <em>backward</em> when one comes up empty — asking the earlier instruction for its next candidate. This forward-backward dance is how one simple loop can answer arbitrarily clever queries.",
     sections: [
@@ -593,38 +476,245 @@ window.FLECS_TOUR.register([
     related: ["qry-compiler", "qry-variables", "qry-iteration", "storage"]
   },
   {
-    id: "qry-variables",
-    parent: "qry-vm",
-    order: 1,
-    title: "Variables & Reification",
-    code: "QRY-04B1",
-    tagline: "Unknowns that lock in as the search proceeds",
-    intro: "A query variable like <code>$planet</code> starts out meaning &quot;someone, we don't know who yet&quot;. As the VM finds matches, the variable gets <em>bound</em> — pinned to one concrete entity — and every later term must agree with that binding. If a later term can't, the VM backtracks, unpins the variable, and tries the next candidate. Solving for unknowns this way is called reification.",
+    id: "qry-cached",
+    parent: "queries",
+    order: 4,
+    title: "Cached Queries",
+    code: "QRY-04",
+    tagline: "A saved answer that updates itself",
+    intro: "A cached query does its searching <em>once</em>, writes down the list of matching tables, and afterwards just reads the list. Like a librarian who keeps a card titled &quot;all books about dragons&quot; and updates the card whenever a shelf changes, instead of walking the aisles for every visitor.",
     sections: [
       {
         type: "text",
-        heading: "A worked example",
-        html: "<p>Take <code>SpaceShip, (DockedTo, $planet), Planet($planet)</code> — ships docked to something that really is a planet:</p><ol><li>The <code>and</code> instruction for <code>SpaceShip</code> binds <code>$this</code> to a table of ships.</li><li>The instruction for <code>(DockedTo, $planet)</code> finds a DockedTo pair on those ships. Its target — say <code>Earth</code> — is written into <code>$planet</code>. The variable is now <em>bound</em>.</li><li><code>Planet($planet)</code> no longer searches anything: <code>$planet</code> is known, so it's a cheap check — does Earth have Planet?</li><li>If Earth isn't a Planet, control falls back to step 2 with <code>redo</code>: the pair instruction produces the ship's <em>next</em> DockedTo target, rebinding <code>$planet</code>. Out of targets? Fall back further to the next table of ships.</li></ol><p>Whether a term <em>searches</em> or merely <em>checks</em> is decided by what's bound when it runs — the compiler tracks this with a <code>written</code> bitset per instruction, so the plan is laid out to bind variables as early and cheaply as possible. This is also why term order can change performance: bind selective variables first, and later terms collapse into cheap checks.</p>"
+        heading: "What exactly is cached",
+        html: "<p>Flecs groups entities with identical component sets into <em>tables</em> (archetypes). A query doesn't match entities one by one — it matches whole tables. And while entities move between tables all the time, the set of tables itself is small and stable: most games settle on a fixed set of component combinations soon after loading.</p><p>That makes the cache cheap and powerful: it's a list of matched tables (each entry remembering where in the table each field's column lives, plus resolved ids and sources for traversal matches). Iterating a cached query is just walking this list — no searching at all. The cache stays current by observing table creation and deletion: each new table is tested once against the query, ever.</p><p>Internally the cache runs a <em>cache query</em> derived from yours: terms that can't be cached are left out (the leftovers are evaluated on the fly each iteration, mapped back through a field map), and fully trivial caches — no wildcards, no traversal, only And/Not/Optional — use a slimmer storage format and a faster iterator.</p>"
+      },
+      {
+        type: "diagram",
+        heading: "The cache is a list of tables",
+        spec: {
+          type: "grid",
+          title: "Cache of query: Position, Velocity",
+          cols: ["Cache entry", "Table (archetype)", "Entities", "Position column", "Velocity column"],
+          rows: [
+            ["0", "[Position, Velocity]", "1,204", "0", "1"],
+            ["1", "[Position, Velocity, Mass]", "310", "0", "1"],
+            ["2", "[Position, Velocity, Turret]", "12", "0", "1"]
+          ],
+          note: "Iteration walks these rows and hands you each table's arrays directly. A new table [Position, Velocity, Shield] would be matched once, on creation, and appended."
+        }
       },
       {
         type: "text",
-        heading: "Two shapes, and the tricks they enable",
-        html: "<p>A variable can hold a whole <em>table range</em> (many entities at once — how <code>$this</code> usually travels, for speed) or a single <em>entity</em>. The VM keeps both forms and converts only when needed: the <code>each</code> instruction fans a table out into individual entities when some term — a parent lookup, an equality test — needs one at a time.</p><ul><li>Variables named with a leading underscore (<code>$_x</code>) are <em>anonymous</em>: they constrain matching but aren't returned.</li><li>Lookup variables like <code>$this.cockpit</code> resolve a named child of whatever the variable is bound to.</li><li>Terms that use a variable first bound inside an optional or Or branch only run when that branch actually bound it — free conditional logic.</li></ul>"
+        heading: "The four cache kinds",
+        html: "<p>The <code>cache_kind</code> member picks the policy:</p><ul><li><code>EcsQueryCacheDefault</code> — decide from context: cached if the query is associated with an entity (which is why <strong>system queries are cached by default</strong>), uncached otherwise.</li><li><code>EcsQueryCacheAuto</code> — cache every term that can be cached; the rest is evaluated live. Cacheable: plain components, tags and pairs, <code>$this</code> sources, wildcards, operators, traversal.</li><li><code>EcsQueryCacheAll</code> — insist that everything is cacheable, or fail query creation. Requires the <code>FLECS_CACHED_QUERIES</code> addon.</li><li><code>EcsQueryCacheNone</code> — never cache.</li></ul><p>The tradeoff: caches make iteration very fast but cost memory, make query creation slower, and add a little work to every table creation and deletion. Rule of thumb — queries that run every frame (systems) should be cached; ad-hoc, create-and-throw-away queries should not.</p>"
       },
       {
         type: "code",
-        heading: "Reading and pre-binding variables",
+        heading: "Requesting a cached query",
         lang: "c",
-        title: "ecs_iter_set_var turns a search into a lookup",
-        src: "ecs_query_t *q = ecs_query(world, {\n  .expr = \"SpaceShip, (DockedTo, $planet), Planet($planet)\"\n});\n\nint planet_var = ecs_query_find_var(q, \"planet\");\n\necs_iter_t it = ecs_query_iter(world, q);\nwhile (ecs_query_next(&it)) {\n  ecs_entity_t planet = ecs_iter_get_var(&it, planet_var);\n  for (int i = 0; i < it.count; i++) {\n  }\n}\n\nit = ecs_query_iter(world, q);\necs_iter_set_var(&it, planet_var, earth);\nwhile (ecs_query_next(&it)) {\n}"
+        src: "ecs_query_t *q = ecs_query(world, {\n  .terms = { { ecs_id(Position) }, { ecs_id(Velocity) } },\n  .cache_kind = EcsQueryCacheAuto\n});"
       },
       {
         type: "text",
-        heading: "Why pre-binding is fast",
-        html: "<p><code>ecs_iter_set_var</code> pins a variable <em>before</em> iteration starts. Every instruction that would have searched for <code>$planet</code> now just checks against your value — the query runs a much smaller search. One parameterized query (&quot;ships docked to $planet&quot;) can replace a whole family of specialized ones, created once and reused with different bindings. <code>$this</code> itself is variable zero, so the same trick can constrain a query to a single entity or table.</p>"
+        heading: "What lives below this deck",
+        html: "<p>The cache enables features that need somewhere to keep state: <strong>rematching</strong> keeps traversal results honest when parents change, <strong>change detection</strong> tracks which tables were touched, and <strong>sorting</strong> and <strong>grouping</strong> keep results in a chosen order. Each has its own page below.</p>"
       }
     ],
-    related: ["qry-vm", "qry-language", "qry-sources"]
+    related: ["qry-uncached", "qry-rematching", "qry-change-detection", "qry-sorting", "qry-grouping", "storage", "systems", "qry-cascade"]
+  },
+  {
+    id: "qry-cascade",
+    parent: "qry-cached",
+    order: 1,
+    title: "Cascade",
+    code: "QRY-04A",
+    tagline: "Parents before children, without sorting anything",
+    intro: "Some work has to happen top-down: a transform system must compute a parent's world position before its children can use it. <code>cascade</code> is traversal with a promise about order — it reads a component from up the hierarchy like <code>up</code> does, and hands you the results breadth-first, shallowest entities first.",
+    sections: [
+      {
+        type: "text",
+        heading: "Handing out the mail floor by floor",
+        html: "<p>Deliver mail in a building by starting at the ground floor and working up, and everyone you visit has already received whatever their floor below needed to pass on. That is breadth-first order, and it is what a transform system needs: by the time you reach a child, its parent's world transform is already final.</p><p>You ask for it by using <code>cascade</code> instead of <code>up</code> as the term's source. Everything else about the term stays the same: it still reaches up the <code>ChildOf</code> relationship (or whichever traversable relationship you name) to find the component on an ancestor.</p>"
+      },
+      {
+        type: "code",
+        heading: "A transform query",
+        lang: "c",
+        title: "The parent's Position, and results in depth order",
+        src: "ecs_query_t *q = ecs_query(world, {\n    .terms = {\n        { .id = ecs_id(Position) },\n        { .id = ecs_id(Position), .src.id = EcsCascade, .trav = EcsChildOf, .oper = EcsOptional }\n    },\n    .cache_kind = EcsQueryCacheAuto\n});"
+      },
+      {
+        type: "text",
+        heading: "The trick: it is grouping, not sorting",
+        html: "<p>A cascade query does not sort its results. It <em>groups</em> them: each matched table gets a group id equal to its depth in the hierarchy, and groups are iterated from low to high. Since tables are already grouped by their exact set of components — and a table's depth never changes without the table changing — keeping this order costs almost nothing as entities come and go.</p><p>That has a pleasant consequence: the guarantee is per level, not per entity. All depth-1 tables are iterated before any depth-2 table, but within a level the order is whatever the storage happens to give you. For a transform system that is exactly enough.</p><p>Add the <code>Desc</code> flag to walk the levels the other way, deepest first — useful for the kind of pass that gathers information from children up to their parents, like summing the mass of a hierarchy.</p>"
+      },
+      {
+        type: "diagram",
+        heading: "Iteration order",
+        spec: {
+          type: "flow",
+          lanes: [
+            [ { id: "d0", label: "Depth 0", sub: "roots" } ],
+            [ { id: "d1", label: "Depth 1", sub: "their children" } ],
+            [ { id: "d2", label: "Depth 2", sub: "grandchildren" } ]
+          ],
+          edges: [
+            { from: "d0", to: "d1", label: "group 0 then 1" },
+            { from: "d1", to: "d2", label: "then 2" }
+          ],
+          note: "With the Desc flag the same groups are visited in reverse: 2, then 1, then 0."
+        }
+      },
+      {
+        type: "text",
+        heading: "What it requires, and who already uses it",
+        html: "<ul><li><strong>Cascade needs a cache.</strong> The depth grouping lives in the query cache, so <code>Cascade</code> and <code>Desc</code> force a cached query. A query that also uses traversal can trigger rematching when hierarchies change — that is the price of the cached answer staying correct.</li><li><strong>Any traversable relationship works</strong>, not just <code>ChildOf</code>. The relationship must have the <code>Traversable</code> trait, which is what keeps a cyclic relationship from sending the search into an endless loop.</li><li><strong>The pipeline is itself a cascade query.</strong> Flecs orders your systems by grouping them on their depth in the <code>DependsOn</code> tree, then ordering within a depth by entity id — which is why systems run in phase order, and in declaration order inside a phase.</li><li><strong>Non-fragmenting parents</strong> keep their depth in a <code>ParentDepth</code> pair, so you can get the same breadth-first walk with an explicit <code>group_by</code> on it.</li></ul>"
+      }
+    ],
+    related: ["qry-traversal", "qry-grouping", "qry-rematching", "sys-phases"]
+  },
+  {
+    id: "qry-grouping",
+    parent: "qry-cached",
+    order: 2,
+    title: "Grouping",
+    code: "QRY-04B",
+    tagline: "Buckets of tables, iterable one bucket at a time",
+    intro: "Grouping gives every matched table a number — a <em>group id</em> — and stores tables with the same number together in the cache. You can then iterate everything bucket by bucket in ascending order, or jump straight to one bucket: &quot;just the entities in the world cell near the player, please&quot;.",
+    sections: [
+      {
+        type: "text",
+        heading: "How groups work",
+        html: "<p>You supply a <code>group_by_callback</code> that computes a 64-bit id from a table's components — for example, the target of a <code>(Region, *)</code> pair. Because the id depends only on the table's type, it's computed once per table, when the table enters the cache.</p><p>The cache keeps one list of tables per group and an index mapping group id to its list, so inserting a table is constant-time and groups stay sorted by id. That makes grouping the <em>coarsest, cheapest</em> ordering tool Flecs has: no entities are compared, no tables are sorted — real sorting only happens in the sense that a brand-new group id must be slotted into place, which is rare. Group ids are local to the query; the tables themselves are untouched, so different queries can group the same tables differently.</p><p>Two hooks let you attach state: <code>on_group_create</code> runs when a group id first appears (its return value becomes the group's context), <code>on_group_delete</code> when its last table leaves. Combine grouping with sorting and grouping wins: tables are bucketed first, then each bucket is sorted internally.</p>"
+      },
+      {
+        type: "diagram",
+        heading: "A grouped cache",
+        spec: {
+          type: "grid",
+          title: "Query: Unit, grouped by (Region, *) target",
+          cols: ["Group id", "Tables in group", "Iterated"],
+          rows: [
+            ["Region_01", "[Unit, (Region,Region_01)], [Unit, Turret, (Region,Region_01)]", "1st"],
+            ["Region_02", "[Unit, (Region,Region_02)]", "2nd"],
+            ["Region_03", "[Unit, Ghost, (Region,Region_03)]", "3rd"]
+          ],
+          note: "Groups are iterated in ascending group id order. ecs_iter_set_group jumps the iterator to exactly one bucket."
+        }
+      },
+      {
+        type: "code",
+        heading: "Group by region, iterate one region",
+        lang: "c",
+        src: "uint64_t group_by_target(ecs_world_t *world, ecs_table_t *table,\n    ecs_id_t id, void *ctx)\n{\n  ecs_id_t pair = 0;\n  if (ecs_search(world, table, ecs_pair(id, EcsWildcard), &pair) != -1) {\n    return ecs_pair_second(world, pair);\n  }\n  return 0;\n}\n\necs_query_t *q = ecs_query(world, {\n  .terms = {{ Unit }},\n  .group_by = Region,\n  .group_by_callback = group_by_target\n});\n\necs_iter_t it = ecs_query_iter(world, q);\necs_iter_set_group(&it, Region_01);\nwhile (ecs_query_next(&it)) {\n}"
+      },
+      {
+        type: "text",
+        heading: "Why this is a big deal",
+        html: "<p>Group iteration with <code>ecs_iter_set_group</code> gives you the speed of a dedicated cached query <em>per bucket</em> without maintaining a cache per bucket. Whether a group holds ten tables or ten thousand doesn't matter — the iterator walks only that group's list. Classic uses: world cells in an open world (only process cells near the player), day/night entity sets, editor-only entities.</p><p>Flecs itself runs on this feature: <code>cascade</code> traversal is grouping with hierarchy-depth as the group id, and the pipeline groups systems by their depth in the <code>DependsOn</code> tree, sorted by entity id within each group.</p>"
+      }
+    ],
+    related: ["qry-sorting", "qry-traversal", "systems", "qry-cascade"]
+  },
+  {
+    id: "qry-sorting",
+    parent: "qry-cached",
+    order: 3,
+    title: "Sorting",
+    code: "QRY-04C",
+    tagline: "Results in order, resorted only when needed",
+    intro: "A sorted query returns entities in an order you define — nearest first, lowest depth first — by giving the query a compare function. Sorting is done ahead of time and remembered; iteration stays fast because the query re-sorts only when change detection says the data moved.",
+    sections: [
+      {
+        type: "code",
+        heading: "Creating a sorted query",
+        lang: "c",
+        title: "order_by picks the component, the callback compares",
+        src: "int compare_depth(ecs_entity_t e1, const void *v1,\n                  ecs_entity_t e2, const void *v2) {\n  const Depth *d1 = v1;\n  const Depth *d2 = v2;\n  return (d1->value > d2->value) - (d1->value < d2->value);\n}\n\necs_query_t *q = ecs_query(world, {\n  .terms = {\n    { ecs_id(Depth), .inout = EcsIn }\n  },\n  .order_by = ecs_id(Depth),\n  .order_by_callback = compare_depth\n});"
+      },
+      {
+        type: "text",
+        heading: "How sorting works: sort, then slice",
+        html: "<p>Results can be spread over many tables, and sorted order may interleave them — the entity with the 3rd-smallest depth might live in a different table than the 2nd. Flecs handles this in two steps, both using quicksort:</p><ol><li><strong>Sort each table</strong> that changed, in place, by your compare function.</li><li><strong>Compute slices</strong>: walk the sorted tables to build an ordered list of runs — &quot;entities 0–2 of table A, then 3–4 of table B, then 5 of table C, then 6–7 of table A again&quot;. Iteration then just plays the slices back.</li></ol><p>The whole result is cached; iterating an already-sorted query costs about the same as a normal one. When an iterator is created, the query consults change detection: untouched data means no work at all.</p><p>Leave <code>order_by</code> at zero and the callback receives only entity ids — an easy way to iterate in creation order. And a neat trick: sorting on a component matched through <em>traversal</em> (e.g. from a parent) can order whole tables at once, since every entity in the table shares the value.</p>"
+      },
+      {
+        type: "text",
+        heading: "When re-sorts trigger, and how to avoid them",
+        html: "<ul><li>A re-sort is considered whenever an iterator is created, and happens only for tables whose sorted component (or membership) changed since last time.</li><li><strong>Mark the sort component <code>[in]</code>.</strong> If the sorted query can write it, every iteration invalidates its own order — a treadmill of re-sorts.</li><li><strong>Avoid rival sorted queries</strong> that order the same tables differently; each one's sort invalidates the other's, forcing a re-sort per iterator.</li><li>The slicing step scans matched tables repeatedly, so sorting queries that match many tables with frequently-changing data is the worst case. For coarse ordering, <em>grouping</em> is far cheaper.</li></ul>"
+      }
+    ],
+    related: ["qry-change-detection", "qry-grouping", "qry-performance", "sto-ordered-children"]
+  },
+  {
+    id: "qry-change-detection",
+    parent: "qry-cached",
+    order: 4,
+    title: "Change Detection",
+    code: "QRY-04D",
+    tagline: "Skip the tables where nothing happened",
+    intro: "Change detection lets a query ask &quot;did anything I care about change since I last looked?&quot; — and skip entire tables of untouched entities. It's a sticky note on each drawer of the filing cabinet: if nobody moved the note, don't open the drawer.",
+    sections: [
+      {
+        type: "text",
+        heading: "Dirty counters per table column",
+        html: "<p>Tracking every entity would be expensive, so Flecs tracks changes per <em>table, per component column</em>: each tracked table keeps a list of counters — one per component, plus one for entities joining or leaving the table. Any change bumps the matching counter.</p><p>A query with change detection keeps its own copy of those counters (a <em>monitor</em>) for every cached table. &quot;Has anything changed?&quot; is then just comparing numbers; iterating a table syncs the copy, resetting its changed state. Counters are only maintained on tables matched by at least one change-detecting query, so nobody else pays for the feature. It requires a cached query and the <code>FLECS_CACHED_QUERIES</code> addon.</p><p>What bumps the counters: adding/removing components, deleting entities, <code>ecs_set</code>, an explicit <code>ecs_modified</code>, and — importantly — <em>being iterated by a query with <code>inout</code> or <code>out</code> terms</em>. What doesn't: writing through a pointer from <code>ecs_ensure</code> or a cached ref without calling <code>ecs_modified</code>. Flecs can't see raw pointer writes.</p>"
+      },
+      {
+        type: "code",
+        heading: "The API",
+        lang: "c",
+        title: "ecs_query_changed, ecs_iter_changed, ecs_iter_skip",
+        src: "ecs_query_t *q = ecs_query(world, {\n  .terms = {{ ecs_id(Position), .inout = EcsIn }},\n  .flags = EcsQueryDetectChanges\n});\n\nbool any = ecs_query_changed(q);\n\necs_iter_t it = ecs_query_iter(world, q);\nwhile (ecs_query_next(&it)) {\n  if (!ecs_iter_changed(&it)) {\n    ecs_iter_skip(&it);\n    continue;\n  }\n  Position *p = ecs_field(&it, Position, 0);\n  for (int i = 0; i < it.count; i++) {\n  }\n}"
+      },
+      {
+        type: "text",
+        heading: "Rules of the road",
+        html: "<p>Three habits make change detection work well:</p><ul><li><strong>Read with <code>[in]</code>.</strong> A change-detecting query with <code>inout</code>/<code>out</code> terms marks components dirty just by iterating, so it would always see itself as changed. Read-only terms don't.</li><li><strong>Skip honestly.</strong> A writing query that decides not to modify a table should call <code>ecs_iter_skip</code> — otherwise the table's counters are bumped anyway, since Flecs assumes an unskipped <code>inout</code>/<code>out</code> iteration wrote something.</li><li><strong>Changed state is per table</strong> and stays set until that table is iterated by the detecting query, so per-table reactions (recompute a bounding box, re-upload a mesh) fall out naturally from the <code>ecs_iter_changed</code> check.</li></ul>"
+      }
+    ],
+    related: ["qry-access", "qry-sorting", "qry-cached", "sto-columns"]
+  },
+  {
+    id: "qry-rematching",
+    parent: "qry-cached",
+    order: 5,
+    title: "Rematching",
+    code: "QRY-04E",
+    tagline: "When the cache's answer goes stale",
+    intro: "A cache entry normally only depends on the matched table itself, so it never goes stale. But a query that matched a component <em>through traversal</em> — on a parent, or an inherited prefab — depends on an entity outside the table. When that entity changes, the cached answer can be wrong, and Flecs must re-check it. That re-check is rematching.",
+    sections: [
+      {
+        type: "text",
+        heading: "When it happens",
+        html: "<p>Only queries that use <code>up</code> or <code>cascade</code> traversal (including the implicit <code>self|up IsA</code> that inheritable components get) can need rematching. Triggers include:</p><ul><li>A parent (or other traversal target) adds or removes the matched component — say the <code>Transform</code> your children matched via <code>up</code> disappears.</li><li>An entity's <code>IsA</code> target changes, so the set of inherited components changes.</li><li>Hierarchy changes that alter which entity a traversal ends at.</li></ul><p>The machinery: the world keeps <em>component monitors</em> for components matched by traversal queries. Writes to a monitored component set a dirty flag; when the flags are evaluated, every query registered with that monitor re-runs matching for the affected tables and updates its cache entries (each entry carries a <code>rematch_count</code> to track this).</p>"
+      },
+      {
+        type: "diagram",
+        heading: "From parent change to fresh cache",
+        spec: {
+          type: "flow",
+          lanes: [
+            [ { id: "a", label: "Parent changes", sub: "removes Transform" } ],
+            [ { id: "b", label: "Component monitor", sub: "marked dirty" } ],
+            [ { id: "c", label: "Monitors evaluated", sub: "queries flagged for rematch" } ],
+            [ { id: "d", label: "Rematch", sub: "cache entries re-validated" } ]
+          ],
+          edges: [
+            { from: "a", to: "b" },
+            { from: "b", to: "c" },
+            { from: "c", to: "d" }
+          ],
+          note: "Between the change and the rematch, the cache would have handed out a pointer to a component that is no longer there — rematching closes that gap."
+        }
+      },
+      {
+        type: "text",
+        heading: "What it costs, and what to do about it",
+        html: "<p>Rematching re-evaluates matched tables, so its cost grows with the number of archetypes and the number of traversal queries — in a world with many of both, it can show up as real frame time whenever hierarchies churn.</p><ul><li><strong>Measure first.</strong> Import the stats module and open the world statistics page in the Explorer; rematch counts are tracked there.</li><li><strong>If it hurts</strong>, make the traversal queries uncached: iteration gets slower, but the rematch cost disappears entirely, since uncached queries recompute traversal fresh every time.</li><li><strong>Keep hierarchies calm.</strong> Rematching only fires when traversal targets change, so stable parent/prefab structures never pay it.</li></ul><p>The Flecs docs are candid that rematching is a stopgap: it works, but a cheaper mechanism is planned. Until then, it's the one cost of cached traversal queries worth keeping an eye on.</p>"
+      }
+    ],
+    related: ["qry-traversal", "qry-cached", "observability", "entities"]
   },
   {
     id: "qry-iteration",
@@ -667,7 +757,7 @@ window.FLECS_TOUR.register([
       {
         type: "text",
         heading: "Iterator etiquette",
-        html: "<p>A few rules keep iteration safe and fast:</p><ul><li><strong>Run to completion or clean up.</strong> The final <code>next()</code> that returns false releases the iterator's resources. Breaking out early? Call <code>ecs_iter_fini(&amp;it)</code>.</li><li><strong>Don't restructure mid-iteration.</strong> Adding/removing components moves entities between tables, which would pull the rug out from under the cursor. Wrap changes in <code>ecs_defer_begin</code>/<code>ecs_defer_end</code> (systems defer automatically) — see the Prefabs &amp; Lifecycle deck.</li><li><strong>Generic code can use <code>ecs_iter_next</code></strong>, which works for any iterator kind (query, each, children...) at the cost of a function pointer call; <code>ecs_query_next</code> is the direct, faster path.</li><li>Inside a system you receive a ready-made <code>ecs_iter_t*</code> — same struct, same fields, no <code>ecs_query_iter</code> needed.</li></ul>"
+        html: "<p>A few rules keep iteration safe and fast:</p><ul><li><strong>Run to completion or clean up.</strong> The final <code>next()</code> that returns false releases the iterator's resources. Breaking out early? Call <code>ecs_iter_fini(&amp;it)</code>.</li><li><strong>Don't restructure mid-iteration.</strong> Adding/removing components moves entities between tables, which would pull the rug out from under the cursor. Wrap changes in <code>ecs_defer_begin</code>/<code>ecs_defer_end</code> (systems defer automatically) — see the Commands deck.</li><li><strong>Generic code can use <code>ecs_iter_next</code></strong>, which works for any iterator kind (query, each, children...) at the cost of a function pointer call; <code>ecs_query_next</code> is the direct, faster path.</li><li>Inside a system you receive a ready-made <code>ecs_iter_t*</code> — same struct, same fields, no <code>ecs_query_iter</code> needed.</li></ul>"
       },
       {
         type: "struct",
@@ -718,7 +808,7 @@ window.FLECS_TOUR.register([
         ]
       }
     ],
-    related: ["qry-fields", "qry-vm", "systems", "lifecycle"]
+    related: ["qry-fields", "qry-vm", "systems", "commands"]
   },
   {
     id: "qry-fields",
@@ -752,7 +842,7 @@ window.FLECS_TOUR.register([
         html: "<ul><li><code>ecs_field</code> — the data itself. Fetch once per result, outside the inner loop.</li><li><code>ecs_field_at</code> — the data for one entity; required for sparse fields.</li><li><code>ecs_field_id</code> — which id matched, essential with wildcards and Or (was it <code>(Likes, Cats)</code> or <code>(Likes, Dogs)</code>? Velocity or Speed?).</li><li><code>ecs_field_src</code> — which entity provided it (0 means the matched entities themselves).</li><li><code>ecs_field_is_set</code> — did this optional term match here at all?</li><li><code>ecs_field_size</code> — element size, for generic code that doesn't know the type.</li></ul>"
       }
     ],
-    related: ["qry-iteration", "qry-operators", "qry-sources", "reflection"]
+    related: ["qry-iteration", "qry-operators", "qry-sources", "reflection", "sto-columns"]
   },
   {
     id: "qry-performance",
@@ -784,6 +874,6 @@ window.FLECS_TOUR.register([
         html: "<ul><li><strong>Not / Optional</strong>: cheap — a per-table check, no extra searching.</li><li><strong>Traversal, uncached</strong>: walks the hierarchy per evaluation; caches help within one iteration, depth still costs.</li><li><strong>Traversal, cached</strong>: iteration is free, but watch <em>rematching</em> when parents and prefabs churn.</li><li><strong>Change detection</strong>: near-free to maintain; can eliminate whole tables of work. Keep read paths <code>[in]</code> so they don't self-trigger.</li><li><strong>Sorting</strong>: expensive when data changes often (re-sort plus slice rebuild); free-ish when stable.</li><li><strong>Grouping</strong>: cheapest ordering tool, constant-time maintenance; group iterators give per-bucket speed without per-bucket queries.</li></ul><p>When in doubt: print the plan with <code>ecs_query_plan</code>, profile with <code>ecs_query_plan_w_profile</code>, and watch the stats module in the Explorer — cache hits, rematches and evaluation counts are all tracked.</p>"
       }
     ],
-    related: ["qry-cached", "qry-uncached", "qry-rematching", "qry-compiler", "storage", "observability"]
+    related: ["qry-cached", "qry-uncached", "qry-rematching", "qry-compiler", "storage", "observability", "sto-dont-fragment", "cmp-toggle"]
   }
 ]);

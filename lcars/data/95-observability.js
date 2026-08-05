@@ -44,7 +44,7 @@ window.FLECS_TOUR.register([
         html: "<p>Every measurement is one of two shapes:</p><ul><li>A <strong>gauge</strong> (<code>ecs_gauge_t</code>) is a &quot;right now&quot; value, like the number of entities. It keeps three arrays of 60 samples each: the windowed <em>average</em>, <em>minimum</em>, and <em>maximum</em> — so a one-frame spike survives even after averaging.</li><li>A <strong>counter</strong> (<code>ecs_counter_t</code>) is a number that only goes up, like total frames processed. It stores the raw values plus a gauge of the <em>rate</em> (how much it grew per interval).</li></ul><p>Both live in 60-slot ring buffers (<code>ECS_STAT_WINDOW</code>), with a cursor <code>t</code> pointing at the most recent slot. The pages below cover how those windows are filled, what the world statistics contain, the lighter-weight world summary, and memory statistics.</p>"
       }
     ],
-    related: ["obs-stats-windows", "obs-world-stats", "remote", "systems"]
+    related: ["obs-stats-windows", "obs-world-stats", "remote", "systems", "obs-metric-kinds"]
   },
   {
     id: "obs-stats-windows",
@@ -117,7 +117,7 @@ window.FLECS_TOUR.register([
         html: "<p>The same pattern exists at finer grain:</p><ul><li><code>ecs_query_stats_t</code> — per query: <code>result_count</code>, <code>matched_table_count</code>, <code>matched_entity_count</code>.</li><li><code>ecs_system_stats_t</code> — per system: <code>time_spent</code>, plus the stats of its query and whether it is a task (a system with no matched entities to iterate).</li><li><code>ecs_pipeline_stats_t</code> — per pipeline: the ordered list of systems (merges shown as 0), and per <em>sync point</em> — a moment where the pipeline stops to flush queued commands — the time spent and commands enqueued.</li></ul><p>When the module is imported, these are tracked automatically for every system and pipeline and stored the same windowed way, which is how the Explorer shows a time-per-system breakdown.</p>"
       }
     ],
-    related: ["obs-stats-windows", "systems", "lifecycle", "internals"]
+    related: ["obs-stats-windows", "systems", "commands", "internals"]
   },
   {
     id: "obs-world-summary",
@@ -494,6 +494,6 @@ window.FLECS_TOUR.register([
         html: "<p>The journal is off by default and has to be compiled in:</p><ul><li>Build with <code>FLECS_JOURNAL</code> defined (it automatically pulls in <code>FLECS_LOG</code>).</li><li>Journal lines are emitted through the log framework at level 4, and journaling is suppressed while the runtime log level is below trace — so raise it with <code>ecs_log_set_level(4)</code> to see the full trace.</li></ul><p>Fair warning from the addon itself: enabling journaling can have a <strong>significant impact on performance</strong> — it formats strings for every operation in the world. It's a debugging tool, not a production feature.</p><p>Two honest limitations: the trace records <em>structural</em> operations, not component values (an <code>ecs_set</code> shows up as the add, without the data), so a replay reproduces the shape of the world rather than its exact contents — which is usually exactly what a storage bug needs. And because output goes through the log, you can combine it with <code>ecs_log_start_capture()</code> to collect a trace programmatically.</p>"
       }
     ],
-    related: ["obs-logging", "storage", "lifecycle", "internals"]
+    related: ["obs-logging", "storage", "commands", "internals"]
   }
 ]);

@@ -79,7 +79,7 @@ window.FLECS_TOUR.register([
         html: "<p>You can describe types at two levels:</p><ul><li><strong>Convenience initializers</strong> like <code>ecs_struct_init()</code>, <code>ecs_enum_init()</code>, <code>ecs_array_init()</code> — fill in a small descriptor struct and get a type entity back. This is what you'll use nearly always.</li><li><strong>Raw entities</strong> — because it's all just entities and components, you can also build a struct by creating child entities with an <code>EcsMember</code> component, or an enum by adding child entities with the <code>Constant</code> tag. The initializers do exactly this under the hood.</li></ul><p>The pages below cover each kind of type in detail.</p>"
       }
     ],
-    related: ["rfl-primitives", "rfl-structs", "components"]
+    related: ["rfl-primitives", "rfl-structs", "components", "cmp-registration"]
   },
   {
     id: "rfl-primitives",
@@ -125,14 +125,103 @@ window.FLECS_TOUR.register([
         src: "ecs_entity_t e = ecs_new(world);\necs_set(world, e, ecs_i32_t, {10});\necs_set(world, e, ecs_string_t, {\"hello\"});"
       }
     ],
-    related: ["rfl-structs", "rfl-enums-bitmasks"]
+    related: ["rfl-structs", "rfl-enums", "rfl-bitmasks"]
+  },
+  {
+    id: "rfl-enums",
+    parent: "rfl-describing",
+    order: 2,
+    title: "Enums",
+    code: "RFL-02B",
+    tagline: "A value that must be exactly one of a set of named options",
+    intro: "An enum is a traffic light: the value is Red, Orange or Green, and never two at once. In C it is stored as a plain integer, which means a tool looking at the bytes only sees <code>2</code>. Describing the enum tells Flecs the names, so everything that reads or writes your data can say <code>Green</code> instead.",
+    sections: [
+      {
+        type: "code",
+        heading: "Describing an enum",
+        lang: "c",
+        title: "Constants get values 0, 1, 2 unless you say otherwise",
+        src: "typedef enum {\n  Red, Orange, Green\n} TrafficLight;\n\nECS_COMPONENT(world, TrafficLight);\n\necs_enum(world, {\n  .entity = ecs_id(TrafficLight),\n  .constants = {\n    { .name = \"Red\" },\n    { .name = \"Orange\" },\n    { .name = \"Green\" }\n  }\n});"
+      },
+      {
+        type: "text",
+        heading: "Constants are child entities",
+        html: "<p>Just like struct members, each constant becomes a child entity of the type, tagged with <code>Constant</code>. Values are assigned in order (0, 1, 2...) unless you supply one. To pick a value yourself, set the pair <code>(Constant, i32)</code> on the constant entity — or fill in the <code>value</code> field of the constant descriptor and let Flecs do it.</p><p>Because constants are entities, they show up in the tour of your world like everything else: you can look them up by name, document them, and reference them from script.</p>"
+      },
+      {
+        type: "struct",
+        heading: "The datatypes",
+        name: "EcsEnum / ecs_enum_constant_t",
+        summary: "What gets stored on the type entity, and what each constant descriptor holds.",
+        members: [
+          { name: "EcsEnum.underlying_type", type: "ecs_entity_t", desc: "Which integer type the enum is stored as. An enum can occupy one byte or eight, and a serializer has to know which before it can read the value." },
+          { name: "constant.name", type: "const char*", desc: "The name of the constant. Required when describing the enum." },
+          { name: "constant.value", type: "int64_t", desc: "The numeric value, when the underlying type is signed. Left out, values count up from zero." },
+          { name: "constant.value_unsigned", type: "uint64_t", desc: "The numeric value when the underlying type is unsigned." },
+          { name: "constant.constant", type: "ecs_entity_t", desc: "The entity Flecs created for this constant. Filled in for you — do not set it yourself." }
+        ]
+      },
+      {
+        type: "text",
+        heading: "What it buys you",
+        html: "<p>A described enum is one that every part of Flecs can talk about in words:</p><ul><li>JSON says <code>\"Green\"</code>, not <code>2</code>, so a saved scene survives you reordering the enum later.</li><li>Flecs Script can assign <code>Green</code> by name, and the expression engine converts it for you.</li><li>The explorer shows a dropdown of the real options instead of a number field.</li><li>A companion <code>EcsConstants</code> component holds the lookup structures — a map from value to constant, and the constants in registration order — so those conversions cost a hash lookup, not a scan.</li></ul><p>An enum can also be used as a relationship target directly, which is a separate feature but the same idea: names beat numbers.</p>"
+      }
+    ],
+    related: ["rfl-bitmasks", "rfl-primitives", "rfl-cursor-conversions"]
+  },
+  {
+    id: "rfl-bitmasks",
+    parent: "rfl-describing",
+    order: 3,
+    title: "Bitmasks",
+    code: "RFL-02C",
+    tagline: "Named switches you can flip in any combination",
+    intro: "A bitmask is a pizza order: cheese and pepperoni and mushrooms, any mix you like. Where an enum picks exactly one option, a bitmask packs a row of on/off switches into one integer — and describing it lets Flecs print <code>Cheese|Pepperoni</code> instead of <code>3</code>.",
+    sections: [
+      {
+        type: "code",
+        heading: "Describing a bitmask",
+        lang: "c",
+        title: "Each constant is its own bit",
+        src: "typedef uint32_t Toppings;\n#define Cheese    (1u << 0)\n#define Pepperoni (1u << 1)\n#define Mushroom  (1u << 2)\n\nECS_COMPONENT(world, Toppings);\n\necs_bitmask(world, {\n  .entity = ecs_id(Toppings),\n  .constants = {\n    { .name = \"Cheese\",    .value = Cheese },\n    { .name = \"Pepperoni\", .value = Pepperoni },\n    { .name = \"Mushroom\",  .value = Mushroom }\n  }\n});"
+      },
+      {
+        type: "text",
+        heading: "Powers of two, on purpose",
+        html: "<p>Bitmask values must not overlap: each constant owns exactly one bit, so the values run 1, 2, 4, 8 and so on. That is what makes combining them a bitwise or, and testing one a bitwise and. If you leave the values out, Flecs assigns the next free bit for you.</p><p>Constants are child entities of the type, tagged with <code>Constant</code>, exactly like enum constants. The difference is the pair used to store the value: bitmask constants use <code>(Constant, u32)</code>, since a bit pattern is naturally unsigned.</p>"
+      },
+      {
+        type: "diagram",
+        heading: "One choice vs. many switches",
+        spec: {
+          type: "flow",
+          lanes: [
+            [ { id: "en", label: "Enum: TrafficLight", sub: "value is ONE of..." },
+              { id: "bm", label: "Bitmask: Toppings", sub: "value is ANY MIX of..." } ],
+            [ { id: "ec", label: "Red=0, Orange=1, Green=2", sub: "stored as one integer" },
+              { id: "bc", label: "Cheese=1, Pepperoni=2, Mushroom=4", sub: "stored as combined bits: 3 = Cheese|Pepperoni" } ]
+          ],
+          edges: [
+            { from: "en", to: "ec" },
+            { from: "bm", to: "bc" }
+          ],
+          note: "Same storage — one integer — but the described meaning is completely different."
+        }
+      },
+      {
+        type: "text",
+        heading: "Reading and writing by name",
+        html: "<p>With the description in place, a bitmask value converts both ways:</p><ul><li>Serialized out, the value becomes a list of the names whose bits are set.</li><li>Read back in, a string like <code>Cheese|Mushroom</code> is turned into the right integer — the meta cursor accepts constant names wherever a bitmask value is expected.</li><li>A bit that matches no constant is preserved as a number, so unknown flags do not silently vanish.</li></ul><p>The <code>EcsBitmask</code> component itself carries no data: the type entity's children are the description. Use a bitmask when the options genuinely combine, and an enum when exactly one must win — mixing them up produces data that looks fine and reads wrong.</p>"
+      }
+    ],
+    related: ["rfl-enums", "rfl-cursor-conversions", "rfl-serializer"]
   },
   {
     id: "rfl-structs",
     parent: "rfl-describing",
-    order: 2,
+    order: 4,
     title: "Structs & Members",
-    code: "RFL-02B",
+    code: "RFL-02D",
     tagline: "Name each field, and Flecs figures out where it lives",
     intro: "A struct description is a list of members: each has a name, a type, and an offset — how many bytes into the struct the field starts. You give Flecs the names and types with <code>ecs_struct_init()</code>; offsets are computed for you using the same layout rules the C compiler uses.",
     sections: [
@@ -189,98 +278,167 @@ window.FLECS_TOUR.register([
         html: "<p>You don't have to describe every field. If a struct has fields you want to keep private — a cached pointer, an internal handle — describe only the interesting ones and give explicit offsets with <code>offset</code> plus <code>use_offset: true</code> (the C macro <code>offsetof()</code> gives you the number). Flecs marks the type as <em>partial</em> and tools will show and edit just the described fields.</p><p>The <code>use_offset</code> flag matters because an offset of 0 is a perfectly valid offset for a first member — the boolean is how you say &quot;yes, I really mean this offset&quot; rather than &quot;please compute one&quot;. Flecs preserves this flag on the member entity it creates, so a description that round-trips through entities keeps its exact layout.</p>"
       }
     ],
-    related: ["rfl-primitives", "rfl-units", "rfl-cursor"]
+    related: ["rfl-primitives", "rfl-units", "rfl-cursor", "rfl-collections"]
   },
   {
-    id: "rfl-enums-bitmasks",
+    id: "rfl-collections",
     parent: "rfl-describing",
-    order: 3,
-    title: "Enums & Bitmasks",
-    code: "RFL-02C",
-    tagline: "Named choices, and named switches you can flip together",
-    intro: "An enum is a value that must be exactly one of a set of named options, like a traffic light: Red, Orange or Green. A bitmask is a set of named on/off switches that can be combined, like pizza toppings: Cheese and Pepperoni at the same time. Describing them lets Flecs read and write the <em>names</em> instead of raw numbers.",
-    sections: [
-      {
-        type: "code",
-        heading: "Describing an enum",
-        lang: "c",
-        title: "Constants get values 0, 1, 2 unless you say otherwise",
-        src: "typedef enum {\n  Red, Orange, Green\n} TrafficLight;\n\nECS_COMPONENT(world, TrafficLight);\n\necs_enum(world, {\n  .entity = ecs_id(TrafficLight),\n  .constants = {\n    { .name = \"Red\" },\n    { .name = \"Orange\" },\n    { .name = \"Green\" }\n  }\n});"
-      },
-      {
-        type: "text",
-        heading: "Constants are child entities",
-        html: "<p>Just like struct members, each constant becomes a child entity of the type — here tagged with <code>Constant</code>. Values are assigned automatically in order (0, 1, 2...); to pick a value yourself, set the pair <code>(Constant, i32)</code> on the constant to the number you want. For bitmask constants use <code>(Constant, u32)</code>, and values combine as powers of two (1, 2, 4, 8...) so each constant is its own switch.</p><p>The enum type entity gets an <code>EcsEnum</code> component whose one field, <code>underlying_type</code>, records which integer type the enum is stored as — an enum can sit in one byte or eight, and serializers need to know which. A companion <code>EcsConstants</code> component holds fast lookup structures: a map from value to constant, plus the constants in registration order.</p><p>The payoff: JSON and script files say <code>&quot;Green&quot;</code> or <code>&quot;Cheese|Pepperoni&quot;</code> instead of <code>2</code> or <code>3</code>, which survives you reordering the enum later.</p>"
-      },
-      {
-        type: "diagram",
-        heading: "One choice vs. many switches",
-        spec: {
-          type: "flow",
-          lanes: [
-            [ { id: "en", label: "Enum: TrafficLight", sub: "value is ONE of..." },
-              { id: "bm", label: "Bitmask: Toppings", sub: "value is ANY MIX of..." } ],
-            [ { id: "ec", label: "Red=0, Orange=1, Green=2", sub: "stored as one integer" },
-              { id: "bc", label: "Cheese=1, Pepperoni=2, Mushroom=4", sub: "stored as combined bits: 3 = Cheese|Pepperoni" } ]
-          ],
-          edges: [
-            { from: "en", to: "ec" },
-            { from: "bm", to: "bc" }
-          ]
-        }
-      }
-    ],
-    related: ["rfl-primitives", "rfl-structs"]
-  },
-  {
-    id: "rfl-arrays-vectors",
-    parent: "rfl-describing",
-    order: 4,
-    title: "Arrays, Vectors & Maps",
-    code: "RFL-02D",
+    order: 5,
+    title: "Collections",
+    code: "RFL-02E",
     tagline: "Egg cartons, shopping lists, and phone books",
-    intro: "Collections come in three flavors. An <em>array</em> is like an egg carton: a fixed number of slots, decided up front. A <em>vector</em> is like a shopping list: it grows and shrinks as you add and remove items. A <em>map</em> is like a phone book: you look up a value by a key.",
+    intro: "Some members hold many values instead of one. Flecs describes three shapes of that: an <em>array</em> with a fixed number of slots, a <em>vector</em> that grows and shrinks, and a <em>map</em> that finds values by key. Each is a type entity like any other, so a collection can hold structs, and a struct can hold collections.",
     sections: [
       {
         type: "text",
-        heading: "The three collection kinds",
-        html: "<p>Each is described by a small component on the type entity:</p><ul><li><code>EcsArray</code> holds an element <code>type</code> and a <code>count</code>. The elements sit directly inside the component's memory, like <code>float values[8]</code> in C. Create one with <code>ecs_array_init()</code>.</li><li><code>EcsVector</code> holds just an element <code>type</code> — the count lives with each value, because every value can have a different length. The C representation is Flecs' own growable list type, <code>ecs_vec_t</code>. Create one with <code>ecs_vector_init()</code>.</li><li><code>EcsMap</code> holds a <code>key_type</code> and a value <code>type</code>. Keys must be simple: a primitive (but not a string, f32 or f64), an enum, or a bitmask. Create one with <code>ecs_map_type_init()</code>.</li></ul><p>Element types can be anything described — primitives, structs, even other collections — so &quot;a vector of structs that each contain an array&quot; is fine.</p>"
-      },
-      {
-        type: "code",
-        heading: "A fixed array and a growable vector",
-        lang: "c",
-        title: "Both become ordinary component types",
-        src: "ecs_entity_t Waypoints = ecs_array(world, {\n  .entity = ecs_entity(world, { .name = \"Waypoints\" }),\n  .type = ecs_id(ecs_f32_t),\n  .count = 8\n});\n\necs_entity_t Inventory = ecs_vector(world, {\n  .entity = ecs_entity(world, { .name = \"Inventory\" }),\n  .type = ecs_id(ecs_string_t)\n});"
+        heading: "Three shapes, one idea",
+        html: "<p>All three say the same thing — \"here are many values of type X\" — and differ in where the values live and how you reach them:</p><ul><li>An <strong>array</strong> is an egg carton: the number of slots is decided when you describe the type, and the values sit directly inside the component's own memory.</li><li>A <strong>vector</strong> is a shopping list: each value can have a different length, so the elements live in a buffer the component points at.</li><li>A <strong>map</strong> is a phone book: values are found by key rather than by position.</li></ul><p>Element types can be anything Flecs knows about — primitives, structs, enums, even other collections — so \"a vector of structs that each contain an array\" describes fine.</p>"
       },
       {
         type: "diagram",
-        heading: "Fixed vs. growable",
+        heading: "Where the elements live",
         spec: {
           type: "grid",
           title: "Same element type, different shape",
-          cols: ["Kind", "Element type", "Length", "Where elements live"],
+          cols: ["Kind", "Length", "Where elements live", "Described with"],
           rows: [
-            ["Array", "fixed at description time", "always 8", "inline, inside the component"],
-            ["Vector", "fixed at description time", "whatever each value holds", "in a growable buffer the component points to"],
-            ["Map", "fixed at description time", "whatever each value holds", "in a lookup structure, found by key"]
-          ]
+            ["Array", "fixed when described", "inline, inside the component", "ecs_array_init()"],
+            ["Vector", "whatever each value holds", "a growable buffer the component points to", "ecs_vector_init()"],
+            ["Map", "whatever each value holds", "a lookup structure, found by key", "ecs_map_type_init()"]
+          ],
+          note: "Only the array's size is part of the type. The other two carry their length with the value."
         }
       },
       {
         type: "text",
-        heading: "Vectors need lifecycle care",
-        html: "<p>A vector owns memory outside the component, so copying or destroying a vector-typed component has to do real work — copy the buffer, free the buffer. When a collection type is created from reflection data alone, Flecs generates those cleanup routines automatically; see <em>Runtime Types</em>.</p>"
+        heading: "Owned memory changes the rules",
+        html: "<p>An array is just bytes, so a component containing one copies and destroys like any struct. A vector or a map owns memory <em>outside</em> the component, which means copying such a component has to copy the buffer, and destroying it has to free the buffer.</p><p>When a type is built from reflection data alone, Flecs generates those routines for you — the constructor, copy, move and destructor hooks come out of the description. That is what makes it possible to invent a component type at runtime that contains a vector and still have it behave correctly when entities are created, cloned and deleted.</p>"
       }
     ],
-    related: ["rfl-runtime-types", "internals"]
+    related: ["rfl-runtime-types", "rfl-structs", "int-vec-allocators"]
+  },
+  {
+    id: "rfl-arrays",
+    parent: "rfl-collections",
+    order: 1,
+    title: "Arrays",
+    code: "RFL-02E1",
+    tagline: "A fixed number of slots, sitting inside the value itself",
+    intro: "An array type is <code>float values[8]</code>: eight slots, decided when you describe the type, stored one after another inside whatever contains them. It is the simplest collection because there is nothing to allocate and nothing to free — the slots are part of the value.",
+    sections: [
+      {
+        type: "code",
+        heading: "Describing an array type",
+        lang: "c",
+        title: "Eight floats, as a named type you can use anywhere",
+        src: "ecs_entity_t Waypoints = ecs_array(world, {\n  .entity = ecs_entity(world, { .name = \"Waypoints\" }),\n  .type = ecs_id(ecs_f32_t),\n  .count = 8\n});\n\nECS_COMPONENT(world, Path);\n\necs_struct(world, {\n  .entity = ecs_id(Path),\n  .members = {\n    { .name = \"points\", .type = Waypoints },\n    { .name = \"length\", .type = ecs_id(ecs_i32_t) }\n  }\n});"
+      },
+      {
+        type: "struct",
+        heading: "The datatype",
+        name: "EcsArray",
+        summary: "Added to the type entity. Two fields say everything about the shape.",
+        members: [
+          { name: "type", type: "ecs_entity_t", desc: "The element type. Any described type will do — a primitive, a struct, an enum, or another collection." },
+          { name: "count", type: "int32_t", desc: "How many elements. Part of the type itself, which is why every value of this type has exactly this many." }
+        ]
+      },
+      {
+        type: "text",
+        heading: "The inline shortcut",
+        html: "<p>Describing a separate array type is worth it when the array is a type in its own right that several structs share. For a one-off member, you do not need to: a struct member descriptor has a <code>count</code> field, and setting it turns that member into an inline array of the member's type.</p><p>Either way the layout is identical — element size times count, laid out end to end — and the size of the whole type is computed from the description, so it matches what the C compiler produced for your struct.</p>"
+      },
+      {
+        type: "text",
+        heading: "How it reads and writes",
+        html: "<ul><li>Serialized to JSON, an array becomes a list: <code>[1, 2, 3]</code>.</li><li>The meta cursor walks it with <code>ecs_meta_push</code> to step into the array, <code>ecs_meta_next</code> to move between elements, and <code>ecs_meta_pop</code> to step back out.</li><li>Writing more elements than the type has is an error rather than a silent grow — the count is part of the type.</li><li>Because everything is inline, an array member needs no special construct or destruct work beyond what its element type already needs.</li></ul>"
+      }
+    ],
+    related: ["rfl-vectors", "rfl-structs", "rfl-cursor"]
+  },
+  {
+    id: "rfl-vectors",
+    parent: "rfl-collections",
+    order: 2,
+    title: "Vectors",
+    code: "RFL-02E2",
+    tagline: "A list that grows, with its elements kept outside the value",
+    intro: "A vector type is a shopping list: this value holds three items, that one holds forty. The type says what the elements are, but not how many — so the elements cannot sit inside the value. They live in a buffer the value points at, and that pointer is the part that needs care.",
+    sections: [
+      {
+        type: "code",
+        heading: "Describing a vector type",
+        lang: "c",
+        title: "The type fixes the element type, not the length",
+        src: "ecs_entity_t Inventory = ecs_vector(world, {\n  .entity = ecs_entity(world, { .name = \"Inventory\" }),\n  .type = ecs_id(ecs_string_t)\n});\n\nECS_COMPONENT(world, Backpack);\n\necs_struct(world, {\n  .entity = ecs_id(Backpack),\n  .members = {\n    { .name = \"items\", .type = Inventory }\n  }\n});"
+      },
+      {
+        type: "struct",
+        heading: "The datatype",
+        name: "EcsVector",
+        summary: "One field. Everything else about a vector value is decided per value, not per type.",
+        members: [
+          { name: "type", type: "ecs_entity_t", desc: "The element type. The number of elements is stored with each value, in the growable list Flecs uses to represent it." }
+        ]
+      },
+      {
+        type: "text",
+        heading: "It is a real ecs_vec_t",
+        html: "<p>A vector-typed value is Flecs' own growable list: a pointer to the elements, a count, and a capacity. That is the same container the storage engine uses internally, so a vector member is not a special reflection-only construct — it is a data structure your C code can read and manipulate directly.</p><p>Growing follows the usual rule: when the capacity is used up, the buffer is reallocated with room to spare, so appending is cheap on average and occasionally expensive.</p>"
+      },
+      {
+        type: "text",
+        heading: "Owned memory means lifecycle work",
+        html: "<p>Because the elements live outside the value, a component containing a vector cannot be copied with a plain memory copy, and forgetting it leaks:</p><ul><li><strong>Copy</strong> has to allocate a new buffer and copy the elements into it, or two components end up sharing — and later double-freeing — one buffer.</li><li><strong>Move</strong> can hand the buffer over and leave the source empty, which is why moves are cheap and copies are not.</li><li><strong>Destruct</strong> has to destruct the elements and free the buffer.</li></ul><p>For types created from reflection data, Flecs generates all of that from the description. For a type you registered from C, describing a member as a vector tells the serializers what to do, but the component's own hooks are still yours to provide.</p><p>Serialized out, a vector is a JSON list, exactly like an array. Read back in, the cursor grows the vector as elements arrive instead of erroring on the fourth one.</p>"
+      }
+    ],
+    related: ["rfl-arrays", "rfl-runtime-types", "int-vec-allocators"]
+  },
+  {
+    id: "rfl-maps",
+    parent: "rfl-collections",
+    order: 3,
+    title: "Maps",
+    code: "RFL-02E3",
+    tagline: "Values you find by key instead of by position",
+    intro: "A map type is a phone book: you do not walk it looking for entry seventeen, you look up a name and get a number. Describing one tells Flecs both halves — what the keys are and what the values are — so a map-typed member can be serialized, edited and rebuilt like any other data.",
+    sections: [
+      {
+        type: "code",
+        heading: "Describing a map type",
+        lang: "c",
+        title: "Keys are entity ids here, values are floats",
+        src: "ecs_entity_t Reputation = ecs_map_type(world, {\n  .entity = ecs_entity(world, { .name = \"Reputation\" }),\n  .key_type = ecs_id(ecs_u64_t),\n  .type = ecs_id(ecs_f32_t)\n});\n\nECS_COMPONENT(world, Faction);\n\necs_struct(world, {\n  .entity = ecs_id(Faction),\n  .members = {\n    { .name = \"standing\", .type = Reputation }\n  }\n});"
+      },
+      {
+        type: "struct",
+        heading: "The datatype",
+        name: "EcsMap",
+        summary: "Added to the type entity. Two types: one for the key, one for the value.",
+        members: [
+          { name: "key_type", type: "ecs_entity_t", desc: "The key type. It must be something that can be hashed and compared reliably: a primitive that is not a string, f32 or f64, or an enum or bitmask." },
+          { name: "type", type: "ecs_entity_t", desc: "The value type. Anything described will do, including structs and other collections." }
+        ]
+      },
+      {
+        type: "text",
+        heading: "Why the key type is restricted",
+        html: "<p>Keys have to answer one question exactly: are these two the same? Floating point numbers are bad at that — two values that print the same can differ in the last bit — and strings would mean the map owns the memory its keys point at. Ruling both out keeps map keys to plain integers and named constants, where equality is unambiguous and the key can be stored by value.</p><p>Enums and bitmasks are allowed because they are integers underneath, with the bonus that a serialized map can use the constant's name as the key.</p>"
+      },
+      {
+        type: "text",
+        heading: "Reading and writing",
+        html: "<ul><li>Serialized out, a map becomes a JSON object: each key is rendered with its own type's rules, and each value follows.</li><li>Read back in, the entries are added to the map as they arrive, so a map value does not need to be empty first.</li><li>Like a vector, a map owns memory outside the value, so copying and destroying a component containing one is real work — generated for you when the type itself was built from reflection data.</li><li>If you only ever need a fixed set of named slots, a struct is a better fit: it is faster to reach, and the names are part of the type instead of part of the data.</li></ul>"
+      }
+    ],
+    related: ["rfl-vectors", "rfl-enums", "int-maps"]
   },
   {
     id: "rfl-opaque",
     parent: "rfl-describing",
-    order: 5,
+    order: 6,
     title: "Opaque Types",
-    code: "RFL-02E",
+    code: "RFL-02F",
     tagline: "Describe types you don't control by teaching Flecs to talk to them",
     intro: "Some types can't be described field-by-field because their insides are hidden or unusual: a C++ <code>std::string</code>, a handle from another library, a class that only exposes getters and setters. An <em>opaque type</em> is the escape hatch: instead of describing the layout, you provide small functions that read from and write to the value on Flecs' behalf.",
     sections: [
@@ -532,7 +690,7 @@ window.FLECS_TOUR.register([
         html: "<p>Two related helpers generate comparison hooks from reflection data: <code>ecs_set_rtt_compare()</code> builds an ordering hook and <code>ecs_set_rtt_equals()</code> an equality hook, both recursing into member types as needed. They also work on compile-time types that never got comparison hooks of their own — reflection knows enough to compare them field by field.</p><p>Where does this all pay off? Modding and scripting: a mod or a Flecs Script file can introduce component types the shipped binary never heard of, and they behave like first-class citizens — storable, queryable, printable, editable in the Explorer.</p>"
       }
     ],
-    related: ["rfl-describing", "components", "script"]
+    related: ["rfl-describing", "components", "script", "rfl-collections"]
   },
   {
     id: "rfl-units",

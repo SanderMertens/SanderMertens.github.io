@@ -12,6 +12,7 @@
   var dfs = [];
 
   nodes.forEach(function (n) { byId[n.id] = n; children[n.id] = []; });
+  if (byId.entities) byId.lifecycle = byId.entities;
   nodes.forEach(function (n) {
     if (n.parent === null || n.parent === undefined) {
       decks.push(n);
@@ -35,6 +36,15 @@
   }
   decks.forEach(function (d) { walk(d, d); });
   dfs.forEach(function (n, i) { n._idx = i; });
+
+  function isBelow(n, ancestor) {
+    var cur = n;
+    while (cur.parent !== null && cur.parent !== undefined && byId[cur.parent]) {
+      cur = byId[cur.parent];
+      if (cur === ancestor) return true;
+    }
+    return false;
+  }
 
   function ancestors(n) {
     var out = [];
@@ -144,35 +154,61 @@
 
   function textW(s, size) { return String(s).length * size * 0.56; }
 
+  function wrapText(str, size, maxW) {
+    if (!str) return [];
+    var words = String(str).split(/\s+/);
+    var lines = [], cur = "";
+    words.forEach(function (word) {
+      var next = cur ? cur + " " + word : word;
+      if (cur && textW(next, size) > maxW) { lines.push(cur); cur = word; }
+      else cur = next;
+    });
+    if (cur) lines.push(cur);
+    return lines;
+  }
+
+  var LABEL_SIZE = 16, SUB_SIZE = 12.5, LABEL_LH = 19, SUB_LH = 15;
+
+  function boxLines(b, innerW, labelSize, labelLh) {
+    labelSize = labelSize || LABEL_SIZE;
+    labelLh = labelLh || LABEL_LH;
+    var lines = wrapText(b.label, labelSize, innerW);
+    var subLines = wrapText(b.sub, SUB_SIZE, innerW);
+    var h = 24 + lines.length * labelLh + (subLines.length ? 5 + subLines.length * SUB_LH : 0);
+    return { lines: lines, subLines: subLines, h: h, lh: labelLh };
+  }
+
   function renderFlow(spec, color) {
-    var margin = 24, colGap = 90, rowGap = 22, padX = 18;
+    var margin = 24, colGap = 64, rowGap = 22, padX = 15;
     var pos = {};
     var colWs = [];
     var colHs = [];
+    var laid = [];
     spec.lanes.forEach(function (lane, ci) {
-      var w = 110;
+      var w = 118;
       lane.forEach(function (b) {
-        w = Math.max(w, textW(b.label, 14.5) + padX * 2, b.sub ? textW(b.sub, 11) + padX * 2 : 0);
+        w = Math.max(w, textW(b.label, LABEL_SIZE) + padX * 2, textW(b.sub, SUB_SIZE) + padX * 2);
       });
-      colWs[ci] = Math.min(w, 280);
+      colWs[ci] = Math.min(w, 300);
+      laid[ci] = lane.map(function (b) { return boxLines(b, colWs[ci] - padX * 2); });
       var h = 0;
-      lane.forEach(function (b) { h += (b.sub ? 58 : 42) + rowGap; });
+      laid[ci].forEach(function (m) { h += m.h + rowGap; });
       colHs[ci] = h - rowGap;
     });
     var totalH = Math.max.apply(null, colHs) + margin * 2;
     var x = margin;
     spec.lanes.forEach(function (lane, ci) {
       var y = (totalH - colHs[ci]) / 2;
-      lane.forEach(function (b) {
-        var bh = b.sub ? 58 : 42;
-        pos[b.id] = { x: x, y: y, w: colWs[ci], h: bh, b: b };
-        y += bh + rowGap;
+      lane.forEach(function (b, bi) {
+        var m = laid[ci][bi];
+        pos[b.id] = { x: x, y: y, w: colWs[ci], h: m.h, b: b, lines: m.lines, subLines: m.subLines };
+        y += m.h + rowGap;
       });
       x += colWs[ci] + colGap;
     });
     var totalW = x - colGap + margin;
     var s = "";
-    s += '<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">';
+    s += '<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">';
     s += '<path d="M 0 0 L 10 5 L 0 10 z" fill="' + color + '"/></marker></defs>';
     (spec.edges || []).forEach(function (e) {
       var a = pos[e.from], b = pos[e.to];
@@ -195,7 +231,7 @@
       s += '<path d="' + p + '" fill="none" stroke="' + color + '" stroke-width="1.6" marker-end="url(#arr)"' +
         (e.dashed ? ' stroke-dasharray="6 5" opacity="0.7"' : "") + "/>";
       if (e.label) {
-        s += '<text x="' + lx + '" y="' + ly + '" text-anchor="middle" font-size="11" fill="#9a9aa8" ' +
+        s += '<text x="' + lx + '" y="' + ly + '" text-anchor="middle" font-size="12.5" fill="#a8a8b6" ' +
           'style="paint-order:stroke;stroke:#0d0d12;stroke-width:5" font-family="Inter,sans-serif">' + esc(e.label) + "</text>";
       }
     });
@@ -204,21 +240,27 @@
       var c = q.b.color || color;
       s += '<rect x="' + q.x + '" y="' + q.y + '" width="' + q.w + '" height="' + q.h + '" rx="11" fill="#16161e" stroke="' + c + '" stroke-width="1.6"/>';
       s += '<rect x="' + q.x + '" y="' + q.y + '" width="7" height="' + q.h + '" rx="3.5" fill="' + c + '"/>';
-      var ty = q.b.sub ? q.y + q.h / 2 - 6 : q.y + q.h / 2 + 1;
-      s += '<text x="' + (q.x + q.w / 2 + 3) + '" y="' + ty + '" text-anchor="middle" dominant-baseline="middle" font-size="14.5" letter-spacing="0.5" fill="' + c + '" font-family="Antonio,Arial Narrow,sans-serif" style="text-transform:uppercase">' + esc(q.b.label) + "</text>";
-      if (q.b.sub) {
-        s += '<text x="' + (q.x + q.w / 2 + 3) + '" y="' + (q.y + q.h / 2 + 13) + '" text-anchor="middle" dominant-baseline="middle" font-size="11" fill="#9a9aa8" font-family="Inter,sans-serif">' + esc(q.b.sub) + "</text>";
-      }
+      var cx = q.x + q.w / 2 + 3;
+      var contentH = q.lines.length * LABEL_LH + (q.subLines.length ? 5 + q.subLines.length * SUB_LH : 0);
+      var top = q.y + (q.h - contentH) / 2;
+      q.lines.forEach(function (line, i) {
+        s += '<text x="' + cx + '" y="' + (top + i * LABEL_LH + LABEL_LH / 2) + '" text-anchor="middle" dominant-baseline="middle" font-size="' + LABEL_SIZE + '" letter-spacing="0.5" fill="' + c + '" font-family="Antonio,Arial Narrow,sans-serif" style="text-transform:uppercase">' + esc(line) + "</text>";
+      });
+      var subTop = top + q.lines.length * LABEL_LH + 5;
+      q.subLines.forEach(function (line, i) {
+        s += '<text x="' + cx + '" y="' + (subTop + i * SUB_LH + SUB_LH / 2) + '" text-anchor="middle" dominant-baseline="middle" font-size="' + SUB_SIZE + '" fill="#a8a8b6" font-family="Inter,sans-serif">' + esc(line) + "</text>";
+      });
     });
-    return '<svg viewBox="0 0 ' + totalW + " " + totalH + '" width="' + totalW + '" role="img">' + s + "</svg>";
+    return '<svg viewBox="0 0 ' + totalW + " " + totalH + '" width="' + totalW +
+      '" style="min-width:' + Math.round(totalW * 0.85) + 'px" role="img">' + s + "</svg>";
   }
 
   function renderStack(spec, color) {
-    var w = 460, lh, gap = 9, y = 4, s = "";
+    var w = 520, gap = 10, y = 4, s = "";
     var rows = spec.layers.map(function (l) {
-      lh = l.sub ? 58 : 44;
-      var r = { l: l, y: y, h: lh };
-      y += lh + gap;
+      var m = boxLines(l, w - 60, 17.5, 21);
+      var r = { l: l, y: y, h: m.h, lines: m.lines, subLines: m.subLines };
+      y += m.h + gap;
       return r;
     });
     var totalH = y - gap + 4;
@@ -226,13 +268,19 @@
       var c = r.l.color || color;
       s += '<rect x="4" y="' + r.y + '" width="' + (w - 8) + '" height="' + r.h + '" rx="11" fill="#16161e" stroke="' + c + '" stroke-width="1.6"/>';
       s += '<rect x="4" y="' + r.y + '" width="7" height="' + r.h + '" rx="3.5" fill="' + c + '"/>';
-      var ty = r.l.sub ? r.y + r.h / 2 - 6 : r.y + r.h / 2 + 1;
-      s += '<text x="' + (w / 2 + 3) + '" y="' + ty + '" text-anchor="middle" dominant-baseline="middle" font-size="15" letter-spacing="0.5" fill="' + c + '" font-family="Antonio,Arial Narrow,sans-serif">' + esc(r.l.label) + "</text>";
-      if (r.l.sub) {
-        s += '<text x="' + (w / 2 + 3) + '" y="' + (r.y + r.h / 2 + 13) + '" text-anchor="middle" dominant-baseline="middle" font-size="11.5" fill="#9a9aa8" font-family="Inter,sans-serif">' + esc(r.l.sub) + "</text>";
-      }
+      var cx = w / 2 + 3;
+      var contentH = r.lines.length * 21 + (r.subLines.length ? 5 + r.subLines.length * SUB_LH : 0);
+      var top = r.y + (r.h - contentH) / 2;
+      r.lines.forEach(function (line, i) {
+        s += '<text x="' + cx + '" y="' + (top + i * 21 + 21 / 2) + '" text-anchor="middle" dominant-baseline="middle" font-size="17.5" letter-spacing="0.5" fill="' + c + '" font-family="Antonio,Arial Narrow,sans-serif">' + esc(line) + "</text>";
+      });
+      var subTop = top + r.lines.length * 21 + 5;
+      r.subLines.forEach(function (line, i) {
+        s += '<text x="' + cx + '" y="' + (subTop + i * SUB_LH + SUB_LH / 2) + '" text-anchor="middle" dominant-baseline="middle" font-size="13" fill="#a8a8b6" font-family="Inter,sans-serif">' + esc(line) + "</text>";
+      });
     });
-    return '<svg viewBox="0 0 ' + w + " " + totalH + '" width="' + w + '" role="img">' + s + "</svg>";
+    return '<svg viewBox="0 0 ' + w + " " + totalH + '" width="' + w +
+      '" style="min-width:' + Math.round(w * 0.85) + 'px" role="img">' + s + "</svg>";
   }
 
   function renderGrid(spec) {
@@ -259,7 +307,8 @@
       h += b.html;
     } else if (b.type === "code") {
       h += '<div class="codeblock"><div class="codeblock-bar"><span>' + esc(b.title || "sample") +
-        '</span><span class="lang">' + esc(b.lang || "c") + "</span></div><pre>" + esc(b.src) + "</pre></div>";
+        '</span><span class="lang">' + esc(b.lang || "c") + "</span></div><pre><code>" +
+        window.FLECS_HIGHLIGHT.render(b.src, b.lang || "c") + "</code></pre></div>";
     } else if (b.type === "struct") {
       h += '<div class="struct-name">' + esc(b.name) + "</div>";
       if (b.summary) h += '<div class="struct-summary">' + esc(b.summary) + "</div>";
@@ -307,9 +356,17 @@
     (n.sections || []).forEach(function (b) { h += renderBlock(b, color); });
 
     var kids = children[n.id];
-    if (kids.length) {
+    var seen = {};
+    kids.forEach(function (c) { seen[c.id] = true; });
+    var rel = (n.related || []).map(function (rid) { return byId[rid]; }).filter(function (r) {
+      return r && r !== n && !seen[r.id];
+    });
+    var below = rel.filter(function (r) { return isBelow(r, n); });
+    var aside = rel.filter(function (r) { return !isBelow(r, n); });
+
+    if (kids.length || below.length) {
       h += '<section class="section"><h2 class="section-heading">Go deeper</h2><div class="children-grid">';
-      kids.forEach(function (c) {
+      kids.concat(below).forEach(function (c) {
         h += '<a class="child-card" href="#/' + c.id + '" style="border-left-color:' + n._deck._color + '">' +
           '<div class="cc-code">' + esc(c.code || "") + '</div>' +
           '<div class="cc-title">' + esc(c.title) + '</div>' +
@@ -318,11 +375,15 @@
       h += "</div></section>";
     }
 
-    if (n.related && n.related.length) {
-      h += '<section class="section"><h2 class="section-heading">Related</h2><div class="related-row">';
-      n.related.forEach(function (rid) {
-        var r = byId[rid];
-        if (r) h += '<a class="related-chip" href="#/' + r.id + '">' + esc(r.title) + "</a>";
+    if (aside.length) {
+      h += '<section class="section"><h2 class="section-heading">More reading</h2><div class="children-grid">';
+      aside.forEach(function (r) {
+        h += '<a class="child-card sidestep" href="#/' + r.id + '" style="border-left-color:' + r._deck._color + '">' +
+          '<div class="cc-code">' + esc(r.code || "") + '</div>' +
+          '<div class="cc-title" style="color:' + r._deck._color + '">' + esc(r.title) + '</div>' +
+          '<div class="cc-tag">' + esc(r.tagline || "") + '</div>' +
+          '<div class="cc-where" style="color:' + r._deck._color + '">' +
+          esc(r === r._deck ? "Deck" : r._deck.title) + "</div></a>";
       });
       h += "</div></section>";
     }

@@ -35,7 +35,7 @@ window.FLECS_TOUR.register([
         html: "<p>The pages below cover how components come to exist (registration), the surprising fact that every component is itself an entity, and singletons — components with exactly one instance in the whole world.</p>"
       }
     ],
-    related: ["cmp-tags", "cmp-pairs", "storage"]
+    related: ["cmp-tags", "cmp-pairs", "storage", "sto-columns"]
   },
   {
     id: "cmp-registration",
@@ -110,7 +110,7 @@ window.FLECS_TOUR.register([
         src: "ecs_entity_t comp = ecs_component(world, {\n  .entity = ecs_entity(world, { .name = \"MyComponent\" }),\n  .type = {\n    .size = 8,\n    .alignment = 8\n  }\n});\n\necs_entity_t e = ecs_new(world);\necs_add_id(world, e, comp);\nconst void *ptr = ecs_get_id(world, e, comp);"
       }
     ],
-    related: ["cmp-component-entities", "reflection"]
+    related: ["cmp-component-entities", "reflection", "rfl-describing", "sys-modules"]
   },
   {
     id: "cmp-component-entities",
@@ -145,10 +145,10 @@ window.FLECS_TOUR.register([
       {
         type: "text",
         heading: "Unregistering",
-        html: "<p>Deleting the component entity unregisters the component: by default it is removed from every entity that has it, and the tables that stored it are cleaned up. What exactly happens on deletion is governed by cleanup traits — see the Cleanup Traits page and the Prefabs &amp; Lifecycle deck.</p>"
+        html: "<p>Deleting the component entity unregisters the component: by default it is removed from every entity that has it, and the tables that stored it are cleaned up. What exactly happens on deletion is governed by cleanup traits — see the Cleanup Traits page and the Entities deck.</p>"
       }
     ],
-    related: ["cmp-traits", "cmp-cleanup-traits", "world"]
+    related: ["cmp-traits", "cmp-cleanup-traits", "world", "wld-entity-ids"]
   },
   {
     id: "cmp-singletons",
@@ -163,7 +163,7 @@ window.FLECS_TOUR.register([
         type: "code",
         heading: "Using a singleton",
         lang: "c",
-        src: "typedef struct {\n  float value;\n} TimeOfDay;\n\nECS_COMPONENT(world, TimeOfDay);\n\necs_singleton_set(world, TimeOfDay, { 0.5 });\n\nconst TimeOfDay *t = ecs_singleton_get(world, TimeOfDay);"
+        src: "typedef struct {\n  float value;\n} TimeOfDay;\n\nECS_COMPONENT(world, TimeOfDay);\n\necs_singleton_set(world, TimeOfDay, { 0.5 });\n\nconst TimeOfDay *t = ecs_singleton_get(world, TimeOfDay);\n\nTimeOfDay *tm = ecs_singleton_ensure(world, TimeOfDay);\ntm->value = 0.75;\necs_singleton_modified(world, TimeOfDay);"
       },
       {
         type: "text",
@@ -174,9 +174,14 @@ window.FLECS_TOUR.register([
         type: "text",
         heading: "The Singleton trait",
         html: "<p>Adding the <code>Singleton</code> trait to a component enforces the pattern: the component can then only be added to its own entity, and adding it anywhere else panics. It also teaches queries about it — a query term for a <code>Singleton</code> component automatically reads from the component entity, so a system can mix per-entity terms like <code>Position</code> with a singleton term like <code>TimeOfDay</code> in one query.</p><p>This trait is part of the constraint traits addon (<code>FLECS_CONSTRAINT_TRAITS</code>), which is included by default.</p>"
+      },
+      {
+        type: "text",
+        heading: "Just sugar",
+        html: "<p>Every <code>ecs_singleton_*</code> macro expands to a regular entity operation with the component's own id as the entity:</p><ul><li><code>ecs_singleton_set(world, Gravity, {...})</code> is <code>ecs_set(world, ecs_id(Gravity), Gravity, {...})</code>.</li><li><code>ecs_singleton_get</code> is <code>ecs_get</code> on the same entity; <code>ecs_singleton_add</code>, <code>ecs_singleton_remove</code>, <code>ecs_singleton_ensure</code>, <code>ecs_singleton_emplace</code> and <code>ecs_singleton_modified</code> follow the same pattern.</li></ul><p>Because there is no special storage, singletons inherit everything components already have — reflection, serialization, observers, queries — with zero extra machinery. Use them for genuinely world-global state that systems need as context: gravity, the current game time, the input state. If you catch yourself wanting two of something, it was never a singleton — give it its own entity.</p>"
       }
     ],
-    related: ["cmp-component-entities", "queries"]
+    related: ["cmp-component-entities", "queries", "qry-sources"]
   },
   {
     id: "cmp-tags",
@@ -205,7 +210,7 @@ window.FLECS_TOUR.register([
         html: "<ul><li><strong>Tags can't have hooks.</strong> Lifecycle hooks only exist for types with a size. If you need callbacks on a tag, give it a dummy member or use an observer instead.</li><li><strong>Deleting a tag entity removes the tag everywhere.</strong> Because the tag is an entity, deleting it triggers cleanup on every entity that has it — usually what you want, and configurable with cleanup traits.</li><li><strong>Empty C++ structs become tags automatically</strong>; in C, zero-size registration does the same.</li></ul>"
       }
     ],
-    related: ["cmp-pairs", "cmp-registration", "storage"]
+    related: ["cmp-pairs", "cmp-registration", "storage", "sto-type-array"]
   },
   {
     id: "cmp-pairs",
@@ -238,7 +243,7 @@ window.FLECS_TOUR.register([
         html: "<p>Flecs ships three relationships with special meaning:</p><ul><li><code>ChildOf</code> — parent-child hierarchies. It is <em>exclusive</em>: adding <code>(ChildOf, parent_b)</code> replaces <code>(ChildOf, parent_a)</code>, because nothing has two parents.</li><li><code>IsA</code> — inheritance: &quot;this entity is an instance of that prefab&quot;.</li><li><code>DependsOn</code> — used by systems to declare execution order.</li></ul><p>All three are ordinary relationship entities that happen to carry the right traits — you can build your own with the same powers.</p>"
       }
     ],
-    related: ["cmp-pair-ids", "cmp-graph-traits", "queries", "lifecycle"]
+    related: ["cmp-pair-ids", "cmp-graph-traits", "queries", "wld-entity-ids", "sto-dont-fragment", "qry-traversal"]
   },
   {
     id: "cmp-pair-ids",
@@ -276,7 +281,7 @@ window.FLECS_TOUR.register([
         html: "<p>Because pairs are ordinary ids, adding or removing a pair costs the same as adding or removing a component. A few second-order effects are worth knowing:</p><ul><li><strong>No low-id fast path.</strong> Flecs reserves ids below a threshold (256 by default) for components, and table-graph edges for those use direct array indexing. A packed pair can never be a low id, so pair adds always go through a hash map — typically a 5-10% overhead on the operation.</li><li><strong>More tables.</strong> Every distinct set of components-and-pairs is its own table, so heavy relationship use multiplies tables (<em>fragmentation</em>). Flecs is built to handle hundreds of thousands of tables, and the <code>DontFragment</code> trait exists for extreme cases.</li><li><strong>More index work.</strong> A new table with <code>(Likes, Apples)</code> registers itself under <code>(Likes, Apples)</code>, <code>(Likes, *)</code>, <code>(*, Apples)</code> and <code>(*, *)</code>, making its creation a bit pricier.</li></ul>"
       }
     ],
-    related: ["cmp-wildcards", "cmp-sparse", "storage", "internals"]
+    related: ["cmp-wildcards", "storage", "internals", "sto-dont-fragment", "sto-type-array"]
   },
   {
     id: "cmp-pair-data",
@@ -345,7 +350,7 @@ window.FLECS_TOUR.register([
         html: "<p>Because a table's type is sorted by relationship, all <code>(Likes, ...)</code> pairs are contiguous — so <code>(Likes, *)</code> queries jump straight to them. Pairs with the same <em>target</em> are scattered, so <code>(*, Apples)</code> needs a linear scan through the table's type. Both are fine; just prefer relationship-side wildcards in hot paths when you have the choice.</p>"
       }
     ],
-    related: ["cmp-pair-ids", "queries"]
+    related: ["cmp-pair-ids", "queries", "sto-table-records"]
   },
   {
     id: "cmp-traits",
@@ -374,7 +379,7 @@ window.FLECS_TOUR.register([
         html: "<p>There is even a trait named <code>Trait</code>: adding it to a tag marks that tag as a behavior-modifier. All builtin traits carry it. It's optional for your own traits — its main job is relaxing the <code>Relationship</code> guard-rail, so an entity restricted to relationship use can still receive trait tags.</p><p>Several enforcement traits (<code>Final</code>, <code>Symmetric</code>, <code>Acyclic</code>, <code>OneOf</code>, <code>Trait</code>, <code>Relationship</code>, <code>Target</code>, <code>Singleton</code>) live in the constraint traits addon (<code>FLECS_CONSTRAINT_TRAITS</code>), which is part of the default build.</p>"
       }
     ],
-    related: ["cmp-component-entities", "cmp-toggle", "cmp-sparse"]
+    related: ["cmp-component-entities", "cmp-toggle", "sto-sparse", "cmp-cleanup-traits"]
   },
   {
     id: "cmp-graph-traits",
@@ -420,7 +425,7 @@ window.FLECS_TOUR.register([
         html: "<ul><li><strong>Exclusive</strong> — only one instance of the relationship per entity; adding a second target <em>replaces</em> the first, in a single fast operation. <code>ChildOf</code> is exclusive (one parent), and so is <code>OnDelete</code> itself (one policy).</li><li><strong>Acyclic</strong> — declares the relationship must not form cycles (you can't be located in yourself, however indirectly). Flecs can then flag accidental cycles — though full cycle detection is expensive, so this is a best-effort safety net, not a guarantee.</li><li><strong>Traversable</strong> — allows queries to walk the relationship upwards (the <code>up</code> flag: &quot;match Position on my parent&quot;), and lets events ride along its edges — how a change on a prefab reaches its instances. Traversable relationships are automatically acyclic. <code>ChildOf</code> and <code>IsA</code> both have it.</li></ul>"
       }
     ],
-    related: ["cmp-pairs", "queries", "events"]
+    related: ["cmp-pairs", "queries", "events", "qry-traversal"]
   },
   {
     id: "cmp-inheritance-traits",
@@ -467,7 +472,7 @@ window.FLECS_TOUR.register([
         html: "<ul><li><strong>Final</strong> — the entity cannot be used as an <code>IsA</code> target at all; trying is an error. Like a final class. Queries use this as an optimization: no need to look for subclasses of something that can't have any.</li><li><strong>Inheritable</strong> — the opposite promise: this component <em>will</em> be inherited from. Queries decide at creation time whether to do inheritance bookkeeping; marking a component <code>Inheritable</code> guarantees queries created before any <code>IsA</code> pairs exist still account for them. If a query wasn't inheritance-aware and inheritance appears later, iteration fails in debug mode.</li></ul>"
       }
     ],
-    related: ["lifecycle", "queries", "cmp-traits"]
+    related: ["entities", "queries", "cmp-traits", "lif-inheritance", "ent-overriding"]
   },
   {
     id: "cmp-cleanup-traits",
@@ -475,28 +480,93 @@ window.FLECS_TOUR.register([
     order: 3,
     title: "Cleanup Traits",
     code: "CMP-04C",
-    tagline: "No dangling references, and you choose how",
-    intro: "When an entity that is used <em>as</em> a tag, component, relationship or target gets deleted, every reference to it in the storage must go too — Flecs never leaves dangling ids behind. Cleanup traits let you pick <em>what</em> happens to the entities holding those references: lose the component, or be deleted along with it.",
+    tagline: "No dangling references, ever — you just choose how",
+    intro: "Entities are used <em>inside</em> other entities: as tags, as components, as halves of relationship pairs. So what happens when you delete one? Cleanup traits answer that per relationship — strip the references, delete the entities holding them, or refuse with a panic — and Flecs guarantees no dangling ids survive either way.",
     sections: [
       {
         type: "text",
-        heading: "Conditions and actions",
-        html: "<p>A cleanup policy is a pair on the entity being deleted: <code>(Condition, Action)</code>.</p><p>Two conditions:</p><ul><li><code>OnDelete</code> — fires when the component/tag/relationship itself is deleted.</li><li><code>OnDeleteTarget</code> — fires when an entity used as a <em>target</em> of this relationship is deleted.</li></ul><p>Three actions:</p><ul><li><code>Remove</code> (default) — strip the reference from everything that has it.</li><li><code>Delete</code> — delete every entity that has the reference.</li><li><code>Panic</code> — refuse and raise a fatal error; for references that should never disappear at runtime.</li></ul>"
+        heading: "The librarian's problem",
+        html: "<p>Imagine a library card that thousands of books reference. If the card is destroyed, something must happen to every book pointing at it — otherwise the catalog lies. When you delete an entity that others use, Flecs has to clean up:</p><ul><li>every entity that <em>has</em> it, as a tag or component,</li><li>every pair using it as the relationship: <code>(Archer, *)</code>,</li><li>every pair using it as the target: <code>(*, Archer)</code>.</li></ul><p>The <em>how</em> is a <code>(Condition, Action)</code> pair on the entity being deleted. Two conditions: <code>OnDelete</code> (this thing itself is deleted) and <code>OnDeleteTarget</code> (an entity used as the <em>target</em> of this relationship is deleted). Three actions:</p><ul><li><strong>Remove</strong> — strip the references from everyone. The default for tags and relationships.</li><li><strong>Delete</strong> — delete every entity holding a reference.</li><li><strong>Panic</strong> — abort with a fatal error. The default for components, since deleting a component type out from under live entities is usually a bug.</li></ul>"
+      },
+      {
+        type: "text",
+        heading: "Why deleting a parent deletes the children",
+        html: "<p>The builtin <code>ChildOf</code> relationship ships with <code>(OnDeleteTarget, Delete)</code>: &quot;when the target of a ChildOf pair — the parent — is deleted, delete the entities that have the pair&quot;. That single trait is the entire reason hierarchies clean themselves up.</p><p>You can give your own relationships the same behavior — a <code>Requires</code> relationship where dependents die with their dependency — or leave the default, so deleting a target merely removes the pairs and the entities live on.</p>"
       },
       {
         type: "code",
-        heading: "The classic example: ChildOf",
+        heading: "Try it",
         lang: "c",
-        title: "Delete the parent, delete the children",
-        src: "ecs_add_pair(world, EcsChildOf, EcsOnDeleteTarget, EcsDelete);\n\necs_entity_t Likes = ecs_new(world);\necs_add_pair(world, Likes, EcsOnDelete, EcsRemove);\n\necs_entity_t parent = ecs_new(world);\necs_entity_t child = ecs_new_w_pair(world, EcsChildOf, parent);\n\necs_delete(world, parent);\nassert(!ecs_is_alive(world, child));"
+        title: "a relationship whose holders die with the target",
+        src: "ecs_entity_t Requires = ecs_new(world);\necs_add_pair(world, Requires, EcsOnDeleteTarget, EcsDelete);\n\necs_entity_t reactor = ecs_new(world);\necs_entity_t shield = ecs_new_w_pair(world, Requires, reactor);\n\necs_delete(world, reactor);\n\necs_is_alive(world, shield);"
+      },
+      {
+        type: "diagram",
+        heading: "One delete, cascading",
+        spec: {
+          type: "flow",
+          lanes: [
+            [ { id: "del", label: "ecs_delete(world, parent)" } ],
+            [ { id: "pol", label: "ChildOf: (OnDeleteTarget, Delete)", sub: "policy lookup" } ],
+            [ { id: "c1", label: "delete child 1", sub: "OnRemove observers fire" },
+              { id: "c2", label: "delete child 2" } ],
+            [ { id: "g", label: "delete grandchildren", sub: "same policy, recursively" },
+              { id: "done", label: "delete parent last", sub: "children first, then parent" } ]
+          ],
+          edges: [
+            { from: "del", to: "pol" },
+            { from: "pol", to: "c1" },
+            { from: "pol", to: "c2" },
+            { from: "c1", to: "g" },
+            { from: "c2", to: "done" }
+          ],
+          note: "Each deleted child re-runs the same machinery for its own children, so the whole subtree unwinds bottom-up."
+        }
       },
       {
         type: "text",
         heading: "Fine print",
-        html: "<ul><li>The <code>ChildOf</code> policy above is builtin — shown here only to illustrate the syntax.</li><li>Policies cover ids added <em>to</em> entities, not entity values stored <em>inside</em> your component structs — those you must handle yourself.</li><li>Cleanup guarantees no dangling references, but not a specific ordering of <code>OnRemove</code> callbacks across entities — and during world teardown, ordering rules relax further.</li></ul><p>Cleanup order, world teardown, and how deferred operations interact with deletion get the full treatment in the Prefabs &amp; Lifecycle deck.</p>"
+        html: "<ul><li>Policies cover ids added <em>to</em> entities, not entity values stored <em>inside</em> your component structs — an <code>ecs_entity_t</code> in your own struct is invisible to cleanup traits, and yours to maintain.</li><li>Cleanup guarantees no dangling references, but not a specific ordering of <code>OnRemove</code> callbacks across entities.</li><li>During world teardown the ordering rules relax further — the next page covers what you can still rely on.</li><li>Deletes issued inside a system are deferred like any other structural change, so the cascade happens at the flush.</li></ul>"
       }
     ],
-    related: ["lifecycle", "cmp-component-entities", "events"]
+    related: ["lif-world-teardown", "cmp-component-entities", "evt-observer-execution", "lif-deferring"]
+  },
+  {
+    id: "lif-world-teardown",
+    parent: "cmp-cleanup-traits",
+    order: 1,
+    title: "Cleanup Order & Teardown",
+    code: "CMP-04C1",
+    tagline: "What can you rely on when everything is being demolished",
+    intro: "Cleanup traits say <em>what</em> must happen, not in <em>which order</em> — many orders satisfy them. That matters most for <code>OnRemove</code> observers, and most of all during world teardown, when everything is deleted at once.",
+    sections: [
+      {
+        type: "text",
+        heading: "The one guarantee, and its limits",
+        html: "<p>When you delete a parent, its children are cleaned up first — so an <code>OnRemove</code> observer sees children before parents. This holds for any relationship with <code>(OnDeleteTarget, Delete)</code>, as long as the graph of deleted entities has no cycles.</p><p>It stops holding when the deletion comes from a different direction. Delete the <em>component</em> <code>Node</code> instead of the parent, and every entity with Node is cleaned up without consulting <code>ChildOf</code> policies — order undefined. Cycles between relationships with Delete actions also make order undefined.</p>"
+      },
+      {
+        type: "diagram",
+        heading: "What ecs_fini does",
+        spec: {
+          type: "stack",
+          layers: [
+            { label: "1. Find all root entities", sub: "entities without a ChildOf pair" },
+            { label: "2. Set aside modules, components, observers, systems", sub: "they must outlive their users" },
+            { label: "3. Set aside childless entities", sub: "they can't trigger complex cleanup" },
+            { label: "4. Delete the remaining roots", sub: "cleanup traits respected" },
+            { label: "5. Delete everything else", sub: "traits no longer considered, order undefined" }
+          ],
+          note: "The further down the list an entity is deleted, the fewer guarantees it gets."
+        }
+      },
+      {
+        type: "text",
+        heading: "Organizing for a graceful shutdown",
+        html: "<p>Because step 2 protects modules, where you put things decides how they die:</p><ul><li><strong>Put components, observers and systems in modules.</strong> They'll survive until the entities that use them are gone, so observers aren't deleted while events they'd match are still being generated.</li><li><strong>Don't park them under ordinary entities.</strong> A non-module scope in the root gets torn down with the regular entities. If you have such a scope, add the <code>EcsModule</code> tag to its root.</li></ul>"
+      }
+    ],
+    related: ["evt-observer-execution", "world", "systems", "cmp-cleanup-traits"]
   },
   {
     id: "cmp-guard-traits",
@@ -607,89 +677,6 @@ window.FLECS_TOUR.register([
         html: "<p>Rule of thumb: <strong>type hooks for resources, observers for gameplay</strong>. Hooks are single, ordered, and always run — right for memory safety. Observers can be many, can be added or removed at runtime, and can match complex queries — right for behavior. The component hooks (<code>on_add</code>/<code>on_set</code>/<code>on_remove</code>) sit in between: use them when being first (or last) in line matters, like validating or normalizing values before observers see them.</p>"
       }
     ],
-    related: ["events", "cmp-registration", "lifecycle"]
-  },
-  {
-    id: "cmp-toggle",
-    parent: "components",
-    order: 6,
-    title: "Enabling & Disabling",
-    code: "CMP-06",
-    tagline: "A light switch for components — flip the bit, keep the data",
-    intro: "Sometimes you want a component to stop counting without throwing away its value: pause an AI, suspend a collider, mute a sound source. Toggling flips a single bit instead of removing the component — queries treat the entity as if it doesn't have it, but the data stays put, ready to be switched back on.",
-    sections: [
-      {
-        type: "code",
-        heading: "Flipping the switch",
-        lang: "c",
-        src: "ECS_COMPONENT(world, Position);\necs_add_id(world, ecs_id(Position), EcsCanToggle);\n\necs_entity_t e = ecs_insert(world, ecs_value(Position, {10, 20}));\n\necs_enable_component(world, e, Position, false);\nassert(!ecs_is_enabled(world, e, Position));\n\necs_enable_component(world, e, Position, true);\nassert(ecs_is_enabled(world, e, Position));"
-      },
-      {
-        type: "diagram",
-        heading: "Where the switch lives",
-        spec: {
-          type: "grid",
-          title: "Table [Position] with a toggle bitset",
-          cols: ["Entity", "Position", "enabled bit"],
-          rows: [
-            ["e1", "10, 20", "1"],
-            ["e2", "3, 5", "0"],
-            ["e3", "7, 7", "1"]
-          ],
-          note: "One bit per row, stored next to the column. Queries skip rows whose bit is 0 — e2 acts as if it has no Position, but its {3, 5} is still there."
-        }
-      },
-      {
-        type: "text",
-        heading: "Why and when",
-        html: "<p>Removing a component moves the entity to a different table — copying its other components along. Toggling writes one bit and moves nothing, so it's much cheaper for frequent on/off flips, and it preserves the value.</p><p>The fine print:</p><ul><li>Only components with the <code>CanToggle</code> trait can be toggled; the trait tells the storage to maintain the bitset.</li><li>Toggling doesn't <em>add</em> anything: the entity must actually have the component for a query to ever match it.</li><li><code>CanToggle</code> adds a small cost to query iteration for that component — every matched table row has to consult the bitset, even for entities that never toggle. Don't sprinkle it on everything.</li><li>Queries can match the bitset itself by flagging a term with <code>ECS_TOGGLE</code>.</li></ul>"
-      }
-    ],
-    related: ["cmp-traits", "queries", "storage"]
-  },
-  {
-    id: "cmp-sparse",
-    parent: "components",
-    order: 7,
-    title: "Sparse & Non-Fragmenting",
-    code: "CMP-07",
-    tagline: "Components that live outside the tables and never move",
-    intro: "Normally a component's bytes live in a table column, and they move whenever the entity changes tables. The <code>Sparse</code> trait moves a component out of the tables into its own per-component storage, where each entity's value stays at a fixed address for its whole life. <code>DontFragment</code> goes one step further and keeps the component out of table bookkeeping entirely.",
-    sections: [
-      {
-        type: "diagram",
-        heading: "Two homes for component data",
-        spec: {
-          type: "flow",
-          lanes: [
-            [ { id: "s1", label: "Entity e", sub: "has Position and Health" } ],
-            [ { id: "s2", label: "Table [Position, Health]", sub: "Position column: tight array, moves with the entity" },
-              { id: "s3", label: "Sparse storage for Health", sub: "one slot per entity, address never changes" } ]
-          ],
-          edges: [
-            { from: "s1", to: "s2", label: "regular" },
-            { from: "s1", to: "s3", dashed: true, label: "Sparse" }
-          ],
-          note: "With Sparse on Health, the table still lists Health in its type — but the bytes live outside it."
-        }
-      },
-      {
-        type: "code",
-        heading: "Opting in",
-        lang: "c",
-        src: "ECS_COMPONENT(world, Health);\necs_add_id(world, ecs_id(Health), EcsSparse);\n\nECS_COMPONENT(world, Wounded);\necs_add_id(world, ecs_id(Wounded), EcsDontFragment);"
-      },
-      {
-        type: "text",
-        heading: "Sparse: stable pointers, slower queries",
-        html: "<p>What you gain:</p><ul><li><strong>Pointer stability</strong> — a pointer from <code>get</code> stays valid when the entity changes tables. Essential for components that other code holds pointers into, and for types that can't be moved at all (non-movable C++ types are marked sparse automatically).</li><li><strong>No move cost</strong> — big components stop being copied around on every add/remove of <em>other</em> components.</li></ul><p>What you pay: queries can no longer stream the component from a contiguous column — each entity's value is a lookup away. Sparse trades query speed for add/remove speed. All ECS operations and queries still work as expected. Note that adding or removing a sparse component itself still changes the entity's table, since the table type records that the entity has it.</p>"
-      },
-      {
-        type: "text",
-        heading: "DontFragment: for the very rare",
-        html: "<p><code>DontFragment</code> uses the same sparse storage but additionally keeps the component <em>out of table types</em>. Why that matters: a component held by only a handful of entities would otherwise split those entities into their own nearly-empty tables (fragmentation), which slows every query that touches them. With <code>DontFragment</code>, adding the component doesn't create or change tables at all.</p><p>The trade-offs are real, so reserve it for genuinely sparse data:</p><ul><li>The component doesn't show up in an entity's type, and monitors can't watch it (they compare tables, and this component isn't in any).</li><li>Some query features don't work with it yet: <code>Or</code>, optional terms, <code>AndFrom</code>/<code>NotFrom</code>, inheritance and transitivity.</li><li>Plain operations, relationships (including exclusive ones), simple queries, wildcards and query variables all work.</li></ul>"
-      }
-    ],
-    related: ["storage", "cmp-pair-ids", "queries"]
+    related: ["events", "cmp-registration", "entities", "evt-observers"]
   }
 ]);

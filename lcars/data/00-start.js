@@ -140,14 +140,14 @@ window.FLECS_TOUR.register([
       {
         type: "text",
         heading: "What's in this deck",
-        html: "<p>This deck covers the world itself and the things most tightly bound to it: entities and their ids, how entities get names, and how they form parent-child hierarchies.</p>"
+        html: "<p>This deck covers the world's startup and operating modes, how names and paths are resolved, parent-child hierarchies and scopes, entity ranges, and singletons.</p>"
       }
     ]
   },
   {
     id: "components",
     parent: null,
-    order: 3,
+    order: 4,
     title: "Components & Relationships",
     code: "CMP",
     tagline: "The data you attach to things, and the links between things",
@@ -156,14 +156,14 @@ window.FLECS_TOUR.register([
       {
         type: "text",
         heading: "What's in this deck",
-        html: "<p>This deck covers everything you can add to an entity: components with data, tags without data, relationship pairs, the traits that change how components behave, and the hooks that run when component data is created, copied or destroyed.</p>"
+        html: "<p>This deck covers everything you can add to an entity: components with data, tags without data, relationship pairs, the traits that change how components behave, cleanup policies, and the hooks that run when component data is created, copied or destroyed.</p>"
       }
     ]
   },
   {
     id: "storage",
     parent: null,
-    order: 4,
+    order: 5,
     title: "Storage Engine",
     code: "STO",
     tagline: "Where the bytes actually live",
@@ -179,7 +179,7 @@ window.FLECS_TOUR.register([
   {
     id: "queries",
     parent: null,
-    order: 5,
+    order: 6,
     title: "Queries",
     code: "QRY",
     tagline: "Ask the world questions, get fast answers",
@@ -195,7 +195,7 @@ window.FLECS_TOUR.register([
   {
     id: "events",
     parent: null,
-    order: 6,
+    order: 7,
     title: "Observers & Events",
     code: "EVT",
     tagline: "Run code the moment something changes",
@@ -209,25 +209,41 @@ window.FLECS_TOUR.register([
     ]
   },
   {
-    id: "lifecycle",
+    id: "entities",
     parent: null,
-    order: 7,
-    title: "Prefabs & Lifecycle",
-    code: "LIF",
-    tagline: "Templates, cleanup rules, and safely changing the world mid-flight",
-    intro: "This deck is about the life story of entities: stamping many entities from a prefab template, what happens when entities are deleted (and what gets cleaned up with them), and how Flecs safely queues up changes you make while it is iterating.",
+    order: 3,
+    title: "Entities",
+    code: "ENT",
+    tagline: "Create them, identify them, and stamp them from templates",
+    intro: "An entity is the number Flecs uses to identify a thing. This deck follows that number through creation, deletion and recycling, then shows how prefabs stamp out whole families of entities with inherited data.",
     sections: [
       {
         type: "text",
         heading: "What's in this deck",
-        html: "<p>Prefabs and inheritance, cleanup policies, and the deferring/staging machinery that makes structural changes safe during iteration and across threads.</p>"
+        html: "<p>This deck covers creating and deleting entities, liveness and generations, the layout of entity ids, prefabs and inheritance, and prefab hierarchies.</p>"
+      }
+    ]
+  },
+  {
+    id: "commands",
+    parent: null,
+    order: 8,
+    title: "Commands",
+    code: "CMD",
+    tagline: "Record structural changes now, apply them safely later",
+    intro: "Commands let you change the world while systems are iterating it. Flecs records structural operations in private queues, combines related work, and applies the result at a safe merge point.",
+    sections: [
+      {
+        type: "text",
+        heading: "What's in this deck",
+        html: "<p>This deck covers deferring operations into command queues, batching commands so entities move only once, and staging changes safely across threads.</p>"
       }
     ]
   },
   {
     id: "systems",
     parent: null,
-    order: 8,
+    order: 9,
     title: "Systems & Execution",
     code: "SYS",
     tagline: "The logic that runs every frame, in the right order",
@@ -243,7 +259,7 @@ window.FLECS_TOUR.register([
   {
     id: "reflection",
     parent: null,
-    order: 9,
+    order: 10,
     title: "Reflection & Types",
     code: "RFL",
     tagline: "Teach Flecs what your structs look like",
@@ -259,7 +275,7 @@ window.FLECS_TOUR.register([
   {
     id: "script",
     parent: null,
-    order: 10,
+    order: 11,
     title: "Flecs Script",
     code: "SCR",
     tagline: "Describe your scene in text, reload it while running",
@@ -275,7 +291,7 @@ window.FLECS_TOUR.register([
   {
     id: "remote",
     parent: null,
-    order: 11,
+    order: 12,
     title: "JSON & Remote API",
     code: "NET",
     tagline: "Your world, as text, over the wire",
@@ -291,7 +307,7 @@ window.FLECS_TOUR.register([
   {
     id: "observability",
     parent: null,
-    order: 12,
+    order: 13,
     title: "Monitoring & Debugging",
     code: "OBS",
     tagline: "Instruments, alarms, and the ship's log",
@@ -307,7 +323,7 @@ window.FLECS_TOUR.register([
   {
     id: "internals",
     parent: null,
-    order: 13,
+    order: 14,
     title: "Under the Hood",
     code: "INT",
     tagline: "The engine room: allocators, data structures, and the OS layer",

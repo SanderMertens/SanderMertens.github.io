@@ -33,7 +33,7 @@ window.FLECS_TOUR.register([
         src: "prefab SpaceShip {\n  MaxSpeed: {value: 100}\n}\n\nmy_ship : SpaceShip {\n  Position: {x: 10, y: 20}\n}\n\nCheckBox my_checkbox(checked: true)\n\n$ {\n  TimeOfDay: {t: 0.5}\n}"
       }
     ],
-    related: ["scr-hierarchies", "scr-types", "components", "reflection", "lifecycle"]
+    related: ["scr-hierarchies", "scr-types", "components", "reflection", "entities"]
   },
   {
     id: "scr-hierarchies",
@@ -303,18 +303,60 @@ window.FLECS_TOUR.register([
     related: ["scr-expressions", "scr-templates", "scr-variables"]
   },
   {
-    id: "scr-templates",
+    id: "scr-reactivity",
     parent: "script",
     order: 4,
-    title: "Templates",
+    title: "Reactivity",
     code: "SCR-04",
+    tagline: "A script is not a one-shot builder — it re-runs when its inputs change",
+    intro: "The obvious way to use a script is once: read the text, create the entities, done. Flecs Script does more than that. A script remembers what it read and what it built, so when an input changes — a template property, a component it looked at, or the text itself — the affected part is evaluated again and the world catches up on its own.",
+    sections: [
+      {
+        type: "text",
+        heading: "A spreadsheet, not a printout",
+        html: "<p>A printout is a snapshot: change the numbers behind it and the paper still says what it said. A spreadsheet is different — edit one cell and everything derived from it recalculates.</p><p>Script behaves like the spreadsheet. Three different inputs can change, and each has its own mechanism for noticing:</p><ul><li>A <strong>template</strong> is a recipe attached to an entity. Change the entity's properties and that one instance is rebuilt from the recipe.</li><li>A <strong>script ref</strong> is a component value the script read from some entity. Change that component and the script runs again.</li><li>A <strong>managed script</strong> is the text itself, living in the world as an entity. Replace the text and the world it created is updated to match.</li></ul>"
+      },
+      {
+        type: "diagram",
+        heading: "Three inputs, one idea",
+        spec: {
+          type: "flow",
+          lanes: [
+            [ { id: "p", label: "Property changed", sub: "prop on an instance" },
+              { id: "c", label: "Component changed", sub: "a value the script read" },
+              { id: "t", label: "Text changed", sub: "ecs_script_update" } ],
+            [ { id: "e", label: "Re-evaluate", sub: "the affected script or instance" } ],
+            [ { id: "w", label: "World matches the source again", sub: "created, changed, removed" } ]
+          ],
+          edges: [
+            { from: "p", to: "e" },
+            { from: "c", to: "e" },
+            { from: "t", to: "e" }
+          ],
+          note: "In all three cases the mechanism is the same: an observer notices the change and asks the script to run again."
+        }
+      },
+      {
+        type: "text",
+        heading: "What re-evaluation actually does",
+        html: "<p>Running again is not appending. Flecs tracks everything a script (or a template instance) created, so a second run <em>reconciles</em> rather than duplicates: entities that still appear are kept and updated, entities that no longer appear are deleted, and new ones are created.</p><p>Two guards keep this from going wrong:</p><ul><li>A script that is already evaluating will not re-enter itself, so a script that writes a component it also reads does not spin.</li><li>If the change arrives while the world is deferred — inside a system, say — the re-run is enqueued as an event and happens once it is safe, instead of mutating the storage mid-iteration.</li></ul><p>The cost is real evaluation work, so reactivity is meant for authoring-time and configuration-time data — scenes, layouts, tunables — not for per-frame simulation. Systems are still the tool for things that change every tick.</p>"
+      }
+    ],
+    related: ["evt-observers", "scr-running", "net-explorer"]
+  },
+  {
+    id: "scr-templates",
+    parent: "scr-reactivity",
+    order: 1,
+    title: "Templates",
+    code: "SCR-04A",
     tagline: "A recipe you stamp onto entities, with knobs to turn",
     intro: "A template is a chunk of script that does not run right away. Instead it becomes a reusable recipe: add the template to an entity like a component, and the recipe runs <em>for that entity</em> — creating its components and children. Parameters called <em>props</em> are the knobs on the recipe.",
     sections: [
       {
         type: "text",
         heading: "Define once, instantiate anywhere",
-        html: "<p>Declare a template with the <code>template</code> keyword. Its body can contain anything a script can: components, children, variables, loops, even nested template instances. The body is <em>stored</em>, not executed — it runs each time the template is <strong>instantiated</strong>, which happens when you add the template to an entity like any other component, most often with the kind syntax: <code>Tree my_tree</code>.</p><p>This is what makes templates <em>procedural</em> assets: a template with a loop inside can build a whole forest of children from one number. Inside the body, a <code>this</code> variable refers to the entity being instantiated.</p><p>Templates differ from prefabs (see the Prefabs &amp; Lifecycle deck): a prefab shares components with instances through inheritance, while a template <em>runs a script</em> per instance, so every instance gets its own freshly computed components and children.</p>"
+        html: "<p>Declare a template with the <code>template</code> keyword. Its body can contain anything a script can: components, children, variables, loops, even nested template instances. The body is <em>stored</em>, not executed — it runs each time the template is <strong>instantiated</strong>, which happens when you add the template to an entity like any other component, most often with the kind syntax: <code>Tree my_tree</code>.</p><p>This is what makes templates <em>procedural</em> assets: a template with a loop inside can build a whole forest of children from one number. Inside the body, a <code>this</code> variable refers to the entity being instantiated.</p><p>Templates differ from prefabs (see the Entities deck): a prefab shares components with instances through inheritance, while a template <em>runs a script</em> per instance, so every instance gets its own freshly computed components and children.</p>"
       },
       {
         type: "code",
@@ -348,14 +390,14 @@ window.FLECS_TOUR.register([
         html: "<p>Templates stay connected to their instances:</p><ul><li><strong>Change a prop</strong> — set the template component with a new value — and that instance's body re-runs with the new value.</li><li><strong>Change the template itself</strong> (redefine it, for example by hot-reloading the script that declares it) and Flecs walks every entity that has the template component and re-instantiates each one with its existing prop values.</li><li>If the template body reads component values from other entities (like <code>Game[Level]</code>), Flecs creates observers on those components, so instances also refresh when the data they depend on changes.</li></ul><p>Entities a template creates under an instance are tagged with an <code>EcsScriptTemplate</code> pair, so re-instantiating knows exactly which children it owns and may replace. One caution: templates added to prefabs are not instantiated on the prefab itself — the recipe runs when the prefab is instantiated into a real entity.</p>"
       }
     ],
-    related: ["scr-template-props", "scr-managed", "lifecycle"]
+    related: ["scr-template-props", "scr-managed", "entities", "scr-reactivity", "scr-refs"]
   },
   {
     id: "scr-template-props",
     parent: "scr-templates",
     order: 1,
     title: "Props, Muts & the Template Component",
-    code: "SCR-04A",
+    code: "SCR-04A1",
     tagline: "The knobs on the recipe are a real component",
     intro: "When you declare props in a template, Flecs quietly builds a real struct component named after the template, with one member per prop. The template <em>is</em> its parameter component — which is why instances are configured with plain component values, show up in the Explorer, and can be edited live.",
     sections: [
@@ -407,6 +449,122 @@ window.FLECS_TOUR.register([
     related: ["scr-templates", "scr-managed", "reflection"]
   },
   {
+    id: "scr-refs",
+    parent: "scr-reactivity",
+    order: 2,
+    title: "Script Refs",
+    code: "SCR-04B",
+    tagline: "Read a component from another entity, and follow it when it changes",
+    intro: "A script can read a component from a named entity and use it as a value: <code>Game[Level].width</code> is \"the width member of the Level component on the entity Game\". That single expression does two things — it fetches the value now, and it signs the script up to be re-run whenever that component is set.",
+    sections: [
+      {
+        type: "code",
+        heading: "Reading a component from an entity",
+        lang: "flecs",
+        title: "The bracket form, and the same thing through a variable",
+        src: "grid {\n  Grid: { Game[Level].width, Game[Level].depth }\n}\n\nconst level = Game[Level]\n\ntiles {\n  Grid: { width: $level.width, depth: $level.depth, prefab: Tile }\n}"
+      },
+      {
+        type: "text",
+        heading: "By value, not by pointer",
+        html: "<p><code>Game[Level]</code> reads the component's value into the script, it does not hold a pointer into the storage. That matters in practice:</p><ul><li>Adding or removing components on <code>Game</code> afterwards cannot invalidate what the script read, even though such a change moves the entity to another table.</li><li>If the component is not on the entity, evaluation fails with an error rather than quietly producing zeros.</li><li>Storing the value in a <code>const</code> variable does the lookup once and reuses it, which is the cheaper form when a script reads the same component in several places.</li></ul>"
+      },
+      {
+        type: "text",
+        heading: "The observer behind the bracket",
+        html: "<p>While evaluating, the script records every component it read this way as a small entry — the entity, the component id, and later the observer that watches it. When evaluation finishes, Flecs reconciles that list with the observers the script already had: new refs get an <code>OnSet</code> observer created for exactly that entity and component, refs that disappeared have their observer deleted.</p><p>Those observers are created <em>inside</em> the script entity's scope, so they are children of the script and are cleaned up with it — no manual bookkeeping, and no observers left behind when the script is deleted.</p><p>When one of the watched components is set, the callback re-runs the whole script through <code>ecs_script_update</code>. Two things keep that safe: a script already in the middle of evaluating refuses to re-enter, and if the change happened while the world was deferred the re-run is enqueued as a script-update event and performed once operations can be applied again.</p>"
+      },
+      {
+        type: "diagram",
+        heading: "From read to re-run",
+        spec: {
+          type: "flow",
+          lanes: [
+            [ { id: "r1", label: "Script reads Game[Level]", sub: "during evaluation" } ],
+            [ { id: "r2", label: "Ref recorded", sub: "entity + component" } ],
+            [ { id: "r3", label: "OnSet observer", sub: "fixed source: Game" } ],
+            [ { id: "r4", label: "Level is set", sub: "by C code, REST, anything" } ],
+            [ { id: "r5", label: "Script re-evaluated", sub: "world catches up" } ]
+          ],
+          edges: [
+            { from: "r1", to: "r2" },
+            { from: "r2", to: "r3", label: "after eval" },
+            { from: "r3", to: "r4", dashed: true },
+            { from: "r4", to: "r5" }
+          ],
+          note: "The same machinery drives template instances: their props are the components being watched."
+        }
+      },
+      {
+        type: "text",
+        heading: "Using it well",
+        html: "<p>Script refs turn a script into a view over your data. A layout script that reads a <code>Level</code> component rebuilds its grid the moment a designer changes the level size — from C, from the Explorer, or from another script — with no reload step in between.</p><p>Two habits keep that pleasant:</p><ul><li><strong>Read from few, stable entities.</strong> Every distinct entity-and-component you read costs one observer, and every set on any of them re-runs the entire script.</li><li><strong>Do not read what the script itself writes.</strong> The re-entry guard stops an infinite loop, but the intent is muddy: put values the script derives somewhere it does not read back.</li></ul>"
+      }
+    ],
+    related: ["scr-managed", "scr-templates", "evt-observers", "scr-variables"]
+  },
+  {
+    id: "scr-managed",
+    parent: "scr-reactivity",
+    order: 3,
+    title: "Managed Scripts & Hot Reload",
+    code: "SCR-04C",
+    tagline: "Edit the text, watch the world follow",
+    intro: "A managed script is a script that lives in the world as an entity. Flecs remembers which entities the script created, so when you update the text, the world updates to match — new things appear, changed things change, and things you deleted from the script disappear. This is the hot-reload workflow.",
+    sections: [
+      {
+        type: "text",
+        heading: "Creating and updating",
+        html: "<p><code>ecs_script(world, { .code = ... })</code> (or <code>.filename</code>) creates a script entity carrying an <code>EcsScript</code> component and evaluates it. Every entity the script creates is tagged with a pair that points back at the script entity — like a museum putting its own sticker on every piece in its collection.</p><p>To reload, call <code>ecs_script_update(world, script, 0, new_code)</code>. Flecs then:</p><ul><li>parses the new code (on a parse error, the old entities are left untouched and the error is stored in <code>EcsScript::error</code>),</li><li>clears the previously tagged entities,</li><li>evaluates the new code, tagging the new set.</li></ul><p>Named entities that appear in both versions are simply recreated under the same names, so to the rest of the world they persist; entities that no longer appear are gone. If evaluation fails midway, everything the failed run created is deleted, so a broken save never leaves half a scene behind. <code>ecs_script_clear()</code> removes a script's entities without deleting the script itself.</p>"
+      },
+      {
+        type: "code",
+        heading: "Hot reload from C",
+        lang: "c",
+        title: "reload.c",
+        src: "ecs_entity_t s = ecs_script(world, {\n    .code = \"ship { Position: {10, 20} }\"\n});\n\nif (ecs_script_update(world, s, 0,\n    \"ship { Position: {30, 40} }\\nbuoy {}\"))\n{\n}\n\necs_script_clear(world, s, 0);"
+      },
+      {
+        type: "diagram",
+        heading: "The update cycle",
+        spec: {
+          type: "flow",
+          lanes: [
+            [ { id: "m1", label: "New code", sub: "ecs_script_update" } ],
+            [ { id: "m2", label: "Parse", sub: "fail: keep old entities, store error" } ],
+            [ { id: "m3", label: "Clear old set", sub: "delete entities tagged with the script" } ],
+            [ { id: "m4", label: "Evaluate", sub: "tag everything created" } ],
+            [ { id: "m5", label: "World matches text", sub: "removed entities are gone" } ]
+          ],
+          edges: [
+            { from: "m1", to: "m2" },
+            { from: "m2", to: "m3", label: "parse ok" },
+            { from: "m3", to: "m4" },
+            { from: "m4", to: "m5" }
+          ],
+          note: "On an evaluation error the freshly created entities are deleted, so a bad reload cannot leave a half-built scene."
+        }
+      },
+      {
+        type: "text",
+        heading: "Who calls update",
+        html: "<p>Anything that can reach the world can trigger a reload, which is what makes the workflow feel live:</p><ul><li>Your own code, watching a file on disk and calling <code>ecs_script_update</code> when the timestamp moves.</li><li>The Explorer, which edits script text in a browser and sends it over the REST API — the same call, one network hop away.</li><li>Flecs itself, when a component the script read changes: that is the script-refs path, and it ends in exactly this update cycle.</li></ul><p>Two notes from the API: managed scripts are marked experimental, and a script that defines templates keeps its resources alive until those template entities are deleted.</p>"
+      },
+      {
+        type: "struct",
+        heading: "The datatype",
+        name: "ecs_script_desc_t",
+        summary: "What you fill in for ecs_script_init(), usually through the ecs_script() shorthand.",
+        members: [
+          { name: "entity", type: "ecs_entity_t", desc: "Optional: an existing entity to attach the script to. Leave at 0 and Flecs creates one, named after the filename if there is one." },
+          { name: "filename", type: "const char *", desc: "Set this to load the code from a file on disk." },
+          { name: "code", type: "const char *", desc: "Set this to pass the code directly as a string. Set either this or filename." }
+        ]
+      }
+    ],
+    related: ["scr-running", "scr-templates", "remote", "events", "scr-refs", "net-explorer"]
+  },
+  {
     id: "scr-running",
     parent: "script",
     order: 5,
@@ -451,67 +609,6 @@ window.FLECS_TOUR.register([
       }
     ],
     related: ["scr-managed", "scr-variables", "scr-internals"]
-  },
-  {
-    id: "scr-managed",
-    parent: "scr-running",
-    order: 1,
-    title: "Managed Scripts & Hot Reload",
-    code: "SCR-05A",
-    tagline: "Edit the text, watch the world follow",
-    intro: "A managed script is a script that lives in the world as an entity. Flecs remembers which entities the script created, so when you update the text, the world updates to match — new things appear, changed things change, and things you deleted from the script disappear. This is the hot-reload workflow.",
-    sections: [
-      {
-        type: "text",
-        heading: "Creating and updating",
-        html: "<p><code>ecs_script(world, { .code = ... })</code> (or <code>.filename</code>) creates a script entity carrying an <code>EcsScript</code> component and evaluates it. Every entity the script creates is tagged with a pair that points back at the script entity — like a museum putting its own sticker on every piece in its collection.</p><p>To reload, call <code>ecs_script_update(world, script, 0, new_code)</code>. Flecs then:</p><ul><li>parses the new code (on a parse error, the old entities are left untouched and the error is stored in <code>EcsScript::error</code>),</li><li>clears the previously tagged entities,</li><li>evaluates the new code, tagging the new set.</li></ul><p>Named entities that appear in both versions are simply recreated under the same names, so to the rest of the world they persist; entities that no longer appear are gone. If evaluation fails midway, everything the failed run created is deleted, so a broken save never leaves half a scene behind. <code>ecs_script_clear()</code> removes a script's entities without deleting the script itself.</p>"
-      },
-      {
-        type: "code",
-        heading: "Hot reload from C",
-        lang: "c",
-        title: "reload.c",
-        src: "ecs_entity_t s = ecs_script(world, {\n    .code = \"ship { Position: {10, 20} }\"\n});\n\nif (ecs_script_update(world, s, 0,\n    \"ship { Position: {30, 40} }\\nbuoy {}\"))\n{\n}\n\necs_script_clear(world, s, 0);"
-      },
-      {
-        type: "diagram",
-        heading: "The update cycle",
-        spec: {
-          type: "flow",
-          lanes: [
-            [ { id: "m1", label: "New code", sub: "ecs_script_update" } ],
-            [ { id: "m2", label: "Parse", sub: "fail: keep old entities, store error" } ],
-            [ { id: "m3", label: "Clear old set", sub: "delete entities tagged with the script" } ],
-            [ { id: "m4", label: "Evaluate", sub: "tag everything created" } ],
-            [ { id: "m5", label: "World matches text", sub: "removed entities are gone" } ]
-          ],
-          edges: [
-            { from: "m1", to: "m2" },
-            { from: "m2", to: "m3", label: "parse ok" },
-            { from: "m3", to: "m4" },
-            { from: "m4", to: "m5" }
-          ],
-          note: "On an evaluation error the freshly created entities are deleted, so a bad reload cannot leave a half-built scene."
-        }
-      },
-      {
-        type: "text",
-        heading: "Reactive scripts",
-        html: "<p>Managed scripts that read component values from other entities (the <code>Game[Level]</code> form) register observers on those components. When such a value changes, the script re-runs automatically — so a script that lays out a grid from a <code>Level</code> component rebuilds the grid the moment the level data is set. This is the same trick templates use to keep instances fresh, and it is what makes the Explorer's live script editing feel instant: the Explorer just calls <code>ecs_script_update()</code> over the REST API. Managed scripts are marked experimental in the API, and scripts that define templates keep their resources alive until the template entities are deleted.</p>"
-      },
-      {
-        type: "struct",
-        heading: "The datatype",
-        name: "ecs_script_desc_t",
-        summary: "What you fill in for ecs_script_init(), usually through the ecs_script() shorthand.",
-        members: [
-          { name: "entity", type: "ecs_entity_t", desc: "Optional: an existing entity to attach the script to. Leave at 0 and Flecs creates one, named after the filename if there is one." },
-          { name: "filename", type: "const char *", desc: "Set this to load the code from a file on disk." },
-          { name: "code", type: "const char *", desc: "Set this to pass the code directly as a string. Set either this or filename." }
-        ]
-      }
-    ],
-    related: ["scr-running", "scr-templates", "remote", "events"]
   },
   {
     id: "scr-internals",
@@ -559,7 +656,7 @@ window.FLECS_TOUR.register([
         html: "<p>Both parse and eval errors carry the script name, line and column, and can be captured in an <code>ecs_script_eval_result_t</code> instead of being logged. Scratch memory for evaluation — token buffers, variable storage, the visitor's stacks — lives in an <code>ecs_script_runtime_t</code>, created on demand or reused across runs for speed.</p>"
       }
     ],
-    related: ["scr-expr-engine", "scr-query-dsl", "reflection", "internals"]
+    related: ["scr-expr-engine", "reflection", "internals", "int-parser"]
   },
   {
     id: "scr-expr-engine",
@@ -596,40 +693,5 @@ window.FLECS_TOUR.register([
       }
     ],
     related: ["scr-expressions", "scr-internals", "remote"]
-  },
-  {
-    id: "scr-query-dsl",
-    parent: "scr-internals",
-    order: 2,
-    title: "One Parser, Two Languages",
-    code: "SCR-06B",
-    tagline: "Script and the query language are cousins who share a mouth",
-    intro: "Flecs has two text languages: the script language you have been reading about, and the query language used in strings like <code>&quot;Position, !Frozen&quot;</code>. They are different languages — but they share one tokenizer and grammar, which is why they look and feel like family.",
-    sections: [
-      {
-        type: "text",
-        heading: "The shared layer",
-        html: "<p>The <code>FLECS_PARSER</code> addon (<code>src/addons/parser</code>) holds the shared plumbing: the tokenizer that splits text into tokens, the grammar tables with every keyword and operator, and the parser state that tracks position for error messages. On top of it sit two consumers:</p><ul><li>the <strong>script parser</strong> (<code>src/addons/script/parser.c</code>), which builds statement trees out of the tokens, and</li><li>the <strong>query DSL parser</strong> (<code>src/addons/query_dsl</code>), which turns a query string into the <code>ecs_term_t</code> array of an <code>ecs_query_desc_t</code> — the same terms you could have filled in from C by hand.</li></ul><p>DSL is short for <em>domain-specific language</em>: a small language built for one job, the way sheet music is a language just for melodies.</p>"
-      },
-      {
-        type: "diagram",
-        heading: "Two languages, one foundation",
-        spec: {
-          type: "stack",
-          layers: [
-            { label: "Script parser", sub: "statements: entities, scopes, templates" },
-            { label: "Query DSL parser", sub: "terms: Position, (Likes, $friend), !Frozen" },
-            { label: "Shared tokenizer & grammar", sub: "src/addons/parser — FLECS_PARSER addon" }
-          ],
-          note: "Both top layers consume the same token stream; they just build different things from it."
-        }
-      },
-      {
-        type: "text",
-        heading: "Why sharing matters",
-        html: "<p>Because the token layer is shared, the two languages agree on the basics: paths use dots (<code>game.Ship</code>), pairs use parentheses (<code>(Likes, Pizza)</code>), variables use <code>$</code>, strings and numbers are written the same way. Learn one and the other reads naturally — a pair you add in a script is written exactly like the pair you match in a query. It also means one implementation of the fiddly parts (string escapes, number formats, error positions) serves both, and both are compiled out together when the parser addon is disabled.</p><p>Where queries go from here — terms, operators, and the virtual machine that evaluates them — is the Queries deck.</p>"
-      }
-    ],
-    related: ["scr-internals", "queries", "internals"]
   }
 ]);
