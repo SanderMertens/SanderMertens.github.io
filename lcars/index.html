@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flecs Tour — LCARS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/lcars.css">
+</head>
+<body>
+<div id="frame">
+  <div class="elbow-tl"><span class="elbow-label">Flecs 4</span></div>
+  <div id="header">
+    <div id="header-title-row">
+      <span id="header-stardate"></span>
+      <span id="header-title">Guided Tour</span>
+    </div>
+    <div id="header-bar">
+      <div class="seg seg-1"></div>
+      <div class="seg blinker"></div>
+      <div class="seg seg-2"></div>
+      <div class="seg seg-3"></div>
+      <div class="seg seg-4"></div>
+    </div>
+  </div>
+  <aside id="sidebar">
+    <div id="search-wrap">
+      <div id="search-cap"></div>
+      <input id="search" type="text" placeholder="Search database — press /" autocomplete="off" spellcheck="false">
+    </div>
+    <nav id="tree"></nav>
+  </aside>
+  <main id="content"></main>
+  <div class="elbow-bl"><span class="elbow-label">Tour Mode</span></div>
+  <div id="footer">
+    <button id="prev-btn" class="nav-btn"><span class="nav-dir">&#9666; Previous</span><span class="nav-label"></span></button>
+    <div class="fseg f-fill"></div>
+    <span class="kbd-hint">Navigate with &#8592; &#8594;</span>
+    <div class="fseg f-acc"></div>
+    <button id="next-btn" class="nav-btn"><span class="nav-dir">Next &#9656;</span><span class="nav-label"></span></button>
+  </div>
+</div>
+<script src="js/data.js"></script>
+<script src="data/00-start.js"></script>
+<script src="data/10-world.js"></script>
+<script src="data/20-components.js"></script>
+<script src="data/30-storage.js"></script>
+<script src="data/40-queries.js"></script>
+<script src="data/50-events.js"></script>
+<script src="data/60-systems.js"></script>
+<script src="data/70-reflection.js"></script>
+<script src="data/80-script.js"></script>
+<script src="data/90-remote.js"></script>
+<script src="data/95-observability.js"></script>
+<script src="data/98-internals.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
