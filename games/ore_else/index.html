@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0b0e13">
+<meta name="description" content="Ore Else — mine fast, launch faster. A WebGPU game built with Flecs.">
+<title>Ore Else</title>
+<link rel="icon" href="flecs_logo.png">
+<style>
+  :root {
+    --bg: #0b0e13;
+    --bg2: #10141b;
+    --fg: #e7ecf2;
+    --muted: #8b95a3;
+    --green: #42b983;
+    --green-soft: #a2d8b4;
+    --border: #232935;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: Inter, -apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
+  }
+
+  /* The stage holds the canvas. In portrait on mobile it is rotated to
+   * landscape (see the rotation block near the bottom of the script). */
+  #stage {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: #000;
+    transform-origin: top left;
+  }
+  #canvas {
+    display: block;
+    width: 100%; height: 100%;
+    touch-action: none;
+  }
+  #canvas:focus { outline: none; }
+
+  /* Loading / message overlay */
+  #overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 22px;
+    padding: 24px;
+    text-align: center;
+    background:
+      radial-gradient(1200px 600px at 50% -10%, rgba(66,185,131,0.10), transparent 60%),
+      linear-gradient(180deg, var(--bg2), var(--bg));
+    transition: opacity .5s ease;
+  }
+  #overlay.hidden { opacity: 0; pointer-events: none; }
+
+  .brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+  .brand img {
+    width: 60px; height: 60px;
+    filter: drop-shadow(0 4px 18px rgba(66,185,131,0.35));
+    animation: float 3.2s ease-in-out infinite;
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+  .title {
+    font-size: clamp(2.2rem, 7vw, 3.4rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    background: linear-gradient(180deg, #ffffff, #b9c4d0);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .tagline {
+    font-size: clamp(0.95rem, 2.6vw, 1.15rem);
+    color: var(--green-soft);
+    font-weight: 500;
+    letter-spacing: 0.01em;
+  }
+
+  #bar {
+    width: min(260px, 60vw);
+    height: 4px;
+    background: var(--border);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  #bar > div {
+    width: 0%; height: 100%;
+    background: linear-gradient(90deg, var(--green), var(--green-soft));
+    border-radius: 999px;
+    transition: width .18s ease;
+  }
+  #bar.hidden { visibility: hidden; }
+
+  #message { font-size: 0.95rem; color: var(--fg); font-weight: 500; }
+  #detail {
+    font-size: 0.82rem;
+    color: var(--muted);
+    max-width: 30em;
+    line-height: 1.5;
+  }
+  .hint {
+    position: fixed;
+    bottom: max(14px, env(safe-area-inset-bottom));
+    left: 0; right: 0;
+    z-index: 5;
+    text-align: center;
+    font-size: 0.78rem;
+    color: var(--muted);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .4s ease;
+  }
+  .hint.show { opacity: 0.85; }
+  .hint kbd {
+    display: inline-block;
+    padding: 1px 6px;
+    margin: 0 1px;
+    border: 1px solid var(--border);
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    background: var(--bg2);
+    color: var(--fg);
+    font: inherit;
+    font-size: 0.72rem;
+  }
+
+  a.err-link { color: var(--green-soft); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+</div>
+
+<div id="overlay">
+  <div class="brand">
+    <img src="flecs_logo.png" alt="">
+    <div class="title">Ore Else</div>
+    <div class="tagline">Mine fast, launch faster.</div>
+  </div>
+  <div id="bar"><div></div></div>
+  <div id="message">Starting&hellip;</div>
+  <div class="detail" id="detail"></div>
+</div>
+
+<div class="hint" id="hint">
+  <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move &nbsp;&middot;&nbsp; click to interact
+</div>
+
+<script src="ore_else.js"></script>
+<script>
+(function () {
+  var stage   = document.getElementById('stage');
+  var canvas  = document.getElementById('canvas');
+  var overlay = document.getElementById('overlay');
+  var message = document.getElementById('message');
+  var detail  = document.getElementById('detail');
+  var bar     = document.getElementById('bar');
+  var fill    = bar.firstElementChild;
+  var hint    = document.getElementById('hint');
+
+  var isTouch = (('ontouchstart' in window) || navigator.maxTouchPoints > 0);
+
+  function say(text, note) {
+    overlay.classList.remove('hidden');
+    message.textContent = text;
+    detail.innerHTML = note || '';
+  }
+  function fail(text, note) {
+    bar.classList.add('hidden');
+    say(text, note);
+  }
+
+  /* ---- WebGPU pre-flight -------------------------------------------------
+   * Without an adapter the module dies inside wasm as a silent black screen,
+   * so probe here where the failure can still be shown to the player. */
+  function haveWebGPU() {
+    if (!navigator.gpu) return Promise.resolve(false);
+    return navigator.gpu.requestAdapter()
+      .then(function (a) { return !!a; })
+      .catch(function () { return false; });
+  }
+
+  haveWebGPU().then(function (ok) {
+    if (!ok) {
+      fail('This game needs a WebGPU-capable browser.',
+        'Try a recent <b>Chrome</b>, <b>Edge</b> or <b>Safari</b>. ' +
+        'On Linux, Chrome may need <code>--enable-unsafe-webgpu</code>.');
+      return;
+    }
+
+    say('Loading&hellip;', '');
+
+    /* The engine raises this once its first frame is actually submitted.
+     * Hiding the overlay from inside a rAF means it clears only when that
+     * frame is on screen — the module promise is no good for this because
+     * ASYNCIFY resolves it as soon as main() first suspends. */
+    window.addEventListener('flecs-first-frame', function () {
+      requestAnimationFrame(function () {
+        overlay.classList.add('hidden');
+        canvas.focus();
+        hint.classList.add('show');
+        setTimeout(function () { hint.classList.remove('show'); }, 6000);
+      });
+    }, { once: true });
+
+    canvas.addEventListener('pointerdown', function () { canvas.focus(); });
+
+    /* Bake links with -sMODULARIZE=1: the script above only defines a factory
+     * named after the project output. Assets are --embed-file'd into the wasm,
+     * so the wait is the module download + startup, not a second asset fetch. */
+    return ore_else({
+      canvas: canvas,
+      print: function (t) { console.log(t); },
+      printErr: function (t) { console.error(t); },
+      setStatus: function (t) {
+        if (!t) return;
+        var p = t.match(/([\d.]+)\s*\/\s*([\d.]+)/);
+        if (p) fill.style.width = (parseFloat(p[1]) / parseFloat(p[2]) * 100) + '%';
+        message.textContent = /^Running/.test(t) ? 'Starting the engine&hellip;' : t;
+        if (/^Running/.test(t)) fill.style.width = '100%';
+      }
+    });
+  }).catch(function (err) {
+    fail('Failed to start.', String(err && err.message ? err.message : err));
+    console.error(err);
+  });
+
+  /* =======================================================================
+   * MOBILE: always play in landscape.
+   *
+   * Two mechanisms, layered so at least one always works:
+   *
+   *  1. Native lock — on the first touch we enter fullscreen and ask for
+   *     screen.orientation.lock('landscape'). On Android Chrome this rotates
+   *     the real viewport, so input stays fully native. iOS ignores it.
+   *
+   *  2. CSS fallback — whenever the *viewport* is still portrait, the stage
+   *     is rotated 90° so the game fills the screen in landscape. Touch/mouse
+   *     coordinates are routed back through the rotation so it stays playable
+   *     (works everywhere, including iOS). When (1) succeeds the viewport is
+   *     landscape and this fallback switches itself off automatically.
+   * ===================================================================== */
+
+  var rotated = false;
+
+  function portrait() {
+    return window.innerHeight > window.innerWidth;
+  }
+
+  function applyRotation() {
+    var want = isTouch && portrait();
+    if (want) {
+      var vw = window.innerWidth, vh = window.innerHeight;
+      /* Lay the stage out as landscape (w=vh, h=vw) then rotate it 90° CW so
+       * it covers the portrait viewport exactly. */
+      stage.style.width  = vh + 'px';
+      stage.style.height = vw + 'px';
+      stage.style.transform = 'rotate(90deg) translateY(-100%)';
+      rotated = true;
+    } else {
+      stage.style.width = '100%';
+      stage.style.height = '100%';
+      stage.style.transform = 'none';
+      rotated = false;
+    }
+    /* The engine's ResizeObserver picks the new canvas box up on its own. */
+  }
+
+  /* Route pointer/touch coordinates through the rotation. The Emscripten GLFW
+   * port maps events with canvas.getBoundingClientRect() and an axis-aligned
+   * scale, which a CSS rotation would break — so while rotated we hand it an
+   * axis-aligned rect and feed it synthetic mouse events carrying the
+   * un-rotated coordinates. A single touch is all this game needs. */
+  var realRect = canvas.getBoundingClientRect.bind(canvas);
+  canvas.getBoundingClientRect = function () {
+    if (!rotated) return realRect();
+    var w = canvas.clientWidth, h = canvas.clientHeight;
+    return { left: 0, top: 0, right: w, bottom: h, width: w, height: h, x: 0, y: 0 };
+  };
+
+  function unrotate(clientX, clientY) {
+    /* Inverse of `rotate(90deg) translateY(-100%)` with a top-left origin.
+     * Screen (px,py) -> stage-local landscape (u,v). */
+    var vw = window.innerWidth;
+    return { x: clientY, y: vw - clientX };
+  }
+
+  var SYN = '__oreSynthetic';
+  function forward(type, clientX, clientY, button) {
+    var l = unrotate(clientX, clientY);
+    var ev = new MouseEvent(type, {
+      bubbles: true, cancelable: true, view: window,
+      clientX: l.x, clientY: l.y, screenX: l.x, screenY: l.y,
+      button: button || 0, buttons: (type === 'mouseup') ? 0 : 1
+    });
+    ev[SYN] = true;
+    canvas.dispatchEvent(ev);
+  }
+
+  function onTouch(mouseType) {
+    return function (e) {
+      if (!rotated) return;                 /* native landscape: leave as-is */
+      var t = e.changedTouches && e.changedTouches[0];
+      if (!t) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      forward(mouseType, t.clientX, t.clientY, 0);
+    };
+  }
+  window.addEventListener('touchstart', onTouch('mousedown'), { capture: true, passive: false });
+  window.addEventListener('touchmove',  onTouch('mousemove'), { capture: true, passive: false });
+  window.addEventListener('touchend',   onTouch('mouseup'),   { capture: true, passive: false });
+
+  /* Real (non-synthetic) mouse events while rotated also need routing. */
+  ['mousedown', 'mousemove', 'mouseup'].forEach(function (type) {
+    window.addEventListener(type, function (e) {
+      if (!rotated || e[SYN]) return;
+      e.stopImmediatePropagation();
+      forward(type, e.clientX, e.clientY, e.button);
+    }, { capture: true });
+  });
+
+  /* First touch: try the real native landscape lock. */
+  function tryNativeLock() {
+    if (!isTouch) return;
+    var el = document.documentElement;
+    var fs = el.requestFullscreen || el.webkitRequestFullscreen;
+    var p;
+    try { p = fs ? fs.call(el) : null; } catch (e) { p = null; }
+    function lock() {
+      try {
+        if (screen.orientation && screen.orientation.lock) {
+          screen.orientation.lock('landscape').catch(function () {});
+        }
+      } catch (e) {}
+    }
+    if (p && p.then) p.then(lock).catch(lock); else lock();
+  }
+  window.addEventListener('touchend', tryNativeLock, { once: true, passive: true });
+
+  applyRotation();
+  window.addEventListener('resize', applyRotation);
+  window.addEventListener('orientationchange', function () {
+    setTimeout(applyRotation, 120);
+  });
+})();
+</script>
+</body>
+</html>
