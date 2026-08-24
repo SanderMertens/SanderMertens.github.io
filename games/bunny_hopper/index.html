@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0b0e13">
+<meta name="description" content="Bunny Hopper — hop down the hill, snatch carrots, double-jump in the air for the big ones. A WebGPU game built with Flecs.">
+<title>Bunny Hopper</title>
+<link rel="icon" href="flecs_logo.png">
+<script>
+/* Kick the engine binary off before anything else on this page runs. It is the
+ * critical path, and time spent parsing the loader below or probing for a
+ * WebGPU adapter is time the binary is not downloading. Compilation is started
+ * from the same stream, so it overlaps the download instead of following it. */
+(function () {
+  /* Update when republishing the binary; only the percentage depends on it. */
+  var EXPECTED = 4386187;                 /* uncompressed bunny_hopper.wasm bytes */
+  var w = window.__wasm = { read: 0, total: EXPECTED, onprogress: null, done: false };
+
+  w.response = fetch('bunny_hopper.wasm', { credentials: 'same-origin' }).then(function (r) {
+    if (!r.ok) throw new Error('bunny_hopper.wasm: HTTP ' + r.status);
+    /* Under Content-Encoding the length header counts compressed bytes while
+     * the body stream yields decoded ones, so only trust it when it matches
+     * the size we shipped. */
+    var len = +(r.headers.get('content-length') || 0);
+    if (len > EXPECTED * 0.9) w.total = len;
+    if (!r.body) return r;
+
+    var reader = r.body.getReader();
+    var counted = new ReadableStream({
+      pull: function (c) {
+        return reader.read().then(function (res) {
+          if (res.done) { w.done = true; c.close(); return; }
+          w.read += res.value.byteLength;
+          if (w.onprogress) w.onprogress(w.read, w.total);
+          c.enqueue(res.value);
+        });
+      },
+      cancel: function (reason) { return reader.cancel(reason); }
+    });
+    /* Re-wrap with an explicit wasm MIME type so streaming compilation is used
+     * whatever the host labelled the file as. */
+    return new Response(counted, { headers: { 'Content-Type': 'application/wasm' } });
+  });
+
+  w.module = w.response.then(function (r) { return WebAssembly.compileStreaming(r); });
+  w.module.catch(function () {});         /* handled by the loader below */
+})();
+</script>
+<style>
+  :root {
+    --bg: #0b0e13;
+    --bg2: #10141b;
+    --fg: #e7ecf2;
+    --muted: #8b95a3;
+    --green: #42b983;
+    --green-soft: #a2d8b4;
+    --border: #232935;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: Inter, -apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
+  }
+
+  /* The stage holds the canvas. In portrait on mobile it is rotated to
+   * landscape (see the rotation block near the bottom of the script). */
+  #stage {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: #000;
+    transform-origin: top left;
+  }
+  #canvas {
+    display: block;
+    width: 100%; height: 100%;
+    touch-action: none;
+  }
+  #canvas:focus { outline: none; }
+
+  /* Loading / message overlay */
+  #overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 22px;
+    padding: 24px;
+    text-align: center;
+    background:
+      radial-gradient(1200px 600px at 50% -10%, rgba(66,185,131,0.10), transparent 60%),
+      linear-gradient(180deg, var(--bg2), var(--bg));
+    transition: opacity .5s ease;
+  }
+  #overlay.hidden { opacity: 0; pointer-events: none; }
+
+  .brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+  .brand img {
+    width: 60px; height: 60px;
+    filter: drop-shadow(0 4px 18px rgba(66,185,131,0.35));
+    animation: float 3.2s ease-in-out infinite;
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+  .title {
+    font-size: clamp(2.2rem, 7vw, 3.4rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    background: linear-gradient(180deg, #ffffff, #b9c4d0);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  #bar {
+    width: min(260px, 60vw);
+    height: 4px;
+    background: var(--border);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  /* Scaled rather than resized: a transform animates on the compositor, so the
+   * bar keeps moving through the engine's startup, which blocks the main
+   * thread solid for several seconds on a phone. */
+  #bar > div {
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg, var(--green), var(--green-soft));
+    border-radius: 999px;
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform .18s linear;
+    will-change: transform;
+  }
+  #bar.hidden { visibility: hidden; }
+
+  #message { font-size: 0.95rem; color: var(--fg); font-weight: 500; }
+  #detail {
+    font-size: 0.82rem;
+    color: var(--muted);
+    max-width: 30em;
+    line-height: 1.5;
+  }
+  .hint {
+    position: fixed;
+    bottom: max(14px, env(safe-area-inset-bottom));
+    left: 0; right: 0;
+    z-index: 5;
+    text-align: center;
+    font-size: 0.78rem;
+    color: var(--muted);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .4s ease;
+  }
+  .hint.show { opacity: 0.85; }
+  .hint kbd {
+    display: inline-block;
+    padding: 1px 6px;
+    margin: 0 1px;
+    border: 1px solid var(--border);
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    background: var(--bg2);
+    color: var(--fg);
+    font: inherit;
+    font-size: 0.72rem;
+  }
+
+  a.err-link { color: var(--green-soft); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+</div>
+
+<div id="overlay">
+  <div class="brand">
+    <img src="flecs_logo.png" alt="">
+    <div class="title">Bunny Hopper</div>
+  </div>
+  <div id="bar"><div></div></div>
+  <div id="message">Starting&hellip;</div>
+  <div class="detail" id="detail"></div>
+</div>
+
+<div class="hint" id="hint">
+  <kbd>SPACE</kbd> hop &nbsp;&middot;&nbsp; hop again in the air to double-jump
+</div>
+
+<script src="bunny_hopper.js"></script>
+<script>
+(function () {
+  var stage   = document.getElementById('stage');
+  var canvas  = document.getElementById('canvas');
+  var overlay = document.getElementById('overlay');
+  var message = document.getElementById('message');
+  var detail  = document.getElementById('detail');
+  var bar     = document.getElementById('bar');
+  var fill    = bar.firstElementChild;
+  var hint    = document.getElementById('hint');
+
+  var isTouch = (('ontouchstart' in window) || navigator.maxTouchPoints > 0);
+
+  function say(text, note) {
+    overlay.classList.remove('hidden');
+    message.textContent = text;
+    detail.innerHTML = note || '';
+  }
+  function fail(text, note) {
+    bar.classList.add('hidden');
+    say(text, note);
+  }
+
+  /* ---- Honest progress ----------------------------------------------------
+   * The first stretch of the bar is real measured work: one tick per chunk of
+   * the binary that has actually arrived. Everything after the last byte —
+   * finishing the compile, then the engine building its world — reports
+   * nothing and blocks the main thread throughout, so the bar covers it with a
+   * single decelerating animation that stops short of the end. The first
+   * rendered frame is the only thing that fills it. */
+  var DOWNLOAD_END = 0.55, INIT_CEILING = 0.97;
+  var shown = 0;
+
+  /* `ms` is how long the bar should take to travel there. Short and linear
+   * while bytes are arriving; long and eased for the one stage that reports
+   * nothing. Monotonic, so a late update can never walk the bar backwards. */
+  function setProgress(frac, ms, ease) {
+    if (frac <= shown) return;
+    shown = frac;
+    fill.style.transition = 'transform ' + (ms || 180) + 'ms ' +
+      (ease || 'linear');
+    fill.style.transform = 'scaleX(' + frac.toFixed(4) + ')';
+  }
+
+  var W = window.__wasm;
+  W.onprogress = function (read, total) {
+    var frac = Math.min(read / total, 1);
+    setProgress(frac * DOWNLOAD_END);
+    message.textContent = 'Downloading…';
+    detail.textContent = Math.round(frac * 100) + '%';
+    if (frac < 1) return;
+
+    /* The last byte has landed and the engine has not started yet, so this is
+     * the one moment the main thread is free enough to hand the compositor a
+     * long animation. Everything after this point — compiling, then the
+     * engine's own startup — holds the thread solid for seconds with nothing
+     * to report, and only a compositor animation keeps moving through it. It
+     * decelerates towards a ceiling it never reaches; the first frame is what
+     * actually completes the bar. */
+    setProgress(INIT_CEILING, 6000, 'cubic-bezier(.05,.7,.2,1)');
+  };
+
+  /* ---- WebGPU pre-flight -------------------------------------------------
+   * Without an adapter the module dies inside wasm as a silent black screen,
+   * so probe here where the failure can still be shown to the player. */
+  function haveWebGPU() {
+    if (!navigator.gpu) return Promise.resolve(false);
+    return navigator.gpu.requestAdapter()
+      .then(function (a) { return !!a; })
+      .catch(function () { return false; });
+  }
+
+  /* Probe alongside the download that is already in flight, not in front of
+   * it — requesting an adapter costs real milliseconds on mobile. */
+  haveWebGPU().then(function (ok) {
+    if (!ok) {
+      fail('This game needs a WebGPU-capable browser.',
+        'Try a recent <b>Chrome</b>, <b>Edge</b> or <b>Safari</b>. ' +
+        'On Linux, Chrome may need <code>--enable-unsafe-webgpu</code>.');
+      return;
+    }
+
+    W.module.then(function () {
+      message.textContent = 'Starting the engine…';
+      detail.textContent = '';
+    }, function () {});
+
+    /* The engine raises this once its first frame is actually submitted.
+     * Hiding the overlay from inside a rAF means it clears only when that
+     * frame is on screen — the module promise is no good for this because
+     * ASYNCIFY resolves it as soon as main() first suspends. */
+    window.addEventListener('flecs-first-frame', function () {
+      requestAnimationFrame(function () {
+        setProgress(1, 160);
+        overlay.classList.add('hidden');
+        canvas.focus();
+        hint.classList.add('show');
+        setTimeout(function () { hint.classList.remove('show'); }, 6000);
+      });
+    }, { once: true });
+
+    canvas.addEventListener('pointerdown', function () { canvas.focus(); });
+
+    /* Bake links with -sMODULARIZE=1: the script above only defines a factory
+     * named after the project output. Assets are --embed-file'd into the wasm,
+     * so the wait is the module download + startup, not a second asset fetch. */
+    return bunny_hopper({
+      canvas: canvas,
+      print: function (t) { console.log(t); },
+      printErr: function (t) { console.error(t); },
+
+      /* Hand the module the binary the head script already downloaded and
+       * compiled; without this the loader would start a second fetch. */
+      instantiateWasm: function (imports, ready) {
+        W.module.then(function (mod) {
+          return WebAssembly.instantiate(mod, imports).then(function (inst) {
+            ready(inst, mod);
+          });
+        }).catch(function (err) {
+          fail('Failed to load the engine.', String(err && err.message || err));
+        });
+        return {};
+      },
+
+      onRuntimeInitialized: function () {
+        message.textContent = 'Building the world…';
+        detail.textContent = 'placing terrain, props and lighting';
+      }
+    });
+  }).catch(function (err) {
+    fail('Failed to start.', String(err && err.message ? err.message : err));
+    console.error(err);
+  });
+
+  /* =======================================================================
+   * MOBILE: always play in landscape.
+   *
+   * Two mechanisms, layered so at least one always works:
+   *
+   *  1. Native lock — on the first touch we enter fullscreen and ask for
+   *     screen.orientation.lock('landscape'). On Android Chrome this rotates
+   *     the real viewport, so input stays fully native. iOS ignores it.
+   *
+   *  2. CSS fallback — whenever the *viewport* is still portrait, the stage
+   *     is rotated 90° so the game fills the screen in landscape. Touch/mouse
+   *     coordinates are routed back through the rotation so it stays playable
+   *     (works everywhere, including iOS). When (1) succeeds the viewport is
+   *     landscape and this fallback switches itself off automatically.
+   * ===================================================================== */
+
+  var rotated = false;
+
+  function portrait() {
+    return window.innerHeight > window.innerWidth;
+  }
+
+  function applyRotation() {
+    var want = isTouch && portrait();
+    if (want) {
+      var vw = window.innerWidth, vh = window.innerHeight;
+      /* Lay the stage out as landscape (w=vh, h=vw) then rotate it 90° CW so
+       * it covers the portrait viewport exactly. */
+      stage.style.width  = vh + 'px';
+      stage.style.height = vw + 'px';
+      stage.style.transform = 'rotate(90deg) translateY(-100%)';
+      rotated = true;
+    } else {
+      stage.style.width = '100%';
+      stage.style.height = '100%';
+      stage.style.transform = 'none';
+      rotated = false;
+    }
+    /* The engine's ResizeObserver picks the new canvas box up on its own. */
+  }
+
+  /* Route pointer/touch coordinates through the rotation. The Emscripten GLFW
+   * port maps events with canvas.getBoundingClientRect() and an axis-aligned
+   * scale, which a CSS rotation would break — so while rotated we hand it an
+   * axis-aligned rect and feed it synthetic mouse events carrying the
+   * un-rotated coordinates. A single touch is all this game needs. */
+  var realRect = canvas.getBoundingClientRect.bind(canvas);
+  canvas.getBoundingClientRect = function () {
+    if (!rotated) return realRect();
+    var w = canvas.clientWidth, h = canvas.clientHeight;
+    return { left: 0, top: 0, right: w, bottom: h, width: w, height: h, x: 0, y: 0 };
+  };
+
+  function unrotate(clientX, clientY) {
+    /* Inverse of `rotate(90deg) translateY(-100%)` with a top-left origin.
+     * Screen (px,py) -> stage-local landscape (u,v). */
+    var vw = window.innerWidth;
+    return { x: clientY, y: vw - clientX };
+  }
+
+  var SYN = '__oreSynthetic';
+  function forward(type, clientX, clientY, button) {
+    var l = unrotate(clientX, clientY);
+    var ev = new MouseEvent(type, {
+      bubbles: true, cancelable: true, view: window,
+      clientX: l.x, clientY: l.y, screenX: l.x, screenY: l.y,
+      button: button || 0, buttons: (type === 'mouseup') ? 0 : 1
+    });
+    ev[SYN] = true;
+    canvas.dispatchEvent(ev);
+  }
+
+  function onTouch(mouseType) {
+    return function (e) {
+      if (!rotated) return;                 /* native landscape: leave as-is */
+      var t = e.changedTouches && e.changedTouches[0];
+      if (!t) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      forward(mouseType, t.clientX, t.clientY, 0);
+    };
+  }
+  window.addEventListener('touchstart', onTouch('mousedown'), { capture: true, passive: false });
+  window.addEventListener('touchmove',  onTouch('mousemove'), { capture: true, passive: false });
+  window.addEventListener('touchend',   onTouch('mouseup'),   { capture: true, passive: false });
+
+  /* Real (non-synthetic) mouse events while rotated also need routing. */
+  ['mousedown', 'mousemove', 'mouseup'].forEach(function (type) {
+    window.addEventListener(type, function (e) {
+      if (!rotated || e[SYN]) return;
+      e.stopImmediatePropagation();
+      forward(type, e.clientX, e.clientY, e.button);
+    }, { capture: true });
+  });
+
+  /* First touch: try the real native landscape lock. */
+  function tryNativeLock() {
+    if (!isTouch) return;
+    var el = document.documentElement;
+    var fs = el.requestFullscreen || el.webkitRequestFullscreen;
+    var p;
+    try { p = fs ? fs.call(el) : null; } catch (e) { p = null; }
+    function lock() {
+      try {
+        if (screen.orientation && screen.orientation.lock) {
+          screen.orientation.lock('landscape').catch(function () {});
+        }
+      } catch (e) {}
+    }
+    if (p && p.then) p.then(lock).catch(lock); else lock();
+  }
+  window.addEventListener('touchend', tryNativeLock, { once: true, passive: true });
+
+  applyRotation();
+  window.addEventListener('resize', applyRotation);
+  window.addEventListener('orientationchange', function () {
+    setTimeout(applyRotation, 120);
+  });
+})();
+</script>
+</body>
+</html>
