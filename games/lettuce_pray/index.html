@@ -14,7 +14,7 @@
  * from the same stream, so it overlaps the download instead of following it. */
 (function () {
   /* Update when republishing the binary; only the percentage depends on it. */
-  var EXPECTED = 4427206;                 /* uncompressed lettuce_pray.wasm bytes */
+  var EXPECTED = 4437896;                 /* uncompressed lettuce_pray.wasm bytes */
   var w = window.__wasm = { read: 0, total: EXPECTED, onprogress: null, done: false };
 
   w.response = fetch('lettuce_pray.wasm', { credentials: 'same-origin' }).then(function (r) {

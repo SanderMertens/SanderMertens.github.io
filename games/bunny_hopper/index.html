@@ -14,7 +14,7 @@
  * from the same stream, so it overlaps the download instead of following it. */
 (function () {
   /* Update when republishing the binary; only the percentage depends on it. */
-  var EXPECTED = 4386187;                 /* uncompressed bunny_hopper.wasm bytes */
+  var EXPECTED = 4396876;                 /* uncompressed bunny_hopper.wasm bytes */
   var w = window.__wasm = { read: 0, total: EXPECTED, onprogress: null, done: false };
 
   w.response = fetch('bunny_hopper.wasm', { credentials: 'same-origin' }).then(function (r) {

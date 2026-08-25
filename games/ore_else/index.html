@@ -14,7 +14,7 @@
  * from the same stream, so it overlaps the download instead of following it. */
 (function () {
   /* Update when republishing the binary; only the percentage depends on it. */
-  var EXPECTED = 5575392;                 /* uncompressed ore_else.wasm bytes */
+  var EXPECTED = 5592875;                 /* uncompressed ore_else.wasm bytes */
   var w = window.__wasm = { read: 0, total: EXPECTED, onprogress: null, done: false };
 
   w.response = fetch('ore_else.wasm', { credentials: 'same-origin' }).then(function (r) {
