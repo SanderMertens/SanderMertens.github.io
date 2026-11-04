@@ -1,0 +1,37 @@
+using flecs.script
+using box.transform
+using box.geometry
+using box.material
+
+@tree Parent
+template CanopySlab {
+  prop floors: i32 = 5
+  prop variant: i32 = 0
+  prop wall: Rgb = {226, 235, 211}
+  prop timber: Rgb = {143, 91, 48}
+  prop roof_style: i32 = 0
+  prop facade_style: i32 = 0
+  const windows: math.Rng = {seed: variant + 314159}
+  CanopyPlinth(width: 9.2, depth: 5.2, variant: variant) {}
+  for f in 0..floors {
+    const y = 1.2 + f * 3.2
+    const offset = math.sin(math.floor(f / 2.0) * 1.6 + variant) * 0.65
+    { (IsA, CanopyIvory); Rgb: wall; Position: {offset, y + 1.5, 0}; RoundedBox: {8.2, 3, 4.5, 0.35} }
+    { (IsA, CanopyWood); Rgb: timber; Position: {offset, y, 0}; RoundedBox: {8.8, 0.24, 5.4, 0.35} }
+    for side in 0..2 {
+      const z = (side - 0.5) * 4.56
+      { (IsA, CanopyFacade); Position: {offset, y + 1.55, z}; Box: {7.6, 2.8, 0.06}; TextureTransform: {scale_x: 0.59, scale_y: 0.125, offset_x: windows.f(1), offset_y: windows.u(8) / 8.0} }
+      { (IsA, CanopyMetal); Position: {offset, y + 1.2, z * 1.16}; Box: {7.9, 0.04, 0.04} }
+      for c in 0..4 {
+        { (IsA, CanopyLeafCard); Rgb: {72 + (f + c) % 3 * 12, 128, 56}; Position: {offset - 3 + c * 2, y + 0.72, z * 1.13}; Rotation: {-0.2, f + c, 0}; Quad: {1.7, 0.9} }
+      }
+      if windows.f(1) > 0.4 {
+        CanopyBalconyProp(kind: windows.u(5), seed: variant + f + side) { Position: {offset + windows.f(5) - 2.5, y + 0.12, z * 1.1} }
+      }
+      { (IsA, CanopyLeaf); Position: {offset, y + 0.3, z * 1.13}; RoundedBox: {7.7, 0.4, 0.6, 0.12} }
+      CanopyVine(length: 1.5 + facade_style * 0.4, phase: variant + f) { Position: {offset - 2.6, y + 0.4, z * 1.2} }
+    }
+  }
+  roof : CanopyIvory { Rgb: wall; Position: {0, 1.2 + floors * 3.2, 0}; RoundedBox: {8.6, 0.3, 5.3, 0.35} }
+  CanopyRoof(style: roof_style, variant: variant) { Position: {0, 1.4 + floors * 3.2, 0} }
+}

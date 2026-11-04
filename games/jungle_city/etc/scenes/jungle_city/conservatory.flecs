@@ -1,0 +1,314 @@
+using flecs.script
+using box.transform
+using box.geometry
+using box.material
+using box.light
+
+@tree Parent
+template CanopyGreenhouse {
+  { (IsA, CanopyIvory); Position: {0, 0.4, 0}; Cylinder: {radius: 6.4, length: 0.8, segments: 32} }
+  { (IsA, CanopyGlass); Position: {0, 0.8, 0}; Scale: {1, 1.15, 1}; HemiSphere: {radius: 5.7, segments: 24, smooth: true} }
+  for i in 0..12 {
+    { (IsA, CanopyTrim); Position: {0, 0.8, 0}; Rotation: {-math.PI / 2, i * math.PI / 12, 0}; Scale: {1, 1, 1.15}; Tube: {radius: 5.77, thickness: 0.1, length: 0.12, arc: math.PI, segments: 24} }
+  }
+  for i in 0..3 {
+    const phi = 0.34 + i * 0.36
+    { (IsA, CanopyTrim); Position: {0, 0.8 + math.sin(phi) * 5.77 * 1.15, 0}; Torus: {radius: math.cos(phi) * 5.77, tube: 0.05, segments: 28, rings: 4} }
+  }
+  { (IsA, CanopyWood); Position: {0, 0.9, 0}; Torus: {radius: 5.9, tube: 0.13, segments: 28, rings: 6} }
+  for i in 0..8 {
+    CanopyFern(size: 1.1) { Position: {math.sin(i * math.PI / 4) * 6, 0.8, math.cos(i * math.PI / 4) * 6} }
+  }
+  { (IsA, CanopyTrim); Position: {0, 8.2, 0}; Frustum: {length: 3, radius_bottom: 0.3, radius_top: 0.06, segments: 12} }
+  { (IsA, CanopyGlow); Position: {0, 9.8, 0}; Sphere: {radius: 0.18, segments: 12} }
+}
+
+@tree Parent
+template CanopyPortico {
+  prop width: f32 = 3.2
+  prop depth: f32 = 2.3
+  prop tall: f32 = 2.8
+  const half = width / 2
+  deck : CanopyPaver { Position: {0, 0.1, depth / 2}; Box: {width + 0.5, 0.2, depth + 0.3}; TextureTransform: {scale_x: 1.2, scale_y: 1} }
+  for s in 0..2 {
+    { (IsA, CanopyAshlar); Position: {0, 0.05, depth + 0.28 + s * 0.26}; Box: {width + 0.3 - s * 0.3, 0.1, 0.28}; TextureTransform: {scale_x: 1.2, scale_y: 0.1} }
+  }
+  for side in 0..2 {
+    const x = (side - 0.5) * width
+    for row in 0..2 {
+      const z = 0.3 + row * (depth - 0.45)
+      { (IsA, CanopyAshlar); Position: {x, 0.42, z}; Box: {0.36, 0.44, 0.36}; TextureTransform: {scale_x: 0.3, scale_y: 0.2} }
+      { (IsA, CanopyIron); Position: {x, 0.64 + tall / 2, z}; Cylinder: {radius: 0.1, length: tall, segments: 10, smooth: true} }
+      { (IsA, CanopyIron); Position: {x, 0.64 + tall + 0.05, z}; Frustum: {radius_bottom: 0.1, radius_top: 0.2, length: 0.12, segments: 10} }
+      { (IsA, CanopyBrass); Position: {x, 0.68, z}; Torus: {radius: 0.11, tube: 0.018, segments: 10, rings: 4} }
+    }
+    { (IsA, CanopyIron); Position: {x, 0.64 + tall + 0.16, depth / 2}; Box: {0.14, 0.12, depth} }
+    { (IsA, CanopyPalmGlass); Position: {x, 0.5 + tall / 2 + 0.1, depth / 2 + 0.05}; Box: {0.02, tall - 0.2, depth - 0.55} }
+    for m in 0..2 {
+      { (IsA, CanopyIron); Position: {x, 0.75 + m * (tall - 0.4) / 2 + 0.6, depth / 2}; Box: {0.04, 0.04, depth - 0.3} }
+    }
+    { (IsA, CanopyBlossomCard); Position: {(side - 0.5) * (width + 0.32), 1.5, depth - 0.08}; Rotation: {0, (side - 0.5) * 1.5, 0}; Quad: {1.5, 2.8} }
+    { (IsA, CanopyTerracotta); Position: {(side - 0.5) * (width + 0.64), 0.3, depth + 0.1}; Frustum: {radius_bottom: 0.22, radius_top: 0.34, length: 0.6, segments: 12} }
+    { (IsA, CanopyLeafCard); Rgb: {78, 136, 58}; Position: {(side - 0.5) * (width + 0.64), 1.1, depth + 0.1}; Rotation: {0, side, 0}; Quad: {1, 1.1} }
+    { (IsA, CanopyLeafCard); Rgb: {62, 118, 54}; Position: {(side - 0.5) * (width + 0.64), 1.1, depth + 0.1}; Rotation: {0, side + 1.57, 0}; Quad: {1, 1.1} }
+    door_leaf : CanopyTimberDark { Position: {(side - 0.5) * 0.95, 1.42, 0.2}; Box: {0.92, 2.5, 0.06} }
+    { (IsA, CanopyPalmGlass); Position: {(side - 0.5) * 0.95, 1.62, 0.24}; Box: {0.66, 1.6, 0.02} }
+    { (IsA, CanopyBrass); Position: {(side - 0.5) * 0.28, 1.32, 0.27}; Box: {0.03, 0.42, 0.03} }
+  }
+  vault : CanopyPalmGlass { Position: {0, 0.8 + tall, depth / 2}; Rotation: {math.PI / 2, 0, 0}; Tube: {radius: half, thickness: 0.03, length: depth, arc: math.PI, segments: 16} }
+  for r in 0..4 {
+    { (IsA, CanopyIron); Position: {0, 0.8 + tall, r * depth / 3}; Rotation: {-math.PI / 2, 0, 0}; Tube: {radius: half + 0.04, thickness: 0.09, length: 0.1, arc: math.PI, segments: 16} }
+  }
+  ridge : CanopyIron { Position: {0, 0.8 + tall + half, depth / 2}; Box: {0.08, 0.08, depth} }
+  for k in 0..5 {
+    const a = (k + 1) * math.PI / 6
+    { (IsA, CanopyIron); Position: {math.cos(a) * half * 0.5, 0.8 + tall + math.sin(a) * half * 0.5, depth}; Rotation: {0, 0, a - math.PI / 2}; Box: {0.035, half, 0.035} }
+    { (IsA, CanopyIron); Position: {math.cos(a) * (half + 0.03), 0.8 + tall + math.sin(a) * (half + 0.03), depth / 2}; Box: {0.04, 0.04, depth} }
+  }
+  hub : CanopyBrass { Position: {0, 0.8 + tall + 0.08, depth + 0.03}; Rotation: {math.PI / 2, 0, 0}; Cylinder: {radius: 0.2, length: 0.06, segments: 12} }
+  CanopyHangingLantern() { Position: {0, 0.8 + tall + half - 0.2, depth / 2} }
+  finial : CanopyBrass { Position: {0, 0.8 + tall + half + 0.22, depth}; Sphere: {radius: 0.1, segments: 8, smooth: true} }
+}
+
+@tree Parent
+template CanopyConservatory {
+  const wall_r = 7.2
+  const wall_base = 1.45
+  const wall_top = 4.85
+  const dome_y = 6.25
+  const dome_r = 6.2
+
+  for s in 0..3 {
+    { (IsA, CanopyAshlar); Position: {0, 0.09 + s * 0.18, 0}; Cylinder: {radius: 8.3 - s * 0.32, length: 0.18, segments: 64}; TextureTransform: {scale_x: 16, scale_y: 0.1} }
+  }
+  drum : CanopyAshlar { Position: {0, 1, 0}; Tube: {radius: wall_r + 0.1, thickness: 0.34, length: 0.96, segments: 64}; TextureTransform: {scale_x: 15, scale_y: 0.5} }
+  drum_cap : CanopyTrim { Position: {0, wall_base, 0}; Torus: {radius: wall_r + 0.02, tube: 0.1, segments: 64, rings: 6} }
+  floor_base : CanopyPaver { Position: {0, 0.52, 0}; Cylinder: {radius: wall_r - 0.1, length: 0.06, segments: 64} }
+  floor : CanopyMosaic { Position: {0, 0.56, 0}; Rotation: {-math.PI / 2, 0, 0}; Quad: {wall_r * 2 - 0.3, wall_r * 2 - 0.3} }
+
+  glass_wall : CanopyPalmGlass { Position: {0, (wall_base + wall_top) / 2, 0}; Tube: {radius: wall_r, thickness: 0.05, length: wall_top - wall_base, segments: 64} }
+  transom_a : CanopyIron { Position: {0, 2.5, 0}; Torus: {radius: wall_r + 0.01, tube: 0.03, segments: 64, rings: 4} }
+  transom_b : CanopyIron { Position: {0, 3.7, 0}; Torus: {radius: wall_r + 0.02, tube: 0.05, segments: 64, rings: 4} }
+
+  for i in 0..24 {
+    const a = i * math.PI / 12
+    const m = a + math.PI / 24
+    const c = math.cos(a)
+    const s = math.sin(a)
+    { (IsA, CanopyIron); Position: {s * wall_r, (wall_base + wall_top) / 2, c * wall_r}; Cylinder: {radius: 0.075, length: wall_top - wall_base, segments: 8, smooth: true} }
+    { (IsA, CanopyIron); Position: {s * wall_r, wall_base + 0.14, c * wall_r}; Frustum: {radius_bottom: 0.14, radius_top: 0.08, length: 0.22, segments: 8} }
+    { (IsA, CanopyBrass); Position: {s * wall_r, 3.7, c * wall_r}; Sphere: {radius: 0.09, segments: 6} }
+    { (IsA, CanopyIron); Position: {math.sin(m) * wall_r, 3.7 + 0.08, math.cos(m) * wall_r}; Rotation: {-math.PI / 2, m, 0}; Tube: {radius: 0.94, thickness: 0.05, length: 0.05, arc: math.PI, segments: 12} }
+    { (IsA, CanopyIron); Position: {s * (wall_r + 0.02), 4.46, c * (wall_r + 0.02)}; Rotation: {math.PI / 2, a, 0}; Torus: {radius: 0.17, tube: 0.022, segments: 12, rings: 4} }
+    { (IsA, CanopyIron); Position: {math.sin(m) * wall_r, 2.65, math.cos(m) * wall_r}; Box: {0.03, 2.3, 0.03}; Rotation: {0, m, 0} }
+    { (IsA, CanopyIron); Position: {s * (wall_r + 0.3), wall_top - 0.08, c * (wall_r + 0.3)}; Rotation: {0, a, 0}; Box: {0.14, 0.2, 0.62} }
+    if i % 2 == 1 {
+      { (IsA, CanopyVineCard); Rgb: {96, 146, 62}; Position: {math.sin(m) * (wall_r + 0.14), 2.9, math.cos(m) * (wall_r + 0.14)}; Rotation: {0, m, 0}; Quad: {1.3, 3.2} }
+      { (IsA, CanopyBlossomCard); Position: {math.sin(m) * (wall_r + 0.17), 2.6, math.cos(m) * (wall_r + 0.17)}; Rotation: {0, m, 0}; Quad: {1.5, 2.6} }
+    } else {
+      { (IsA, CanopyVineCard); Rgb: {82, 134, 60}; Position: {s * (wall_r + 0.14), 2.9, c * (wall_r + 0.14)}; Rotation: {0, a, 0}; Quad: {1, 3} }
+    }
+  }
+
+  gallery : CanopyTrim { Position: {0, wall_top + 0.1, 0}; Tube: {radius: wall_r + 0.75, thickness: 1.65, length: 0.2, segments: 64} }
+  gallery_inner : CanopyBrass { Position: {0, wall_top - 0.02, 0}; Torus: {radius: wall_r - 0.88, tube: 0.03, segments: 64, rings: 4} }
+  gallery_lip : CanopyBrass { Position: {0, wall_top - 0.02, 0}; Torus: {radius: wall_r + 0.72, tube: 0.04, segments: 64, rings: 4} }
+  gallery_deck : CanopyDeck { Position: {0, wall_top + 0.21, 0}; Tube: {radius: wall_r + 0.7, thickness: 1.5, length: 0.02, segments: 64}; TextureTransform: {scale_x: 24, scale_y: 1} }
+  rail_top : CanopyIron { Position: {0, wall_top + 1.12, 0}; Torus: {radius: wall_r + 0.66, tube: 0.04, segments: 64, rings: 4} }
+  rail_mid : CanopyIron { Position: {0, wall_top + 0.7, 0}; Torus: {radius: wall_r + 0.66, tube: 0.018, segments: 64, rings: 4} }
+  for i in 0..48 {
+    const a = i * math.PI / 24
+    { (IsA, CanopyIron); Position: {math.sin(a) * (wall_r + 0.66), wall_top + 0.68, math.cos(a) * (wall_r + 0.66)}; Rotation: {0, a, 0}; Box: {0.035, 0.9, 0.035} }
+    if i % 2 == 0 {
+      { (IsA, CanopyIron); Position: {math.sin(a) * (wall_r + 0.66), wall_top + 1.2, math.cos(a) * (wall_r + 0.66)}; Sphere: {radius: 0.05, segments: 6} }
+    }
+    if i % 6 == 3 {
+      { Position: {math.sin(a) * (wall_r + 0.3), wall_top + 0.22, math.cos(a) * (wall_r + 0.3)}; Rotation: {0, a, 0}; CanopyPlanter(length: 1.6, seed: i, bloom: true) {} }
+    }
+    if i % 8 == 0 {
+      CanopyPerson(seed: i) { Position: {math.sin(a + 0.1) * (wall_r + 0.24), wall_top + 0.22, math.cos(a + 0.1) * (wall_r + 0.24)} }
+    }
+  }
+
+  clerestory : CanopyPalmGlass { Position: {0, (wall_top + dome_y) / 2 + 0.1, 0}; Tube: {radius: dome_r, thickness: 0.05, length: dome_y - wall_top - 0.2, segments: 64} }
+  clerestory_cap : CanopyTrim { Position: {0, dome_y, 0}; Torus: {radius: dome_r + 0.03, tube: 0.11, segments: 64, rings: 6} }
+  for i in 0..24 {
+    const a = i * math.PI / 12 + math.PI / 24
+    { (IsA, CanopyIron); Position: {math.sin(a) * dome_r, (wall_top + dome_y) / 2 + 0.1, math.cos(a) * dome_r}; Rotation: {0, a, 0}; Box: {0.09, dome_y - wall_top - 0.2, 0.09} }
+    { (IsA, CanopyBrass); Position: {math.sin(a) * (dome_r + 0.07), dome_y + 0.14, math.cos(a) * (dome_r + 0.07)}; Sphere: {radius: 0.06, segments: 6} }
+  }
+
+  dome : CanopyPalmGlass { Position: {0, dome_y, 0}; HemiSphere: {radius: dome_r, segments: 48, smooth: true} }
+  for i in 0..12 {
+    { (IsA, CanopyIron); Position: {0, dome_y, 0}; Rotation: {-math.PI / 2, i * math.PI / 12, 0}; Tube: {radius: dome_r + 0.06, thickness: 0.12, length: 0.14, arc: math.PI, segments: 48} }
+    { (IsA, CanopyIron); Position: {0, dome_y, 0}; Rotation: {-math.PI / 2, (i + 0.5) * math.PI / 12, 0}; Tube: {radius: dome_r + 0.03, thickness: 0.05, length: 0.05, arc: math.PI, segments: 48} }
+  }
+  for i in 1..8 {
+    const phi = i * 0.18
+    { (IsA, CanopyIron); Position: {0, dome_y + math.sin(phi) * dome_r, 0}; Torus: {radius: math.cos(phi) * dome_r + 0.02, tube: 0.04, segments: 64, rings: 4} }
+  }
+
+  const crown_y = dome_y + dome_r * 0.92
+  lantern_seat : CanopyTrim { Position: {0, crown_y, 0}; Cylinder: {radius: 1.9, length: 0.2, segments: 32} }
+  lantern_rail : CanopyIron { Position: {0, crown_y + 0.7, 0}; Torus: {radius: 1.8, tube: 0.025, segments: 32, rings: 4} }
+  lantern_glass : CanopyPalmGlass { Position: {0, crown_y + 0.85, 0}; Tube: {radius: 1.3, thickness: 0.04, length: 1.5, segments: 32} }
+  lantern_core : CanopyLanternGlow { Position: {0, crown_y + 0.85, 0}; Sphere: {radius: 0.32, segments: 12, smooth: true} }
+  for i in 0..12 {
+    const a = i * math.PI / 6
+    { (IsA, CanopyIron); Position: {math.sin(a) * 1.3, crown_y + 0.85, math.cos(a) * 1.3}; Cylinder: {radius: 0.05, length: 1.5, segments: 6} }
+    { (IsA, CanopyIron); Position: {math.sin(a) * 1.8, crown_y + 0.4, math.cos(a) * 1.8}; Box: {0.03, 0.6, 0.03} }
+    { (IsA, CanopyIron); Position: {0, crown_y + 1.6, 0}; Rotation: {-math.PI / 2, a / 2, 0}; Tube: {radius: 1.4, thickness: 0.05, length: 0.06, arc: math.PI, segments: 20} }
+  }
+  lantern_cap : CanopyTrim { Position: {0, crown_y + 1.62, 0}; Torus: {radius: 1.38, tube: 0.07, segments: 32, rings: 5} }
+  cupola : CanopyVerdigris { Position: {0, crown_y + 1.62, 0}; HemiSphere: {radius: 1.35, segments: 24, smooth: true} }
+  neck : CanopyBrass { Position: {0, crown_y + 3.2, 0}; Frustum: {radius_bottom: 0.2, radius_top: 0.06, length: 0.6, segments: 12} }
+  orb : CanopyBrass { Position: {0, crown_y + 3.58, 0}; Sphere: {radius: 0.18, segments: 12, smooth: true} }
+  spire : CanopyBrass { Position: {0, crown_y + 4.3, 0}; Frustum: {radius_bottom: 0.05, radius_top: 0.008, length: 1.3, segments: 8} }
+  beacon : CanopyGlow { Position: {0, crown_y + 4.98, 0}; Sphere: {radius: 0.09, segments: 8} }
+  pennant : CanopyCanvasA { Position: {0.42, crown_y + 4.4, 0}; Box: {0.8, 0.4, 0.015} }
+
+  for side in 0..4 {
+    { Position: {0, 0.54, 0}; Rotation: {0, side * math.PI / 2, 0}; CanopyPortico() { Position: {0, 0, wall_r - 0.2} } }
+  }
+
+  basin : CanopyAshlar { Position: {0, 0.8, 0}; Cylinder: {radius: 1.5, length: 0.46, segments: 28}; TextureTransform: {scale_x: 4, scale_y: 0.2} }
+  basin_rim : CanopyBrass { Position: {0, 1.04, 0}; Torus: {radius: 1.46, tube: 0.05, segments: 28, rings: 4} }
+  basin_water : CanopyWater { Position: {0, 1.03, 0}; Cylinder: {radius: 1.42, length: 0.02, segments: 28} }
+  stem : CanopyVerdigris { Position: {0, 1.7, 0}; Frustum: {radius_bottom: 0.2, radius_top: 0.1, length: 1.4, segments: 12, smooth: true} }
+  bowl : CanopyVerdigris { Position: {0, 2.5, 0}; Frustum: {radius_bottom: 0.14, radius_top: 0.72, length: 0.26, segments: 18} }
+  bed : CanopySoil { Position: {0, 0.72, 0}; Tube: {radius: 6.5, thickness: 1.3, length: 0.32, segments: 48} }
+  bed_inner : CanopySoil { Position: {0, 0.72, 0}; Tube: {radius: 3.8, thickness: 1.5, length: 0.32, segments: 48} }
+  bed_edge : CanopyAshlar { Position: {0, 0.74, 0}; Tube: {radius: 5.28, thickness: 0.12, length: 0.42, segments: 48}; TextureTransform: {scale_x: 10, scale_y: 0.2} }
+  inner_edge : CanopyAshlar { Position: {0, 0.74, 0}; Tube: {radius: 3.92, thickness: 0.12, length: 0.42, segments: 48}; TextureTransform: {scale_x: 10, scale_y: 0.2} }
+  for i in 0..6 {
+    const a = i * math.PI / 3 + 0.52
+    CanopyTree(height: 5.6 + i % 3 * 0.7, variant: i * 53 + 7, species: 0) { Position: {math.sin(a) * 3, 0.86, math.cos(a) * 3} }
+  }
+  for i in 0..12 {
+    const a = i * math.PI / 6
+    CanopyBroadPlant(size: 0.9, seed: i) { Position: {math.sin(a) * 5.9, 0.86, math.cos(a) * 5.9} }
+    CanopyFern(size: 0.8) { Position: {math.sin(a + 0.5) * 3.2, 0.86, math.cos(a + 0.5) * 3.2} }
+    CanopyFern(size: 0.9) { Position: {math.sin(a + 0.26) * 5.7, 0.86, math.cos(a + 0.26) * 5.7} }
+    { (IsA, CanopyBlossomCard); Position: {math.sin(a + 0.5) * 5.9, 1.3, math.cos(a + 0.5) * 5.9}; Rotation: {0, a, 0}; Quad: {1.5, 1.2} }
+  }
+  for i in 0..4 {
+    const a = i * math.PI / 2 + 0.78
+    { Position: {math.sin(a) * 4.55, 0.58, math.cos(a) * 4.55}; Rotation: {0, a + math.PI, 0}; CanopyBench(length: 1.5) {} }
+    CanopyPerson(seed: i + 2) { Position: {math.sin(a + 0.5) * 4.55, 0.58, math.cos(a + 0.5) * 4.55} }
+  }
+  warm_a {
+    Position: {0, 4.6, 0}
+    PointLight: {intensity: 26, range: 16}
+    Rgb: {255, 214, 160}
+  }
+  warm_b {
+    Position: {0, 9.8, 0}
+    PointLight: {intensity: 12, range: 12}
+    Rgb: {240, 255, 220}
+  }
+}
+
+@tree Parent
+template CanopyParterre {
+  prop w: f32 = 9
+  prop d: f32 = 9
+  prop seed: i32 = 0
+  const hedge_h = 0.46
+  floor : CanopyPaver { Position: {0, 0.015, 0}; Box: {w, 0.05, d}; TextureTransform: {scale_x: w / 2.6, scale_y: d / 2.6} }
+  for bx in 0..2 {
+    for bz in 0..2 {
+      const cx = (bx - 0.5) * (w / 2)
+      const cz = (bz - 0.5) * (d / 2)
+      const bw = w / 2 - 1
+      const bd = d / 2 - 1
+      { (IsA, CanopySoil); Position: {cx, 0.06, cz}; Box: {bw, 0.06, bd} }
+      { (IsA, CanopyLeaf); Rgb: {52, 100, 50}; Position: {cx, hedge_h / 2, cz - bd / 2}; RoundedBox: {bw + 0.3, hedge_h, 0.3, 0.1, segments: 1}; TextureTransform: {scale_x: bw / 2, scale_y: 0.2} }
+      { (IsA, CanopyLeaf); Rgb: {52, 100, 50}; Position: {cx, hedge_h / 2, cz + bd / 2}; RoundedBox: {bw + 0.3, hedge_h, 0.3, 0.1, segments: 1}; TextureTransform: {scale_x: bw / 2, scale_y: 0.2} }
+      { (IsA, CanopyLeaf); Rgb: {52, 100, 50}; Position: {cx - bw / 2, hedge_h / 2, cz}; RoundedBox: {0.3, hedge_h, bd + 0.3, 0.1, segments: 1}; TextureTransform: {scale_x: bd / 2, scale_y: 0.2} }
+      { (IsA, CanopyLeaf); Rgb: {52, 100, 50}; Position: {cx + bw / 2, hedge_h / 2, cz}; RoundedBox: {0.3, hedge_h, bd + 0.3, 0.1, segments: 1}; TextureTransform: {scale_x: bd / 2, scale_y: 0.2} }
+      for i in 0..7 {
+        const a = i * 2.399963 + bx + bz * 2 + seed
+        const r = 0.3 + (i % 3) * 0.5
+        { (IsA, CanopyBlossomCard); Position: {cx + math.sin(a) * r, 0.42, cz + math.cos(a) * r}; Rotation: {-0.5, a, 0}; Quad: {0.95, 0.72} }
+      }
+      { (IsA, CanopyLeaf); Rgb: {44, 92, 46}; Position: {cx, 0.86, cz}; IcoSphere: {radius: 0.5, segments: 2, smooth: true}; TextureTransform: {scale_x: 2, scale_y: 2} }
+      { (IsA, CanopyTerracotta); Position: {cx, 0.24, cz}; Frustum: {radius_bottom: 0.2, radius_top: 0.3, length: 0.42, segments: 10} }
+    }
+  }
+  urn_base : CanopyAshlar { Position: {0, 0.4, 0}; Box: {0.8, 0.8, 0.8}; TextureTransform: {scale_x: 0.4, scale_y: 0.3} }
+  urn : CanopyVerdigris { Position: {0, 1.05, 0}; Frustum: {radius_bottom: 0.2, radius_top: 0.42, length: 0.5, segments: 14} }
+  { (IsA, CanopyLeafCard); Rgb: {80, 132, 58}; Position: {0, 1.7, 0}; Rotation: {0, 0.5, 0}; Quad: {1.2, 1} }
+  { (IsA, CanopyBlossomCard); Position: {0, 1.7, 0}; Rotation: {0, 2, 0}; Quad: {1.2, 1} }
+}
+
+@tree Parent
+template CanopyCivicPlaza {
+  prop radius: f32 = 11
+  prop height: f32 = 4.52
+  const stairs: i32 = 21
+  const rise = (height + 0.55) / stairs
+  const run = 0.36
+  wall : CanopyAshlar { Position: {0, (height - 1.1) / 2, 0}; Cylinder: {radius: radius, length: height + 1.1, segments: 72}; TextureTransform: {scale_x: 22, scale_y: 1.4} }
+  plaza_base : CanopyPaver { Position: {0, height - 0.05, 0}; Cylinder: {radius: radius - 0.1, length: 0.1, segments: 72} }
+  plaza : CanopyMosaic { Position: {0, height + 0.006, 0}; Rotation: {-math.PI / 2, 0, 0}; Quad: {radius * 2 - 0.3, radius * 2 - 0.3} }
+  cornice : CanopyTrim { Position: {0, height - 0.12, 0}; Torus: {radius: radius + 0.04, tube: 0.13, segments: 72, rings: 6} }
+  water_line : CanopyConcrete { Position: {0, 0.2, 0}; Torus: {radius: radius + 0.02, tube: 0.22, segments: 72, rings: 6}; TextureTransform: {scale_x: 12, scale_y: 0.2} }
+  for i in 0..36 {
+    const a = i * math.PI / 18
+    const m = a + math.PI / 36
+    { (IsA, CanopyAshlar); Position: {math.sin(a) * (radius + 0.1), (height - 0.9) / 2 + 0.05, math.cos(a) * (radius + 0.1)}; Rotation: {0, a, 0}; Box: {0.42, height - 0.5, 0.26}; TextureTransform: {scale_x: 0.3, scale_y: 1.2} }
+    { (IsA, CanopyTimberDark); Position: {math.sin(m) * (radius + 0.005), 1.6, math.cos(m) * (radius + 0.005)}; Rotation: {0, m, 0}; Box: {0.92, 2.1, 0.03} }
+    { (IsA, CanopyAshlar); Position: {math.sin(m) * (radius + 0.02), 2.66, math.cos(m) * (radius + 0.02)}; Rotation: {-math.PI / 2, m, 0}; Tube: {radius: 0.52, thickness: 0.09, length: 0.09, arc: math.PI, segments: 12}; TextureTransform: {scale_x: 1, scale_y: 0.1} }
+    if i % 3 == 0 {
+      { Position: {math.sin(m) * (radius + 0.12), height - 0.1, math.cos(m) * (radius + 0.12)}; Rotation: {0, m, 0}; CanopyVine(length: 2 + i % 4 * 0.6, phase: i) {} }
+    }
+    if i % 9 == 4 {
+      { (IsA, CanopyBlossomCard); Position: {math.sin(a) * (radius + 0.28), height - 1.4, math.cos(a) * (radius + 0.28)}; Rotation: {0, a, 0}; Quad: {2, 2.8} }
+    }
+  }
+  for i in 0..72 {
+    const a = (i + 0.5) * math.PI / 36
+    const near = (i + 3) % 18
+    if near > 5 {
+      { (IsA, CanopyTrim); Position: {math.sin(a) * (radius - 0.26), height + 0.95, math.cos(a) * (radius - 0.26)}; Rotation: {0, a, 0}; Box: {0.96, 0.08, 0.16} }
+      { (IsA, CanopyTrim); Position: {math.sin(a) * (radius - 0.26), height + 0.45, math.cos(a) * (radius - 0.26)}; Rotation: {0, a, 0}; Box: {0.1, 0.9, 0.1} }
+      { (IsA, CanopyTrim); Position: {math.sin(a) * (radius - 0.26), height + 0.04, math.cos(a) * (radius - 0.26)}; Rotation: {0, a, 0}; Box: {0.98, 0.08, 0.2} }
+    }
+    if i % 8 == 2 {
+      CanopyPotted(size: 1, seed: i) { Position: {math.sin(a) * (radius - 1), height, math.cos(a) * (radius - 1)} }
+    }
+    if i % 12 == 1 {
+      { Position: {math.sin(a) * (radius - 0.9), height, math.cos(a) * (radius - 0.9)}; Rotation: {0, a + math.PI, 0}; CanopyBench(length: 1.7) {} }
+    }
+    if i % 9 == 4 {
+      { (IsA, CanopyMetal); Position: {math.sin(a) * (radius - 0.5), height + 1.5, math.cos(a) * (radius - 0.5)}; Cylinder: {radius: 0.06, length: 3, segments: 8} }
+      { (IsA, CanopyLampGlow); Position: {math.sin(a) * (radius - 0.5), height + 3.1, math.cos(a) * (radius - 0.5)}; Sphere: {radius: 0.2, segments: 10, smooth: true} }
+      { (IsA, CanopyVerdigris); Position: {math.sin(a) * (radius - 0.5), height + 3.3, math.cos(a) * (radius - 0.5)}; Cone: {radius: 0.26, length: 0.16, segments: 10} }
+      CanopyPerson(seed: i) { Position: {math.sin(a + 0.1) * (radius - 1.6), height, math.cos(a + 0.1) * (radius - 1.6)} }
+    }
+  }
+  CanopyConservatory() { Position: {0, height, 0} }
+  for s in 0..stairs {
+    { (IsA, CanopyAshlar); Position: {0, height - (s + 0.5) * rise, radius - 0.2 + (s + 0.5) * run}; Box: {8.4, rise + 0.02, run + 0.02}; TextureTransform: {scale_x: 3, scale_y: 0.1} }
+  }
+  for side in 0..2 {
+    const x = (side - 0.5) * 9.2
+    const total = stairs * run
+    const drop = stairs * rise
+    const slope = math.atan2(drop, total)
+    const seg = math.sqrt(drop * drop + total * total)
+    { (IsA, CanopyAshlar); Position: {x, height - drop / 2 + 0.15, radius - 0.2 + total / 2}; Rotation: {slope, 0, 0}; Box: {0.8, 0.5, seg + 0.3}; TextureTransform: {scale_x: 3, scale_y: 0.2} }
+    { (IsA, CanopyFoam); Position: {x * 1.11, height - drop / 2 - 0.25, radius - 0.2 + total / 2}; Rotation: {slope, 0, 0}; Box: {0.32, 0.03, seg}; TextureTransform: {scale_x: 0.4, scale_y: 4} }
+    { (IsA, CanopyAshlar); Position: {x, height - 0.05, radius + 0.25}; Box: {1.1, 1.3, 1.1}; TextureTransform: {scale_x: 0.5, scale_y: 0.4} }
+    { (IsA, CanopyVerdigris); Position: {x, height + 1, radius + 0.25}; Frustum: {radius_bottom: 0.24, radius_top: 0.5, length: 0.7, segments: 14} }
+    { (IsA, CanopyLeafCard); Rgb: {74, 128, 56}; Position: {x, height + 1.8, radius + 0.25}; Rotation: {0, 0.4, 0}; Quad: {1.5, 1.3} }
+    { (IsA, CanopyBlossomCard); Position: {x, height + 1.8, radius + 0.25}; Rotation: {0, 2, 0}; Quad: {1.5, 1.3} }
+    { (IsA, CanopyAshlar); Position: {x, -0.05, radius - 0.2 + total + 0.3}; Box: {1.2, 0.8, 1.2}; TextureTransform: {scale_x: 0.5, scale_y: 0.3} }
+    { (IsA, CanopyMetal); Position: {x, 1.55, radius - 0.2 + total + 0.3}; Cylinder: {radius: 0.07, length: 2.5, segments: 8} }
+    { (IsA, CanopyLampGlow); Position: {x, 2.9, radius - 0.2 + total + 0.3}; Sphere: {radius: 0.22, segments: 10, smooth: true} }
+  }
+  for s in 0..7 {
+    const step = (s * 13 + 2) % stairs
+    CanopyPerson(seed: s + 11) { Position: {math.sin(s * 3.7) * 3.4, height - step * rise + 0.02, radius - 0.2 + (step + 0.5) * run} }
+  }
+}

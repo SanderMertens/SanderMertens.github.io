@@ -1,0 +1,11 @@
+using flecs.script
+using box.material
+using box.widgets
+
+const canopy_dark = math.max(0, math.min(1, (math.sqrt((hud.screen.options.body.hour[Slider.mut].current - 12) * (hud.screen.options.body.hour[Slider.mut].current - 12)) - 4.6) / 1.6))
+
+CanopyFacade { Emissive: {strength: 0.05 + canopy_dark * 0.62, color: {255, 196, 128}} }
+CanopyWindow { Emissive: {strength: 0.3 + canopy_dark * 0.8, color: {255, 202, 135}} }
+CanopyLampGlow { Emissive: {strength: 0.25 + canopy_dark * 2.6, color: {255, 209, 129}} }
+CanopyLanternGlow { Emissive: {strength: 0.3 + canopy_dark * 2, color: {255, 150, 80}} }
+CanopyGlow { Emissive: {strength: 0.04 + canopy_dark * 1, color: {110, 234, 181}} }

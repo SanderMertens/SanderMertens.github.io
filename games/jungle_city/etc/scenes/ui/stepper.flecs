@@ -1,0 +1,255 @@
+// Stepper: a number changed in steps with minus and plus buttons around it.
+
+module box.widgets
+
+using flecs.script
+using flecs.script.math
+using box.ui
+using box.input
+using box.picking
+using box.layout
+using box.geometry
+using box.material
+using box.text
+
+// Behavior of a stepper, a spin button. A click on the left button part (button points wide)
+// steps down, on the right one up; the arrow keys step (Up and Right up), PageUp and PageDown by
+// ten steps, Home and End go to min and max. current stays within min..max. part is the button
+// under the pointer and pressed the one held: -1 minus, 1 plus, 0 none. The pointer shows a hand
+// over the stepper, a crossed circle while it is disabled.
+template HeadlessStepper {
+  prop min: f32 = 0
+  prop max: f32 = 10
+  prop step: f32 = 1
+  prop value: f32 = 0
+  prop disabled: bool = false
+  prop width: f32 = 0
+  prop button: f32 = 0
+
+  mut current: f32 = clamp(value, min, max)
+  mut last_value: f32 = value
+  mut part: i32 = 0
+  mut pressed: i32 = 0
+  mut focused = false
+
+  if !disabled {
+    Focusable
+    Cursor: {CursorPointer}
+  } else {
+    Cursor: {CursorNotAllowed}
+  }
+
+  async {
+    if value != last_value {
+      last_value = value
+      current = clamp(value, min, max)
+    }
+  }
+
+  // A disabled stepper ignores the pointer, so its buttons never show as hovered or pressed
+  async {
+    while true {
+      const e = await on.move(this)
+      const w = this[LayoutBounds].width
+      const at = match e.local_x < button - w / 2 {
+        true: -1
+        _: match e.local_x > w / 2 - button {
+          true: 1
+          _: 0
+        }
+      }
+      part = match disabled {
+        true: 0
+        _: at
+      }
+    }
+  }
+
+  async {
+    while true {
+      await on.leave(this)
+      part = 0
+    }
+  }
+
+  async {
+    while true {
+      const e = await on.press(this)
+      const w = this[LayoutBounds].width
+      const at = match e.local_x < button - w / 2 {
+        true: -1
+        _: match e.local_x > w / 2 - button {
+          true: 1
+          _: 0
+        }
+      }
+      pressed = match disabled {
+        true: 0
+        _: at
+      }
+      await on.release(this)
+      pressed = 0
+    }
+  }
+
+  async {
+    while true {
+      const e = await on.focus(this)
+      if e.target == this {
+        focused = true
+      }
+    }
+  }
+
+  async {
+    while true {
+      const e = await on.blur(this)
+      if e.target == this {
+        focused = false
+      }
+    }
+  }
+
+  async {
+    while true {
+      const e = await on.activate(this)
+      const w = this[LayoutBounds].width
+      if ui.activation(e) == this && !e.keyboard && !disabled {
+        const dir = match e.local_x < button - w / 2 {
+          true: -1
+          _: match e.local_x > w / 2 - button {
+            true: 1
+            _: 0
+          }
+        }
+        const v = clamp(current + dir * step, min, max)
+        if v != current {
+          current = v
+          await ui.changed(this)
+        }
+      }
+    }
+  }
+
+  async {
+    while true {
+      const e = await on.key_down(this)
+      if !disabled {
+        const target = match e.key {
+          "ArrowLeft": current - step
+          "ArrowDown": current - step
+          "ArrowRight": current + step
+          "ArrowUp": current + step
+          "PageDown": current - step * 10
+          "PageUp": current + step * 10
+          "Home": min
+          "End": max
+          _: current
+        }
+        const v = clamp(target, min, max)
+        if v != current {
+          current = v
+          await ui.changed(this)
+        }
+      }
+    }
+  }
+}
+
+// A stepper: a minus button, the value with decimals digits after the point and a plus button
+// in one bordered control. The buttons sit inside the border, which is edge points wide. A width
+// fixes it, 0 makes it 112 points.
+template Stepper : HeadlessStepper {
+  prop decimals: i32 = 0
+  prop button: f32 = 28
+
+  const t = box.ui.theme[UiTheme]
+  const ring = focused && FocusStatus[FocusStatus].visible
+  const w = match width {
+    0.0: 112
+    _: width
+  }
+  const edge = match ring {
+    true: t.focus_width
+    _: 1
+  }
+
+  Layout: {direction: Row, v: Middle, padding: {edge, edge, edge, edge}}
+  LayoutItem: {
+    width: {mode: Fixed, value: w},
+    height: {mode: Fixed, value: t.control_height}
+  }
+  Rect: {1, 1}
+  Rgb: t.surface_alt
+
+  if ring {
+    Border: {
+      width: t.focus_width, radius: t.radius,
+      color: {t.focus.r, t.focus.g, t.focus.b, 255}
+    }
+  } else {
+    Border: {width: 1, radius: t.radius, color: {t.border.r, t.border.g, t.border.b, 255}}
+  }
+
+  minus {
+    Layout: {direction: Row, h: Center, v: Middle}
+    LayoutItem: {width: {mode: Fixed, value: button - edge}, height: {mode: Grow}}
+    Rect: {1, 1}
+    Border: {radius: t.radius - edge}
+
+    if pressed == -1 {
+      Rgb: t.pressed
+    } else if part == -1 {
+      Rgb: t.hover
+    } else {
+      Rgb: t.surface
+    }
+
+    sign {
+      Text: {value: "-", size: t.font_size + 2}
+      if current <= min {
+        Rgb: t.text_muted
+      } else {
+        Rgb: t.text
+      }
+    }
+  }
+
+  amount {
+    Layout: {direction: Row, h: Center, v: Middle}
+    LayoutItem: {width: {mode: Grow}, height: {mode: Grow}}
+
+    digits {
+      Text: {value: "{current:.decimals}", size: t.font_size}
+      Rgb: t.text
+    }
+  }
+
+  plus {
+    Layout: {direction: Row, h: Center, v: Middle}
+    LayoutItem: {width: {mode: Fixed, value: button - edge}, height: {mode: Grow}}
+    Rect: {1, 1}
+    Border: {radius: t.radius - edge}
+
+    if pressed == 1 {
+      Rgb: t.pressed
+    } else if part == 1 {
+      Rgb: t.hover
+    } else {
+      Rgb: t.surface
+    }
+
+    sign {
+      Text: {value: "+", size: t.font_size + 2}
+      if current >= max {
+        Rgb: t.text_muted
+      } else {
+        Rgb: t.text
+      }
+    }
+  }
+
+  if disabled {
+    Opacity: {t.disabled_opacity}
+  }
+}

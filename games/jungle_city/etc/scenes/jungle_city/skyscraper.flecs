@@ -1,0 +1,188 @@
+using flecs.script
+using box.transform
+using box.geometry
+using box.material
+
+@tree Parent
+template CanopySkyDeck {
+  prop width: f32 = 10
+  prop depth: f32 = 8
+  prop variant: i32 = 0
+  { Position: {0, 0, 0}; (IsA, CanopyIvory); RoundedBox: {width, 0.55, depth, 0.65} }
+  { (IsA, CanopyWood); Position: {0, -0.36, 0}; RoundedBox: {width - 0.3, 0.2, depth - 0.3, 0.5} }
+  for side in 0..2 {
+    const z = (side - 0.5) * (depth - 0.9)
+    { (IsA, CanopyLeaf); Position: {0, 0.5, z}; RoundedBox: {width - 0.8, 0.65, 1, 0.3} }
+    { (IsA, CanopyGlow); Position: {0, -0.48, z}; Box: {width - 1.5, 0.05, 0.06} }
+    { (IsA, CanopyMetal); Position: {0, 1.2, (side - 0.5) * depth * 0.98}; Box: {width - 0.4, 0.04, 0.04} }
+    for p in 0..4 {
+      { (IsA, CanopyMetal); Position: {(p / 3.0 - 0.5) * (width - 0.5), 0.75, (side - 0.5) * depth * 0.98}; Box: {0.04, 0.9, 0.04} }
+    }
+    CanopyBench(length: 1.4) { Position: {(side - 0.5) * 1.6, 0.27, z * 0.2}; Rotation: {0, side * math.PI, 0} }
+    for i in 0..3 {
+      const x = (i - 1) * (width - 2) / 2
+      CanopyVine(length: 3.5 + i, phase: variant + side + i) { Position: {x, 0.8, z + (side - 0.5) * 0.9} }
+    }
+    CanopyTree(height: 3.8 + side, variant: variant + side * 71) { Position: {(side - 0.5) * (width - 2.2), 0.7, z} }
+    CanopyFern(size: 1.5) { Position: {(0.5 - side) * (width - 2.2), 0.8, z} }
+  }
+}
+
+@tree Parent
+template CanopySkyBlock {
+  prop floors: i32 = 4
+  prop width: f32 = 6
+  prop depth: f32 = 6
+  prop variant: i32 = 0
+  prop wall: Rgb = {226, 235, 211}
+  prop timber: Rgb = {143, 91, 48}
+  const windows: math.Rng = {seed: variant + 314159}
+  for f in 0..floors {
+    const y = f * 3.2
+    { (IsA, CanopyFacade); Position: {0, y + 1.6, 0}; Box: {width - 0.45, 3.2, depth - 0.45}; TextureTransform: {scale_x: (width - 0.45) / 12.8, scale_y: 0.125, offset_x: windows.f(1), offset_y: windows.u(8) / 8.0} }
+    { (IsA, CanopyIvory); Rgb: wall; Position: {0, y, 0}; RoundedBox: {width, 0.35, depth, 0.35} }
+    for side in 0..4 {
+      const horizontal = match side % 2 { 0: width; _: depth }
+      const reach = match side % 2 { 0: depth; _: width }
+      {
+        Rotation: {0, side * math.PI / 2, 0}
+        for i in 0..3 {
+          const x = (i - 1) * (horizontal - 1) / 3
+          { (IsA, CanopyWood); Rgb: timber; Position: {x, y + 1.6, reach / 2 - 0.15}; Box: {0.16, 3, 0.25} }
+        }
+      }
+    }
+  }
+  for x in 0..2 {
+    for z in 0..2 {
+      { (IsA, CanopyIvory); Rgb: wall; Position: {(x - 0.5) * (width - 0.4), floors * 1.6, (z - 0.5) * (depth - 0.4)}; Box: {0.35, floors * 3.2, 0.35} }
+    }
+  }
+}
+
+@tree Parent
+template CanopySkyscraper {
+  prop floors: i32 = 20
+  prop variant: i32 = 0
+  prop floorplan: i32 = 0
+  prop wall: Rgb = {226, 235, 211}
+  prop timber: Rgb = {143, 91, 48}
+  prop roof_style: i32 = 0
+  prop facade_style: i32 = 0
+  const height = floors * 3.2
+  const windows: math.Rng = {seed: variant + 314159}
+  if floorplan == 0 {
+    for wing in 0..2 {
+      const levels = floors - wing * 7
+      const x = (wing - 0.5) * 6.3
+      CanopyPlinth(width: 4.4, depth: 6, variant: variant + wing) { Position: {x, 0, 0} }
+      CanopySkyBlock(floors: levels, width: 3.8, depth: 5.2, variant: variant + wing, wall: wall, timber: timber) { Position: {x, 1.2, 0} }
+      for garden in 1..levels / 5 {
+        CanopySkyDeck(width: 5.3, depth: 7.4, variant: variant + wing * 31 + garden) { Position: {x, 1.2 + garden * 16, 0} }
+      }
+      CanopySkyDeck(width: 5.2, depth: 7, variant: variant + wing) { Position: {x, 1.2 + levels * 3.2, 0} }
+      CanopyRoof(style: 1, variant: variant) { Position: {x, 1.9 + levels * 3.2, 0}; Scale: {0.65, 1.4, 0.8} }
+    }
+    for tier in 0..2 {
+      const y = height * (0.32 + tier * 0.27)
+      CanopySkyDeck(width: 12, depth: 8, variant: variant + tier * 13) { Position: {0, y, 0} }
+      for side in 0..2 {
+        { (IsA, CanopyWood); Position: {(side - 0.5) * 5.8, y - 2.2, 0}; Rotation: {0, 0, (side - 0.5) * 1.1}; Box: {0.35, 5, 0.5} }
+      }
+    }
+  } else if floorplan == 1 {
+    CanopyPlinth(width: 12.2, depth: 10.8, variant: variant) {}
+    for tier in 0..4 {
+      const start: i32 = math.floor(floors * tier / 4.0)
+      const levels: i32 = math.floor(floors * (tier + 1) / 4.0) - start
+      const width = 11.8 - tier * 2.1
+      const depth = 10.2 - tier * 1.8
+      const y = 1.2 + start * 3.2
+      const z = -tier * 0.6
+      CanopySkyBlock(floors: levels, width: width, depth: depth, variant: variant + tier, wall: wall, timber: timber) { Position: {0, y, z} }
+      CanopySkyDeck(width: width + 0.8, depth: depth + 0.8, variant: variant + tier * 31) { Position: {0, y + levels * 3.2, z} }
+    }
+    CanopyRoof(style: 3, variant: variant) { Position: {0, 2 + height, -1.8}; Scale: {0.75, 1.4, 0.75} }
+  } else if floorplan == 2 {
+    CanopyPlinth(width: 10.8, depth: 6.6, variant: variant) { Position: {0, 0, 1.2} }
+    core : CanopyIvory { Rgb: wall; Position: {0, height / 2 + 1.2, 0}; RoundedBox: {2.4, height, 2.4, 0.3}; TextureTransform: {scale_x: 1, scale_y: floors / 4.0} }
+    for tier in 0..5 {
+      const start: i32 = math.floor(floors * tier / 5.0)
+      const levels: i32 = math.floor(floors * (tier + 1) / 5.0) - start
+      const a = tier * math.PI / 2
+      const y = 1.2 + start * 3.2
+      {
+        Position: {math.sin(a) * 1.2, y, math.cos(a) * 1.2}
+        Rotation: {0, a, 0}
+        CanopySkyBlock(floors: levels, width: 10.2 - tier * 0.35, depth: 5.6, variant: variant + tier, wall: wall, timber: timber) {}
+        CanopySkyDeck(width: 11 - tier * 0.35, depth: 7.5, variant: variant + tier * 19) { Position: {0, levels * 3.2, 0} }
+      }
+    }
+    CanopyGreenhouse() { Position: {0, 1.8 + height, 0}; Scale: {0.5, 0.65, 0.5} }
+  } else if floorplan == 3 {
+    CanopyPlinth(round: true, radius: 4.4, variant: variant) {}
+    core : CanopyFacade { Position: {0, height / 2 + 1.2, 0}; Frustum: {radius_bottom: 3.7, radius_top: 0.9, length: height, segments: 16, smooth: true}; TextureTransform: {scale_x: 1, scale_y: floors / 8.0, offset_x: variant % 8 / 8.0, offset_y: variant % 13 / 8.0} }
+    for rib in 0..8 {
+      const a = rib * math.PI / 4
+      {
+        Rotation: {0, a, 0}
+        { (IsA, CanopyIvory); Rgb: wall; Position: {0, height / 2 + 1.2, 2.3}; Rotation: {-math.atan(2.8 / height), 0, 0}; Box: {0.24, height, 0.3} }
+      }
+    }
+    for tier in 0..7 {
+      const y = 4.4 + tier * (height - 8) / 6
+      const radius = 5.8 - tier * 0.4
+      { (IsA, CanopyWood); Rgb: timber; Position: {0, y - 0.6, 0}; Frustum: {radius_bottom: radius * 0.55, radius_top: radius, length: 1.2, segments: 12} }
+      { (IsA, CanopyIvory); Rgb: wall; Position: {0, y + 0.1, 0}; Cylinder: {radius: radius, length: 0.3, segments: 24} }
+      { (IsA, CanopyLeaf); Position: {0, y + 0.5, 0}; Tube: {radius: radius - 0.3, thickness: 0.85, length: 0.6, segments: 24} }
+      for side in 0..3 {
+        const a = side * math.PI * 2 / 3 + tier
+        CanopyTree(height: 4.6, variant: variant + tier * 11 + side) { Position: {math.sin(a) * (radius - 0.8), y + 0.7, math.cos(a) * (radius - 0.8)} }
+        CanopyVine(length: 5, phase: a) { Position: {math.sin(a) * radius, y + 0.7, math.cos(a) * radius} }
+      }
+    }
+    for petal in 0..5 {
+      const a = petal * math.PI * 2 / 5
+      { (IsA, CanopySolar); Position: {math.sin(a) * 3.2, height + 1.8, math.cos(a) * 3.2}; Rotation: {-0.45, a, 0}; RoundedBox: {2.8, 0.18, 7.5, 0.7} }
+    }
+    mast : CanopyIvory { Position: {0, height + 5, 0}; Frustum: {radius_bottom: 0.28, radius_top: 0.06, length: 10, segments: 8} }
+    for b in 0..4 {
+      { Position: {0, height + 1.2, 0}; Rotation: {0, b * math.PI / 2, 0}; CanopyDownpipe(length: height * 0.9) { Position: {0.9, 0, 0.5} } }
+    }
+  } else if floorplan == 4 {
+    const levels: i32 = math.floor(floors * 0.72)
+    for side in 0..2 {
+      const x = (side - 0.5) * 7.8
+      CanopyPlinth(width: 3.4, depth: 7.8, variant: variant + side) { Position: {x, 0, 0} }
+      CanopySkyBlock(floors: levels, width: 2.8, depth: 7.2, variant: variant + side, wall: wall, timber: timber) { Position: {x, 1.2, 0} }
+      for tier in 1..3 {
+        CanopySkyDeck(width: 3.8, depth: 8.2, variant: variant + tier + side) { Position: {x, 1.2 + levels * 3.2 * tier / 3, 0} }
+      }
+    }
+    const y = 1.2 + levels * 3.2
+    CanopySkyDeck(width: 12.4, depth: 9, variant: variant) { Position: {0, y, 0} }
+    CanopySkyBlock(floors: 2, width: 10.5, depth: 6.2, variant: variant, wall: wall, timber: timber) { Position: {0, y + 0.6, 0} }
+    CanopyGreenhouse() { Position: {0, y + 7.2, 0}; Scale: {0.9, 1.25, 0.65} }
+    for side in 0..2 {
+      { (IsA, CanopyWood); Rgb: timber; Position: {(side - 0.5) * 4.6, y - 3, 0}; Rotation: {0, 0, (side - 0.5) * 1.35}; Box: {0.45, 7.5, 0.65} }
+    }
+  } else {
+    CanopyPlinth(round: true, radius: 4.8, variant: variant) { Position: {0, 0, 1.1} }
+    for f in 0..floors {
+      const a = f * 0.34
+      const x = math.sin(a) * 1.1
+      const z = math.cos(a) * 1.1
+      const y = 1.2 + f * 3.2
+      const radius = 4.5 - f / (floors - 1.0) * 1.5
+      { (IsA, CanopyFacade); Position: {x, y + 1.6, z}; Cylinder: {radius: radius - 0.65, length: 3.2, segments: 24}; TextureTransform: {scale_x: 1.5, scale_y: 0.125, offset_x: windows.f(1), offset_y: windows.u(8) / 8.0} }
+      { (IsA, CanopyIvory); Rgb: wall; Position: {x, y, z}; Cylinder: {radius: radius + 0.3, length: 0.4, segments: 24} }
+      { (IsA, CanopyLeaf); Position: {x, y + 0.45, z}; Tube: {radius: radius, thickness: 0.7, length: 0.55, segments: 24} }
+      { (IsA, CanopyMetal); Position: {x, y + 1.3, z}; Torus: {radius: radius + 0.15, tube: 0.025, segments: 24, rings: 4} }
+      if f % 3 == 0 {
+        CanopyTree(height: 4, variant: variant + f) { Position: {x + math.sin(a) * radius, y + 0.7, z + math.cos(a) * radius} }
+        CanopyVine(length: 4.5, phase: a) { Position: {x - math.sin(a) * radius, y + 0.7, z - math.cos(a) * radius} }
+      }
+    }
+    CanopyRoof(style: 1, variant: variant) { Position: {math.sin((floors - 1) * 0.34) * 1.1, height + 1.2, math.cos((floors - 1) * 0.34) * 1.1} }
+  }
+}

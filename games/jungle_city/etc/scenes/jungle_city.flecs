@@ -1,0 +1,96 @@
+include ui/widgets
+include cfg/hud
+include jungle_city/city
+include jungle_city/lights
+using flecs.script
+using box.transform
+using box.geometry
+using box.material
+using box.camera
+using box.view
+using box.light
+using box.effects
+using box.surface
+using box.controllers
+using box.atmosphere
+using box.layout
+using box.widgets
+
+window { Surface: {width: 1600, height: 1100, vsync: true} }
+canopy_ao { Gtao: {radius: 1.3, final_value_power: 1.7} }
+canopy_bloom { Bloom: {intensity: 0.1, threshold: 1.35, threshold_softness: 0.45} }
+canopy_exposure { AutoExposure: {min_log_luma: -10.8, exposure_compensation: 0.55, max_exposure: 18} }
+canopy_tonemap { Tonemap: {auto_exposure: canopy_exposure, operator_: TonyMcMapface} }
+canopy_aa { Smaa: {} }
+
+async {
+  hud_hour = 9.3
+  hud_day_of_year = 120
+  hud_latitude = -2
+  hud_north = 305
+  hud_fog = 0.002
+}
+
+const water_hour = hud.screen.options.body.hour[Slider.mut].current - 12
+const water_light = 1 - 0.82 * math.max(0, math.min(1, (math.sqrt(water_hour * water_hour) - 4.6) / 1.6))
+
+jungle_city {
+  Scene: {}
+  sun {
+    DirectionalLight: {intensity: 2.6 * math.PI}
+    Rgb: {255, 244, 222}
+  }
+  sky {
+    Atmosphere: {
+      sun: sun,
+      units_per_km: 520,
+      rayleigh: {scale_height: 8, scattering_scale: 2.5},
+      mie: {scale_height: 1.6, anisotropy: 0.78, scattering_scale: 2.6, tint: {238, 244, 232}},
+      ozone_scale: 2.6,
+      ground_albedo: {40, 70, 58},
+      sun_disk_intensity: 10,
+      sun_radius: 0.75
+    }
+    TimeOfDay: {
+      hour: hud.screen.options.body.hour[Slider.mut].current,
+      day_of_year: hud.screen.options.body.day_of_year[Slider.mut].current,
+      latitude: hud.screen.options.body.latitude[Slider.mut].current,
+      north: hud.screen.options.body.north[Slider.mut].current,
+      sun: sun
+    }
+    HeightFog: {
+      density: hud.screen.options.body.fog[Slider.mut].current,
+      falloff: 0.09,
+      base_height: 0,
+      max_opacity: 0.26,
+      atmosphere: sky
+    }
+  }
+  ReflectionBake: {resolution: 128, budget_ms: 2, scene_probe: true, scene_probe_height: 28, environment: sky}
+  LightBake: {environment: sky, probe_spacing: 6, bounds_padding: 0.3, bounces: 0, capture_size: 32, budget_ms: 8}
+  assets.JungleCity city(rows: 15, columns: 15, spacing: 17, seed: 17) { camera {} }
+  CanopyWaterFx water(depth: 9 * 17 + 20, seed: 17, civic_z: (9 - 2 - (9 - 1) / 2.0) * 17 + 17 / 2.0, radius: 11, height: 4.52, light: water_light)
+}
+
+main_view {
+  View: {
+    camera: jungle_city.city.camera,
+    clear: {enabled: true, color: {60, 72, 72, 255}},
+    lighting: {
+      enabled: true,
+      baked: hud.screen.options.body.baked[Checkbox.mut].current,
+      reflections: true,
+      atmosphere: true,
+      environment: {source: jungle_city.sky, intensity: 0.95, yaw: 0, background: false}
+    },
+    shadows: {enabled: hud.screen.options.body.shadows[Checkbox.mut].current, cascades: 4, resolution: 4096, max_distance: 620, split_lambda: 0.72},
+    culling: {enabled: true, occlusion: true, min_dimension_px: 3},
+    effects: [
+      {enabled: hud.screen.options.body.gtao[Checkbox.mut].current, effect: canopy_ao},
+      {enabled: true, effect: jungle_city.sky},
+      {enabled: true, effect: canopy_bloom},
+      {enabled: true, effect: canopy_tonemap},
+      {enabled: true, effect: canopy_aa}
+    ]
+  }
+}

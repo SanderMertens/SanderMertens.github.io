@@ -1,0 +1,66 @@
+include materials
+include branch
+include leaf
+include tree
+include fern
+include vine
+include detail
+include bridge
+include roof
+include tower
+include rotunda
+include cascade
+include spire
+include pods
+include courtyard
+include slab
+include conservatory
+include skyscraper
+include terrain
+include districts
+include life
+using flecs.script
+using box.transform
+using box.geometry
+using box.material
+using box.camera
+using box.controllers
+
+assets {
+  @tree ChildOf
+  template JungleCity {
+    prop columns: i32 = 10
+    prop rows: i32 = 9
+    prop spacing: f32 = 17
+    prop seed: i32 = 17
+    prop base_floors: i32 = 2
+    prop floor_variation: i32 = 2
+    prop center_floors: i32 = 8
+    prop skyscraper_floors: i32 = 7
+    prop trees_per_block: i32 = 5
+    prop downtown_columns: i32 = 10
+    prop downtown_rows: i32 = 9
+    prop midrise: f32 = 0.4
+    const width = columns * spacing + 32
+    const depth = rows * spacing + 20
+    const extent = math.sqrt(width * width + depth * depth)
+    const plaza_radius = 11
+    const civic_z = (rows - 2 - (rows - 1) / 2.0) * spacing + spacing / 2
+    CanopyTerrain terrain(width: width, depth: depth, seed: seed)
+    CanopyDistricts(rows: rows, columns: columns, spacing: spacing, seed: seed,
+      base_floors: base_floors, floor_variation: floor_variation, center_floors: center_floors, skyscraper_floors: skyscraper_floors, trees_per_block: trees_per_block, plaza_radius: plaza_radius,
+      downtown_columns: downtown_columns, downtown_rows: downtown_rows, midrise: midrise) {}
+    civic_island {
+      Position: {0, 0.2, civic_z}
+      CanopyCivicPlaza(radius: plaza_radius, height: 4.52) {}
+    }
+    CanopyCivicSquare(spacing: spacing, radius: plaza_radius) { Position: {0, 0, civic_z} }
+    CanopyLife(width: width, depth: depth, seed: seed) {}
+    camera {
+      Position: {-extent * 0.63, extent * 0.37, extent * 0.76}
+      Rotation: {-0.285, -0.69, 0}
+      Camera: {fov: 43, near_: 0.5, far_: extent * 5}
+      CameraController: {speed: 30}
+    }
+  }
+}

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0e13">
+<meta name="description" content="Jungle City">
+<title>Jungle City</title>
+<link rel="icon" href="/flecs.png">
+<style>
+  :root { --bg: #0b0e13; --bg2: #10141b; --fg: #e7ecf2; --muted: #8b95a3; --green: #42b983; --green-soft: #a2d8b4; --border: #232935; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg); color: var(--fg); font-family: Inter, -apple-system, system-ui, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+  #canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+  #canvas:focus { outline: none; }
+  #overlay { position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; padding: 24px; text-align: center; background: radial-gradient(1200px 600px at 50% -10%, rgba(66,185,131,0.10), transparent 60%), linear-gradient(180deg, var(--bg2), var(--bg)); transition: opacity .5s ease; }
+  #overlay.hidden { opacity: 0; pointer-events: none; }
+  .title { font-size: clamp(2.2rem, 7vw, 3.4rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1; background: linear-gradient(180deg, #ffffff, #b9c4d0); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  #bar { width: min(260px, 60vw); height: 4px; background: var(--border); border-radius: 999px; overflow: hidden; }
+  #bar > div { width: 100%; height: 100%; background: linear-gradient(90deg, var(--green), var(--green-soft)); transform: scaleX(0); transform-origin: left center; transition: transform .18s linear; }
+  #bar.hidden { visibility: hidden; }
+  #message { font-size: 0.95rem; font-weight: 500; }
+  #detail { font-size: 0.82rem; color: var(--muted); max-width: 30em; line-height: 1.5; }
+</style>
+</head>
+<body>
+<canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+<div id="overlay">
+  <div class="title">Jungle City</div>
+  <div id="bar"><div></div></div>
+  <div id="message">Starting&hellip;</div>
+  <div id="detail"></div>
+</div>
+<script>window.BOX_GAME = {"scene":"etc/scenes/jungle_city.flecs","files":[{"path":"etc/scenes/cfg/hud.flecs","size":3971},{"path":"etc/scenes/jungle_city.flecs","size":3310},{"path":"etc/scenes/jungle_city/INVENTORY.md","size":2794},{"path":"etc/scenes/jungle_city/branch.flecs","size":673},{"path":"etc/scenes/jungle_city/bridge.flecs","size":12787},{"path":"etc/scenes/jungle_city/cascade.flecs","size":1905},{"path":"etc/scenes/jungle_city/city.flecs","size":2008},{"path":"etc/scenes/jungle_city/conservatory.flecs","size":23205},{"path":"etc/scenes/jungle_city/courtyard.flecs","size":2567},{"path":"etc/scenes/jungle_city/detail.flecs","size":15508},{"path":"etc/scenes/jungle_city/districts.flecs","size":12035},{"path":"etc/scenes/jungle_city/fern.flecs","size":2288},{"path":"etc/scenes/jungle_city/leaf.flecs","size":1891},{"path":"etc/scenes/jungle_city/life.flecs","size":7900},{"path":"etc/scenes/jungle_city/lights.flecs","size":682},{"path":"etc/scenes/jungle_city/materials.flecs","size":8321},{"path":"etc/scenes/jungle_city/pods.flecs","size":2523},{"path":"etc/scenes/jungle_city/roof.flecs","size":2654},{"path":"etc/scenes/jungle_city/rotunda.flecs","size":2620},{"path":"etc/scenes/jungle_city/sign.flecs","size":762},{"path":"etc/scenes/jungle_city/skyscraper.flecs","size":10081},{"path":"etc/scenes/jungle_city/slab.flecs","size":1873},{"path":"etc/scenes/jungle_city/spire.flecs","size":2555},{"path":"etc/scenes/jungle_city/terrain.flecs","size":4669},{"path":"etc/scenes/jungle_city/textures/ashlar.jpg","size":45901},{"path":"etc/scenes/jungle_city/textures/ashlar_normal.jpg","size":75176},{"path":"etc/scenes/jungle_city/textures/bark.jpg","size":15040},{"path":"etc/scenes/jungle_city/textures/bark_normal.jpg","size":41712},{"path":"etc/scenes/jungle_city/textures/bigleaf.png","size":37410},{"path":"etc/scenes/jungle_city/textures/blossom.png","size":210196},{"path":"etc/scenes/jungle_city/textures/broadleaf.png","size":211032},{"path":"etc/scenes/jungle_city/textures/concrete.jpg","size":40345},{"path":"etc/scenes/jungle_city/textures/concrete_normal.jpg","size":108236},{"path":"etc/scenes/jungle_city/textures/deck.jpg","size":64860},{"path":"etc/scenes/jungle_city/textures/deck_normal.jpg","size":67394},{"path":"etc/scenes/jungle_city/textures/facade.jpg","size":199537},{"path":"etc/scenes/jungle_city/textures/facade_emissive.jpg","size":62876},{"path":"etc/scenes/jungle_city/textures/facade_orm.jpg","size":119222},{"path":"etc/scenes/jungle_city/textures/fern.png","size":66781},{"path":"etc/scenes/jungle_city/textures/ground.jpg","size":328348},{"path":"etc/scenes/jungle_city/textures/ground_normal.jpg","size":898298},{"path":"etc/scenes/jungle_city/textures/mosaic.png","size":2168068},{"path":"etc/scenes/jungle_city/textures/mosaic_normal.jpg","size":704963},{"path":"etc/scenes/jungle_city/textures/palm.png","size":103759},{"path":"etc/scenes/jungle_city/textures/pavers.jpg","size":50069},{"path":"etc/scenes/jungle_city/textures/pavers_normal.jpg","size":100266},{"path":"etc/scenes/jungle_city/textures/plaster.jpg","size":29796},{"path":"etc/scenes/jungle_city/textures/plaster_normal.jpg","size":121757},{"path":"etc/scenes/jungle_city/textures/strata.jpg","size":63458},{"path":"etc/scenes/jungle_city/textures/strata_normal.jpg","size":183475},{"path":"etc/scenes/jungle_city/textures/tuft.png","size":6926},{"path":"etc/scenes/jungle_city/textures/vine.png","size":268027},{"path":"etc/scenes/jungle_city/textures/water_normal.jpg","size":119678},{"path":"etc/scenes/jungle_city/textures/wood.jpg","size":66961},{"path":"etc/scenes/jungle_city/textures/wood_normal.jpg","size":88597},{"path":"etc/scenes/jungle_city/tower.flecs","size":2657},{"path":"etc/scenes/jungle_city/tree.flecs","size":4082},{"path":"etc/scenes/jungle_city/vine.flecs","size":476},{"path":"etc/scenes/ui/button.flecs","size":3564},{"path":"etc/scenes/ui/collapsible.flecs","size":4175},{"path":"etc/scenes/ui/dropdown.flecs","size":8552},{"path":"etc/scenes/ui/label.flecs","size":2129},{"path":"etc/scenes/ui/progress.flecs","size":1570},{"path":"etc/scenes/ui/radio.flecs","size":5466},{"path":"etc/scenes/ui/scroll.flecs","size":22356},{"path":"etc/scenes/ui/slider.flecs","size":6293},{"path":"etc/scenes/ui/stepper.flecs","size":5804},{"path":"etc/scenes/ui/tabs.flecs","size":7598},{"path":"etc/scenes/ui/text_input.flecs","size":4121},{"path":"etc/scenes/ui/theme.flecs","size":1687},{"path":"etc/scenes/ui/toggle.flecs","size":5756},{"path":"etc/scenes/ui/widgets.flecs","size":3703}]};</script>
+<script src="../box/loader.js"></script>
+</body>
+</html>

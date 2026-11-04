@@ -1,0 +1,38 @@
+using flecs.script
+using box.transform
+using box.geometry
+using box.material
+
+@tree Parent
+template CanopyCascade {
+  prop floors: i32 = 5
+  prop variant: i32 = 0
+  prop wall: Rgb = {226, 235, 211}
+  prop timber: Rgb = {143, 91, 48}
+  prop roof_style: i32 = 0
+  prop facade_style: i32 = 0
+  const windows: math.Rng = {seed: variant + 314159}
+  const levels: i32 = 2 + floors / 2
+  CanopyPlinth(width: 8.2, depth: 8.8, variant: variant) {}
+  for f in 0..levels {
+    const y = 1.2 + f * 3.2
+    const depth = 8.4 - f * 1.05
+    const z = -f * 0.5
+    { (IsA, CanopyIvory); Rgb: wall; Position: {0, y + 1.5, z}; RoundedBox: {7.8, 3, depth, 0.45} }
+    { (IsA, CanopyFacade); Position: {0, y + 1.55, z + depth / 2 + 0.02}; Box: {6.9, 2.8, 0.08}; TextureTransform: {scale_x: 0.54, scale_y: 0.125, offset_x: windows.f(1), offset_y: windows.u(8) / 8.0} }
+    for i in 0..5 + facade_style * 3 {
+      { (IsA, CanopyWood); Rgb: timber; Position: {-3.3 + i * 6.6 / (4 + facade_style * 3), y + 1.65, z + depth / 2 + 0.12}; Box: {0.16, 2.4, 0.2} }
+    }
+    { (IsA, CanopyIvory); Rgb: wall; Position: {0, y + 3.1, z}; RoundedBox: {8.4, 0.25, depth + 0.5, 0.35} }
+    { (IsA, CanopyLeaf); Position: {0, y + 3.35, z + depth / 2 - 0.15}; RoundedBox: {7.9, 0.3, 0.8, 0.2} }
+    for i in 0..3 {
+      CanopyFern(size: 0.65) { Position: {-2.6 + i * 2.6, y + 3.5, z + depth / 2 - 0.1} }
+      CanopyVine(length: 1.8 + i * 0.3, phase: variant + i) { Position: {-2.6 + i * 2.6, y + 3.45, z + depth / 2 + 0.3} }
+      { (IsA, CanopyBlossomCard); Position: {-1.3 + i * 2.6, y + 3.66, z + depth / 2 + 0.05}; Rotation: {-0.3, i, 0}; Quad: {1.2, 0.9} }
+    }
+  }
+  const top = 1.2 + levels * 3.2
+  CanopyRoof(style: roof_style, variant: variant) { Position: {0, top + 0.2, -1.7}; Scale: {1, 1, 0.7} }
+  CanopyDownpipe(length: top - 1.2) { Position: {3.95, top, 0} }
+  CanopyTank(size: 0.8) { Position: {-2.6, top + 0.2, -3.2} }
+}

@@ -1,0 +1,199 @@
+using flecs.script
+using box.transform
+using box.geometry
+using box.material
+using box.movement
+using box.particle
+
+@tree Parent
+template CanopyBoat {
+  prop length: f32 = 5.4
+  prop style: i32 = 0
+  const beam = length * 0.26
+  const roll = 0.5 + style % 4 * 0.12
+  AngularVelocity: {roll, 0, 0}
+  counter {
+    Position: {0, 0, 0.012}
+    AngularVelocity: {-roll, 0, 0}
+    hull : CanopyWood { Position: {0, 0.2, 0}; Scale: {1, 0.4, 0.5}; Sphere: {radius: length / 2, segments: 16}; TextureTransform: {scale_x: 3, scale_y: 2} }
+    gunwale : CanopyTrim { Position: {0, 0.58, 0}; Scale: {1, 1, 0.5}; Torus: {radius: length / 2 - 0.2, tube: 0.05, segments: 28, rings: 4} }
+    floor : CanopyDeck { Position: {0, 0.52, 0}; Box: {length * 0.66, 0.05, beam * 1.2}; TextureTransform: {scale_x: 2, scale_y: 0.5} }
+    for side in 0..2 {
+      const x = (side - 0.5) * length * 0.34
+      for z in 0..2 {
+        { (IsA, CanopyTimberDark); Position: {x, 1.2, (z - 0.5) * beam}; Box: {0.06, 1.3, 0.06} }
+      }
+    }
+    CanopyAwning(width: length * 0.42, depth: beam * 1.25, stripes: 6, style: style) { Position: {0, 1.9, -beam * 0.62} }
+    lamp : CanopyLanternGlow { Position: {length * 0.42, 0.98, 0}; Sphere: {radius: 0.1, segments: 8} }
+    lamp_post : CanopyMetal { Position: {length * 0.42, 0.74, 0}; Box: {0.03, 0.42, 0.03} }
+    seat : CanopyWood { Position: {-length * 0.1, 0.72, 0}; Box: {0.5, 0.06, beam * 0.9} }
+    CanopyPerson(seed: style) { Position: {-length * 0.1, 0.5, beam * 0.14} }
+    if style % 2 == 0 {
+      for i in 0..3 {
+        { (IsA, CanopyTerracotta); Position: {length * 0.18, 0.64, -beam * 0.3 + i * beam * 0.3}; Box: {0.3, 0.24, 0.24}; Rgb: {150 + i * 22, 110 + i * 14, 66} }
+      }
+    }
+  }
+}
+
+@tree Parent
+template CanopyLily {
+  prop seed: f32 = 0
+  for i in 0..6 {
+    const a = i * 2.399963 + seed
+    const r = 0.25 + (i % 3) * 0.3
+    { (IsA, CanopyLeaf); Rgb: {70, 128, 58}; Position: {math.sin(a) * r, 0, math.cos(a) * r}; Cylinder: {radius: 0.16 + (i % 2) * 0.07, length: 0.012, segments: 10}; TextureTransform: {scale_x: 0.3, scale_y: 0.3} }
+  }
+  { Position: {0.2, 0.05, 0.14}; IcoSphere: {radius: 0.06, segments: 1}; Rgb: {252, 214, 228}; PbrMaterial: {roughness: 0.8} }
+}
+
+@tree Parent
+template CanopyBird {
+  prop radius: f32 = 20
+  prop speed: f32 = 0.2
+  prop phase: f32 = 0
+  prop color: Rgb = {196, 74, 52}
+  Rotation: {0, phase, 0}
+  AngularVelocity: {0, speed, 0}
+  wings {
+    Position: {radius, 0, 0}
+    Rotation: {0, 0, 0.26}
+    Scale: {1.3, 1.3, 1.3}
+    body { Position: {0, 0, 0}; Scale: {0.34, 0.34, 1}; Sphere: {radius: 0.3, segments: 6}; Rgb: color; PbrMaterial: {roughness: 0.7} }
+    tail { Position: {0, 0, -0.42}; Box: {0.1, 0.02, 0.4}; Rgb: color; PbrMaterial: {roughness: 0.7} }
+    for side in 0..2 {
+      { Position: {(side - 0.5) * 0.74, 0.03, 0}; Rotation: {0, 0, (0.5 - side) * 0.3}; Box: {0.7, 0.015, 0.26}; Rgb: color; PbrMaterial: {roughness: 0.7} }
+    }
+  }
+}
+
+@tree Parent
+template CanopyFlock {
+  prop count: i32 = 14
+  prop phase: f32 = 0
+  const red: Rgb = {206, 66, 48}
+  const blue: Rgb = {46, 104, 196}
+  const gold: Rgb = {232, 176, 56}
+  const white: Rgb = {234, 232, 222}
+  const plumage = [red, blue, gold, white]
+  for i in 0..count {
+    const tone: Rgb = plumage[i % 4]
+    CanopyBird(radius: 26 + i * 4.3 * 14 / count, speed: 0.1 + (i % 4) * 0.022, phase: phase + i * 2.399963, color: tone) { Position: {0, (i % 5) * 7.5 - 14, 0} }
+  }
+}
+
+@tree Parent
+template CanopyLife {
+  prop width: f32 = 200
+  prop depth: f32 = 170
+  prop seed: i32 = 17
+  const density = width * depth / (202 * 173)
+  const flock_cell = 150
+  const flocks_x: i32 = 2 * math.floor((width / flock_cell - 1) / 2 + 0.5) + 1
+  const flocks_z: i32 = 2 * math.floor((depth / flock_cell - 1) / 2 + 0.5) + 1
+  const flock_birds: i32 = math.max(1, math.floor(14 * density / (flocks_x * flocks_z) + 0.5))
+  const pollen_max: i32 = 1800 * density
+  for fx in 0..flocks_x {
+    for fz in 0..flocks_z {
+      const g: math.Rng = {seed: seed + fx * 7919 + fz * 104729 + 613}
+      const dx = fx - (flocks_x - 1) / 2.0
+      const dz = fz - (flocks_z - 1) / 2.0
+      const roam = match dx == 0 && dz == 0 { true: 0.0; _: 1.0 }
+      const jx = (g.f(0.4) - 0.2) * width / flocks_x * roam
+      const jz = (g.f(0.4) - 0.2) * depth / flocks_z * roam
+      const jy = (g.f(16) - 8) * roam
+      CanopyFlock(count: flock_birds, phase: g.f(6.28) * roam) {
+        Position: {dx * width / flocks_x + jx - 8, 46 + jy, dz * depth / flocks_z + jz - 6}
+      }
+    }
+  }
+  pollen {
+    Position: {0, 9, 0}
+    ParticleEmitter: {
+      max: pollen_max, rate: 150 * density, shape: EmitterBox, extents: {width * 0.46, 8, depth * 0.46},
+      direction: {0.6, 0.3, 0.2}, spread: 80, speed: {0.1, 0.5},
+      lifetime: {8, 14}, size: {0.03, 0.07}, opacity: {0.35, 0.8},
+      color: {255, 236, 170}, color_variance: {0, 20, 40}, seed: seed + 2
+    }
+  }
+  const boat_rows = [-0.42, -0.31, -0.17, -0.05, 0.08, 0.2]
+  for i in 0..6 {
+    const side = match i % 2 { 0: -1.0; _: 1.0 }
+    CanopyBoat(style: i, length: 4.6 + i % 3 * 0.8) { Position: {side * 3.3, -0.42, boat_rows[i] * depth}; Rotation: {0, 1.5708, 0} }
+  }
+  for i in 0..14 {
+    const r = i / 14.0 - 0.5
+    if r < 0.2 || r > 0.42 {
+      CanopyLily(seed: i) { Position: {math.sin(i * 7.3) * 3, -0.32, r * (depth - 14)} }
+    }
+  }
+}
+
+@tree Parent
+template CanopyWaterFx {
+  prop depth: f32 = 170
+  prop seed: i32 = 17
+  prop civic_z: f32 = 0
+  prop radius: f32 = 11
+  prop height: f32 = 4.52
+  prop light: f32 = 1
+  canal_mist {
+    Position: {0, 0.6, 0}
+    ParticleEmitter: {
+      max: 160, rate: 11, shape: EmitterBox, extents: {5, 0.2, depth / 2 - 4},
+      direction: {0, 1, 0}, spread: 60, speed: {0.08, 0.24},
+      lifetime: {12, 20}, size: {3.5, 7}, opacity: {0.008, 0.024},
+      color: {220 * light, 236 * light, 230 * light}, seed: seed + 1
+    }
+  }
+  spill_lip {
+    Position: {0, -0.42, depth / 2 + 0.08}
+    ParticleEmitter: {
+      max: 1400, rate: 520, shape: EmitterBox, extents: {4.9, 0.02, 0.02},
+      direction: {0, -0.2, 1}, spread: 7, speed: {0.3, 0.9},
+      lifetime: {0.5, 0.9}, size: {0.02, 0.07}, opacity: {0.2, 0.5},
+      acceleration: {0, -8, 0}, color: {224 * light, 244 * light, 240 * light}, seed: seed + 3
+    }
+  }
+  spill_foot {
+    Position: {0, -4.9, depth / 2 + 0.4}
+    ParticleEmitter: {
+      max: 240, rate: 44, shape: EmitterBox, extents: {5, 0.2, 0.3},
+      direction: {0, 1, 0.5}, spread: 40, speed: {0.2, 0.7},
+      lifetime: {1.5, 3}, size: {0.8, 2.1}, opacity: {0.05, 0.14},
+      color: {220 * light, 236 * light, 230 * light}, seed: seed + 4
+    }
+  }
+  for i in 0..3 {
+    {
+      Position: {(i - 1) * 3.4, 0.2, -depth / 2 + 1.5}
+      ParticleEmitter: {
+        max: 500, rate: 170, shape: EmitterBox, extents: {0.72, 0.5, 0.02},
+        direction: {0, -0.1, 1}, spread: 9, speed: {1, 1.8},
+        lifetime: {0.4, 0.7}, size: {0.04, 0.12}, opacity: {0.3, 0.7},
+        acceleration: {0, -7, 0}, color: {224 * light, 244 * light, 240 * light}, seed: seed + 5 + i
+      }
+    }
+  }
+  fountain {
+    Position: {0, 0.2 + height + 2.66, civic_z}
+    ParticleEmitter: {
+      max: 900, rate: 320, shape: EmitterDisc, radius: 0.05,
+      direction: {0, 1, 0}, spread: 11, speed: {3.2, 4.4},
+      lifetime: {0.8, 1.1}, size: {0.03, 0.08}, opacity: {0.35, 0.75},
+      acceleration: {0, -8, 0}, color: {224 * light, 244 * light, 240 * light}, seed: seed + 41
+    }
+  }
+  for side in 0..2 {
+    {
+      Position: {(side - 0.5) * 9.2 * 1.11, 0.2 + height - 0.1, civic_z + radius + 0.1}
+      ParticleEmitter: {
+        max: 500, rate: 170, shape: EmitterBox, extents: {0.13, 0.02, 0.1},
+        direction: {0, -0.8, 1}, spread: 8, speed: {1.8, 2.8},
+        lifetime: {1.5, 2}, size: {0.03, 0.09}, opacity: {0.3, 0.7},
+        acceleration: {0, -3.6, 0}, color: {224 * light, 244 * light, 240 * light}, seed: seed + 51 + side
+      }
+    }
+  }
+}

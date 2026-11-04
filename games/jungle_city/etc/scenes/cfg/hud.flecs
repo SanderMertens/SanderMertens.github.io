@@ -1,0 +1,154 @@
+using flecs.script
+using box.transform
+using box.camera
+using box.view
+using box.effects
+using box.surface
+using box.controllers
+using box.geometry
+using box.material
+using box.light
+using box.atmosphere
+using box.layout
+using box.text
+using box.input
+using box.picking
+using box.ui
+using box.widgets
+
+export mut hud_hour: f32 = 16
+export mut hud_day_of_year: f32 = 80
+export mut hud_latitude: f32 = 45
+export mut hud_north: f32 = 60
+export mut hud_fog: f32 = 0.002
+
+window {}
+
+box {
+  ui {
+    theme {
+      UiTheme: {
+        background: {32, 35, 41},
+        surface: {46, 50, 58},
+        surface_alt: {38, 41, 48},
+        border: {70, 76, 87},
+        text: {214, 218, 224},
+        text_muted: {112, 118, 128},
+        accent: {98, 168, 122},
+        accent_text: {22, 26, 30},
+        hover: {60, 65, 75},
+        pressed: {36, 39, 46},
+        focus: {120, 172, 240},
+        danger: {210, 104, 91},
+        selection: {60, 104, 84},
+        caret: {214, 218, 224},
+        disabled_opacity: 0.45,
+        font_size: 14,
+        small_font_size: 12,
+        heading_font_size: 18,
+        radius: 4,
+        padding: 8,
+        spacing: 8,
+        control_height: 28,
+        focus_width: 2,
+        caret_blink: 0.5
+      }
+    }
+  }
+}
+
+template OptionsPanel : HeadlessCollapsible {
+  prop header: f32 = 24
+
+  const t = box.ui.theme[UiTheme]
+  const ring = focused && FocusStatus[FocusStatus].visible
+  const radius = t.radius * 1.5
+
+  Layout: {direction: Column}
+  Rect: {1, 1}
+  Rgb: t.surface
+  Border: {width: 1, radius: radius, color: {t.border.r, t.border.g, t.border.b, 255}}
+  InputBlocker
+
+  head {
+    Layout: {}
+    LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: header}}
+    Rect: {1, 1}
+
+    if down {
+      Rgb: t.pressed
+    } else if hover {
+      Rgb: t.hover
+    } else {
+      Rgb: t.surface_alt
+    }
+
+    if ring {
+      Border: {width: t.focus_width, radius: radius, color: {t.focus.r, t.focus.g, t.focus.b, 255}}
+    } else {
+      Border: {radius: radius}
+    }
+
+    if current {
+      corners {
+        LayoutItem: {v: Bottom, width: {mode: Fixed, value: width}, height: {mode: Fixed, value: radius}}
+        Rect: {1, 1}
+
+        if down {
+          Rgb: t.pressed
+        } else if hover {
+          Rgb: t.hover
+        } else {
+          Rgb: t.surface_alt
+        }
+      }
+    }
+
+    row {
+      Layout: {direction: Row, spacing: t.spacing, v: Middle}
+      LayoutItem: {h: Left, v: Middle, x: 12}
+
+      Chevron chevron(direction: match current { true: "down"; _: "right" }, color: t.text_muted)
+
+      caption {
+        Text: {value: "OPTIONS", size: t.font_size * 0.8}
+        Rgb: t.text_muted
+      }
+    }
+  }
+}
+
+hud {
+  Scene: {}
+
+  camera {
+    Position: {0, 0, 100}
+    Camera: {ortho: true, ortho_scale: 1}
+  }
+
+  screen {
+    LayoutFill: {surface: window}
+    Layout: {direction: Column, padding: {16, 16, 16, 16}, h: Right}
+    FocusScope
+
+    OptionsPanel options(value: true, width: 260) {
+      body {
+        Layout: {direction: Column, spacing: 8, padding: {4, 12, 12, 12}}
+
+        Slider hour(label: "Time of day", width: 236, min: 0, max: 24, step: 0, value: hud_hour, decimals: 1, unit: " h")
+        Slider day_of_year(label: "Day of year", width: 236, min: 1, max: 365, step: 1, value: hud_day_of_year)
+        Slider latitude(label: "Latitude", width: 236, min: -90, max: 90, step: 0, value: hud_latitude, decimals: 1, unit: "°")
+        Slider north(label: "North", width: 236, min: 0, max: 360, step: 0, value: hud_north, decimals: 0, unit: "°")
+        Slider fog(label: "Fog density", width: 236, min: 0, max: 0.02, step: 0, value: hud_fog, decimals: 4)
+        Separator lighting_start()
+        Checkbox shadows(label: "Shadows", value: true)
+        Checkbox baked(label: "Baked lighting", value: true)
+        Checkbox gtao(label: "GTAO", value: true)
+      }
+    }
+  }
+}
+
+hud_view {
+  View: {camera: hud.camera, order: 1, lighting: {enabled: false}, culling: {enabled: false}}
+}
