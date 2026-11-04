@@ -12,23 +12,6 @@ jukebox_actions {
   crash { Action: {description: "Crash on the next bar"}; Binding: {key: C} }
 }
 
-prefab jb_clunk {
-  AudioOutput: {bus: sfx}
-  SynthSound: {seed: 41, pitch_variance: 0.04}
-  SynthEnvelope: {attack: 0.001, decay: 0.12, curve: 4}
-  SynthFilter: {kind: SynthLowPass, cutoff: 2400}
-  latch {
-    SynthOscillator: {wave: SynthNoise, level: 0.4}
-    SynthEnvelope: {attack: 0.0005, decay: 0.02}
-  }
-  arm { SynthOscillator: {wave: SynthTriangle, frequency: 180, frequency_end: 95, sweep: 0.06, level: 0.5} }
-  spring {
-    SynthOscillator: {frequency: 1320, level: 0.08}
-    SynthEnvelope: {attack: 0.001, decay: 0.3, curve: 5}
-    rattle { SynthOscillator: {frequency: 410, modulation: SynthRing, index: 0.7} }
-  }
-}
-
 prefab jb_crash {
   AudioOutput: {bus: sfx}
   SynthSound: {seed: 43, level_variance: 0.05}
@@ -83,7 +66,6 @@ proc pick(n: i32) {
 async {
   while true {
     await on.pressed(jukebox_actions.pick_harbor)
-    const c = box.audio.play(jb_clunk, 0.8)
     pick(2)
   }
 }
@@ -91,7 +73,6 @@ async {
 async {
   while true {
     await on.pressed(jukebox_actions.pick_neon)
-    const c = box.audio.play(jb_clunk, 0.8)
     pick(1)
   }
 }
@@ -99,7 +80,6 @@ async {
 async {
   while true {
     await on.pressed(jukebox_actions.pick_lantern)
-    const c = box.audio.play(jb_clunk, 0.8)
     pick(3)
   }
 }
@@ -148,7 +128,6 @@ async {
 async {
   while true {
     await on.pressed(jukebox_actions.pick_orbit)
-    const c = box.audio.play(jb_clunk, 0.8)
     pick(0)
   }
 }

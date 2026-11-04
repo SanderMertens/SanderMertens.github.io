@@ -20,7 +20,7 @@ template SongButton {
   prop action: entity = 0
   mut hover = false
 
-  const selected = song == index
+  const selected = playing && song == index
   const r = SONG_R[index]
   const g = SONG_G[index]
   const b = SONG_B[index]

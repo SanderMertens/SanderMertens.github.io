@@ -1,5 +1,5 @@
 export mut song: i32 = 0
-export mut playing = true
+export mut playing = false
 export mut low_pass_cutoff: f32 = 20000
 export mut high_pass_cutoff: f32 = 20
 export mut reverb_level: f32 = 100
