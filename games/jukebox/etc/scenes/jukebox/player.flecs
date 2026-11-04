@@ -49,6 +49,7 @@ $ {
     loop_start: SONG_START[song], loop_end: SONG_START[song] + SONG_BEATS[song]
   }
   Transport = {playing: playing}
+  Transport = {position: SONG_START[song] + stops * 0}
 }
 
 const LANES = [
@@ -59,8 +60,13 @@ const LANES = [
 ]
 
 proc pick(n: i32) {
-  song = n
-  playing = true
+  if playing && song == n {
+    playing = false
+    stops += 1
+  } else {
+    song = n
+    playing = true
+  }
 }
 
 async {

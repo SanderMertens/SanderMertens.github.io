@@ -101,8 +101,12 @@ template Jukebox {
   JBArch light_channel(radius: 0.632, tube: 0.048) { Position: {0, 0, 0.402}; (IsA, JBBrass) }
   JBArch neon(radius: 0.632, tube: 0.033) {
     Position: {0, 0, 0.439}
-    Rgb: {R, G, B}
-    Emissive: {strength: 0.7 + 1.15 * glow, color: {R, G, B}}
+    if playing {
+      Rgb: {R, G, B}
+      Emissive: {strength: 0.7 + 1.15 * glow, color: {R, G, B}}
+    } else {
+      Rgb: {58, 60, 68}
+    }
     PbrMaterial: {roughness: 0.25}
     ClearCoat: {strength: 1, roughness: 0.12}
   }
