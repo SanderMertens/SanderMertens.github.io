@@ -1,0 +1,201 @@
+// The camera orbits a point on the plot: WASD or the arrow keys move the point, Q and E turn
+// around it, the right mouse button drags the view around, the wheel or + and - zoom. The number
+// keys and P pick a tool, X the demolish tool, R turns the piece before it is placed, U upgrades the
+// selected piece, Escape puts the tool down and clears the selection.
+
+using flecs.script
+using flecs.script.math
+using box.app
+using box.input
+using box.transform
+using box.camera
+using box.picking
+using box.surface
+
+// An action that picks tool t
+template ToolKey {
+  prop t: i32 = 1
+  prop key: Key = Num1
+
+  Action: {description: "Pick the tool {kind_name(t)}"}
+  Binding: {key: key}
+
+  async {
+    while true {
+      await on.pressed(this)
+      emit PickTool(t: t)
+    }
+  }
+}
+
+castle_actions {
+  PanLeft { Action: {description: "Move the view left"}; Binding: {key: A}; alt { Binding: {key: Left} } }
+  PanRight { Action: {description: "Move the view right"}; Binding: {key: D}; alt { Binding: {key: Right} } }
+  PanUp { Action: {description: "Move the view forward"}; Binding: {key: W}; alt { Binding: {key: Up} } }
+  PanDown { Action: {description: "Move the view back"}; Binding: {key: S}; alt { Binding: {key: Down} } }
+  TurnLeft { Action: {description: "Turn the view left"}; Binding: {key: Q} }
+  TurnRight { Action: {description: "Turn the view right"}; Binding: {key: E} }
+  ZoomIn { Action: {description: "Zoom in"}; Binding: {key: Equal}; alt { Binding: {key: KpAdd} } }
+  ZoomOut { Action: {description: "Zoom out"}; Binding: {key: Minus}; alt { Binding: {key: KpSubtract} } }
+  Orbit { Action: {description: "Drag to turn the view"}; Binding: {key: MouseRight} }
+  Paint { Action: {description: "Drag walls and paths across the plot"}; Binding: {key: MouseLeft} }
+
+  ToolKey Tool1(t: 1, key: Num1)
+  ToolKey Tool2(t: 2, key: Num2)
+  ToolKey Tool3(t: 3, key: Num3)
+  ToolKey Tool4(t: 4, key: Num4)
+  ToolKey Tool5(t: 5, key: Num5)
+  ToolKey Tool6(t: 6, key: Num6)
+  ToolKey Tool7(t: 7, key: Num7)
+  ToolKey Tool8(t: 8, key: Num8)
+  ToolKey Tool9(t: 9, key: Num9)
+  ToolKey Tool10(t: 10, key: Num0)
+  ToolKey Tool11(t: 11, key: P)
+  ToolKey Tool12(t: 12, key: X)
+  PutDown { Action: {description: "Put the tool down and clear the selection"}; Binding: {key: Escape} }
+  UpgradeKey { Action: {description: "Upgrade the selected piece"}; Binding: {key: U} }
+  RotateKey { Action: {description: "Turn the piece before placing it"}; Binding: {key: R} }
+}
+
+// Where the view eases to; the keys, the mouse and scripts move these
+export mut view_x: f32 = 0
+export mut view_z: f32 = 1
+export mut view_yaw: f32 = 0.55
+export mut view_pitch: f32 = 0.74
+export mut view_dist: f32 = 36
+
+// Where the view is, read by the camera rig of the scene
+export mut cam_x: f32 = 0
+export mut cam_z: f32 = 1
+export mut cam_yaw: f32 = 0.55
+export mut cam_pitch: f32 = 0.74
+export mut cam_dist: f32 = 36
+
+async {
+  while true {
+    await on.pressed(castle_actions.PutDown)
+    if tool != 0 {
+      tool = 0
+    } else {
+      selected = -1
+    }
+  }
+}
+
+async {
+  while true {
+    await on.pressed(castle_actions.UpgradeKey)
+    if selected >= 0 {
+      if kind[selected] == K_SMITH {
+        emit Research()
+      } else {
+        emit Upgrade(i: selected)
+      }
+    }
+  }
+}
+
+async {
+  while true {
+    await on.pressed(castle_actions.RotateKey)
+    build_rot = (build_rot + 1) % 4
+  }
+}
+
+async {
+  mut last: f64 = AppStatus[AppStatus].elapsed
+  while true {
+    await next_frame()
+    const now = AppStatus[AppStatus].elapsed
+    const fixed = App[App].delta_time
+    const dt = match fixed > 0 { true: fixed; _: clamp(now - last, 0.001, 0.1) }
+    last = now
+    clock += dt
+
+    const px = bool_f(castle_actions.PanRight[ActionState].down) - bool_f(castle_actions.PanLeft[ActionState].down)
+    const pz = bool_f(castle_actions.PanDown[ActionState].down) - bool_f(castle_actions.PanUp[ActionState].down)
+    const turn = bool_f(castle_actions.TurnLeft[ActionState].down) - bool_f(castle_actions.TurnRight[ActionState].down)
+    const zoom = bool_f(castle_actions.ZoomOut[ActionState].down) - bool_f(castle_actions.ZoomIn[ActionState].down)
+    const mouse = Input[Input].mouse
+
+    if px != 0 || pz != 0 {
+      const speed = view_dist * 0.75 * dt
+      view_x = clamp(view_x + (cos(view_yaw) * px + sin(view_yaw) * pz) * speed, -HALF - 2, HALF + 2)
+      view_z = clamp(view_z + (cos(view_yaw) * pz - sin(view_yaw) * px) * speed, -HALF - 2, HALF + 2)
+    }
+    if turn != 0 {
+      view_yaw += turn * 1.6 * dt
+    }
+    if castle_actions.Orbit[ActionState].down && (mouse.delta.x != 0 || mouse.delta.y != 0) {
+      view_yaw -= mouse.delta.x * 0.006
+      view_pitch = clamp(view_pitch + mouse.delta.y * 0.004, 0.22, 1.42)
+    }
+    if zoom != 0 {
+      view_dist = clamp(view_dist * (1 + zoom * 1.2 * dt), 10, 120)
+    }
+    if mouse.scroll.y != 0 {
+      view_dist = clamp(view_dist * (1 - mouse.scroll.y * 0.08), 10, 120)
+    }
+
+    if dragging {
+      if !drag_tool(tool) {
+        dragging = false
+      } else if !castle_actions.Paint[ActionState].down {
+        dragging = false
+        build_line()
+      } else if hover_cell >= 0 && hover_cell != drag_start {
+        const hx = hover_cell % GRID
+        const hz = (hover_cell - hx) / GRID
+        const sx = drag_start % GRID
+        const sz = (drag_start - sx) / GRID
+        const across = abs(hx - sx) >= abs(hz - sz)
+        const end: i32 = match across { true: sz * GRID + hx; _: hz * GRID + sx }
+        if drag_end != end {
+          drag_end = end
+        }
+      } else {
+        const ps = PickStatus[PickStatus]
+        const ss = window[SurfaceStatus]
+        const sw = match ss.point_width > 0 { true: ss.point_width; _: 1600 }
+        const sh = match ss.point_height > 0 { true: ss.point_height; _: 960 }
+        const th = tan(20 * PI / 180)
+        const nx = (ps.cursor.x / sw * 2 - 1) * th * sw / sh
+        const ny = (1 - ps.cursor.y / sh * 2) * th
+        const sp = sin(cam_pitch)
+        const cp = cos(cam_pitch)
+        const sy = sin(cam_yaw)
+        const cy = cos(cam_yaw)
+        const dy = cp * ny - sp
+        if dy < 0 {
+          const t = cam_dist * sp / (0 - dy)
+          const gx = cam_x + cam_dist * cp * sy + (cy * nx - cp * sy - sp * sy * ny) * t
+          const gz = cam_z + cam_dist * cp * cy + (0 - cp * cy - sy * nx - sp * cy * ny) * t
+          const cx = clamp(floor(gx / PITCH + GRID / 2.0), 0, GRID - 1)
+          const cz = clamp(floor(gz / PITCH + GRID / 2.0), 0, GRID - 1)
+          const sx = drag_start % GRID
+          const sz = (drag_start - sx) / GRID
+          const across = abs(cx - sx) >= abs(cz - sz)
+          const ex = match across { true: cx; _: sx }
+          const ez = match across { true: sz; _: cz }
+          const end: i32 = ez * GRID + ex
+          if drag_end != end {
+            drag_end = end
+          }
+        }
+      }
+    }
+
+    const ease = min(1, dt * 12)
+    if abs(cam_x - view_x) > 0.0005 || abs(cam_z - view_z) > 0.0005 {
+      cam_x += (view_x - cam_x) * ease
+      cam_z += (view_z - cam_z) * ease
+    }
+    if abs(cam_yaw - view_yaw) > 0.0001 || abs(cam_pitch - view_pitch) > 0.0001 {
+      cam_yaw += (view_yaw - cam_yaw) * ease
+      cam_pitch += (view_pitch - cam_pitch) * ease
+    }
+    if abs(cam_dist - view_dist) > 0.001 {
+      cam_dist += (view_dist - cam_dist) * ease
+    }
+  }
+}

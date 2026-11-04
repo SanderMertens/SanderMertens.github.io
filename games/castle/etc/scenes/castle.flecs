@@ -1,0 +1,116 @@
+// Castlewright: build a medieval castle on a meadow, written entirely in flecs script.
+//
+//   bake3 run apps/boxrun --local-env -- etc/scenes/castle.flecs
+//
+// Pick a piece from the toolbar (or press 1 to 9, 0 and P), press R to turn it and click the plot to
+// build it; drag to preview a straight line of wall or path and let go to build it. Walls and gates start as timber and are
+// rebuilt in stone, quarries are dug into the stone deposits of the plot and a cottage built next to
+// a path turns to face it. Click a piece to select it and upgrade it from the panel (or press U); no
+// piece rises above the level of the keep, and the keep rises with the number of folk in the realm. Cottages, the keep and the blacksmith eat food that farms grow: when the
+// granary runs dry, folk leave and their buildings stand abandoned until they are demolished. Close
+// a ring of walls, towers and gatehouses to make a courtyard: cottages inside it gather protection
+// and grow into houses and manors, and the keep is worth twice the prestige. The blacksmith
+// researches farming, so the same land feeds more folk, and quarrying, so the same deposit cuts
+// more stone. Grow the realm from a Hamlet to a Royal Citadel. X demolishes, Escape puts the tool
+// down. WASD moves the view, Q and E turn it, the right mouse button drags it around and the wheel
+// zooms.
+
+include castle/state
+include castle/materials
+include castle/fx
+include castle/pieces
+include castle/board
+include castle/logic
+include castle/camera
+include castle/hud
+
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.camera
+using box.view
+using box.light
+using box.effects
+using box.surface
+using box.atmosphere
+
+window { Surface: {width: 1600, height: 960, vsync: true} }
+
+castle_contact { Gtao: {radius: 0.6, final_value_power: 2.0} }
+castle_bloom { Bloom: {intensity: 0.12, threshold: 1.2, threshold_softness: 0.5} }
+castle_exposure { AutoExposure: {min_log_luma: -10.8, exposure_compensation: 0.4} }
+castle_film { Tonemap: {auto_exposure: castle_exposure, operator_: TonyMcMapface} }
+castle_edges { Smaa: {} }
+
+castle {
+  Scene: {}
+  AmbientLight: {sky: {150, 170, 200}, ground: {90, 80, 60}, intensity: 0.35}
+
+  sun {
+    DirectionalLight: {intensity: 2.6 * PI}
+    Rgb: {255, 246, 228}
+  }
+
+  sky {
+    Atmosphere: {
+      sun: sun,
+      units_per_km: 400,
+      rayleigh: {scale_height: 8, scattering_scale: 2.2},
+      mie: {scale_height: 1.4, anisotropy: 0.76, scattering_scale: 2.4, tint: {255, 232, 200}},
+      ozone_scale: 3,
+      ground_albedo: {96, 128, 70},
+      sun_disk_intensity: 10,
+      sun_radius: 0.75
+    }
+    TimeOfDay: {hour: 15.6, day_of_year: 160, latitude: 50, north: 200, sun: sun}
+    HeightFog: {density: 0.004, falloff: 0.08, base_height: -2, max_opacity: 0.35, atmosphere: sky}
+  }
+
+  rig {
+    Position: {cam_x, 0, cam_z}
+    Rotation: {0, cam_yaw, 0}
+    arm {
+      Rotation: {-cam_pitch, 0, 0}
+      camera {
+        Position: {0, 0, cam_dist}
+        Camera: {fov: 40, near_: 0.3, far_: 1000}
+      }
+    }
+  }
+  Board board()
+}
+
+castle_view {
+  View: {
+    camera: castle.rig.arm.camera,
+    clear: {enabled: true, color: {150, 178, 210, 255}},
+    lighting: {
+      enabled: true,
+      reflections: true,
+      atmosphere: true,
+      environment: {source: castle.sky, intensity: 0.6, background: false}
+    },
+    shadows: {
+      enabled: true,
+      cascades: 4,
+      resolution: 2048,
+      max_distance: 200,
+      split_lambda: 0.7,
+      depth_bias: 2,
+      normal_offset: 2,
+      filter_size: 3,
+      fade: 0.2,
+      blend: 0.1
+    },
+    culling: {enabled: true, occlusion: true, min_dimension_px: 2},
+    effects: [
+      {effect: castle_contact},
+      {effect: castle.sky},
+      {effect: castle_bloom},
+      {effect: castle_film},
+      {effect: castle_edges}
+    ]
+  }
+}

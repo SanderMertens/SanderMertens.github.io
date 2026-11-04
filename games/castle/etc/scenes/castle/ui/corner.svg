@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<defs>
+<linearGradient id="iron" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9a9690"/><stop offset="0.4" stop-color="#5c5955"/><stop offset="1" stop-color="#2e2c2b"/></linearGradient>
+<radialGradient id="rivet" cx="0.35" cy="0.35" r="0.7"><stop offset="0" stop-color="#e6e0d6"/><stop offset="0.5" stop-color="#7f7a73"/><stop offset="1" stop-color="#2a2725"/></radialGradient>
+</defs>
+<path d="M2 2 H50 Q62 2 62 12 Q62 22 52 22 H30 Q22 22 22 30 V52 Q22 62 12 62 Q2 62 2 50 Z" fill="url(#iron)" stroke="#16110e" stroke-width="2.6" stroke-linejoin="round"/>
+<path d="M6 6 H48 M6 6 V48" stroke="#c4beb4" stroke-width="1.4" opacity="0.55" stroke-linecap="round"/>
+<path d="M22 30 Q22 22 30 22" fill="none" stroke="#16110e" stroke-width="1.6" opacity="0.6"/>
+<circle cx="12" cy="12" r="5" fill="url(#rivet)" stroke="#16110e" stroke-width="1.2"/>
+<circle cx="50" cy="12" r="4" fill="url(#rivet)" stroke="#16110e" stroke-width="1.1"/>
+<circle cx="12" cy="50" r="4" fill="url(#rivet)" stroke="#16110e" stroke-width="1.1"/>
+<circle cx="32" cy="12" r="3" fill="url(#rivet)" stroke="#16110e" stroke-width="1"/>
+<circle cx="12" cy="32" r="3" fill="url(#rivet)" stroke="#16110e" stroke-width="1"/>
+</svg>

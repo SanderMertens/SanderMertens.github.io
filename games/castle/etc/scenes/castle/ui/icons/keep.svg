@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64"><defs><linearGradient id="st" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#efe4cc"/><stop offset="1" stop-color="#b9a98b"/></linearGradient><linearGradient id="sl" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7d93c8"/><stop offset="1" stop-color="#3b4c7e"/></linearGradient><linearGradient id="wd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b47a46"/><stop offset="1" stop-color="#7a4c28"/></linearGradient><linearGradient id="wt" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7cc4e6"/><stop offset="1" stop-color="#2f6f9c"/></linearGradient><linearGradient id="lf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8cc85a"/><stop offset="1" stop-color="#3f7a34"/></linearGradient><linearGradient id="ir" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c9c6c0"/><stop offset="1" stop-color="#5c5955"/></linearGradient><linearGradient id="th" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ecc77a"/><stop offset="1" stop-color="#b08640"/></linearGradient><linearGradient id="gd" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff0a8"/><stop offset="0.5" stop-color="#eab64c"/><stop offset="1" stop-color="#a06c1c"/></linearGradient></defs><g stroke="#2a1a0e" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M32 4 V14" fill="none"/>
+<path d="M32 4 L45 7.5 L32 11 Z" fill="#3456a8"/>
+<path d="M17 58 V20 H21 V15 H27 V20 H37 V15 H43 V20 H47 V58 Z" fill="url(#st)"/>
+<path d="M6 58 V24 L11 16 L16 24 V58 Z" fill="url(#st)"/>
+<path d="M48 58 V24 L53 16 L58 24 V58 Z" fill="url(#st)"/>
+<path d="M5 25 L11 12 L17 25 Z M47 25 L53 12 L59 25 Z" fill="url(#sl)"/>
+<rect x="24" y="27" width="4.5" height="8" rx="2" fill="#f2a542" stroke-width="1.6"/>
+<rect x="35.5" y="27" width="4.5" height="8" rx="2" fill="#f2a542" stroke-width="1.6"/>
+<path d="M26 58 V48 Q32 40 38 48 V58 Z" fill="url(#wd)"/>
+<path d="M4 58 H60" stroke-width="2.6"/></g></svg>
