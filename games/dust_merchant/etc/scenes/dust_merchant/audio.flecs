@@ -18,7 +18,7 @@ using box.transform
 using box.audio
 
 cabin_verb {
-  AudioBus: {output: master, kind: AudioChannelReturn}
+  AudioBus: {output: master, kind: AudioChannelReturn, effects: [cabin_verb]}
   Reverb: {decay: 0.75, damping: 0.6, predelay: 0.008, size: 0.25}
 }
 world {

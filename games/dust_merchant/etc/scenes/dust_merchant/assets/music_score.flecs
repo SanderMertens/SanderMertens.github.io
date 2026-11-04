@@ -10,7 +10,7 @@ using flecs.script.math
 using box.app
 using box.audio
 
-hall { AudioBus: {output: master, kind: AudioChannelReturn}; Reverb: {decay: 1.6, damping: 0.55, predelay: 0.03, size: 0.7} }
+hall { AudioBus: {output: master, kind: AudioChannelReturn, effects: [hall]}; Reverb: {decay: 1.6, damping: 0.55, predelay: 0.03, size: 0.7} }
 band { AudioBus: {output: master, volume: 0.55, sends: [{bus: hall, level: 0.35}]} }
 kit { AudioBus: {output: master, volume: 0.5, sends: [{bus: hall, level: 0.12}]} }
 

@@ -672,7 +672,7 @@ template StationHud {
 
                 StationHoverZone money_zone(stat: 7) {
                   LayoutItem: {width: {min: 150, max: 150}}
-                  Layout: {direction: Column, spacing: 5, h: Left}
+                  Layout = {direction: Column, spacing: 5, h: Left}
                   money {
                     Layout: {direction: Row, spacing: 8, v: Middle}
                     StationIcon coin(icon: station_icon_credit, size: 22, state: match st_credits < 0 { true: UI_BAD; _: UI_WARN })
@@ -709,7 +709,7 @@ template StationHud {
 
                 StationHoverZone crew_zone(stat: 5) {
                   LayoutItem: {width: {mode: Grow}}
-                  Layout: {direction: Column, spacing: 4, h: Left}
+                  Layout = {direction: Column, spacing: 4, h: Left}
                   crew {
                     Layout: {direction: Row, spacing: 8, v: Middle}
                     LayoutItem: {width: {mode: Grow}}

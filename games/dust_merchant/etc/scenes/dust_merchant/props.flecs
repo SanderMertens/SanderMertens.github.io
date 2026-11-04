@@ -145,7 +145,7 @@ template DustJar {
   neck : GlassWare { Position: {0, 0.083, 0}; Cylinder: {radius: 0.015, length: 0.012, segments: 14, smooth: true} }
   stopper : Brass { Position: {0, 0.095, 0}; Cylinder: {radius: 0.0175, length: 0.014, segments: 14, smooth: true} }
   tag : Paper { Position: {0, 0.038, 0.0226}; Quad: {0.036, 0.03} }
-  Stamp words(text: label, size: 15, font: font_hand) { Position: {0, 0.038, 0.0234} }
+  Stamp words(text: label, size: 15, font: font_hand) { Position = {0, 0.038, 0.0234} }
 }
 
 template DustRack {
@@ -245,8 +245,8 @@ template CoffeeMachine {
   dial_face { Position: {0.044, 0.18, 0.0404}; Circle: {0.02}; Rgb: {168, 160, 136} }
   dial_needle { Position: {0.044, 0.18, 0.041}; Rotation: {0, 0, match brewing { true: -0.4; _: 2.5 }}; Transition: [Rotation: {duration: 2.2, timing_function: EaseOut}]; Rect: {0.03, 0.0016}; Rgb: {120, 8, 4} }
   asset_tag : Paper { Position: {-0.014, 0.142, 0.0375}; Box: {0.15, 0.05, 0.0012}; Rgb: {190, 186, 160} }
-  Stamp tag_a(text: "PROPERTY OF", size: 10) { Position: {-0.014, 0.153, 0.04} }
-  Stamp tag_b(text: "TOLL STN ORO", size: 15, ink: {90, 6, 4}, font: font_stencil) { Position: {-0.014, 0.135, 0.04} }
+  Stamp tag_a(text: "PROPERTY OF", size: 10) { Position = {-0.014, 0.153, 0.04} }
+  Stamp tag_b(text: "TOLL STN ORO", size: 15, ink: {90, 6, 4}, font: font_stencil) { Position = {-0.014, 0.135, 0.04} }
   Steam plume(on: brewing, rate: 14, seed: 21) { Position: {0.118, 0.07, 0.074} }
   Cable cord(a: {-0.1, 0.05, -0.07}, b: {-0.28, 0.0, 0.1}, sag: 0.02, thick: 0.008, tone: {120, 100, 40}) { Position: {0, 0, 0} }
 }
@@ -261,8 +261,8 @@ template Manifest {
   board : Brass { Position: {0, 0, 0}; Box: {0.17, 0.25, 0.005}; Rgb: {92, 58, 34}; PbrMaterial: {metallic: 0, roughness: 0.7} }
   sheet : Paper { Position: {0, -0.01, 0.0035}; Box: {0.146, 0.21, 0.0008} }
   clip : BareSteel { Position: {0, 0.112, 0.006}; RoundedBox: {0.07, 0.024, 0.006, 0.002, segments: 2}; Rgb: {156, 154, 148} }
-  Stamp head(text: "DM-7 MANIFEST", size: 11) { Position: {0, 0.068, 0.0045} }
-  Stamp list(text: "oro dust  x40\nnaur frost  x12\ncinder ash  x6\n1 coffee mach.\n???  - dont ask", size: 16, font: font_hand, align: Left, width: 136) { Position: {0, -0.02, 0.0045} }
+  Stamp head(text: "DM-7 MANIFEST", size: 11) { Position = {0, 0.068, 0.0045} }
+  Stamp list(text: "oro dust  x40\nnaur frost  x12\ncinder ash  x6\n1 coffee mach.\n???  - dont ask", size: 16, font: font_hand, align: Left, width: 136) { Position = {0, -0.02, 0.0045} }
 }
 
 template Extinguisher {
@@ -280,7 +280,7 @@ template Extinguisher {
   band_a : Soot { Position: {0, 0.07, 0}; Tube: {radius: 0.054, thickness: 0.004, length: 0.018, segments: 18, smooth: true} }
   band_b : Soot { Position: {0, -0.07, 0}; Tube: {radius: 0.054, thickness: 0.004, length: 0.018, segments: 18, smooth: true} }
   tag : Paper { Position: {0, -0.01, 0.0505}; Quad: {0.056, 0.06} }
-  Stamp words(text: "empty\nsince\noro", size: 17, font: font_hand) { Position: {0, -0.008, 0.052} }
+  Stamp words(text: "empty\nsince\noro", size: 17, font: font_hand) { Position = {0, -0.008, 0.052} }
 }
 
 template Pedal {
@@ -369,7 +369,7 @@ template Underdash {
     lid : Mustard { Position: {0, 0.085, 0}; RoundedBox: {0.285, 0.03, 0.165, 0.012, segments: 2}; Rgb: {160, 112, 36}; TextureTransform: {scale_x: 0.4, scale_y: 0.1} }
     latch : BareSteel { Position: {0, 0.065, 0.084}; Box: {0.03, 0.03, 0.004} }
     grip : BareSteel { Position: {0, 0.112, 0}; Rotation: {PI / 2, 0, 0}; TorusShell: {radius: 0.05, tube: 0.005, ring_start: -1.4, ring_end: 1.4, tube_start: 0, tube_end: 6.283, segments: 12, rings: 8} }
-    Stamp words(text: "lunch. not cargo.", size: 22, font: font_hand) { Position: {0, 0, 0.0815} }
+    Stamp words(text: "lunch. not cargo.", size: 22, font: font_hand) { Position = {0, 0, 0.0815} }
   }
 }
 

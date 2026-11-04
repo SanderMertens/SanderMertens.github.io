@@ -356,7 +356,7 @@ template RitesAside {
     Divider rule_b()
 
     ScrollView codex(focusable: false) {
-      LayoutItem: {width: {mode: Grow}, height: {mode: Grow}}
+      LayoutItem = {width: {mode: Grow}, height: {mode: Grow}}
       CodexEntry a(title: "The Astrarium", body: "An engine of brass and patience, built to chart a sky that no longer exists. It keeps better time than the stars do.")
       CodexEntry b(title: "The Four Bands", body: "Pyre, Tide, Thorn and Veil. Every wanderer is born owing a debt to each, and spends a lifetime deciding which to pay first.")
       CodexEntry c(title: "Star Points", body: "Earned by living loudly. A star point spent is not lost; it is merely on fire somewhere else.")

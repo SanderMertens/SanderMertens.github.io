@@ -4,7 +4,7 @@ using box.audio
 using box.particle
 using box.transform
 
-mv_hall { AudioBus: {output: master, kind: AudioChannelReturn}; Reverb: {decay: 1.4, damping: 0.5, predelay: 0.02, size: 0.6} }
+mv_hall { AudioBus: {output: master, kind: AudioChannelReturn, effects: [mv_hall]}; Reverb: {decay: 1.4, damping: 0.5, predelay: 0.02, size: 0.6} }
 mv_sfx { AudioBus: {output: master, kind: AudioChannelSfx, volume: 0.85, sends: [{bus: mv_hall, level: 0.18}]} }
 mv_ui { AudioBus: {output: master, kind: AudioChannelSfx, volume: 0.6} }
 mv_music { AudioBus: {output: master, volume: 0.42, sends: [{bus: mv_hall, level: 0.3}]} }
