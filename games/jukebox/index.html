@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0e13">
+<meta name="description" content="Jukebox">
+<title>Jukebox</title>
+<link rel="icon" href="/flecs.png">
+<style>
+  :root { --bg: #0b0e13; --bg2: #10141b; --fg: #e7ecf2; --muted: #8b95a3; --green: #42b983; --green-soft: #a2d8b4; --border: #232935; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg); color: var(--fg); font-family: Inter, -apple-system, system-ui, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+  #canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+  #canvas:focus { outline: none; }
+  #overlay { position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; padding: 24px; text-align: center; background: radial-gradient(1200px 600px at 50% -10%, rgba(66,185,131,0.10), transparent 60%), linear-gradient(180deg, var(--bg2), var(--bg)); transition: opacity .5s ease; }
+  #overlay.hidden { opacity: 0; pointer-events: none; }
+  .title { font-size: clamp(2.2rem, 7vw, 3.4rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1; background: linear-gradient(180deg, #ffffff, #b9c4d0); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  #bar { width: min(260px, 60vw); height: 4px; background: var(--border); border-radius: 999px; overflow: hidden; }
+  #bar > div { width: 100%; height: 100%; background: linear-gradient(90deg, var(--green), var(--green-soft)); transform: scaleX(0); transform-origin: left center; transition: transform .18s linear; }
+  #bar.hidden { visibility: hidden; }
+  #message { font-size: 0.95rem; font-weight: 500; }
+  #detail { font-size: 0.82rem; color: var(--muted); max-width: 30em; line-height: 1.5; }
+</style>
+</head>
+<body>
+<canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+<div id="overlay">
+  <div class="title">Jukebox</div>
+  <div id="bar"><div></div></div>
+  <div id="message">Starting&hellip;</div>
+  <div id="detail"></div>
+</div>
+<script>window.BOX_GAME = {"scene":"etc/scenes/jukebox.flecs","files":[{"path":"etc/scenes/jukebox.flecs","size":292},{"path":"etc/scenes/jukebox/cabinet.flecs","size":9250},{"path":"etc/scenes/jukebox/distant_orbit.flecs","size":9310},{"path":"etc/scenes/jukebox/harbor_lights.flecs","size":20544},{"path":"etc/scenes/jukebox/hud.flecs","size":7395},{"path":"etc/scenes/jukebox/lantern_waltz.flecs","size":20206},{"path":"etc/scenes/jukebox/materials.flecs","size":1005},{"path":"etc/scenes/jukebox/mixer.flecs","size":1657},{"path":"etc/scenes/jukebox/neon_run.flecs","size":17020},{"path":"etc/scenes/jukebox/player.flecs","size":4157},{"path":"etc/scenes/jukebox/room.flecs","size":3203},{"path":"etc/scenes/jukebox/state.flecs","size":1049},{"path":"etc/scenes/jungle_city/textures/wood.jpg","size":66961},{"path":"etc/scenes/ui/button.flecs","size":3564},{"path":"etc/scenes/ui/collapsible.flecs","size":4175},{"path":"etc/scenes/ui/dropdown.flecs","size":8552},{"path":"etc/scenes/ui/label.flecs","size":2129},{"path":"etc/scenes/ui/progress.flecs","size":1570},{"path":"etc/scenes/ui/radio.flecs","size":5466},{"path":"etc/scenes/ui/scroll.flecs","size":22356},{"path":"etc/scenes/ui/slider.flecs","size":6293},{"path":"etc/scenes/ui/stepper.flecs","size":5804},{"path":"etc/scenes/ui/tabs.flecs","size":7598},{"path":"etc/scenes/ui/text_input.flecs","size":4121},{"path":"etc/scenes/ui/theme.flecs","size":1687},{"path":"etc/scenes/ui/toggle.flecs","size":5756},{"path":"etc/scenes/ui/widgets.flecs","size":3703}]};</script>
+<script src="../box/loader.js"></script>
+</body>
+</html>

@@ -1,0 +1,371 @@
+using box.audio
+
+prefab nr_supersaw {
+  SynthSound: {seed: 3}
+  SynthEnvelope: {attack: 0.3, decay: 0.5, sustain: 0.75, release: 0.8, curve: 2.5, attack_curve: 1.5}
+  SynthFilter: {kind: SynthLowPass, cutoff: 2400, resonance: 0.15, slope: SynthSlope24}
+  SynthLfo: {wave: SynthLfoTriangle, rate: 0.15, cutoff: 0.3}
+  saw {
+    SynthOscillator: {wave: SynthSaw, frequency: 440, level: 0.2}
+    SynthUnison: {voices: 5, detune: 28, width: 0.9}
+  }
+  air {
+    SynthOscillator: {wave: SynthSaw, frequency: 880, level: 0.06}
+    SynthUnison: {voices: 3, detune: 16, width: 1}
+  }
+}
+
+prefab nr_pulse {
+  SynthSound: {seed: 6}
+  SynthEnvelope: {attack: 0.002, decay: 0.16, sustain: 0.25, release: 0.08, curve: 4}
+  SynthFilter: {kind: SynthLowPass, cutoff: 2600, resonance: 0.3}
+  SynthFilterEnvelope: {decay: 0.12, amount: 1.4}
+  SynthLfo: {wave: SynthLfoSine, rate: 0.35, pulse_width: 0.18}
+  SynthOscillator: {wave: SynthSquare, frequency: 440, level: 0.28, pulse_width: 0.3}
+}
+
+prefab nr_bass_synth {
+  SynthSound: {}
+  SynthEnvelope: {attack: 0.003, decay: 0.2, sustain: 0.6, release: 0.06, curve: 3}
+  SynthFilter: {kind: SynthLowPass, cutoff: 260, resonance: 0.35, slope: SynthSlope24}
+  SynthFilterEnvelope: {decay: 0.16, sustain: 0.1, release: 0.06, amount: 2.6}
+  saw { SynthOscillator: {wave: SynthSaw, frequency: 440, level: 0.38} }
+  sub { SynthOscillator: {wave: SynthSquare, frequency: 220, level: 0.22} }
+}
+
+prefab nr_glide_lead {
+  SynthSound: {}
+  SynthGlide: {time: 0.07, legato: true, channel: 2}
+  SynthEnvelope: {attack: 0.012, decay: 0.3, sustain: 0.7, release: 0.35, curve: 2.5}
+  SynthFilter: {kind: SynthLowPass, cutoff: 3200, resonance: 0.2}
+  SynthLfo: {rate: 5.6, delay: 0.25, fade: 0.3, pitch: 18}
+  saw {
+    SynthOscillator: {wave: SynthSaw, frequency: 440, level: 0.22}
+    SynthUnison: {voices: 3, detune: 12, width: 0.4}
+  }
+  body { SynthOscillator: {wave: SynthSquare, frequency: 220, level: 0.1} }
+}
+
+prefab nr_kick_drum {
+  SynthSound: {}
+  SynthEnvelope: {attack: 0.001, decay: 0.42, curve: 4}
+  tone { SynthOscillator: {frequency: 160, frequency_end: 42, sweep: 0.08, level: 0.7} }
+  click {
+    SynthOscillator: {wave: SynthNoise, level: 0.25}
+    SynthEnvelope: {attack: 0.0005, decay: 0.006}
+  }
+}
+
+prefab nr_snare_drum {
+  SynthSound: {seed: 12, level_variance: 0.08}
+  SynthEnvelope: {attack: 0.001, decay: 0.24, curve: 4}
+  SynthFilter: {kind: SynthHighPass, cutoff: 180}
+  rattle {
+    SynthOscillator: {wave: SynthNoise, level: 0.55}
+    SynthEnvelope: {attack: 0.001, decay: 0.22, curve: 4}
+  }
+  head {
+    SynthOscillator: {wave: SynthTriangle, frequency: 220, frequency_end: 165, sweep: 0.06, level: 0.45}
+    SynthEnvelope: {attack: 0.001, decay: 0.1, curve: 3}
+  }
+}
+
+prefab nr_hat {
+  SynthSound: {seed: 21, level_variance: 0.1}
+  SynthEnvelope: {attack: 0.0005, decay: 0.035, curve: 3}
+  SynthFilter: {kind: SynthHighPass, cutoff: 8500, resonance: 0.15}
+  SynthOscillator: {wave: SynthNoise, level: 0.4}
+}
+
+nr_pad_inst { Instrument: {sound: nr_supersaw} }
+nr_arp_inst { Instrument: {sound: nr_pulse} }
+nr_bass_inst { Instrument: {sound: nr_bass_synth} }
+nr_lead_inst { Instrument: {sound: nr_glide_lead} }
+nr_kick_inst { Instrument: {sound: nr_kick_drum, gate: false} }
+nr_snare_inst { Instrument: {sound: nr_snare_drum, gate: false} }
+nr_hat_inst { Instrument: {sound: nr_hat, gate: false} }
+
+prefab nr_arp_line {
+  NoteClip: {length: 16, notes: [
+    {start: 0, duration: 0.2, pitch: 57, velocity: 0.85, pan: -0.35},
+    {start: 0.25, duration: 0.2, pitch: 64, velocity: 0.5, pan: 0.35},
+    {start: 0.5, duration: 0.2, pitch: 69, velocity: 0.6, pan: -0.35},
+    {start: 0.75, duration: 0.2, pitch: 72, velocity: 0.5, pan: 0.35},
+    {start: 1, duration: 0.2, pitch: 76, velocity: 0.85, pan: -0.35},
+    {start: 1.25, duration: 0.2, pitch: 72, velocity: 0.5, pan: 0.35},
+    {start: 1.5, duration: 0.2, pitch: 69, velocity: 0.6, pan: -0.35},
+    {start: 1.75, duration: 0.2, pitch: 64, velocity: 0.5, pan: 0.35},
+    {start: 2, duration: 0.2, pitch: 57, velocity: 0.85, pan: -0.35},
+    {start: 2.25, duration: 0.2, pitch: 64, velocity: 0.5, pan: 0.35},
+    {start: 2.5, duration: 0.2, pitch: 69, velocity: 0.6, pan: -0.35},
+    {start: 2.75, duration: 0.2, pitch: 72, velocity: 0.5, pan: 0.35},
+    {start: 3, duration: 0.2, pitch: 76, velocity: 0.85, pan: -0.35},
+    {start: 3.25, duration: 0.2, pitch: 72, velocity: 0.5, pan: 0.35},
+    {start: 3.5, duration: 0.2, pitch: 69, velocity: 0.6, pan: -0.35},
+    {start: 3.75, duration: 0.2, pitch: 64, velocity: 0.5, pan: 0.35},
+    {start: 4, duration: 0.2, pitch: 53, velocity: 0.85, pan: -0.35},
+    {start: 4.25, duration: 0.2, pitch: 60, velocity: 0.5, pan: 0.35},
+    {start: 4.5, duration: 0.2, pitch: 65, velocity: 0.6, pan: -0.35},
+    {start: 4.75, duration: 0.2, pitch: 69, velocity: 0.5, pan: 0.35},
+    {start: 5, duration: 0.2, pitch: 72, velocity: 0.85, pan: -0.35},
+    {start: 5.25, duration: 0.2, pitch: 69, velocity: 0.5, pan: 0.35},
+    {start: 5.5, duration: 0.2, pitch: 65, velocity: 0.6, pan: -0.35},
+    {start: 5.75, duration: 0.2, pitch: 60, velocity: 0.5, pan: 0.35},
+    {start: 6, duration: 0.2, pitch: 53, velocity: 0.85, pan: -0.35},
+    {start: 6.25, duration: 0.2, pitch: 60, velocity: 0.5, pan: 0.35},
+    {start: 6.5, duration: 0.2, pitch: 65, velocity: 0.6, pan: -0.35},
+    {start: 6.75, duration: 0.2, pitch: 69, velocity: 0.5, pan: 0.35},
+    {start: 7, duration: 0.2, pitch: 72, velocity: 0.85, pan: -0.35},
+    {start: 7.25, duration: 0.2, pitch: 69, velocity: 0.5, pan: 0.35},
+    {start: 7.5, duration: 0.2, pitch: 65, velocity: 0.6, pan: -0.35},
+    {start: 7.75, duration: 0.2, pitch: 60, velocity: 0.5, pan: 0.35},
+    {start: 8, duration: 0.2, pitch: 55, velocity: 0.85, pan: -0.35},
+    {start: 8.25, duration: 0.2, pitch: 60, velocity: 0.5, pan: 0.35},
+    {start: 8.5, duration: 0.2, pitch: 64, velocity: 0.6, pan: -0.35},
+    {start: 8.75, duration: 0.2, pitch: 67, velocity: 0.5, pan: 0.35},
+    {start: 9, duration: 0.2, pitch: 72, velocity: 0.85, pan: -0.35},
+    {start: 9.25, duration: 0.2, pitch: 67, velocity: 0.5, pan: 0.35},
+    {start: 9.5, duration: 0.2, pitch: 64, velocity: 0.6, pan: -0.35},
+    {start: 9.75, duration: 0.2, pitch: 60, velocity: 0.5, pan: 0.35},
+    {start: 10, duration: 0.2, pitch: 55, velocity: 0.85, pan: -0.35},
+    {start: 10.25, duration: 0.2, pitch: 60, velocity: 0.5, pan: 0.35},
+    {start: 10.5, duration: 0.2, pitch: 64, velocity: 0.6, pan: -0.35},
+    {start: 10.75, duration: 0.2, pitch: 67, velocity: 0.5, pan: 0.35},
+    {start: 11, duration: 0.2, pitch: 72, velocity: 0.85, pan: -0.35},
+    {start: 11.25, duration: 0.2, pitch: 67, velocity: 0.5, pan: 0.35},
+    {start: 11.5, duration: 0.2, pitch: 64, velocity: 0.6, pan: -0.35},
+    {start: 11.75, duration: 0.2, pitch: 60, velocity: 0.5, pan: 0.35},
+    {start: 12, duration: 0.2, pitch: 55, velocity: 0.85, pan: -0.35},
+    {start: 12.25, duration: 0.2, pitch: 62, velocity: 0.5, pan: 0.35},
+    {start: 12.5, duration: 0.2, pitch: 67, velocity: 0.6, pan: -0.35},
+    {start: 12.75, duration: 0.2, pitch: 71, velocity: 0.5, pan: 0.35},
+    {start: 13, duration: 0.2, pitch: 74, velocity: 0.85, pan: -0.35},
+    {start: 13.25, duration: 0.2, pitch: 71, velocity: 0.5, pan: 0.35},
+    {start: 13.5, duration: 0.2, pitch: 67, velocity: 0.6, pan: -0.35},
+    {start: 13.75, duration: 0.2, pitch: 62, velocity: 0.5, pan: 0.35},
+    {start: 14, duration: 0.2, pitch: 55, velocity: 0.85, pan: -0.35},
+    {start: 14.25, duration: 0.2, pitch: 62, velocity: 0.5, pan: 0.35},
+    {start: 14.5, duration: 0.2, pitch: 67, velocity: 0.6, pan: -0.35},
+    {start: 14.75, duration: 0.2, pitch: 71, velocity: 0.5, pan: 0.35},
+    {start: 15, duration: 0.2, pitch: 74, velocity: 0.85, pan: -0.35},
+    {start: 15.25, duration: 0.2, pitch: 71, velocity: 0.5, pan: 0.35},
+    {start: 15.5, duration: 0.2, pitch: 67, velocity: 0.6, pan: -0.35},
+    {start: 15.75, duration: 0.2, pitch: 62, velocity: 0.5, pan: 0.35}
+  ]}
+}
+
+prefab nr_pad_chords {
+  NoteClip: {length: 16, notes: [
+    {start: 0, duration: 4, pitch: 57, velocity: 0.8},
+    {start: 0, duration: 4, pitch: 60, velocity: 0.75},
+    {start: 0, duration: 4, pitch: 64, velocity: 0.7},
+    {start: 0, duration: 4, pitch: 69, velocity: 0.65},
+    {start: 4, duration: 4, pitch: 57, velocity: 0.8},
+    {start: 4, duration: 4, pitch: 60, velocity: 0.75},
+    {start: 4, duration: 4, pitch: 65, velocity: 0.7},
+    {start: 4, duration: 4, pitch: 69, velocity: 0.65},
+    {start: 8, duration: 4, pitch: 55, velocity: 0.8},
+    {start: 8, duration: 4, pitch: 60, velocity: 0.75},
+    {start: 8, duration: 4, pitch: 64, velocity: 0.7},
+    {start: 8, duration: 4, pitch: 67, velocity: 0.65},
+    {start: 12, duration: 4, pitch: 55, velocity: 0.8},
+    {start: 12, duration: 4, pitch: 59, velocity: 0.75},
+    {start: 12, duration: 4, pitch: 62, velocity: 0.7},
+    {start: 12, duration: 4, pitch: 67, velocity: 0.65}
+  ]}
+}
+
+prefab nr_bass_octaves {
+  NoteClip: {length: 16, notes: [
+    {start: 0, duration: 0.4, pitch: 33, velocity: 0.9},
+    {start: 0.5, duration: 0.4, pitch: 45, velocity: 0.7},
+    {start: 1, duration: 0.4, pitch: 33, velocity: 0.9},
+    {start: 1.5, duration: 0.4, pitch: 45, velocity: 0.7},
+    {start: 2, duration: 0.4, pitch: 33, velocity: 0.9},
+    {start: 2.5, duration: 0.4, pitch: 45, velocity: 0.7},
+    {start: 3, duration: 0.4, pitch: 33, velocity: 0.9},
+    {start: 3.5, duration: 0.4, pitch: 45, velocity: 0.7},
+    {start: 4, duration: 0.4, pitch: 29, velocity: 0.9},
+    {start: 4.5, duration: 0.4, pitch: 41, velocity: 0.7},
+    {start: 5, duration: 0.4, pitch: 29, velocity: 0.9},
+    {start: 5.5, duration: 0.4, pitch: 41, velocity: 0.7},
+    {start: 6, duration: 0.4, pitch: 29, velocity: 0.9},
+    {start: 6.5, duration: 0.4, pitch: 41, velocity: 0.7},
+    {start: 7, duration: 0.4, pitch: 29, velocity: 0.9},
+    {start: 7.5, duration: 0.4, pitch: 41, velocity: 0.7},
+    {start: 8, duration: 0.4, pitch: 36, velocity: 0.9},
+    {start: 8.5, duration: 0.4, pitch: 48, velocity: 0.7},
+    {start: 9, duration: 0.4, pitch: 36, velocity: 0.9},
+    {start: 9.5, duration: 0.4, pitch: 48, velocity: 0.7},
+    {start: 10, duration: 0.4, pitch: 36, velocity: 0.9},
+    {start: 10.5, duration: 0.4, pitch: 48, velocity: 0.7},
+    {start: 11, duration: 0.4, pitch: 36, velocity: 0.9},
+    {start: 11.5, duration: 0.4, pitch: 48, velocity: 0.7},
+    {start: 12, duration: 0.4, pitch: 31, velocity: 0.9},
+    {start: 12.5, duration: 0.4, pitch: 43, velocity: 0.7},
+    {start: 13, duration: 0.4, pitch: 31, velocity: 0.9},
+    {start: 13.5, duration: 0.4, pitch: 43, velocity: 0.7},
+    {start: 14, duration: 0.4, pitch: 31, velocity: 0.9},
+    {start: 14.5, duration: 0.4, pitch: 43, velocity: 0.7},
+    {start: 15, duration: 0.4, pitch: 31, velocity: 0.9},
+    {start: 15.5, duration: 0.4, pitch: 43, velocity: 0.7}
+  ]}
+}
+
+prefab nr_hook {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 1.5, pitch: 76, velocity: 0.85},
+    {start: 1.5, duration: 0.5, pitch: 74, velocity: 0.85},
+    {start: 2, duration: 1, pitch: 72, velocity: 0.85},
+    {start: 3, duration: 1, pitch: 69, velocity: 0.85},
+    {start: 4, duration: 2, pitch: 72, velocity: 0.85},
+    {start: 6, duration: 1, pitch: 74, velocity: 0.85},
+    {start: 7, duration: 1, pitch: 76, velocity: 0.85},
+    {start: 8, duration: 1.5, pitch: 79, velocity: 0.85},
+    {start: 9.5, duration: 0.5, pitch: 76, velocity: 0.85},
+    {start: 10, duration: 2, pitch: 72, velocity: 0.85},
+    {start: 12, duration: 1, pitch: 71, velocity: 0.85},
+    {start: 13, duration: 1, pitch: 74, velocity: 0.85},
+    {start: 14, duration: 2, pitch: 74, velocity: 0.85},
+    {start: 16, duration: 1.5, pitch: 76, velocity: 0.85},
+    {start: 17.5, duration: 0.5, pitch: 79, velocity: 0.85},
+    {start: 18, duration: 2, pitch: 81, velocity: 0.85},
+    {start: 20, duration: 1, pitch: 79, velocity: 0.85},
+    {start: 21, duration: 1, pitch: 77, velocity: 0.85},
+    {start: 22, duration: 2, pitch: 76, velocity: 0.85},
+    {start: 24, duration: 1.5, pitch: 74, velocity: 0.85},
+    {start: 25.5, duration: 0.5, pitch: 72, velocity: 0.85},
+    {start: 26, duration: 2, pitch: 76, velocity: 0.85},
+    {start: 28, duration: 3, pitch: 74, velocity: 0.85},
+    {start: 31, duration: 1, pitch: 71, velocity: 0.85}
+  ]}
+}
+
+prefab nr_four_floor {
+  NoteClip: {length: 4, notes: [
+    {start: 0, duration: 0.25, pitch: 69, velocity: 1},
+    {start: 1, duration: 0.25, pitch: 69, velocity: 1},
+    {start: 2, duration: 0.25, pitch: 69, velocity: 1},
+    {start: 3, duration: 0.25, pitch: 69, velocity: 1}
+  ]}
+}
+
+prefab nr_backbeat {
+  NoteClip: {length: 4, notes: [
+    {start: 1, duration: 0.25, pitch: 69, velocity: 0.9},
+    {start: 3, duration: 0.25, pitch: 69, velocity: 0.95}
+  ]}
+}
+
+prefab nr_sixteenths {
+  NoteClip: {length: 4, notes: [
+    {start: 0, duration: 0.1, pitch: 69, velocity: 0.22, pan: 0.25},
+    {start: 0.25, duration: 0.1, pitch: 69, velocity: 0.32, pan: 0.25},
+    {start: 0.5, duration: 0.1, pitch: 69, velocity: 0.6, pan: 0.25},
+    {start: 0.75, duration: 0.1, pitch: 69, velocity: 0.32, pan: 0.25},
+    {start: 1, duration: 0.1, pitch: 69, velocity: 0.22, pan: 0.25},
+    {start: 1.25, duration: 0.1, pitch: 69, velocity: 0.32, pan: 0.25},
+    {start: 1.5, duration: 0.1, pitch: 69, velocity: 0.6, pan: 0.25},
+    {start: 1.75, duration: 0.1, pitch: 69, velocity: 0.32, pan: 0.25},
+    {start: 2, duration: 0.1, pitch: 69, velocity: 0.22, pan: 0.25},
+    {start: 2.25, duration: 0.1, pitch: 69, velocity: 0.32, pan: 0.25},
+    {start: 2.5, duration: 0.1, pitch: 69, velocity: 0.6, pan: 0.25},
+    {start: 2.75, duration: 0.1, pitch: 69, velocity: 0.32, pan: 0.25},
+    {start: 3, duration: 0.1, pitch: 69, velocity: 0.22, pan: 0.25},
+    {start: 3.25, duration: 0.1, pitch: 69, velocity: 0.32, pan: 0.25},
+    {start: 3.5, duration: 0.1, pitch: 69, velocity: 0.6, pan: 0.25},
+    {start: 3.75, duration: 0.1, pitch: 69, velocity: 0.32, pan: 0.25}
+  ]}
+}
+
+prefab nr_snare_roll {
+  NoteClip: {length: 4, notes: [
+    {start: 0, duration: 0.1, pitch: 69, velocity: 0.15},
+    {start: 0.25, duration: 0.1, pitch: 69, velocity: 0.197},
+    {start: 0.5, duration: 0.1, pitch: 69, velocity: 0.243},
+    {start: 0.75, duration: 0.1, pitch: 69, velocity: 0.29},
+    {start: 1, duration: 0.1, pitch: 69, velocity: 0.337},
+    {start: 1.25, duration: 0.1, pitch: 69, velocity: 0.383},
+    {start: 1.5, duration: 0.1, pitch: 69, velocity: 0.43},
+    {start: 1.75, duration: 0.1, pitch: 69, velocity: 0.477},
+    {start: 2, duration: 0.1, pitch: 69, velocity: 0.523},
+    {start: 2.25, duration: 0.1, pitch: 69, velocity: 0.57},
+    {start: 2.5, duration: 0.1, pitch: 69, velocity: 0.617},
+    {start: 2.75, duration: 0.1, pitch: 69, velocity: 0.663},
+    {start: 3, duration: 0.1, pitch: 69, velocity: 0.71},
+    {start: 3.25, duration: 0.1, pitch: 69, velocity: 0.757},
+    {start: 3.5, duration: 0.1, pitch: 69, velocity: 0.803},
+    {start: 3.75, duration: 0.1, pitch: 69, velocity: 0.85}
+  ]}
+}
+
+const NR: f32 = 1000
+
+neon_kit {
+  AudioBus: {output: neon, volume: 0.8}
+  AudioMeter: {}
+}
+
+nr_kick {
+  Track: {instrument: nr_kick_inst}
+  AudioBus: {output: neon_kit}
+  drop { ClipPlacement: {clip: nr_four_floor, start: NR + 16, duration: 48, loop: true} }
+}
+
+nr_snare {
+  Track: {instrument: nr_snare_inst}
+  AudioBus: {output: neon_kit, volume: 0.65, sends: [{bus: plate, level: 0.5}]}
+  roll { ClipPlacement: {clip: nr_snare_roll, start: NR + 12, gain: 0.8} }
+  drop { ClipPlacement: {clip: nr_backbeat, start: NR + 16, duration: 48, loop: true} }
+}
+
+nr_hats {
+  Track: {instrument: nr_hat_inst}
+  AudioBus: {output: neon_kit, volume: 0.5, pan: 0.1}
+  drop { ClipPlacement: {clip: nr_sixteenths, start: NR + 16, duration: 48, loop: true} }
+}
+
+nr_duck {
+  Compressor: {threshold: -20, ratio: 3, attack: 0.003, release: 0.2, knee: 6, sidechain: nr_kick}
+  AudioMeter: {}
+}
+
+nr_wide {
+  Chorus: {voices: 3, rate: 0.5, depth: 4, delay: 14, spread: 1, mix: 0.35}
+}
+
+nr_pad {
+  Track: {instrument: nr_pad_inst}
+  AudioBus: {output: neon, volume: 0.8, effects: [nr_duck, nr_wide], sends: [{bus: hall, level: 0.2}]}
+  AudioMeter: {}
+  chords { ClipPlacement: {clip: nr_pad_chords, start: NR, duration: 64, loop: true} }
+}
+
+nr_bass {
+  Track: {instrument: nr_bass_inst}
+  AudioBus: {output: neon, volume: 0.8}
+  AudioMeter: {}
+  drop { ClipPlacement: {clip: nr_bass_octaves, start: NR + 16, duration: 48, loop: true} }
+}
+
+nr_sweep {
+  AudioFilter: {cutoff: sweep, resonance: 0.35, slope: SynthSlope24}
+}
+
+nr_echo {
+  Delay: {sync: 0.75, feedback: 0.35, mix: 0.25, damping: 3000, ping_pong: true}
+}
+
+nr_arp {
+  Track: {instrument: nr_arp_inst}
+  AudioBus: {output: neon, volume: 0.55, effects: [nr_sweep, nr_echo]}
+  AudioMeter: {}
+  line { ClipPlacement: {clip: nr_arp_line, start: NR, duration: 64, loop: true} }
+}
+
+nr_lead {
+  Track: {instrument: nr_lead_inst}
+  AudioBus: {output: neon, volume: 0.6, sends: [{bus: echo, level: 0.3}, {bus: plate, level: 0.2}]}
+  AudioMeter: {}
+  hook { ClipPlacement: {clip: nr_hook, start: NR + 32} }
+}

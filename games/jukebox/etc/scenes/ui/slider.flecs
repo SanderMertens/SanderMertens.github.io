@@ -1,0 +1,254 @@
+// Slider: a number between min and max picked on a track.
+
+module box.widgets
+
+using flecs.script
+using flecs.script.math
+using box.ui
+using box.input
+using box.picking
+using box.layout
+using box.geometry
+using box.material
+using box.text
+
+// Snap a value to the steps from min, 0 for a continuous value, and clamp it to min..max
+fn slider_snap(v: f64, min: f64, max: f64, step: f64) -> f64 {
+  match step > 0 {
+    true: clamp(min + round((v - min) / step) * step, min, max)
+    _: clamp(v, min, max)
+  }
+}
+
+// Behavior of a slider. A press on the track jumps to the value under the pointer and a drag
+// from there follows it: the track is the bottom thumb points of the slider across its width, the
+// thumb center moves between thumb / 2 from either edge. The arrow keys step (a hundredth of the range for a continuous slider),
+// PageUp and PageDown step by a tenth of the range, Home and End go to min and max. current
+// snaps to step and stays within min..max. The pointer shows a hand over the slider, a crossed
+// circle while it is disabled.
+template HeadlessSlider {
+  prop min: f32 = 0
+  prop max: f32 = 100
+  prop step: f32 = 1
+  prop value: f32 = 0
+  prop disabled: bool = false
+  prop width: f32 = 0
+  prop thumb: f32 = 0
+
+  mut current: f32 = slider_snap(value, min, max, step)
+  mut last_value: f32 = value
+  mut hover = false
+  mut down = false
+  mut focused = false
+
+  const range = max - min
+  const key_step = match step > 0 {
+    true: step
+    _: range / 100
+  }
+
+  if !disabled {
+    Focusable
+    Cursor: {CursorPointer}
+  } else {
+    Cursor: {CursorNotAllowed}
+  }
+
+  async {
+    if value != last_value {
+      last_value = value
+      current = slider_snap(value, min, max, step)
+    }
+  }
+
+  // A disabled slider ignores the pointer, so it never shows as hovered or held
+  async {
+    while true {
+      await on.enter(this)
+      hover = !disabled
+      await on.leave(this)
+      hover = false
+    }
+  }
+
+  async {
+    while true {
+      const e = await on.press(this)
+      const b = this[LayoutBounds]
+      down = !disabled && e.local_y < thumb - b.height / 2
+      if down {
+        const ratio = clamp((e.local_x + b.width / 2 - thumb / 2) / (b.width - thumb + 0.001), 0, 1)
+        const v = slider_snap(min + ratio * range, min, max, step)
+        if v != current {
+          current = v
+          await ui.changed(this)
+        }
+      }
+    }
+  }
+
+  async {
+    while true {
+      const e = await on.drag(this)
+      if down && !disabled {
+        const w = this[LayoutBounds].width
+        const ratio = clamp((e.local_x + w / 2 - thumb / 2) / (w - thumb + 0.001), 0, 1)
+        const v = slider_snap(min + ratio * range, min, max, step)
+        if v != current {
+          current = v
+          await ui.changed(this)
+        }
+      }
+    }
+  }
+
+  async {
+    while true {
+      await on.release(this)
+      down = false
+    }
+  }
+
+  async {
+    while true {
+      const e = await on.focus(this)
+      if e.target == this {
+        focused = true
+      }
+    }
+  }
+
+  async {
+    while true {
+      const e = await on.blur(this)
+      if e.target == this {
+        focused = false
+      }
+    }
+  }
+
+  async {
+    while true {
+      const e = await on.key_down(this)
+      if !disabled {
+        const target = match e.key {
+          "ArrowLeft": current - key_step
+          "ArrowDown": current - key_step
+          "ArrowRight": current + key_step
+          "ArrowUp": current + key_step
+          "PageDown": current - range / 10
+          "PageUp": current + range / 10
+          "Home": min
+          "End": max
+          _: current
+        }
+        const v = slider_snap(target, min, max, step)
+        if v != current {
+          current = v
+          await ui.changed(this)
+        }
+      }
+    }
+  }
+}
+
+// A slider: a header with the label and the value, shown with decimals digits after the point
+// and the unit, above a track with a thumb. A width fixes the track, 0 makes it 200 points.
+template Slider : HeadlessSlider {
+  prop label: string = ""
+  prop decimals: i32 = 0
+  prop unit: string = ""
+  prop thumb: f32 = 16
+
+  const t = box.ui.theme[UiTheme]
+  const ring = focused && FocusStatus[FocusStatus].visible
+  const track_w = match width {
+    0.0: 200
+    _: width
+  }
+  const range = max - min
+  const ratio = match range > 0 {
+    true: clamp((current - min) / range, 0, 1)
+    _: 0
+  }
+  const rail = 4
+
+  Layout: {direction: Column, spacing: 2}
+  LayoutItem: {width: {mode: Fixed, value: track_w}}
+
+  head {
+    Layout: {direction: Row, v: Middle}
+    LayoutItem: {width: {mode: Grow}}
+
+    caption {
+      Text: {value: label, size: t.font_size}
+      Rgb: t.text
+    }
+
+    gap {
+      LayoutItem: {width: {mode: Grow}}
+    }
+
+    amount {
+      Text: {value: "{current:.decimals}{unit}", size: t.font_size}
+      Rgb: t.text_muted
+    }
+  }
+
+  track {
+    Layout: {}
+    LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: thumb}}
+
+    groove {
+      LayoutItem: {
+        v: Middle, x: thumb / 2,
+        width: {mode: Fixed, value: track_w - thumb}, height: {mode: Fixed, value: rail}
+      }
+      Rect: {1, 1}
+      Rgb: t.surface_alt
+      Border: {radius: rail / 2, width: 1, color: {t.border.r, t.border.g, t.border.b, 255}}
+    }
+
+    fill {
+      LayoutItem: {
+        v: Middle, x: thumb / 2,
+        width: {mode: Fixed, value: ratio * (track_w - thumb) + 0.01},
+        height: {mode: Fixed, value: rail}
+      }
+      Rect: {1, 1}
+      Rgb: t.accent
+      Border: {radius: rail / 2}
+    }
+
+    knob {
+      LayoutItem: {
+        v: Middle, x: ratio * (track_w - thumb),
+        width: {mode: Fixed, value: thumb}, height: {mode: Fixed, value: thumb}
+      }
+      Rect: {1, 1}
+
+      // Held, the knob takes the accent: the pressed color of the theme is close to the surface
+      // and hid the knob while it was dragged
+      if down {
+        Rgb: t.accent
+      } else if hover {
+        Rgb: t.text
+      } else {
+        Rgb: t.text_muted
+      }
+
+      if ring {
+        Border: {
+          width: t.focus_width, radius: thumb / 2,
+          color: {t.focus.r, t.focus.g, t.focus.b, 255}
+        }
+      } else {
+        Border: {width: 2, radius: thumb / 2, color: {t.accent.r, t.accent.g, t.accent.b, 255}}
+      }
+    }
+  }
+
+  if disabled {
+    Opacity: {t.disabled_opacity}
+  }
+}

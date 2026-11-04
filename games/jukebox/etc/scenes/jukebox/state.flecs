@@ -1,0 +1,28 @@
+export mut song: i32 = 0
+export mut playing = true
+export mut low_pass_cutoff: f32 = 20000
+export mut high_pass_cutoff: f32 = 20
+export mut reverb_level: f32 = 100
+export mut sweep: f32 = 300
+export mut beat: f32 = 0
+export mut levels: f32[6] = {}
+export mut master_l: f32 = 0
+export mut master_r: f32 = 0
+export mut glow: f32 = 0
+
+export const SONG_TITLE: string[] = ["Distant Orbit", "Neon Run", "Harbor Lights", "Lantern Waltz"]
+export const SONG_START: f32[] = [3000, 1000, 0, 2000]
+export const SONG_BEATS: f32[] = [128, 64, 64, 96]
+export const SONG_TEMPO: f32[] = [60, 108, 84, 138]
+export const SONG_BPB: i32[] = [4, 4, 4, 3]
+export const SONG_R: f32[] = [130, 255, 255, 90]
+export const SONG_G: f32[] = [160, 60, 165, 230]
+export const SONG_B: f32[] = [255, 200, 70, 180]
+
+export const LANE_COUNT: i32[] = [4, 5, 4, 6]
+export const LANE_NAME: string[] = [
+  "Pad", "Bass", "Bells", "Voice", "", "",
+  "Kit", "Bass", "Pad", "Arp", "Lead", "",
+  "Kit", "Bass", "Keys", "Vibes", "", "",
+  "Perc", "Bass", "Harp", "Strings", "Flute", "Glock"
+]

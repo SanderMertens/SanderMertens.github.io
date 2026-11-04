@@ -1,0 +1,64 @@
+using box.audio
+
+room {
+  AudioBus: {output: master, kind: AudioChannelReturn, volume: 0.9 * reverb_level / 100, effects: [room]}
+  Reverb: {decay: 0.9, damping: 0.6, predelay: 0.012, size: 0.3}
+}
+
+plate {
+  AudioBus: {output: master, kind: AudioChannelReturn, volume: 0.8 * reverb_level / 100, effects: [plate]}
+  Reverb: {decay: 1.9, damping: 0.25, predelay: 0.022, size: 0.55}
+}
+
+hall {
+  AudioBus: {output: master, kind: AudioChannelReturn, volume: reverb_level / 100, effects: [hall]}
+  Reverb: {decay: 3.6, damping: 0.45, predelay: 0.045, size: 1}
+}
+
+echo_lows {
+  Equalizer: {bands: [{kind: AudioEqLowCut, frequency: 280}]}
+}
+
+echo {
+  AudioBus: {output: master, kind: AudioChannelReturn, volume: 0.8, effects: [echo, echo_lows]}
+  Delay: {sync: 0.75, feedback: 0.42, mix: 1, damping: 3200, ping_pong: true}
+}
+
+sfx {
+  AudioBus: {output: master, kind: AudioChannelSfx, volume: 0.8, sends: [{bus: plate, level: 0.25}]}
+}
+
+harbor_tape {
+  Equalizer: {bands: [
+    {kind: AudioEqLowShelf, frequency: 180, gain: 2.5},
+    {kind: AudioEqPeak, frequency: 2800, gain: -2, q: 0.9},
+    {kind: AudioEqHighCut, frequency: 6500}
+  ]}
+}
+
+harbor {
+  AudioBus: {output: master, effects: [harbor_tape]}
+  AudioMeter: {}
+}
+
+neon_glue {
+  Compressor: {threshold: -16, ratio: 2.5, attack: 0.02, release: 0.25, knee: 6, makeup: 2}
+  AudioMeter: {}
+}
+
+neon {
+  AudioBus: {output: master, volume: 0.85, effects: [neon_glue]}
+  AudioMeter: {}
+}
+
+lantern_air {
+  Equalizer: {bands: [
+    {kind: AudioEqLowCut, frequency: 45},
+    {kind: AudioEqHighShelf, frequency: 7000, gain: 2.5}
+  ]}
+}
+
+lantern {
+  AudioBus: {output: master, effects: [lantern_air]}
+  AudioMeter: {}
+}

@@ -1,0 +1,312 @@
+// TabView and Tab: pages of widgets, one shown at a time, chosen from a bar of tabs.
+
+module box.widgets
+
+using flecs.script
+using flecs.script.math
+using box.ui
+using box.input
+using box.picking
+using box.layout
+using box.geometry
+using box.material
+using box.text
+using box.transform
+
+// The label a tab shows in the bar of its tab view
+struct TabLabel(value: string)
+
+// Behavior of the header of a tab in the bar of a tab view: index is the place of its tab, the
+// header of the selected tab is Focusable, the others only Interactive. The tab view acts on its
+// clicks and keys. A change of tab changes selected, which restarts the async blocks, so they
+// keep no state across events. The pointer shows a hand over it.
+template HeadlessTabHeader {
+  prop index: i32 = 0
+  prop label: string = ""
+  prop selected: bool = false
+
+  mut hover = false
+  mut down = false
+
+  Interactive
+  Cursor: {CursorPointer}
+  if selected {
+    Focusable
+  }
+
+  async {
+    while true {
+      await on.enter(this)
+      hover = true
+    }
+  }
+
+  async {
+    while true {
+      await on.leave(this)
+      hover = false
+    }
+  }
+
+  async {
+    while true {
+      await on.press(this)
+      down = true
+    }
+  }
+
+  async {
+    while true {
+      await on.release(this)
+      down = false
+    }
+  }
+
+  async {
+    while true {
+      const e = await on.blur(this)
+      if e.target == this {
+        down = false
+      }
+    }
+  }
+
+  async {
+    while true {
+      const e = await on.key_down(this)
+      if e.key == " " && !e.repeat {
+        down = true
+      }
+    }
+  }
+
+  async {
+    while true {
+      const e = await on.key_up(this)
+      if e.key == " " {
+        down = false
+      }
+    }
+  }
+}
+
+// The header of a tab: the label, raised on the surface of the page and underlined with the
+// accent while selected. Its corners follow the inside of the border of the tab view.
+template TabHeader : HeadlessTabHeader {
+  const t = box.ui.theme[UiTheme]
+  const focus = FocusStatus[FocusStatus]
+  const ring = focus.focused == this && focus.visible
+  const pad = t.padding * 1.5
+
+  Layout: {direction: Column, padding: {0, 0, pad, pad}, h: Center}
+  LayoutItem: {height: {mode: Fixed, value: t.control_height + 4}}
+  Rect: {1, 1}
+
+  if selected {
+    Rgb: t.surface
+  } else if down {
+    Rgb: t.pressed
+  } else if hover {
+    Rgb: t.hover
+  } else {
+    Rgb: t.surface_alt
+  }
+
+  if ring {
+    Border: {
+      width: t.focus_width, radius: t.radius - 1,
+      color: {t.focus.r, t.focus.g, t.focus.b, 255}
+    }
+  } else {
+    Border: {width: 0, radius: t.radius - 1}
+  }
+
+  above {
+    LayoutItem: {height: {mode: Grow}}
+  }
+
+  caption {
+    Text: {value: label, size: t.font_size}
+    if selected {
+      Rgb: t.text
+    } else {
+      Rgb: t.text_muted
+    }
+  }
+
+  below {
+    LayoutItem: {height: {mode: Grow}}
+  }
+
+  mark {
+    LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: 2}}
+    if selected {
+      Rect: {1, 1}
+      Rgb: t.accent
+    }
+  }
+}
+
+// A tab view: its Tab children are the pages, of which it shows the one of index current below
+// the bar, its first child, with a header for each tab. The bar is one Tab stop, the header of
+// the selected tab: a click on a header selects its tab; while a header has the focus Left and
+// Right select and focus the previous and next tab, wrapping around, Home and End the first and
+// the last. Each change of the tab reports a change. A width fixes the view, 0 fits the page; a
+// height fixes the page, 0 fits it.
+//
+// The view owns the value and is not split, as RadioGroup: its tabs read and assign its muts.
+// count is the number of its tabs, each of which took the next index when it started, first the
+// tab of index 0 and header the header with the focus, 0 for none. The bar reads the TabLabel of
+// each tab.
+template TabView {
+  prop value: i32 = 0
+  prop width: f32 = 0
+  prop height: f32 = 0
+
+  mut current: i32 = value
+  mut last_value: i32 = value
+  mut count: i32 = 0
+  mut first: entity = 0
+  mut header: entity = 0
+  mut probe: i32 = 0
+
+  const none: entity = 0
+  const t = box.ui.theme[UiTheme]
+  const bar_h = t.control_height + 4
+  const edge = 1
+
+  // The bar and the page sit inside the border, edge points wide
+  Layout: {direction: Column, padding: {edge, edge, edge, edge}}
+  LayoutItem: {}
+  if width > 0 {
+    LayoutItem = {width: {mode: Fixed, value: width}}
+  }
+  if height > 0 {
+    LayoutItem = {height: {mode: Fixed, value: bar_h + height + edge * 2}}
+  }
+  Rect: {1, 1}
+  Rgb: t.surface_alt
+  Border: {width: edge, radius: t.radius, color: {t.border.r, t.border.g, t.border.b, 255}}
+
+  bar {
+    Layout: {direction: Row, spacing: 2}
+    LayoutItem: {width: {mode: Grow}}
+
+    if first != 0 {
+      for i in 0..count {
+        TabHeader "tab_{i}"(
+          index: i, selected: i == current,
+          label: ui.sibling(first, i, TabLabel)[TabLabel].value)
+      }
+    }
+  }
+
+  async {
+    if value != last_value {
+      last_value = value
+      current = value
+    }
+  }
+
+  async {
+    while true {
+      const e = await on.focus(this)
+      if e.target.parent() == bar {
+        header = e.target
+      } else {
+        header = none
+      }
+    }
+  }
+
+  async {
+    while true {
+      const e = await on.blur(this)
+      if e.target == header {
+        header = none
+      }
+    }
+  }
+
+  // A click on a header; the activations of the widgets on the page bubble up and do nothing
+  async {
+    while true {
+      const e = await on.activate(this)
+      const tab = ui.activation(e)
+      if tab != 0 {
+        if tab.parent() == bar {
+          probe = 0
+          while probe < count && tab.name() != "tab_{probe}" {
+            probe = probe + 1
+          }
+          if probe < count && probe != current {
+            current = probe
+            await ui.changed(this)
+          }
+          await focus(tab)
+        }
+      }
+    }
+  }
+
+  async {
+    while true {
+      const e = await on.key_down(this)
+      if header != 0 && count > 0 &&
+        (e.key == "ArrowLeft" || e.key == "ArrowRight" || e.key == "Home" || e.key == "End")
+      {
+        const from = current
+        const target = match e.key {
+          "ArrowLeft": (from + count - 1) % count
+          "ArrowRight": (from + 1) % count
+          "Home": 0
+          _: count - 1
+        }
+        if target != from {
+          current = target
+          await ui.changed(this)
+        }
+        await focus(ui.sibling(header, target - from, Interactive))
+      }
+    }
+  }
+}
+
+// Behavior of a tab, a child of a tab view: the page that shows while the view selects it, with
+// the label its header in the bar shows. A tab that is not selected is hidden: it takes no space
+// and clips its children away entirely, so they are not drawn, picked or reached with Tab.
+template HeadlessTab : parent TabView {
+  prop label: string = ""
+
+  mut index: i32 = -1
+
+  TabLabel: {label}
+  ClipChildren
+  if index >= 0 && index == current {
+    LayoutItem: {width: {mode: Grow, value: 1}, height: {mode: Grow, value: 1}}
+  } else {
+    LayoutItem: {width: {mode: Fixed, value: 0}, height: {mode: Fixed, value: 0}}
+  }
+
+  async {
+    if index < 0 {
+      index = count
+      count = count + 1
+      if index == 0 {
+        first = this
+      }
+    }
+  }
+}
+
+// A tab: a page on the surface that lays its children out in a column, its corners following
+// the inside of the border of the tab view
+template Tab : HeadlessTab {
+  const t = box.ui.theme[UiTheme]
+  const pad = t.padding * 1.5
+
+  Layout: {direction: Column, padding: {pad, pad, pad, pad}, spacing: t.spacing}
+  Rect: {1, 1}
+  Rgb: t.surface
+  Border: {radius: t.radius - 1}
+}

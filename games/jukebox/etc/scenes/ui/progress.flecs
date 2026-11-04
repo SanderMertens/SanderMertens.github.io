@@ -1,0 +1,69 @@
+// ProgressBar: a fraction from 0 to 1 shown as a filled bar. It takes no input.
+
+module box.widgets
+
+using flecs.script
+using flecs.script.math
+using box.ui
+using box.layout
+using box.geometry
+using box.material
+using box.text
+
+// A progress bar with a label and the percentage above the bar. current is the fraction shown,
+// clamped to 0..1. A width fixes the bar, 0 makes it 200 points.
+template ProgressBar {
+  prop value: f32 = 0
+  prop label: string = ""
+  prop width: f32 = 0
+
+  mut current: f32 = value
+
+  const t = box.ui.theme[UiTheme]
+  const bar_w = match width {
+    0.0: 200
+    _: width
+  }
+  const ratio = clamp(current, 0, 1)
+  const bar_h = 6
+
+  Layout: {direction: Column, spacing: 2}
+  LayoutItem: {width: {mode: Fixed, value: bar_w}}
+
+  head {
+    Layout: {direction: Row, v: Middle}
+    LayoutItem: {width: {mode: Grow}}
+
+    caption {
+      Text: {value: label, size: t.font_size}
+      Rgb: t.text
+    }
+
+    gap {
+      LayoutItem: {width: {mode: Grow}}
+    }
+
+    amount {
+      Text: {value: "{ratio * 100:.0}%", size: t.small_font_size}
+      Rgb: t.text_muted
+    }
+  }
+
+  bar {
+    Layout: {}
+    LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: bar_h}}
+    Rect: {1, 1}
+    Rgb: t.surface_alt
+    Border: {radius: bar_h / 2, width: 1, color: {t.border.r, t.border.g, t.border.b, 255}}
+
+    fill {
+      LayoutItem: {
+        v: Middle,
+        width: {mode: Fixed, value: ratio * bar_w + 0.01}, height: {mode: Fixed, value: bar_h}
+      }
+      Rect: {1, 1}
+      Rgb: t.accent
+      Border: {radius: bar_h / 2}
+    }
+  }
+}
