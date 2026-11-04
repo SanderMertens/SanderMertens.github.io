@@ -1,0 +1,223 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.light
+using box.spatial
+using box.transition
+
+export mut sky_pitch: f32 = 0
+export mut sky_yaw: f32 = 0
+export mut sky_roll: f32 = 0
+
+template SkyDome {
+  Position: {0, 0, 0}
+  EllipsoidShell: {radius: {6000, 6000, 6000}, longitude_start: 0, longitude_end: 2 * PI, latitude_start: 0 - PI / 2, latitude_end: PI / 2, thickness: 1, segments: 96, rings: 48}
+  Rgb: {0, 0, 0}
+  PbrMaterial: {metallic: 1, roughness: 0.03}
+  Emissive: {strength: match in_tunnel { true: 0.05; _: 0.55 }, color: match here { 0: {255, 240, 236}; 1: {176, 226, 255}; _: {255, 150, 110} }}
+  Transition: [Emissive: {duration: 0.6}]
+  PbrTextures: {emissive: tex_sky}
+  NoShadow
+  SpatialIgnore
+}
+
+template Planet {
+  prop tex: entity = tex_oro
+  prop radius: f32 = 900
+  prop glow: Rgb = {255, 180, 110}
+
+  Sphere: {radius: radius, segments: 128, smooth: true}
+  Rgb: {255, 255, 255}
+  PbrMaterial: {metallic: 0, roughness: 0.92}
+  PbrTextures: {albedo: tex}
+  NoShadow
+  SpatialIgnore
+
+}
+
+template PlanetLimb {
+  prop at: P3 = {0, 0, -1000}
+  prop radius: f32 = 900
+  prop glow: Rgb = {255, 180, 110}
+
+  Position: {at.x, at.y, at.z}
+  Rotation: {pitch_of(at, {0, 0, 0}), yaw_of(at, {0, 0, 0}), 0}
+  Rect: {radius * 2.4, radius * 2.4}
+  Image: {texture: tex_limb}
+  Rgb: glow
+  BlendMode: Additive
+  NoShadow
+  SpatialIgnore
+}
+
+fn sun_pitch(d: i32) -> f32 {
+  match d { 0: 0.34; 1: 0.62; _: 0.1 }
+}
+
+fn sun_yaw(d: i32) -> f32 {
+  match d { 0: -0.62; 1: 0.72; _: -1.9 }
+}
+
+template Sun {
+  prop dest: i32 = 0
+  const hue: Rgb = match dest { 0: {255, 226, 186}; 1: {206, 228, 255}; _: {255, 150, 90} }
+
+  Rotation: {sun_pitch(dest), sun_yaw(dest), 0}
+  DirectionalLight: {intensity: match in_tunnel { true: 0; _: 5.5 }, bake: Realtime}
+  Rgb: hue
+
+  disc {
+    Position: {0, 0, -5000}
+    Rect: {900, 900}
+    Image: {texture: tex_halo}
+    Rgb: {hue.r * 0.5, hue.g * 0.5, hue.b * 0.5}
+    BlendMode: Additive
+    NoShadow
+    SpatialIgnore
+    core { Position: {0, 0, 2}; Circle: {30}; Rgb: {255, 250, 240}; Emissive: {strength: 5, color: hue}; NoShadow; SpatialIgnore }
+  }
+}
+
+template StarField {
+  for i in 0..360 {
+    const a = i * 2.39996
+    const rr = 0.09 + 0.91 * sqrt((i + 0.5) / 360)
+    const big = 2 + (i % 7) * 0.45
+    const depth = 1800 + (i * 137) % 3200
+    const x = cos(a) * rr * 3300
+    const y = sin(a) * rr * 2500
+    const r = sqrt(x * x + y * y)
+    const tip = max(r * 0.18, 520)
+    const len = depth - tip
+    const thin = 0.0014 * sqrt(r * r + tip * tip) / big
+    const long = (star_mode == STARS_STREAK || star_mode == STARS_SNAP) && i % 5 > 1
+    const gone = star_mode != STARS_REST && !long
+    const wide = match long { true: thin; _: match gone { true: 0.001; _: 1 } }
+    const reach = match long { true: len / big; _: match gone { true: 0.001; _: 1 } }
+    const secs = match star_mode { 1: 0.62; 0: 0.55; _: 0 }
+    const wait = match star_mode { 1: (i % 11) * 0.008; _: 0 }
+    const ease: box.transition.TimingFunction = match star_mode { 1: EaseIn; _: EaseOut }
+    "star_{i}" {
+      Position: {x, y, match long { true: len / 2 - depth; _: 0 - depth }}
+      Box: {big, big, big}
+      Scale: {wide, wide, reach}
+      Transition: [
+        Position: {duration: secs, delay: wait, timing_function: ease},
+        Scale: {duration: secs, delay: wait, timing_function: ease}
+      ]
+      Rgb: {0, 0, 0}
+      Emissive: {strength: 5 + (i % 5) * 2.5, color: {match i % 3 { 0: 190; _: 245 }, 236, 255}}
+      NoShadow
+      SpatialIgnore
+    }
+  }
+}
+
+template Tunnel {
+  const shown = tunnel_on
+
+  if shown {
+    wall {
+      Rotation: {PI / 2, 0, 0}
+      Tube: {radius: 90, thickness: 2, length: 9000, segments: 64, smooth: true}
+      Rgb: {0, 0, 0}
+      PbrMaterial: {metallic: 1, roughness: 1}
+      Emissive: {strength: 1.15, color: {200, 228, 255}}
+      PbrTextures: {emissive: tex_tunnel}
+      TextureTransform: {scale_x: 3, scale_y: 5, offset_x: scroll * 0.012, offset_y: scroll}
+      BlendMode: Additive
+      NoShadow
+      SpatialIgnore
+    }
+    glare_a { Position: {0.6, 1.9, -0.9}; PointLight: {intensity: 2.2 + sin(clock * 37) * 0.4, range: 5}; Rgb: {150, 196, 255} }
+    glare_b { Position: {-0.2, 1.4, -2.2}; PointLight: {intensity: 2.8 + sin(clock * 51) * 0.5, range: 5}; Rgb: {130, 186, 255} }
+  }
+}
+
+template TollStation {
+  Rotation: {0.3, 0.5, 0.22}
+  Scale: {1.5, 1.5, 1.5}
+  hub : Soot { Rotation: {PI / 2, 0, 0}; Cylinder: {radius: 16, length: 70, segments: 18, smooth: true}; NoShadow; SpatialIgnore }
+  wheel : BoneWhite { Torus: {radius: 58, tube: 6, segments: 40, rings: 10, smooth: true}; Rotation: {PI / 2, 0, clock * 0.05}; NoShadow; SpatialIgnore }
+  for i in 0..4 {
+    "spoke_{i}" : Soot { Rotation: {0, 0, i * PI / 4 + clock * 0.05}; Box: {116, 3.4, 3.4}; NoShadow; SpatialIgnore }
+  }
+  arm_a : BoneWhite { Position: {0, 0, 44}; Box: {150, 5, 10}; NoShadow; SpatialIgnore }
+  barrier_a : Oxide { Position: {80, 0, 44}; Box: {12, 60, 12}; NoShadow; SpatialIgnore }
+  barrier_b : Oxide { Position: {-80, 0, 44}; Box: {12, 60, 12}; NoShadow; SpatialIgnore }
+  strobe_a { Position: {80, 34, 44}; Sphere: {radius: 5, segments: 8}; Rgb: {30, 4, 2}; Emissive: {strength: match blink { true: 24; _: 0.2 }, color: {255, 50, 30}}; NoShadow; SpatialIgnore }
+  strobe_b { Position: {-80, 34, 44}; Sphere: {radius: 5, segments: 8}; Rgb: {30, 4, 2}; Emissive: {strength: match blink { true: 0.2; _: 24 }, color: {255, 50, 30}}; NoShadow; SpatialIgnore }
+  for i in 0..10 {
+    "window_{i}" { Rotation: {0, 0, i * 0.628 + clock * 0.05}; lit { Position: {58, 0, 6.2}; Box: {5, 3, 0.4}; Rgb: {30, 22, 8}; Emissive: {strength: 7, color: {255, 200, 120}}; NoShadow; SpatialIgnore } }
+  }
+}
+
+template IceLane {
+  for i in 0..18 {
+    const a = i * 0.71
+    const rr = 620 + (i * 83) % 420
+    "ice_{i}" {
+      Position: {cos(a) * rr * 1.4 - 600, 320 + sin(a * 1.7) * 160, -2100 + sin(a) * rr * 0.5}
+      Rotation: {i * 0.9 + clock * 0.03, i * 1.4 + clock * 0.02, i * 0.3}
+      Scale: {1 + (i % 3) * 0.3, 0.72, 1 + (i % 2) * 0.4}
+      IcoSphere: {radius: 8 + (i * 7) % 26, segments: 1}
+      Rgb: {168, 196, 214}
+      PbrMaterial: {metallic: 0, roughness: 0.34}
+      NoShadow
+      SpatialIgnore
+    }
+  }
+}
+
+template Heavens {
+  Rotation: {sky_pitch, sky_yaw, sky_roll}
+
+  SkyDome dome()
+  StarField stars()
+
+  if !in_tunnel {
+    Sun sun(dest: here)
+
+    if here == DEST_ORO {
+      Planet oro(tex: tex_oro, radius: 1700) { Position: {1500, -1250, -2600}; Rotation: {0.3, 0.6, 0.35} }
+      PlanetLimb oro_limb(at: {1500, -1250, -2600}, radius: 1700, glow: {190, 120, 76})
+      TollStation toll() { Position: {-420, 820, -2700} }
+    }
+    if here == DEST_NAUR {
+      Planet naur(tex: tex_naur, radius: 1050) { Position: {-1050, 720, -3600}; Rotation: {0.2, 0.4, 0.38} }
+      PlanetLimb naur_limb(at: {-1050, 720, -3600}, radius: 1050, glow: {120, 170, 210})
+      IceLane ice()
+      rings {
+        Position: {-1050, 720, -3600}
+        Rotation: {1.3, 0.2, 0.38}
+        Rect: {4700, 4700}
+        Image: {texture: tex_rings}
+        Rgb: {150, 148, 138}
+        BlendMode: AlphaBlend
+        NoShadow
+        SpatialIgnore
+      }
+    }
+    if here == DEST_CINDER {
+      Planet cinder(tex: tex_cinder, radius: 2300) { Position: {-700, -1900, -2700}; Rotation: {0.5, 2, 0.2} }
+      PlanetLimb cinder_limb(at: {-700, -1900, -2700}, radius: 2300, glow: {255, 90, 40})
+      cinder_fire { Position: {-700, -1900, -2700}; Rotation: {0.5, 2, 0.2}; Sphere: {radius: 2301, segments: 128, smooth: true}; Rgb: {0, 0, 0}; Emissive: {strength: 5, color: {255, 150, 90}}; PbrTextures: {emissive: tex_cinder_glow}; BlendMode: Additive; NoShadow; SpatialIgnore }
+      for i in 0..16 {
+        "wreck_{i}" : Soot {
+          Position: {-1100 + i * 170, 240 + (i * 53) % 150, -1800 - (i * 91) % 500}
+          Rotation: {i * 0.8 + clock * 0.018, i * 1.3 + clock * 0.012, i * 0.4}
+          Box: {24 + (i * 31) % 60, 6 + (i * 13) % 14, 12 + (i * 17) % 34}
+          NoShadow
+          SpatialIgnore
+          rib : BareSteel { Position: {6, 0, 0}; Rotation: {0, 0, 0.8}; Box: {3, 40, 3}; Rgb: {60, 54, 48}; NoShadow; SpatialIgnore }
+          ember { Position: {-8, 3, 0}; Sphere: {radius: 2.2, segments: 6}; Rgb: {10, 4, 2}; Emissive: {strength: 8 + i % 5, color: {255, 110, 40}}; NoShadow; SpatialIgnore }
+        }
+      }
+    }
+  }
+}
+
+Heavens heavens()
+Tunnel tunnel()

@@ -1,0 +1,260 @@
+// Checkbox and Switch: a bool value the user toggles.
+
+module box.widgets
+
+using flecs.script
+using box.ui
+using box.input
+using box.picking
+using box.layout
+using box.geometry
+using box.material
+using box.text
+
+// Behavior of a two-state control with a label. A click on the control or its label, Enter or
+// Space toggles current and reports the change; Space shows the pressed look while it is down.
+// The pointer shows a hand over it, a crossed circle while it is disabled.
+template HeadlessToggle {
+  prop label: string = ""
+  prop value: bool = false
+  prop disabled: bool = false
+  prop width: f32 = 0
+
+  mut current = value
+  mut last_value = value
+  mut hover = false
+  mut down = false
+  mut focused = false
+
+  if !disabled {
+    Focusable
+    Cursor: {CursorPointer}
+  } else {
+    Cursor: {CursorNotAllowed}
+  }
+
+  async {
+    if value != last_value {
+      last_value = value
+      current = value
+    }
+  }
+
+  // A disabled toggle ignores the pointer, so it never shows as hovered or pressed
+  async {
+    while true {
+      await on.enter(this)
+      hover = !disabled
+      await on.leave(this)
+      hover = false
+    }
+  }
+
+  async {
+    while true {
+      await on.press(this)
+      down = !disabled
+      await on.release(this)
+      down = false
+    }
+  }
+
+  async {
+    while true {
+      const e = await on.focus(this)
+      if e.target == this {
+        focused = true
+      }
+    }
+  }
+
+  async {
+    while true {
+      const e = await on.blur(this)
+      if e.target == this {
+        focused = false
+        down = false
+      }
+    }
+  }
+
+  async {
+    while true {
+      const e = await on.key_down(this)
+      if e.key == " " && !e.repeat {
+        down = true
+      }
+    }
+  }
+
+  async {
+    while true {
+      const e = await on.key_up(this)
+      if e.key == " " {
+        down = false
+      }
+    }
+  }
+
+  async {
+    while true {
+      const e = await on.activate(this)
+      if ui.activation(e) == this {
+        down = false
+        if !disabled {
+          current = !current
+          await ui.changed(this)
+        }
+      }
+    }
+  }
+}
+
+// A check box with a label to its right, both part of the hit area
+template Checkbox : HeadlessToggle {
+  const t = box.ui.theme[UiTheme]
+  const ring = focused && FocusStatus[FocusStatus].visible
+  const size = 16
+
+  Layout: {direction: Row, spacing: t.spacing, v: Middle}
+  LayoutItem: {
+    width: {min: width, max: width},
+    height: {mode: Fixed, value: t.control_height}
+  }
+
+  box {
+    Layout: {}
+    LayoutItem: {width: {mode: Fixed, value: size}, height: {mode: Fixed, value: size}}
+    Rect: {1, 1}
+
+    if current {
+      Rgb: t.accent
+    } else if down {
+      Rgb: t.pressed
+    } else if hover {
+      Rgb: t.hover
+    } else {
+      Rgb: t.surface_alt
+    }
+
+    // Checked, the box lightens while hovered and darkens while pressed, as a filled button
+    if current && down {
+      Tint: {0, 0, 0, 60}
+    } else if current && hover {
+      Tint: {255, 255, 255, 40}
+    }
+
+    if ring {
+      Border: {
+        width: t.focus_width, radius: 3,
+        color: {t.focus.r, t.focus.g, t.focus.b, 255}
+      }
+    } else if current {
+      Border: {width: 1, radius: 3, color: {t.accent.r, t.accent.g, t.accent.b, 255}}
+    } else {
+      Border: {width: 1, radius: 3, color: {t.border.r, t.border.g, t.border.b, 255}}
+    }
+
+    if current {
+      mark {
+        LayoutItem: {
+          h: Center, v: Middle,
+          width: {mode: Fixed, value: 8}, height: {mode: Fixed, value: 8}
+        }
+        Rect: {1, 1}
+        Rgb: t.accent_text
+        Border: {radius: 2}
+      }
+    }
+  }
+
+  if label != "" {
+    caption {
+      Text: {value: label, size: t.font_size}
+      Rgb: t.text
+    }
+  }
+
+  if disabled {
+    Opacity: {t.disabled_opacity}
+  }
+}
+
+// A switch: a track with a knob that sits right when on, with a label to its right
+template Switch : HeadlessToggle {
+  const t = box.ui.theme[UiTheme]
+  const ring = focused && FocusStatus[FocusStatus].visible
+  const track_w = 34
+  const track_h = 18
+  const knob = 12
+
+  Layout: {direction: Row, spacing: t.spacing, v: Middle}
+  LayoutItem: {
+    width: {min: width, max: width},
+    height: {mode: Fixed, value: t.control_height}
+  }
+
+  track {
+    Layout: {}
+    LayoutItem: {width: {mode: Fixed, value: track_w}, height: {mode: Fixed, value: track_h}}
+    Rect: {1, 1}
+
+    if current {
+      Rgb: t.accent
+    } else if down {
+      Rgb: t.pressed
+    } else if hover {
+      Rgb: t.hover
+    } else {
+      Rgb: t.surface_alt
+    }
+
+    // On, the track lightens while hovered and darkens while pressed, as a filled button
+    if current && down {
+      Tint: {0, 0, 0, 60}
+    } else if current && hover {
+      Tint: {255, 255, 255, 40}
+    }
+
+    if ring {
+      Border: {
+        width: t.focus_width, radius: track_h / 2,
+        color: {t.focus.r, t.focus.g, t.focus.b, 255}
+      }
+    } else if current {
+      Border: {width: 1, radius: track_h / 2, color: {t.accent.r, t.accent.g, t.accent.b, 255}}
+    } else {
+      Border: {width: 1, radius: track_h / 2, color: {t.border.r, t.border.g, t.border.b, 255}}
+    }
+
+    knob {
+      Rect: {1, 1}
+      Border: {radius: knob / 2}
+
+      if current {
+        LayoutItem: {
+          h: Right, v: Middle, x: -(track_h - knob) / 2,
+          width: {mode: Fixed, value: knob}, height: {mode: Fixed, value: knob}
+        }
+        Rgb: t.accent_text
+      } else {
+        LayoutItem: {
+          h: Left, v: Middle, x: (track_h - knob) / 2,
+          width: {mode: Fixed, value: knob}, height: {mode: Fixed, value: knob}
+        }
+        Rgb: t.text_muted
+      }
+    }
+  }
+
+  if label != "" {
+    caption {
+      Text: {value: label, size: t.font_size}
+      Rgb: t.text
+    }
+  }
+
+  if disabled {
+    Opacity: {t.disabled_opacity}
+  }
+}

@@ -1,0 +1,159 @@
+// TextInput: a single line text field with a label, around an element with a TextEdit.
+
+module box.widgets
+
+using flecs.script
+using box.ui
+using box.input
+using box.picking
+using box.layout
+using box.geometry
+using box.material
+using box.text
+
+// Behavior of a text field. The engine edits the TextEdit of the field child (caret, selection,
+// clipboard, scrolling); the widget follows it. An edit assigns current and reports a change for
+// the widget, Enter a submit (on.submit), so a scene reads w[TextInput.mut].current. The changes
+// and submits of the field itself (e.widget is the field) reach the ancestors too. read_only
+// allows selecting and copying only, password draws bullets and disables copy and cut. A
+// disabled field shows its value without a TextEdit and is skipped by Tab. The pointer shows the
+// I-beam of the TextEdit over the field, a crossed circle over a disabled field.
+template HeadlessTextInput {
+  prop label: string = ""
+  prop placeholder: string = ""
+  prop value: string = ""
+  prop width: f32 = 0
+  prop password: bool = false
+  prop disabled: bool = false
+  prop read_only: bool = false
+
+  mut current: string = value
+  mut last_value: string = value
+  mut hover = false
+  mut focused = false
+
+  if disabled {
+    Cursor: {CursorNotAllowed}
+  }
+
+  async {
+    if value != last_value {
+      last_value = value
+      current = value
+    }
+  }
+
+  // The field takes the focus, and flecs sends its focus and blur on to this widget
+  async {
+    while true {
+      await on.focus(this)
+      focused = true
+      await on.blur(this)
+      focused = false
+    }
+  }
+
+  async {
+    while true {
+      const e = await on.change(this)
+      if e.widget != this {
+        current = e.widget[TextEdit].value
+        await ui.changed(this)
+      }
+    }
+  }
+
+  async {
+    while true {
+      const e = await on.submit(this)
+      if e.widget != this {
+        current = e.widget[TextEdit].value
+        await ui.submit(this)
+      }
+    }
+  }
+
+  // The label above the field, styled by the template that inherits this one
+  if label != "" {
+    caption {}
+  }
+
+  field {
+    if !disabled {
+      TextEdit: {
+        value: current, placeholder: placeholder, size: box.ui.theme[UiTheme].font_size,
+        password: password, read_only: read_only
+      }
+    }
+
+    // A disabled field ignores the pointer, so it never shows as hovered
+    async {
+      while true {
+        await on.enter(this)
+        hover = !disabled
+        await on.leave(this)
+        hover = false
+      }
+    }
+  }
+}
+
+// A text field: the label as a caption above a bordered field on the inset surface of the theme,
+// whose border lightens while hovered and becomes the focus ring while focused (by pointer or
+// keyboard, as text fields show it). A width fixes it, 0 makes it 200 points.
+template TextInput : HeadlessTextInput {
+  const t = box.ui.theme[UiTheme]
+  const w = match width {
+    0.0: 200
+    _: width
+  }
+  const shown_text = match current {
+    "": placeholder
+    _: match password {
+      true: "••••••••"
+      _: current
+    }
+  }
+
+  Layout: {direction: Column, spacing: 4}
+  LayoutItem: {width: {mode: Fixed, value: w}}
+
+  if label != "" {
+    caption {
+      Text: {value: label, size: t.small_font_size}
+      Rgb: t.text_muted
+    }
+  }
+
+  field {
+    Layout: {direction: Row, v: Middle, padding: {0, 0, t.padding, t.padding}}
+    LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: t.control_height}}
+    Rect: {1, 1}
+    Rgb: t.surface_alt
+
+    if focused {
+      Border: {
+        width: t.focus_width, radius: t.radius,
+        color: {t.focus.r, t.focus.g, t.focus.b, 255}
+      }
+    } else if hover && !disabled && !read_only {
+      Border: {
+        width: 1, radius: t.radius,
+        color: {t.text_muted.r, t.text_muted.g, t.text_muted.b, 255}
+      }
+    } else {
+      Border: {width: 1, radius: t.radius, color: {t.border.r, t.border.g, t.border.b, 255}}
+    }
+
+    if disabled {
+      shown {
+        Text: {value: shown_text, size: t.font_size}
+        Rgb: t.text_muted
+      }
+    }
+  }
+
+  if disabled {
+    Opacity: {t.disabled_opacity}
+  }
+}

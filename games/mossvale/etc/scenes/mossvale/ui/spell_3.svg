@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+<defs><linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff0b8"/><stop offset="0.35" stop-color="#e2b456"/><stop offset="0.7" stop-color="#b07a2a"/><stop offset="1" stop-color="#6e4614"/></linearGradient>
+<linearGradient id="leaf" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9cc070"/><stop offset="1" stop-color="#3e6a34"/></linearGradient>
+</defs>
+<path d="M10 50 H76 C90 50 98 40 96 30 C94 20 82 16 74 22 C68 28 72 38 80 36" fill="none" stroke="#3a2410" stroke-width="14" stroke-linecap="round"/>
+<path d="M10 50 H76 C90 50 98 40 96 30 C94 20 82 16 74 22 C68 28 72 38 80 36" fill="none" stroke="#fffaf0" stroke-width="8" stroke-linecap="round"/>
+<path d="M20 74 H100 C114 74 120 86 116 96 C112 106 98 106 94 98 C90 90 98 84 104 88" fill="none" stroke="#3a2410" stroke-width="14" stroke-linecap="round"/>
+<path d="M20 74 H100 C114 74 120 86 116 96 C112 106 98 106 94 98 C90 90 98 84 104 88" fill="none" stroke="#fffaf0" stroke-width="8" stroke-linecap="round"/>
+<path d="M30 98 H64" fill="none" stroke="#3a2410" stroke-width="12" stroke-linecap="round"/>
+<path d="M30 98 H64" fill="none" stroke="#fffaf0" stroke-width="6" stroke-linecap="round"/>
+</svg>

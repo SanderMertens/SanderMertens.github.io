@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 64" width="512" height="64">
+<defs><linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff0b8"/><stop offset="0.35" stop-color="#e2b456"/><stop offset="0.7" stop-color="#b07a2a"/><stop offset="1" stop-color="#6e4614"/></linearGradient>
+<linearGradient id="leaf" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9cc070"/><stop offset="1" stop-color="#3e6a34"/></linearGradient>
+</defs>
+<path d="M30 32 Q90 14 150 32 T246 32 M266 32 Q326 50 386 32 T482 32" fill="none" stroke="#2a1c0e" stroke-width="5" stroke-linecap="round"/>
+<path d="M30 32 Q90 14 150 32 T246 32 M266 32 Q326 50 386 32 T482 32" fill="none" stroke="url(#gold)" stroke-width="2.6" stroke-linecap="round"/>
+<path d="M30 32 q-14 0 -14 -9 q0 -7 8 -6" fill="none" stroke="#2a1c0e" stroke-width="2.6"/>
+<path d="M482 32 q14 0 14 9 q0 7 -8 6" fill="none" stroke="#2a1c0e" stroke-width="2.6"/>
+<path d="M196.00 28.00 Q185.33 29.43 182.79 18.97 Q193.46 17.54 196.00 28.00 Z" fill="url(#leaf)" stroke="#2a1c0e" stroke-width="1.2"/>
+<path d="M156.00 36.00 Q152.88 44.88 143.71 42.71 Q146.84 33.83 156.00 36.00 Z" fill="url(#leaf)" stroke="#2a1c0e" stroke-width="1.2"/>
+<path d="M116.00 28.00 Q108.15 29.86 105.47 22.25 Q113.32 20.38 116.00 28.00 Z" fill="url(#leaf)" stroke="#2a1c0e" stroke-width="1.2"/>
+<path d="M80.00 36.00 Q77.46 42.23 71.00 40.35 Q73.54 34.12 80.00 36.00 Z" fill="url(#leaf)" stroke="#2a1c0e" stroke-width="1.2"/>
+<path d="M316.00 28.00 Q318.54 17.54 329.21 18.97 Q326.67 29.43 316.00 28.00 Z" fill="url(#leaf)" stroke="#2a1c0e" stroke-width="1.2"/>
+<path d="M356.00 36.00 Q365.16 33.83 368.29 42.71 Q359.12 44.88 356.00 36.00 Z" fill="url(#leaf)" stroke="#2a1c0e" stroke-width="1.2"/>
+<path d="M396.00 28.00 Q398.68 20.38 406.53 22.25 Q403.85 29.86 396.00 28.00 Z" fill="url(#leaf)" stroke="#2a1c0e" stroke-width="1.2"/>
+<path d="M432.00 36.00 Q438.46 34.12 441.00 40.35 Q434.54 42.23 432.00 36.00 Z" fill="url(#leaf)" stroke="#2a1c0e" stroke-width="1.2"/>
+<path d="M256 14 L270 32 L256 50 L242 32 Z" fill="url(#gold)" stroke="#2a1c0e" stroke-width="2"/>
+<circle cx="256" cy="32" r="5" fill="#7e57c2" stroke="#2a1c0e" stroke-width="1.4"/>
+<circle cx="254.5" cy="30.5" r="1.6" fill="#efe4ff"/>
+</svg>

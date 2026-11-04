@@ -1,0 +1,272 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.layout
+using box.text
+using box.picking
+using box.transition
+using box.input
+using box.surface
+using box.camera
+
+fn fit_scale(w: f32, h: f32) -> f32 {
+  min(h / 810.0, w / 1440.0)
+}
+
+template ScreenCamera {
+  const s = window[Surface]
+
+  Position: {0, 0, 100}
+  Camera: {ortho: true, ortho_scale: fit_scale(s.width, s.height)}
+}
+
+template ScreenRoot {
+  const s = window[Surface]
+  const k = fit_scale(s.width, s.height)
+
+  LayoutItem: {
+    width: {mode: Fixed, value: s.width / k},
+    height: {mode: Fixed, value: s.height / k}
+  }
+}
+
+template OneShot {
+  mut go = false
+
+  async {
+    await on.change(ui_tick_a)
+    await on.change(ui_tick_a)
+    go = true
+  }
+}
+
+template Caption {
+  prop text: string = ""
+  prop size: f32 = 14
+  prop color: Rgb = {214, 216, 228}
+  prop font: entity = font_body
+  prop width: f32 = 0
+  prop align: Align = Left
+
+  Text: {value: text, size: size, font: font, width: width, align: align}
+  Rgb: color
+  box.spatial.SpatialIgnore
+}
+
+template Icon {
+  prop tex: entity = 0
+  prop size: f32 = 24
+  prop color: Rgb = {255, 255, 255}
+
+  LayoutItem: {width: {mode: Fixed, value: size}, height: {mode: Fixed, value: size}}
+  Rect: {1, 1}
+  Image: {texture: tex}
+  Rgb: color
+  box.spatial.SpatialIgnore
+}
+
+template Halo {
+  prop size: f32 = 64
+  prop color: Rgb = {255, 255, 255}
+  prop x: f32 = 0
+  prop y: f32 = 0
+  prop z: f32 = 0
+
+  Position: {x, y, z}
+  Rect: {size, size}
+  Image: {texture: tex_halo}
+  Rgb: color
+  BlendMode: Additive
+  box.spatial.SpatialIgnore
+}
+
+fn spell_tex(i: i32) -> entity {
+  match i {
+    0: tex_spell_0
+    1: tex_spell_1
+    2: tex_spell_2
+    3: tex_spell_3
+    4: tex_spell_4
+    _: tex_spell_5
+  }
+}
+
+template CornerArt {
+  prop turn: f32 = 0
+  prop h: Align = Left
+  prop v: VAlign = Top
+  prop dx: f32 = 4
+  prop dy: f32 = -4
+
+  LayoutFloat: {h: h, v: v, anchor_h: h, anchor_v: v, x: dx, y: dy}
+  LayoutItem: {width: {mode: Fixed, value: 30}, height: {mode: Fixed, value: 30}}
+  Rotation: {0, 0, turn}
+  Rect: {1, 1}
+  Image: {texture: tex_corner}
+  Rgb: ui_gold
+  box.spatial.SpatialIgnore
+}
+
+template Divider {
+  prop opacity: f32 = 0.8
+
+  LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: 16}}
+  Rect: {1, 1}
+  Image: {texture: tex_divider}
+  Rgb: ui_gold
+  Opacity: {opacity}
+  box.spatial.SpatialIgnore
+}
+
+template Heading {
+  prop text: string = ""
+  prop size: f32 = 16
+
+  Layout: {direction: Row, spacing: 9, v: Middle, h: Center}
+  LayoutItem: {width: {mode: Grow}}
+
+  lead {
+    Rotation: {0, 0, PI / 4}
+    LayoutItem: {width: {mode: Fixed, value: 6}, height: {mode: Fixed, value: 6}}
+    Rect: {1, 1}
+    Rgb: ui_gold
+    box.spatial.SpatialIgnore
+  }
+
+  Caption words(text: text, size: size, font: font_display, color: ui_pale)
+
+  tail {
+    Rotation: {0, 0, PI / 4}
+    LayoutItem: {width: {mode: Fixed, value: 6}, height: {mode: Fixed, value: 6}}
+    Rect: {1, 1}
+    Rgb: ui_gold
+    box.spatial.SpatialIgnore
+  }
+}
+
+template Frame {
+  prop title: string = ""
+  prop width: f32 = 0
+  prop height: f32 = 0
+  prop pad: f32 = 18
+  prop gap: f32 = 10
+
+  InputBlocker
+  Layout: {direction: Column, padding: {pad, pad, pad, pad}, spacing: gap}
+  LayoutItem: {
+    width: {mode: match width > 0 { true: Fixed; _: Grow }, value: match width > 0 { true: width; _: 1 }},
+    height: {mode: match height > 0 { true: Fixed; _: Grow }, value: match height > 0 { true: height; _: 1 }}
+  }
+  Rect: {1, 1}
+  Image: {texture: tex_panel}
+  Rgb: ui_ink
+  Border: {width: 1, radius: 5, color: {ui_gold.r * 0.55, ui_gold.g * 0.55, ui_gold.b * 0.55, 255}}
+
+  CornerArt tl(h: Left, v: Top)
+  CornerArt tr(h: Right, v: Top, turn: 0 - PI / 2, dx: -4)
+  CornerArt bl(h: Left, v: Bottom, turn: PI / 2, dy: 4)
+  CornerArt br(h: Right, v: Bottom, turn: PI, dx: -4, dy: 4)
+
+  if title != "" {
+    Heading heading(text: title)
+    Divider rule()
+  }
+}
+
+fn stat_tex(i: i32) -> entity {
+  match i {
+    0: tex_stat_might
+    1: tex_stat_ward
+    2: tex_stat_haste
+    _: tex_stat_aether
+  }
+}
+
+fn stat_r(i: i32) -> i32 {
+  match i { 0: 255; 1: 110; 2: 190; _: 92 }
+}
+
+fn stat_g(i: i32) -> i32 {
+  match i { 0: 128; 1: 236; 2: 146; _: 190 }
+}
+
+fn stat_b(i: i32) -> i32 {
+  match i { 0: 66; 1: 160; 2: 255; _: 255 }
+}
+
+template Shock : OneShot {
+  prop hue: Rgb = {255, 255, 255}
+  prop size: f32 = 150
+  prop delay: f32 = 0
+
+  const k = match go { true: 1; _: 0.04 }
+  const a = match go { true: 0; _: 1 }
+
+  Position: {0, 0, 4}
+  Scale: {k, k, 1}
+  Opacity: {a}
+  Circle: {size / 2}
+  Rgb: {0, 0, 0}
+  BlendMode: Additive
+  Border: {width: 2, color: {hue.r, hue.g, hue.b, 255}}
+  Transition: [
+    Scale: {duration: 0.75, delay: delay, timing_function: EaseOut},
+    Opacity: {duration: 0.75, delay: delay, timing_function: EaseIn}
+  ]
+  box.spatial.SpatialIgnore
+}
+
+template Pop : OneShot {
+  prop hue: Rgb = {255, 255, 255}
+  prop size: f32 = 150
+  prop delay: f32 = 0
+
+  const k = match go { true: 1.2; _: 0.2 }
+  const a = match go { true: 0; _: 1 }
+
+  Position: {0, 0, 3}
+  Scale: {k, k, 1}
+  Opacity: {a}
+  Rect: {size, size}
+  Image: {texture: tex_halo}
+  Rgb: hue
+  BlendMode: Additive
+  Transition: [
+    Scale: {duration: 0.65, delay: delay, timing_function: EaseOut},
+    Opacity: {duration: 0.65, delay: delay, timing_function: EaseIn}
+  ]
+  box.spatial.SpatialIgnore
+}
+
+template HoldBar {
+  prop width: f32 = 200
+  prop height: f32 = 44
+  prop holding: bool = false
+  prop seconds: f32 = 0.75
+
+  const f = match holding { true: 1; _: 0.0001 }
+  const px = match holding { true: 0; _: 0 - width / 2 }
+  const dur = match holding { true: seconds; _: 0.2 }
+
+  Position: {px, 0, 1}
+  Scale: {f, 1, 1}
+  Rect: {width, height}
+  Rgb: {ui_gold.r * 0.5, ui_gold.g * 0.42, ui_gold.b * 0.26}
+  Emissive: {strength: 0.16, color: {255, 186, 96}}
+  Transition: [
+    Scale: {duration: dur, timing_function: Linear},
+    Position: {duration: dur, timing_function: Linear}
+  ]
+  box.spatial.SpatialIgnore
+}
+
+fn slot_tex(s: i32) -> entity {
+  match s {
+    0: tex_slot_blade
+    1: tex_slot_relic
+    2: tex_slot_crown
+    _: tex_slot_band
+  }
+}

@@ -1,0 +1,806 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.layout
+using box.text
+using box.picking
+using box.input
+using box.transition
+using box.movement
+using box.particle
+using box.types
+
+fn star_rank(band: i32, keystone: bool) -> string {
+  match keystone { true: "{band_name(band)}, keystone"; _: "{band_name(band)}, minor star" }
+}
+
+template StarSparks {
+  prop hue: rgb = {255, 255, 255}
+  prop at: f32 = 0.44
+
+  Position: {0, 0, 6}
+  ParticleEmitter: {
+    max: 90,
+    rate: 0,
+    shape: EmitterPoint,
+    direction: {0, 1, 0},
+    spread: 180,
+    speed: {30, 190},
+    lifetime: {0.45, 1.25},
+    size: {1.5, 4.5},
+    color: hue,
+    color_variance: {30, 30, 30},
+    opacity: {0.7, 1},
+    seed: 91,
+    linger: true
+  }
+  ParticleForces: {gravity: {0, -40, 0}, drag: 2.6}
+  ParticleAppearance: {shape: ParticleCircle, blend: ParticleAdditive, stretch: 0.005}
+  ParticleCurves: {
+    opacity: {keys: [{0, 1}, {0.33333334, 1}, {0.6666667, 0.5}, {1, 0}]}
+    size: {keys: [{0, 1.2}, {0.33333334, 1}, {0.6666667, 0.6}, {1, 0.1}]}
+  }
+  ParticleBurst: {count: 80, at: at}
+}
+
+template Comet : OneShot {
+  prop dx: f32 = 0
+  prop dy: f32 = 0
+  prop hue: Rgb = {255, 255, 255}
+
+  const px = match go { true: 0; _: dx }
+  const py = match go { true: 0; _: dy }
+  const a = match go { true: 0; _: 1 }
+
+  Position: {px, py, 5}
+  Opacity: {a}
+  Transition: [
+    Position: {duration: 0.44, timing_function: EaseIn},
+    Opacity: {duration: 0.1, delay: 0.42}
+  ]
+  box.spatial.SpatialIgnore
+
+  head {
+    Position: {0, 0, 1}
+    Circle: {4.5}
+    Rgb: {255, 255, 255}
+    Emissive: {strength: 3, color: hue}
+  }
+
+  Halo glow(size: 54, color: hue)
+}
+
+template StarFace {
+  prop id: i32 = 0
+  prop from: i32 = -1
+  prop x: f32 = 0
+  prop y: f32 = 0
+  prop fx: f32 = 0
+  prop fy: f32 = 0
+  prop band: i32 = 0
+  prop keystone: bool = false
+  prop hover: bool = false
+  prop owner: entity = 0
+  prop name: string = ""
+
+  const hue: Rgb = {band_r(band), band_g(band), band_b(band)}
+  const awake = has_bit(atlas_awake, id)
+  const open = from < 0 || has_bit(atlas_awake, from)
+  const reach = open && !awake
+  const selected = atlas_sel == owner
+  const core = match keystone { true: 8.5; _: 5.5 }
+  const dx = fx - x
+  const dy = fy - y
+  const hk = match hover { true: 1.3; _: 1 }
+
+  Position: {0, 0, 0}
+  box.spatial.SpatialIgnore
+
+  if from >= 0 {
+    link {
+      Position: {0, 0, -3}
+      Line: {dx, dy, 0, 0, width: match awake { true: 2; _: 1 }}
+      if awake {
+        Rgb: {min(255, hue.r + 40), min(255, hue.g + 40), min(255, hue.b + 40)}
+        Emissive: {strength: 0.55, color: hue}
+      } else if open {
+        Rgb: {ui_gold.r * 0.62, ui_gold.g * 0.62, ui_gold.b * 0.62}
+        Emissive: {strength: 0, color: hue}
+      } else {
+        Rgb: {ui_dim.r * 0.5, ui_dim.g * 0.5, ui_dim.b * 0.6}
+        Emissive: {strength: 0, color: hue}
+      }
+      Transition: [
+        Rgb: {duration: 0.4, delay: match awake { true: 0.32; _: 0 }},
+        Emissive: {duration: 0.4, delay: match awake { true: 0.32; _: 0 }}
+      ]
+      box.spatial.SpatialIgnore
+    }
+  }
+
+  Halo aura(size: match keystone { true: 118; _: 76 }, color: {hue.r * 0.5, hue.g * 0.5, hue.b * 0.5}, z: -2) {
+    Scale: {hk, hk, 1}
+    Opacity: {match awake { true: 1; _: match reach { true: 0.42; _: 0 } }}
+    Transition: [
+      Opacity: {duration: 0.45, delay: match awake { true: 0.4; _: 0 }},
+      Scale: {duration: 0.2, timing_function: EaseOut}
+    ]
+  }
+
+  if reach {
+    beckon {
+      Position: {0, 0, -1}
+      Circle: {core + 6}
+      Rgb: {0, 0, 0}
+      BlendMode: Additive
+      Border: {width: 1.2, color: {hue.r, hue.g, hue.b, 255}}
+      box.spatial.SpatialIgnore
+    }
+  }
+
+  if selected {
+    orbit {
+      Position: {0, 0, 2}
+      Rect: {core * 2 + 34, core * 2 + 34}
+      Image: {texture: tex_dashes}
+      Rgb: ui_pale
+      Emissive: {strength: 0.5, color: {255, 200, 120}}
+      BlendMode: Additive
+      AngularVelocity: {0, 0, 0.8}
+      box.spatial.SpatialIgnore
+    }
+  }
+
+  body {
+    Position: {0, 0, 1}
+    Scale: {hk, hk, 1}
+    Circle: {core}
+    if awake {
+      Rgb: {255, 250, 236}
+      Emissive: {strength: 1.5, color: hue}
+    } else if reach {
+      Rgb: {hue.r * 0.8, hue.g * 0.8, hue.b * 0.8}
+      Emissive: {strength: 0.2, color: hue}
+    } else {
+      Rgb: {38, 42, 62}
+      Emissive: {strength: 0, color: hue}
+    }
+    Border: {width: 1, color: {ui_gold.r * 0.65, ui_gold.g * 0.65, ui_gold.b * 0.65, 255}}
+    Transition: [
+      Rgb: {duration: 0.35, delay: match awake { true: 0.42; _: 0 }},
+      Emissive: {duration: 0.6, delay: match awake { true: 0.42; _: 0 }},
+      Scale: {duration: 0.2, timing_function: EaseOut}
+    ]
+    box.spatial.SpatialIgnore
+  }
+
+  if keystone {
+    spark {
+      Position: {0, 0, 2}
+      Scale: {hk, hk, 1}
+      Rect: {54, 54}
+      Image: {texture: tex_sigil}
+      if awake {
+        Rgb: {255, 248, 226}
+        Emissive: {strength: 0.9, color: hue}
+      } else {
+        Rgb: {hue.r * 0.55, hue.g * 0.55, hue.b * 0.55}
+        Emissive: {strength: 0, color: hue}
+      }
+      BlendMode: Additive
+      AngularVelocity: {0, 0, 0.22}
+      Transition: [Rgb: {duration: 0.5}, Scale: {duration: 0.2, timing_function: EaseOut}]
+      box.spatial.SpatialIgnore
+    }
+  }
+
+  if hover || selected || (keystone && rite_names) {
+    label {
+      Position: {0, 0 - core - 19, 7}
+      Text: {value: name, size: match keystone { true: 14; _: 13 }, font: font_display}
+      Rgb: match hover || selected { true: {255, 246, 224}; _: {ui_gold.r * 0.82, ui_gold.g * 0.82, ui_gold.b * 0.82} }
+      box.spatial.SpatialIgnore
+    }
+  }
+
+  if atlas_fresh == id {
+    if from >= 0 {
+      Comet comet(dx: dx, dy: dy, hue: hue)
+    }
+    Shock shock(hue: hue, size: 170, delay: 0.42)
+    Pop pop(hue: hue, size: 190, delay: 0.42)
+    StarSparks sparks(hue: {hue.r, hue.g, hue.b})
+  }
+}
+
+template Star {
+  prop id: i32 = 0
+  prop from: i32 = -1
+  prop x: f32 = 0
+  prop y: f32 = 0
+  prop fx: f32 = 0
+  prop fy: f32 = 0
+  prop band: i32 = 0
+  prop keystone: bool = false
+  prop name: string = ""
+  prop flavor: string = ""
+  prop stat: i32 = 0
+  prop amount: i32 = 1
+
+  mut hover = false
+
+  Position: {x, y, 1}
+  Interactive
+  Cursor: {CursorPointer}
+  Circle: {20}
+  Rgb: {0, 0, 0}
+  BlendMode: Additive
+
+  StarFace face(
+    id: id, from: from, x: x, y: y, fx: fx, fy: fy, band: band, keystone: keystone,
+    hover: hover, owner: this, name: name)
+
+  async {
+    while true {
+      await on.enter(this)
+      hover = true
+      await on.leave(this)
+      hover = false
+    }
+  }
+
+  async {
+    while true {
+      await on.click(this)
+      rq_op = OP_SELECT_STAR
+      rq_entity = this
+      await ui.changed(rq)
+    }
+  }
+}
+
+template BandTitle {
+  prop band: i32 = 0
+  prop x: f32 = 0
+  prop y: f32 = 0
+
+  const hue: Rgb = {band_r(band), band_g(band), band_b(band)}
+
+  Position: {x, y, 0}
+  box.spatial.SpatialIgnore
+
+  words {
+    Position: {0, 0, 0}
+    Text: {value: band_name(band), size: 18, font: font_display}
+    Rgb: {hue.r * 0.92, hue.g * 0.92, hue.b * 0.92}
+    box.spatial.SpatialIgnore
+  }
+}
+
+template HollowRing {
+  prop radius: f32 = 100
+  prop width: f32 = 1
+  prop tone: f32 = 0.3
+
+  Position: {0, 0, -6}
+  Circle: {radius}
+  Rgb: {0, 0, 0}
+  BlendMode: Additive
+  Border: {width: width, color: {ui_gold.r * tone, ui_gold.g * tone, ui_gold.b * tone, 255}}
+  box.spatial.SpatialIgnore
+}
+
+template StarChart {
+  LayoutItem: {h: Center, v: Middle, width: {mode: Fixed, value: 1}, height: {mode: Fixed, value: 1}}
+  Position: {0, 0, 0}
+
+  HollowRing r0(radius: 134, tone: 0.34)
+  HollowRing r1(radius: 212, tone: 0.16)
+  HollowRing r2(radius: 306, tone: 0.2)
+
+  for i in 0..4 {
+    const a = PI / 2 * i
+    "spoke_{i}" {
+      Position: {0, 0, -6}
+      Line: {cos(a) * 134, sin(a) * 134, cos(a) * 306, sin(a) * 306, width: 1}
+      Rgb: {ui_gold.r * 0.2, ui_gold.g * 0.2, ui_gold.b * 0.2}
+      BlendMode: Additive
+      box.spatial.SpatialIgnore
+    }
+  }
+
+  BandTitle tag_pyre(band: 0, x: -300, y: 276)
+  BandTitle tag_tide(band: 1, x: 300, y: 276)
+  BandTitle tag_thorn(band: 2, x: 300, y: -280)
+  BandTitle tag_veil(band: 3, x: -300, y: -280)
+
+  Star s0(id: 0, band: 0, x: -135, y: 72, name: "Kindling Spark", stat: 0, amount: 3,
+    flavor: "Every pyre begins as an argument between two sparks.")
+  Star s1(id: 1, from: 0, fx: -135, fy: 72, band: 0, x: -198, y: 122, name: "Ashen Oath", stat: 0, amount: 4,
+    flavor: "Sworn over a dead fire, kept by a living one.")
+  Star s2(id: 2, from: 1, fx: -198, fy: 122, band: 0, x: -268, y: 88, name: "Forge Tongue", stat: 0, amount: 4,
+    flavor: "It speaks only in the language of hammers.") {
+    async {
+      atlas_sel = this
+    }
+  }
+  Star s3(id: 3, from: 1, fx: -198, fy: 122, band: 0, x: -168, y: 198, name: "Cinder Crown", stat: 1, amount: 3,
+    flavor: "Worn lightly, for the wearer is mostly smoke.")
+  Star s4(id: 4, from: 2, fx: -268, fy: 88, band: 0, x: -338, y: 138, name: "Red Comet", stat: 2, amount: 4,
+    flavor: "It was late to the war, and early to the ending.")
+  Star s5(id: 5, from: 3, fx: -168, fy: 198, band: 0, x: -244, y: 228, name: "Ember Choir", stat: 0, amount: 5,
+    flavor: "Nine thousand small fires, singing in one key.")
+  Star s6(id: 6, from: 4, fx: -338, fy: 138, band: 0, x: -350, y: 232, keystone: true, name: "Heart of Cinders", stat: 0, amount: 12,
+    flavor: "What remains after the burning is the part that burns best.")
+
+  Star s7(id: 7, band: 1, x: 135, y: 72, name: "First Swell", stat: 3, amount: 3,
+    flavor: "The sea has never once been in a hurry.")
+  Star s8(id: 8, from: 7, fx: 135, fy: 72, band: 1, x: 190, y: 140, name: "Salt Memory", stat: 3, amount: 4,
+    flavor: "Water forgets nothing that ever drowned in it.")
+  Star s9(id: 9, from: 8, fx: 190, fy: 140, band: 1, x: 272, y: 104, name: "Moonward Pull", stat: 3, amount: 4,
+    flavor: "A patient hand on the hem of the world.")
+  Star s10(id: 10, from: 8, fx: 190, fy: 140, band: 1, x: 150, y: 216, name: "Pearl Lung", stat: 1, amount: 3,
+    flavor: "Breathe in the deep; it has been waiting.")
+  Star s11(id: 11, from: 9, fx: 272, fy: 104, band: 1, x: 346, y: 64, name: "Undertow", stat: 2, amount: 4,
+    flavor: "The current you cannot see is the one that carries you.")
+  Star s12(id: 12, from: 9, fx: 272, fy: 104, band: 1, x: 258, y: 204, name: "Tide Bell", stat: 3, amount: 5,
+    flavor: "Rung once by a sunken city, and heard twice.")
+  Star s13(id: 13, from: 12, fx: 258, fy: 204, band: 1, x: 354, y: 226, keystone: true, name: "Drowned Crown", stat: 3, amount: 12,
+    flavor: "A king is still a king, at any depth.")
+
+  Star s14(id: 14, band: 2, x: 135, y: -72, name: "Green Vow", stat: 1, amount: 3,
+    flavor: "Promise a seed nothing, and it will grow anyway.")
+  Star s15(id: 15, from: 14, fx: 135, fy: -72, band: 2, x: 205, y: -112, name: "Bramble Wall", stat: 1, amount: 4,
+    flavor: "The castle fell. The hedge did not.")
+  Star s16(id: 16, from: 15, fx: 205, fy: -112, band: 2, x: 176, y: -192, name: "Old Bark", stat: 1, amount: 4,
+    flavor: "Count the rings; it has outlived your questions.")
+  Star s17(id: 17, from: 15, fx: 205, fy: -112, band: 2, x: 286, y: -84, name: "Quickroot", stat: 2, amount: 3,
+    flavor: "It is already underneath you.")
+  Star s18(id: 18, from: 16, fx: 176, fy: -192, band: 2, x: 262, y: -218, name: "Rose Thane", stat: 0, amount: 4,
+    flavor: "Beautiful, armored, and entirely without mercy.")
+  Star s19(id: 19, from: 17, fx: 286, fy: -84, band: 2, x: 358, y: -138, name: "Moss Hymn", stat: 1, amount: 5,
+    flavor: "A slow song for those who plan to stay.")
+  Star s20(id: 20, from: 18, fx: 262, fy: -218, band: 2, x: 358, y: -234, keystone: true, name: "Thornfather", stat: 1, amount: 12,
+    flavor: "Every garden is a fortress that has learned patience.")
+
+  Star s21(id: 21, band: 3, x: -135, y: -72, name: "Thin Hour", stat: 2, amount: 3,
+    flavor: "There is a minute between midnight and itself.")
+  Star s22(id: 22, from: 21, fx: -135, fy: -72, band: 3, x: -196, y: -128, name: "Silk Step", stat: 2, amount: 4,
+    flavor: "Walk as if the floor were a rumor.")
+  Star s23(id: 23, from: 22, fx: -196, fy: -128, band: 3, x: -286, y: -102, name: "Lantern Moth", stat: 3, amount: 3,
+    flavor: "It follows a light that has not been lit yet.")
+  Star s24(id: 24, from: 22, fx: -196, fy: -128, band: 3, x: -160, y: -214, name: "Second Shadow", stat: 2, amount: 4,
+    flavor: "One of them is yours. Do not ask which.")
+  Star s25(id: 25, from: 23, fx: -286, fy: -102, band: 3, x: -362, y: -60, name: "Quiet Knife", stat: 0, amount: 4,
+    flavor: "The sharpest word is the one left unsaid.")
+  Star s26(id: 26, from: 23, fx: -286, fy: -102, band: 3, x: -262, y: -206, name: "Mirror Vesper", stat: 2, amount: 5,
+    flavor: "The evening star, seen from the other side.")
+  Star s27(id: 27, from: 26, fx: -262, fy: -206, band: 3, x: -358, y: -232, keystone: true, name: "The Unseen Door", stat: 2, amount: 12,
+    flavor: "It has always been open. That is what hides it.")
+}
+
+template StatBar {
+  prop stat: i32 = 0
+  prop value: i32 = 0
+  prop delta: i32 = 0
+
+  const hue: Rgb = {stat_r(stat), stat_g(stat), stat_b(stat)}
+  const w = 236
+  const scale_max = 140.0
+  const f = clamp(value / scale_max, 0.002, 1)
+  const after = clamp((value + delta) / scale_max, 0.002, 1)
+  const low = min(f, after)
+  const high = max(f, after)
+
+  Layout: {direction: Column, spacing: 5}
+  LayoutItem: {width: {mode: Grow}}
+  box.spatial.SpatialIgnore
+
+  head {
+    Layout: {direction: Row, spacing: 8, v: Middle}
+    LayoutItem: {width: {mode: Grow}}
+    Icon glyph(tex: stat_tex(stat), size: 15, color: hue)
+    Caption name(text: stat_name(stat), size: 14, font: font_display, color: ui_text)
+    gap {
+      LayoutItem: {width: {mode: Grow}}
+    }
+    if delta != 0 {
+      change {
+        Text: {value: match delta > 0 { true: "+{delta}"; _: "{delta}" }, size: 14, font: font_display}
+        Rgb: match delta > 0 { true: {130, 244, 170}; _: {255, 110, 96} }
+      }
+    }
+    Caption amount(text: "{value}", size: 15, font: font_display, color: ui_pale)
+  }
+
+  track {
+    Layout: {}
+    LayoutItem: {width: {mode: Fixed, value: 236}, height: {mode: Fixed, value: 7}}
+    box.spatial.SpatialIgnore
+
+    base {
+      Position: {0, 0, 0}
+      Rect: {w, 7}
+      Rgb: {6, 8, 18}
+      Border: {width: 1, radius: 3, color: {ui_gold.r * 0.34, ui_gold.g * 0.34, ui_gold.b * 0.34, 255}}
+    }
+
+    ghost {
+      Position: {(high - 1) * w / 2, 0, 1}
+      Scale: {high, 1, 1}
+      Rect: {w - 2, 5}
+      Rgb: match after >= f { true: {126, 240, 164}; _: {255, 96, 84} }
+      Emissive: {strength: 0.35, color: match after >= f { true: {90, 255, 150}; _: {255, 70, 60} }}
+      Transition: [
+        Position: {duration: 0.35, timing_function: EaseOut},
+        Scale: {duration: 0.35, timing_function: EaseOut}
+      ]
+    }
+
+    fill {
+      Position: {(low - 1) * w / 2, 0, 2}
+      Scale: {low, 1, 1}
+      Rect: {w - 2, 5}
+      Rgb: hue
+      Emissive: {strength: 0.4, color: hue}
+      Transition: [
+        Position: {duration: 0.5, timing_function: EaseOut},
+        Scale: {duration: 0.5, timing_function: EaseOut}
+      ]
+    }
+  }
+}
+
+template BandRow {
+  prop band: i32 = 0
+  prop count: i32 = 0
+
+  const hue: Rgb = {band_r(band), band_g(band), band_b(band)}
+
+  Layout: {direction: Row, spacing: 6, v: Middle}
+  LayoutItem: {width: {mode: Grow}}
+  box.spatial.SpatialIgnore
+
+  Caption name(text: band_name(band), size: 13, font: font_display, color: {hue.r * 0.92, hue.g * 0.92, hue.b * 0.92})
+  gap {
+    LayoutItem: {width: {mode: Grow}}
+  }
+  for i in 0..7 {
+    "pip_{i}" {
+      const lit = i < count
+      Rotation: {0, 0, PI / 4}
+      LayoutItem: {width: {mode: Fixed, value: 7}, height: {mode: Fixed, value: 7}}
+      Rect: {1, 1}
+      if lit {
+        Rgb: {min(255, hue.r + 50), min(255, hue.g + 50), min(255, hue.b + 50)}
+        Emissive: {strength: 0.7, color: hue}
+      } else {
+        Rgb: {26, 30, 46}
+        Emissive: {strength: 0, color: hue}
+      }
+      Border: {width: 1, color: {hue.r * 0.45, hue.g * 0.45, hue.b * 0.45, 255}}
+      Transition: [Rgb: {duration: 0.3, delay: 0.42}, Emissive: {duration: 0.3, delay: 0.42}]
+    }
+  }
+}
+
+template GildedButtonFace {
+  prop label: string = ""
+  prop enabled: bool = true
+  prop hover: bool = false
+  prop down: bool = false
+  prop holding: bool = false
+  prop seconds: f32 = 0
+  prop height: f32 = 44
+  prop width: f32 = 236
+  prop primary: bool = true
+
+  const lit = enabled && hover
+  const k = match down && enabled { true: 0.985; _: 1 }
+
+  Layout: {}
+  LayoutItem: {width: {mode: Fixed, value: width}, height: {mode: Fixed, value: height}}
+  Rect: {1, 1}
+  Scale: {k, k, 1}
+  if !enabled {
+    Rgb: {16, 18, 30}
+  } else if lit {
+    Rgb: {ui_gold.r * 0.34, ui_gold.g * 0.3, ui_gold.b * 0.24}
+  } else if primary {
+    Rgb: {ui_gold.r * 0.2, ui_gold.g * 0.17, ui_gold.b * 0.14}
+  } else {
+    Rgb: {14, 17, 34}
+  }
+  Border: {width: 1, radius: 4, color: {ui_gold.r * 0.8, ui_gold.g * 0.8, ui_gold.b * 0.8, 255}}
+  Transition: [Rgb: {duration: 0.14}, Scale: {duration: 0.1}]
+  ClipChildren
+  box.spatial.SpatialIgnore
+
+  if seconds > 0 {
+    HoldBar charge(width: width, height: height, holding: holding, seconds: seconds)
+  }
+
+  sheen {
+    Position: {0, height * 0.22, 2}
+    Rect: {width, height * 0.55}
+    Image: {texture: tex_sheen}
+    Rgb: {ui_gold.r * 0.2, ui_gold.g * 0.18, ui_gold.b * 0.14}
+    BlendMode: Additive
+    box.spatial.SpatialIgnore
+  }
+
+  caption {
+    Position: {0, 1, 3}
+    Text: {value: label, size: 15, font: font_display}
+    if enabled {
+      Rgb: match holding { true: {255, 255, 255}; _: ui_pale }
+    } else {
+      Rgb: {98, 100, 118}
+    }
+    box.spatial.SpatialIgnore
+  }
+}
+
+template AwakenFace {
+  prop hover: bool = false
+  prop down: bool = false
+
+  const s = atlas_sel[Star]
+  const awake = has_bit(atlas_awake, s.id)
+  const open = s.from < 0 || has_bit(atlas_awake, s.from)
+  const can = !awake && open && hero_points > 0
+  Layout: {}
+  LayoutItem: {width: {mode: Fixed, value: 236}, height: {mode: Fixed, value: 44}}
+  box.spatial.SpatialIgnore
+
+  const label = match awake {
+    true: "Awakened"
+    _: match open {
+      true: match hero_points > 0 { true: "Hold to Awaken"; _: "No Star Points" }
+      _: "Beyond Reach"
+    }
+  }
+
+  GildedButtonFace art(
+    label: label, enabled: can, hover: hover, down: down,
+    holding: atlas_holding && can, seconds: HOLD_SECONDS)
+}
+
+template AwakenButton {
+  mut hover = false
+  mut down = false
+
+  Interactive
+  Cursor: {CursorPointer}
+  Layout: {}
+  LayoutItem: {width: {mode: Fixed, value: 236}, height: {mode: Fixed, value: 44}}
+  Rect: {1, 1}
+  Rgb: {0, 0, 0}
+  BlendMode: Additive
+
+  AwakenFace face(hover: hover, down: down)
+
+  async {
+    while true {
+      await on.enter(this)
+      hover = true
+      await on.leave(this)
+      hover = false
+    }
+  }
+
+  async {
+    while true {
+      await on.press(this)
+      down = true
+      atlas_press = true
+      await on.release(this)
+      down = false
+      atlas_press = false
+    }
+  }
+}
+
+template StarInspector {
+  Layout: {direction: Row}
+  LayoutItem: {height: {mode: Grow}}
+
+  const s = atlas_sel[Star]
+  const hue: Rgb = {band_r(s.band), band_g(s.band), band_b(s.band)}
+  const awake = has_bit(atlas_awake, s.id)
+  const open = s.from < 0 || has_bit(atlas_awake, s.from)
+
+  Frame frame(title: "Star Reading", width: 272, gap: 12) {
+    medal {
+      Layout: {}
+      LayoutItem: {width: {mode: Fixed, value: 236}, height: {mode: Fixed, value: 92}}
+      box.spatial.SpatialIgnore
+
+      Halo aura(size: 190, color: {hue.r * 0.42, hue.g * 0.42, hue.b * 0.42}, z: 0)
+
+      ring {
+        Position: {0, 0, 1}
+        Rect: {86, 86}
+        Image: {texture: tex_dashes}
+        Rgb: hue
+        BlendMode: Additive
+        AngularVelocity: {0, 0, -0.3}
+      }
+
+      sigil {
+        Position: {0, 0, 2}
+        Rect: {62, 62}
+        Image: {texture: tex_sigil}
+        if awake {
+          Rgb: {255, 250, 236}
+          Emissive: {strength: 0.8, color: hue}
+        } else {
+          Rgb: hue
+          Emissive: {strength: 0.1, color: hue}
+        }
+        AngularVelocity: {0, 0, 0.14}
+      }
+    }
+
+    titles {
+      Layout: {direction: Column, h: Center, spacing: 3}
+      LayoutItem: {width: {mode: Grow}}
+      Caption name(text: s.name, size: 21, font: font_display, color: ui_pale)
+      Caption place(text: star_rank(s.band, s.keystone), size: 13, font: font_italic, color: hue)
+    }
+
+    Divider rule_a()
+
+    Caption flavor(text: s.flavor, size: 15, font: font_italic, width: 236, align: Center, color: ui_text) {
+      LayoutItem: {width: {mode: Grow}}
+    }
+
+    effect {
+      Layout: {direction: Row, spacing: 8, h: Center, v: Middle, padding: {8, 8, 0, 0}}
+      LayoutItem: {width: {mode: Grow}}
+      Rect: {1, 1}
+      Rgb: {6, 8, 18}
+      Border: {width: 1, radius: 4, color: {hue.r * 0.5, hue.g * 0.5, hue.b * 0.5, 255}}
+      Icon glyph(tex: stat_tex(s.stat), size: 16, color: {stat_r(s.stat), stat_g(s.stat), stat_b(s.stat)})
+      Caption gain(text: "+{s.amount} {stat_name(s.stat)}", size: 16, font: font_display, color: ui_pale)
+    }
+
+    gap {
+      LayoutItem: {height: {mode: Grow}}
+    }
+
+    status {
+      Layout: {direction: Row, h: Center}
+      LayoutItem: {width: {mode: Grow}}
+      Caption line(
+        text: match awake { true: "This star burns for you."; _: match open { true: "One star point, and a steady hand."; _: "Awaken the star before it." } },
+        size: 13, font: font_italic, color: ui_muted)
+    }
+
+    AwakenButton awaken()
+  }
+}
+
+template PlainButton {
+  prop label: string = ""
+  prop op: i32 = 0
+  prop width: f32 = 236
+
+  mut hover = false
+  mut down = false
+
+  Interactive
+  Cursor: {CursorPointer}
+  Layout: {}
+  LayoutItem: {width: {mode: Fixed, value: width}, height: {mode: Fixed, value: 36}}
+  Rect: {1, 1}
+  Rgb: {0, 0, 0}
+  BlendMode: Additive
+
+  GildedButtonFace art(label: label, hover: hover, down: down, primary: false, height: 36, width: width)
+
+  async {
+    while true {
+      await on.enter(this)
+      hover = true
+      await on.leave(this)
+      hover = false
+    }
+  }
+
+  async {
+    while true {
+      await on.press(this)
+      down = true
+      await on.release(this)
+      down = false
+    }
+  }
+
+  async {
+    while true {
+      await on.click(this)
+      rq_op = op
+      await ui.changed(rq)
+    }
+  }
+}
+
+template HeroLedger {
+  Layout: {direction: Row}
+  LayoutItem: {height: {mode: Grow}}
+
+  Frame frame(title: "Attributes", width: 272, gap: 12) {
+    StatBar might(stat: 0, value: stat_might)
+    StatBar ward(stat: 1, value: stat_ward)
+    StatBar haste(stat: 2, value: stat_haste)
+    StatBar aether(stat: 3, value: stat_aether)
+
+    gap_a {
+      LayoutItem: {height: {mode: Fixed, value: 4}}
+    }
+
+    Heading sub(text: "Constellations", size: 14)
+    Divider rule_b()
+
+    BandRow pyre(band: 0, count: atlas_count_0)
+    BandRow tide(band: 1, count: atlas_count_1)
+    BandRow thorn(band: 2, count: atlas_count_2)
+    BandRow veil(band: 3, count: atlas_count_3)
+
+    gap_b {
+      LayoutItem: {height: {mode: Grow}}
+    }
+
+    points {
+      Layout: {direction: Row, h: Center, spacing: 8, v: Middle}
+      LayoutItem: {width: {mode: Grow}}
+      Icon glyph(tex: tex_sigil, size: 18, color: {150, 214, 255})
+      Caption line(text: "{hero_points} star points unspent", size: 14, font: font_italic, color: ui_text)
+    }
+
+    PlainButton realign(label: "Realign the Stars", op: OP_REALIGN)
+  }
+}
+
+template Page {
+  prop index: i32 = 0
+
+  const here = screen == index
+  const a = match here { true: 1; _: 0 }
+  const k = match here { true: 1; _: 0.975 }
+
+  LayoutItem: {width: {mode: Grow}, height: {mode: Grow}}
+  Opacity: {a}
+  Scale: {k, k, 1}
+  Transition: [
+    Opacity: {duration: 0.45, delay: match here { true: 0.2; _: 0 }, timing_function: EaseInOut},
+    Scale: {duration: 0.6, delay: match here { true: 0.2; _: 0 }, timing_function: EaseOut}
+  ]
+  if !here {
+    box.spatial.SpatialIgnore
+  }
+}
+
+template AtlasPage : Page {
+  Layout: {}
+
+  StarChart chart()
+
+  columns {
+    LayoutItem: {width: {mode: Grow}, height: {mode: Grow}}
+    Layout: {direction: Row, padding: {6, 6, 22, 22}}
+
+    HeroLedger ledger()
+
+    gap {
+      LayoutItem: {width: {mode: Grow}}
+    }
+
+    if atlas_sel != 0 {
+      StarInspector inspector()
+    }
+  }
+}

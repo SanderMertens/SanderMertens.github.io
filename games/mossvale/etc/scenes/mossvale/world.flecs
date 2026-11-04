@@ -1,0 +1,562 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.transition
+using box.light
+using box.geometry
+using box.material
+using box.particle
+
+mossvale {
+  ground : MvGrass { Position: {0, -0.5, 0}; Box: {700, 1, 700}; TextureTransform: {700 / TILE_GRASS, 700 / TILE_GRASS, 0, 0} }
+
+  water {
+    river_bank : MvSand { Position: {0, 0, 0}; Sweep: {path: MV_RIVER, profile: MvRoadProfile, scale: {8.8, 0.03}, rings: 256}; TextureMapping: {mode: MappingObject, size: 5}; TextureTransform: {1, 1, 0, 0} }
+    river : MvWater { Position: {0, 0, 0}; Sweep: {path: MV_RIVER, profile: MvRoadProfile, scale: {6.2, 0.06}, rings: 256}; TextureMapping: {mode: MappingObject, size: 8}; TextureTransform: {1, 1, 0, 0} }
+    lake_bank : MvSand { Position: {LAKE_X, 0.019, LAKE_Z}; Cylinder: {length: 0.01, radius: LAKE_R + 1.8, segments: 48}; TextureTransform: {(LAKE_R + 1.8) * 2 / 5, (LAKE_R + 1.8) * 2 / 5, 0, 0} }
+    lake_shallow : MvSand { Position: {LAKE_X, 0.031, LAKE_Z}; Cylinder: {length: 0.01, radius: LAKE_R + 0.6, segments: 48}; Rgb: {200, 196, 150}; TextureTransform: {(LAKE_R + 0.6) * 2 / 5, (LAKE_R + 0.6) * 2 / 5, 0, 0} }
+    lake : MvWater { Position: {LAKE_X, 0.047, LAKE_Z}; Cylinder: {length: 0.01, radius: LAKE_R, segments: 48}; TextureTransform: {LAKE_R * 2 / 5, LAKE_R * 2 / 5, 0, 0} }
+    lake_deep : MvDeepWater { Position: {LAKE_X, 0.052, LAKE_Z}; Cylinder: {length: 0.01, radius: LAKE_R - 5, segments: 40}; TextureTransform: {(LAKE_R - 5) * 2 / 5, (LAKE_R - 5) * 2 / 5, 0, 0} }
+    lake_glints {
+      Position: {LAKE_X, 0.2, LAKE_Z}
+      ParticleEmitter: {max: 60, rate: 14, shape: EmitterDisc, radius: LAKE_R - 1, direction: {0, 1, 0}, speed: {0, 0.05}, lifetime: {0.6, 1.4}, size: {0.15, 0.3}, opacity: {0.6, 1}, color: {255, 250, 230}, seed: 61}
+      ParticleAppearance: {blend: ParticleAdditive}
+      ParticleCurves: {opacity: {keys: [{0, 0}, {0.5, 1}, {1, 0}]}}
+    }
+    for i in 0..12 {
+      const zz = -90 + i * 16
+      "river_glint_{i}" {
+        Position: {river_x(zz), 0.2, zz}
+        ParticleEmitter: {max: 16, rate: 4, shape: EmitterBox, extents: {2.4, 0, 7}, direction: {0, 0, 1}, speed: {0.6, 1.2}, lifetime: {0.6, 1.4}, size: {0.12, 0.25}, opacity: {0.6, 1}, color: {255, 250, 230}, seed: 70 + i}
+        ParticleAppearance: {blend: ParticleAdditive}
+        ParticleCurves: {opacity: {keys: [{0, 0}, {0.5, 1}, {1, 0}]}}
+      }
+      "river_rock_{i}" : MvRock { Position: {river_x(zz) + match i % 2 { 0: 3.6; _: -3.6 }, 0.15, zz + 3}; Rotation: {i, i, 0}; Scale: {0.7, 0.4, 0.6}; IcoSphere: {radius: 1, segments: 0} }
+    }
+    isle_sand : MvSand { Position: {ISLE_X, 0.15, ISLE_Z}; Cylinder: {length: 0.3, radius: ISLE_R + 0.6, segments: 24} }
+    isle : MvGrass { Position: {ISLE_X, 0.2, ISLE_Z}; Cylinder: {length: 0.4, radius: ISLE_R, segments: 24} }
+  }
+
+  forest {
+    for j in 0..19 {
+      for i in 0..39 {
+        if tree_here(i, j) {
+          const h = hash2(i * 3.3, j * 7.1)
+          Tree "t_{i}_{j}"(seed: h, kind: match h < 0.4 { true: 1; _: match h > 0.92 { true: 3; _: match h > 0.8 { true: 2; _: 0 } } }, s: 1.15) {
+            Position: {tree_x(i, j), 0, tree_z(i, j)}
+          }
+        }
+      }
+    }
+    for i in 0..44 {
+      const x = -40 + i * 3.1
+      if abs(x - road_x(-33)) > 4 {
+        Bush "hedge_a_{i}"(seed: i * 0.13, s: 1.6) { Position: {x, 0, -31.2} }
+      }
+    }
+    for i in 0..30 {
+      const a = i * 0.7
+      Mushroom "m_{i}"(s: 1 + fract(a) * 0.8) { Position: {-38 + fract(a * 3.7) * 130, 0, -90 + fract(a * 1.3) * 45} }
+    }
+  }
+
+  hills {
+    for j in 0..14 {
+      for i in 0..29 {
+        if rock_here(i, j) {
+          const h = hash2(i * 1.3, j * 2.7)
+          const wall = rock_z(i, j) < WALL_S1 + 1
+          Rock "r_{i}_{j}"(seed: h, s: match wall { true: 1.7 + h * 0.6; _: 1.1 + h * 0.8 }) { Position: {rock_x(i, j), 0, rock_z(i, j)} }
+        }
+      }
+    }
+    for j in 0..14 {
+      for i in 0..29 {
+        const x = rock_x(i, j) + 2.2
+        const z = rock_z(i, j) + 1.6
+        const h = hash2(i * 5.3, j * 1.9)
+        if h > 0.86 && !hills_clear(x, z) && z > WALL_S1 + 2 && x < 92 && z < 92 {
+          Tree "p_{i}_{j}"(seed: h, kind: 1, s: 0.9) { Position: {x, 0, z} }
+        }
+      }
+    }
+    for i in 0..44 {
+      const x = -40 + i * 3.1
+      if abs(x - road_x(33)) > 4 {
+        "cliff_{i}" : MvCliff { Position: {x, 0.8, 32.5 + fract(i * 0.37) * 2}; Rotation: {0, i, 0}; Scale: {2.2, 1.4 + fract(i * 0.61), 1.6}; IcoSphere: {radius: 1, segments: 0} }
+      }
+    }
+  }
+
+  patches {
+    for j in 0..12 {
+      for i in 0..12 {
+        const cx = -96 + i * 16 + 8
+        const cz = -96 + j * 16 + 8
+        const r = 3 + hash2(i * 1.7 + 3, j * 2.3 + 1) * 3
+        const x = cx + (hash2(i * 3.1, j * 0.7 + 5) - 0.5) * 2 * (7.6 - r)
+        const z = cz + (hash2(i * 0.9 + 2, j * 4.3) - 0.5) * 2 * (7.6 - r)
+        const sz = 0.6 + hash2(i + 9, j * 1.1) * 0.4
+        const tx = r * 2 / TILE_GRASS
+        if cz > -32 && cz < 32 || cx < -50 {
+          if (i + j) % 2 == 0 {
+            "p_{i}_{j}" : MvGrass { Position: {x, 0.013, z}; Rotation: {0, i * 1.3 + j, 0}; Scale: {1, 1, sz}; Cylinder: {length: 0.01, radius: r, segments: 28}; Rgb: {112, 164, 76}; TextureTransform: {tx, tx, 0.3, 0.7} }
+          } else {
+            "p_{i}_{j}" : MvGrass { Position: {x, 0.013, z}; Rotation: {0, i * 1.3 + j, 0}; Scale: {1, 1, sz}; Cylinder: {length: 0.01, radius: r, segments: 28}; Rgb: {132, 178, 84}; TextureTransform: {tx, tx, 0.6, 0.2} }
+          }
+        } else if cz < 0 {
+          "p_{i}_{j}" : MvForestFloor { Position: {x, 0.013, z}; Rotation: {0, i * 1.3 + j, 0}; Scale: {1, 1, sz}; Cylinder: {length: 0.01, radius: r, segments: 20}; Rgb: {150, 160, 120}; TextureTransform: {r * 2 / TILE_FOREST, r * 2 / TILE_FOREST, 0, 0} }
+        } else {
+          "p_{i}_{j}" : MvHillGrass { Position: {x, 0.013, z}; Rotation: {0, i * 1.3 + j, 0}; Scale: {1, 1, sz}; Cylinder: {length: 0.01, radius: r, segments: 20}; Rgb: {176, 168, 104}; TextureTransform: {tx, tx, 0, 0} }
+        }
+      }
+    }
+  }
+
+  square_detail {
+    Position: {SQ_X, 0, SQ_Z}
+    band_w : MvStone { Position: {-7.6, 0.061, 0}; Box: {6.8, 0.01, 1.0}; TextureTransform: {6.8 / TILE_FLAGS, 1 / TILE_FLAGS, 0, 0} }
+    band_e : MvStone { Position: {7.6, 0.061, 0}; Box: {6.8, 0.01, 1.0}; TextureTransform: {6.8 / TILE_FLAGS, 1 / TILE_FLAGS, 0, 0} }
+    band_n : MvStone { Position: {0, 0.061, -4.7}; Box: {1.0, 0.01, 3.0}; TextureTransform: {1 / TILE_FLAGS, 3 / TILE_FLAGS, 0, 0} }
+    band_s : MvStone { Position: {0, 0.061, 4.7}; Box: {1.0, 0.01, 3.0}; TextureTransform: {1 / TILE_FLAGS, 3 / TILE_FLAGS, 0, 0} }
+    ring_a : MvStone { Position: {0, 0.062, 0}; Tube: {length: 0.01, radius: 4.6, thickness: 0.45, segments: 48}; TextureTransform: {9.2 * PI / TILE_FLAGS, 0.45 / TILE_FLAGS, 0, 0} }
+  }
+
+  road_edges {
+    for i in 0..58 {
+      const zz = -82 + i * 3
+      const side = match i % 2 { 0: 1; _: -1 }
+      if !in_village(road_x(zz), zz) && hash(i * 9.1) > 0.3 {
+        "ns_stone_{i}" : MvRock { Position: {road_x(zz) + side * (3.3 + hash(i) * 0.4), 0.12, zz}; Rotation: {i, i * 2, 0}; Scale: {0.4, 0.25, 0.35}; IcoSphere: {radius: 1, segments: 0} }
+      }
+    }
+    for i in 0..50 {
+      const xx = -58 + i * 3
+      const side = match i % 2 { 0: 1; _: -1 }
+      if !in_village(xx, road_z(xx)) && abs(xx - river_x(0)) > 6 && hash(i * 5.3) > 0.3 {
+        "ew_stone_{i}" : MvRock { Position: {xx, 0.12, road_z(xx) + side * (3.3 + hash(i) * 0.4)}; Rotation: {i, i * 3, 0}; Scale: {0.4, 0.25, 0.35}; IcoSphere: {radius: 1, segments: 0} }
+      }
+    }
+    for i in 0..116 {
+      const zz = -84 + i * 1.5 + hash(i * 0.7) * 0.8
+      const side = match i % 2 { 0: 1; _: -1 }
+      if !in_village(road_x(zz), zz) && hash(i * 1.9 + 4) > 0.35 {
+        Tuft "ns_tuft_{i}"(seed: hash(i * 2.3)) { Position: {road_x(zz) + side * (2.6 + hash(i * 3.7) * 1.2), 0, zz} }
+      }
+    }
+    for i in 0..100 {
+      const xx = -58 + i * 1.5 + hash(i * 0.9) * 0.8
+      const side = match i % 2 { 0: 1; _: -1 }
+      if !in_village(xx, road_z(xx)) && abs(xx - river_x(0)) > 6 && hash(i * 2.9 + 1) > 0.35 {
+        Tuft "ew_tuft_{i}"(seed: hash(i * 1.7)) { Position: {xx, 0, road_z(xx) + side * (2.6 + hash(i * 5.1) * 1.2)} }
+      }
+    }
+  }
+
+  meadow {
+    for i in 0..320 {
+      const x = -40 + hash(i * 1.37 + 11) * 134
+      const z = -29 + hash(i * 2.53 + 17) * 58
+      if !on_road(x, z) && !in_village(x, z) && abs(x - river_x(z)) > 5 {
+        Tuft "gt_{i}"(seed: hash(i * 3.1)) { Position: {x, 0, z} }
+      }
+    }
+    for i in 0..140 {
+      const x = -40 + hash(i * 1.7) * 134
+      const z = -29 + hash(i * 2.9 + 3) * 58
+      if !on_road(x, z) && !in_village(x, z) && !in_farm(x, z) && !in_river(x, z) && abs(x - river_x(z)) > 4 {
+        if i % 3 == 0 {
+          Flowers "f_{i}"(seed: hash(i)) { Position: {x, 0, z} }
+        } else {
+          Tuft "g_{i}"(seed: hash(i)) { Position: {x, 0, z} }
+        }
+      }
+    }
+    for i in 0..60 {
+      const x = -96 + hash(i * 4.1) * 50
+      const z = -94 + hash(i * 3.3 + 1) * 188
+      if !near_lake(x, z, 2.5) && abs(x - river_x(z)) > 5 && !(abs(z - road_z(x)) < 3) && dist2(x, z, -78, 44) > 64 {
+        if i % 4 == 0 {
+          Tree "wt_{i}"(seed: hash(i * 7), kind: match i % 8 { 0: 2; _: 0 }) { Position: {x, 0, z} }
+        } else if i % 4 == 1 {
+          Bush "wb_{i}"(seed: hash(i * 5)) { Position: {x, 0, z} }
+        } else {
+          Flowers "wf_{i}"(seed: hash(i * 3)) { Position: {x, 0, z} }
+        }
+      }
+    }
+    for i in 0..24 {
+      const a = i * 0.26
+      const r = LAKE_R + 0.6 + fract(i * 0.37) * 1.2
+      if !(abs(sin(a) * r + LAKE_Z - 4) < 3 && cos(a) > 0) {
+        Reeds "reeds_{i}"(seed: i * 0.31) { Position: {LAKE_X + cos(a) * r, 0, LAKE_Z + sin(a) * r} }
+      }
+    }
+    for i in 0..18 {
+      const x = -36 + i * 7.5 + hash(i) * 3
+      if x < 92 && abs(x - road_x(0)) > 6 && !(x > -36 && x < 30) {
+        Tree "edge_n_{i}"(seed: hash(i * 2), kind: 0) { Position: {x, 0, -27 + hash(i * 3) * 2} }
+      }
+    }
+  }
+
+  border {
+    for i in 0..56 {
+      const t = i * 3.6 - 100
+      Tree "bn_{i}"(seed: hash(i), kind: 1, s: 1.3) { Position: {t, 0, -99 - hash(i * 3) * 4} }
+      Tree "bs_{i}"(seed: hash(i + 9), kind: 1, s: 1.3) { Position: {t, 0, 99 + hash(i * 5) * 4} }
+      Tree "be_{i}"(seed: hash(i + 17), kind: match i % 3 { 0: 1; _: 0 }, s: 1.3) { Position: {99 + hash(i * 7) * 4, 0, t} }
+      Tree "bw_{i}"(seed: hash(i + 23), kind: match i % 3 { 0: 1; _: 0 }, s: 1.3) { Position: {-99 - hash(i * 11) * 4, 0, t} }
+    }
+    for i in 0..24 {
+      const a = i * 0.2618
+      "mount_{i}" : MvHillGrass { Position: {cos(a) * 170, -18, sin(a) * 170}; Rotation: {0, i, 0}; Scale: {50, 40 + hash(i) * 30, 50}; IcoSphere: {radius: 1, segments: 3, smooth: true}; Rgb: {150 + hash(i * 2) * 20, 162, 96}; TextureTransform: {8, 5, 0, 0} }
+    }
+  }
+
+  village {
+    Well well(x: -29.4, z: -13.6)
+    Stall stall_a(x: 8.6, z: -6.0, cloth: 0, rot: -0.3)
+    Stall stall_b(x: -7.0, z: -6.2, cloth: 1, rot: 0.3)
+    Stall stall_c(x: -7.6, z: -11.2, cloth: 2, rot: 0.5)
+    Bench bench_a { Position: {-2.4, 0.06, -3.6}; Rotation: {0, 3.14, 0} }
+    Bench bench_b { Position: {4.6, 0.06, -3.6}; Rotation: {0, 3.14, 0} }
+    Bench bench_c { Position: {-26.4, 0.06, -11.4}; Rotation: {0, 3.14, 0} }
+    Bench bench_d { Position: {-4.0, 0.05, 15.4}; Rotation: {0, 3.14, 0} }
+    Signpost sign_v { Position: {11.8, 0, 3.6} }
+    Barrel barrel_a { Position: {-25.2, 0.05, -3.9} }
+    Barrel barrel_b { Position: {19.2, 0.05, 3.8} }
+    Barrel barrel_c { Position: {-12.8, 0.05, -3.9} }
+    Crate crate_a { Position: {12.8, 0.05, -3.9} }
+    Crate crate_b(s: 0.5) { Position: {12.9, 0.75, -3.9} }
+    Crate crate_c { Position: {-35.4, 0, 11.0}; Rotation: {0, 0.4, 0} }
+    Woodpile smithy_wood { Position: {14.4, 0, 11.4}; Rotation: {0, HALF_PI, 0} }
+    anvil : MvIron { Position: {13.6, 0.5, 3.7}; Box: {1.0, 0.5, 0.5} }
+    anvil_base : MvDarkStone { Position: {13.6, 0.25, 3.7}; Box: {0.6, 0.4, 0.4} }
+    HayBale yard_hay { Position: {29.0, 0.02, 4.8}; Rotation: {0, 0.3, 0} }
+    Cart cart_a { Position: {31.0, 0, -3.8}; Rotation: {0, 0.2, 0} }
+    Fence garden_n_a(len: 5.4) { Position: {-35.8, 0, 16.5} }
+    Fence garden_n_b(len: 5.8) { Position: {-28.4, 0, 16.5} }
+    Fence garden_s(len: 13) { Position: {-32, 0, 27.5} }
+    Fence garden_w(len: 11) { Position: {-38.5, 0, 22}; Rotation: {0, HALF_PI, 0} }
+    Fence garden_e(len: 11) { Position: {-25.5, 0, 22}; Rotation: {0, HALF_PI, 0} }
+    Fence yard_e(len: 7.6) { Position: {30.6, 0, 7.6}; Rotation: {0, HALF_PI, 0} }
+    Fence yard_s(len: 10.4) { Position: {25.4, 0, 11.4} }
+    Tree v_tree_a(seed: 0.31, kind: 0) { Position: {-33.5, 0, -28.6} }
+    Tree v_tree_b(seed: 0.57, kind: 2) { Position: {-13, 0, -28.8} }
+    Tree v_tree_c(seed: 0.73, kind: 0) { Position: {9, 0, -28.4} }
+    Tree v_tree_d(seed: 0.11, kind: 3) { Position: {25, 0, -28.8} }
+    Tree v_tree_e(seed: 0.23, kind: 0) { Position: {-20, 0, 29.0} }
+    Tree v_tree_f(seed: 0.47, kind: 2) { Position: {1.4, 0, 29.2} }
+    Tree v_tree_g(seed: 0.83, kind: 0) { Position: {17, 0, 29.4} }
+    Tree v_tree_h(seed: 0.64, kind: 0) { Position: {-36.6, 0, 30.2} }
+    Bush v_bush_a(seed: 0.12) { Position: {-24.4, 0, -23.6} }
+    Bush v_bush_b(seed: 0.52) { Position: {12.4, 0, -23.4} }
+    Bush v_bush_c(seed: 0.33) { Position: {19.4, 0, 24.0} }
+    Bush v_bush_d(seed: 0.78) { Position: {-8.4, 0, 24.2} }
+    Bush v_bush_e(seed: 0.91) { Position: {-36.6, 0, -24.0} }
+    Flowers v_flow_a(seed: 0.2) { Position: {-14.6, 0, 15.8} }
+    Flowers v_flow_b(seed: 0.6) { Position: {10.2, 0, -17.0} }
+    Flowers v_flow_c(seed: 0.8) { Position: {-20.4, 0, -3.8} }
+    Flowers v_flow_d(seed: 0.4) { Position: {-30.4, 0, 3.8} }
+    Flowers v_flow_e(seed: 0.7) { Position: {23.4, 0, -3.8} }
+    Flowers v_flow_f(seed: 0.15) { Position: {-1.0, 0, 23.6} }
+    for i in 0..18 {
+      const ang = i * 2.4
+      const gx = match i % 6 { 0: -34.0; 1: -19.0; 2: 4.0; 3: 18.0; 4: -6.0; _: 27.0 }
+      const gz = match i % 3 { 0: -23.8; 1: 23.8; _: 28.6 }
+      Tuft "v_tuft_{i}"(seed: hash(i * 2.1)) { Position: {gx + cos(ang) * 1.6, 0, gz + sin(ang) * 0.6} }
+    }
+  }
+
+  farm {
+    for i in 0..13 {
+      const z = -28 + i * 4.6
+      if abs(z - road_z(33)) > 3.5 {
+        Fence "west_fence_{i}"(len: 4.6) { Position: {33, 0, z + 2.3}; Rotation: {0, HALF_PI, 0} }
+      }
+    }
+    wheat_field : MvWheat { Position: {50, 0.03, -25}; Box: {20, 0.06, 6} }
+    for i in 0..10 {
+      "wheat_{i}" : MvWheat { Position: {41 + i * 2, 0.5, -25}; Box: {1.2, 1.0, 5.5} }
+    }
+    Scarecrow scarecrow { Position: {47.5, 0, 12.5} }
+    HayBale hay_a { Position: {72, 0, -8}; Rotation: {0, 0.4, 0} }
+    HayBale hay_b { Position: {73.5, 0, -6} }
+    Cart farm_cart { Position: {58, 0, -6}; Rotation: {0, -0.4, 0} }
+    Pen chicken_pen(w: 6, d: 5) { Position: {40, 0, -6} }
+    for i in 0..5 {
+      "chick_{i}" { Position: {38.5 + fract(i * 0.71) * 3, 0.25, -7 + fract(i * 0.37) * 2.5}; Scale: {1, 1, 1.2}; Sphere: {radius: 0.25, segments: 8}; Rgb: {250, 248, 240}; PbrMaterial: {roughness: 0.9} }
+    }
+    for i in 0..6 {
+      Tree "orchard_{i}"(seed: 0.5 + i * 0.07, kind: 0, s: 0.75) { Position: {86 + (i % 2) * 5, 0, -24 + floor(i / 2) * 5} }
+    }
+  }
+
+  lakeside {
+    Dock dock(x: -59, z: 4, len: 7)
+    Boat boat_a { Position: {-62.5, 0.05, 0.5}; Rotation: {0, 1.4, 0} }
+    Woodpile camp_wood { Position: {-17, 0, -65}; Rotation: {0, 0.4, 0} }
+    Tower stargazer(x: -77.5, z: -9.5)
+    Barrel lou_barrel { Position: {-53, 0, 9} }
+    Crate lou_crate { Position: {-52, 0, 10.5} }
+    Signpost sign_w { Position: {-49, 0, -3.5} }
+  }
+
+  shrine {
+    for i in 0..9 {
+      const a = i * 0.698 + 0.2
+      if abs(sin(a) * 9.5 + 8) > 2.5 || cos(a) > 0 {
+        "menhir_{i}" : MvStone { Position: {18 + cos(a) * 9.5, 1.3, -80 + sin(a) * 9.5}; Rotation: {0.05 * sin(i), a, 0.06 * cos(i)}; Box: {1.0, 2.6 + fract(i * 0.37) * 1.2, 0.7} }
+      }
+    }
+    altar : MvStone { Position: {18, 0.45, -80}; Box: {2.4, 0.9, 1.4} }
+    altar_top : MvDarkStone { Position: {18, 0.95, -80}; Box: {2.6, 0.12, 1.6} }
+    crystal { Position: {18, 1.6, -80}; Rotation: {0, 0.6, 0}; Scale: {1, 2, 1}; IcoSphere: {radius: 0.35, segments: 0}; Rgb: {170, 220, 255}; Emissive: {strength: 2, color: {140, 210, 255}} }
+  }
+
+  forest_detail {
+    for i in 0..36 {
+      const x = -38 + hash(i * 3.9 + 1) * 130
+      const z = -92 + hash(i * 7.3 + 4) * 50
+      if !on_ns_road(x, z) && x < 92 {
+        "fern_{i}" {
+          Position: {x, 0, z}
+          Rotation: {0, i, 0}
+          for k in 0..5 {
+            const a = k * 1.256
+            "frond_{k}" : MvLeafLight { Position: {sin(a) * 0.35, 0.3, cos(a) * 0.35}; Rotation: {cos(a) * 0.9, 0, 0 - sin(a) * 0.9}; Scale: {0.4, 1, 0.12}; Cone: {length: 0.9, radius: 0.5, segments: 4} }
+          }
+        }
+      }
+    }
+    for i in 0..9 {
+      const x = -36 + hash(i * 5.7 + 3) * 126
+      const z = -90 + hash(i * 2.9 + 8) * 46
+      if !on_ns_road(x, z) && !forest_clear(x, z) {
+        "log_{i}" : MvBark { Position: {x, 0.35, z}; Rotation: {0, i * 1.3, HALF_PI}; Cylinder: {length: 3 + hash(i) * 2, radius: 0.35, segments: 8} }
+      }
+    }
+  }
+
+  hill_flowers {
+    for i in 0..70 {
+      const x = -38 + hash(i * 2.7 + 9) * 128
+      const z = 42 + hash(i * 4.9 + 1) * 50
+      if !hills_clear(x, z) || pasture_spot(x, z) {
+        "hf_{i}" {
+          Position: {x, 0, z}
+          for k in 0..4 {
+            const a = i + k * 1.57
+            "s_{k}" : MvLeaf { Position: {sin(a) * 0.3, 0.12, cos(a) * 0.3}; Box: {0.04, 0.24, 0.04} }
+            "b_{k}" : MvPetalYellow { Position: {sin(a) * 0.3, 0.26, cos(a) * 0.3}; Sphere: {radius: 0.08, segments: 5} }
+          }
+        }
+      }
+    }
+  }
+
+  south {
+    Pen sheep_pen(w: 10, d: 8) { Position: {-16, 0, 56} }
+    MineMouth mine(x: 30, z: 51)
+    quarry_pit : MvCliff { Position: {14, -0.2, 73}; Scale: {5, 1, 3}; IcoSphere: {radius: 1, segments: 1} }
+    quarry_rock_a : MvRock { Position: {38, 1.0, 72}; Scale: {3, 2, 2.5}; IcoSphere: {radius: 1, segments: 0} }
+    quarry_blocks {
+      for i in 0..4 {
+        "b_{i}" : MvStone { Position: {29 + i * 1.6, 0.6, 72}; Box: {1.2, 1.2, 1.2} }
+      }
+    }
+    Tower watch(x: -30, z: 86)
+    Signpost sign_s { Position: {7.8, 0, 30.0} }
+  }
+}
+
+targets {
+  Hearth hearth(id: 0, q: Q_HEARTH, sp: SP_SPARK, x: -5.0, z: 18.8, hint: "The hearth needs fire. Choose Spark with 1.")
+
+  const lx = [-9.0, 10.6, -9.0, 10.6, -5.0, 2.6]
+  const lz = [-4.0, -4.0, -13.8, -13.8, -14.4, -14.4]
+  for i in 0..6 {
+    LampPost "lamp_{i}"(id: 1 + i, q: Q_LAMPS, sp: SP_SPARK, x: lx[i], z: lz[i], rot: atan2(lz[i] - SQ_Z, lx[i] - SQ_X) + 3.14, hint: "The lamp's wick wants a flame.")
+  }
+
+  Oven oven(id: 7, q: Q_BREAD, sp: SP_SPARK, x: 11.4, z: -19.4, r: 2.4, hint: "The oven is cold. It needs fire.")
+
+  Weed weed_0(id: 8, q: Q_WEEDS, sp: SP_SPARK, x: -37.2, z: 26.4, hint: "These thorns are too tough to pull. Burn them!")
+  Weed weed_1(id: 9, q: Q_WEEDS, sp: SP_SPARK, x: -26.6, z: 26.6, hint: "These thorns are too tough to pull. Burn them!")
+  Weed weed_2(id: 10, q: Q_WEEDS, sp: SP_SPARK, x: -37.4, z: 17.6, hint: "These thorns are too tough to pull. Burn them!")
+  Weed weed_3(id: 11, q: Q_WEEDS, sp: SP_SPARK, x: -32.4, z: 26.8, hint: "These thorns are too tough to pull. Burn them!")
+  Weed weed_4(id: 12, q: Q_WEEDS, sp: SP_SPARK, x: -26.8, z: 17.4, hint: "These thorns are too tough to pull. Burn them!")
+
+  for i in 0..6 {
+    HerbBed "herb_{i}"(id: 13 + i, q: Q_HERBS, sp: SP_SPLASH, x: -35.2 + (i % 3) * 3.6, z: 20.0 + floor(i / 3) * 4.0, r: 1.9, hint: "The herbs are parched. They need water, not that!")
+  }
+
+  HayFire fire_0(id: 19, q: Q_FIRE, sp: SP_SPLASH, x: 22.4, z: 5.6, hint: "Water! Fire needs water!")
+  HayFire fire_1(id: 20, q: Q_FIRE, sp: SP_SPLASH, x: 26.6, z: 5.4, hint: "Water! Fire needs water!")
+  HayFire fire_2(id: 21, q: Q_FIRE, sp: SP_SPLASH, x: 28.4, z: 9.4, hint: "Water! Fire needs water!")
+  HayFire fire_3(id: 22, q: Q_FIRE, sp: SP_SPLASH, x: 23.8, z: 9.8, hint: "Water! Fire needs water!")
+
+  for i in 0..8 {
+    CropPatch "crop_{i}"(id: 23 + i, q: Q_FIELDS, sp: SP_SPLASH, x: 44 + (i % 4) * 7, z: 9 + floor(i / 4) * 7, r: 2.8, hint: "The soil is cracked and dry. It wants rain.")
+  }
+
+  MillTarget mill(id: 31, q: Q_MILL, sp: SP_GUST, x: 80, z: -18, r: 4, hint: "The sails need wind to turn.")
+  Crow crow_0(gy: 1.8, id: 32, q: Q_MILL, sp: SP_GUST, x: 42, z: -23, hint: "The crow just stares at you. Blow it away!")
+  Crow crow_1(gy: 1.8, id: 33, q: Q_MILL, sp: SP_GUST, x: 47.5, z: -26.5, hint: "The crow just stares at you. Blow it away!")
+  Crow crow_2(gy: 1.8, id: 34, q: Q_MILL, sp: SP_GUST, x: 52.5, z: -23, hint: "The crow just stares at you. Blow it away!")
+  Crow crow_3(gy: 1.8, id: 35, q: Q_MILL, sp: SP_GUST, x: 57, z: -26, hint: "The crow just stares at you. Blow it away!")
+  Crow crow_4(gy: 1.8, id: 36, q: Q_MILL, sp: SP_GUST, x: 39, z: -27, hint: "The crow just stares at you. Blow it away!")
+
+  Laundry line_0(id: 37, q: Q_LAUNDRY, sp: SP_GUST, x: 74, z: 20, hint: "Careful with the laundry! A breeze would dry it.")
+  Laundry line_1(id: 38, q: Q_LAUNDRY, sp: SP_GUST, x: 80, z: 20, hint: "Careful with the laundry! A breeze would dry it.")
+  Laundry line_2(id: 39, q: Q_LAUNDRY, sp: SP_GUST, x: 86, z: 20, hint: "Careful with the laundry! A breeze would dry it.")
+  Laundry line_3(id: 40, q: Q_LAUNDRY, sp: SP_GUST, x: 77, z: 25.5, hint: "Careful with the laundry! A breeze would dry it.")
+  Laundry line_4(id: 41, q: Q_LAUNDRY, sp: SP_GUST, x: 83, z: 25.5, hint: "Careful with the laundry! A breeze would dry it.")
+
+  FogBank fog_0(id: 42, q: Q_FOG, sp: SP_GUST, x: road_x(-32.5), z: -32.5, w: 7, r: 3.5, hint: "A thick, cold fog. A strong wind might clear it.")
+  FogBank fog_1(id: 43, q: Q_FOG, sp: SP_GUST, x: road_x(-36), z: -36, w: 7, r: 3.5, hint: "A thick, cold fog. A strong wind might clear it.")
+  FogBank fog_2(id: 44, q: Q_FOG, sp: SP_GUST, x: road_x(-39.5), z: -39.5, w: 7, r: 3.5, hint: "A thick, cold fog. A strong wind might clear it.")
+
+  CampTarget campfire(id: 45, q: Q_CAMP, sp: SP_SPARK, x: -21, z: -56, hint: "Gareth's campfire is cold and dead.")
+  LeafPile leaves_0(id: 46, q: Q_CAMP, sp: SP_GUST, x: -27, z: -58, hint: "Burning the leaves would burn the logs too. Blow them away!")
+  LeafPile leaves_1(id: 47, q: Q_CAMP, sp: SP_GUST, x: -13, z: -64, hint: "Burning the leaves would burn the logs too. Blow them away!")
+  LeafPile leaves_2(id: 48, q: Q_CAMP, sp: SP_GUST, x: -25, z: -52.5, hint: "Burning the leaves would burn the logs too. Blow them away!")
+  LeafPile leaves_3(id: 49, q: Q_CAMP, sp: SP_GUST, x: -13.5, z: -54, hint: "Burning the leaves would burn the logs too. Blow them away!")
+
+  Brazier brazier_0(id: 50, q: Q_TRIAL, sp: SP_SPARK, x: 12.5, z: -80, hint: "A spirit brazier. It hungers for flame.")
+  Brazier brazier_1(id: 51, q: Q_TRIAL, sp: SP_SPARK, x: 23.5, z: -80, hint: "A spirit brazier. It hungers for flame.")
+  Brazier brazier_2(id: 52, q: Q_TRIAL, sp: SP_SPARK, x: 18, z: -85.5, hint: "A spirit brazier. It hungers for flame.")
+  Brazier brazier_3(id: 53, q: Q_TRIAL, sp: SP_SPARK, x: 18, z: -74.5, hint: "A spirit brazier. It hungers for flame.")
+
+  for i in 0..6 {
+    const a = i * 1.047 + 0.3
+    Sapling "sapling_{i}"(id: 54 + i, q: Q_GROVE, sp: SP_BLOOM, x: 36 + cos(a) * 4.2, z: -58 + sin(a) * 4.2, r: 1.8, hint: "Only a burnt stump. New life must be coaxed from it.")
+  }
+
+  Pumpkin pumpkin(id: 60, q: Q_PUMPKIN, sp: SP_BLOOM, lv: 3, x: 70, z: 25, r: 2.6, hint: "Maud's pumpkin needs to GROW.")
+
+  VineBridge bridge(id: 61, q: Q_BRIDGE, sp: SP_BLOOM, x: river_x(road_z(-42)), z: road_z(-42), r: 5, hint: "The old bridge is broken. Something green and strong could span the gap.")
+
+  LilyPad lily_0(id: 62, q: Q_LILY, sp: SP_BLOOM, x: -67, z: 7.2, r: 1.8, hint: "A sleeping lily bud, waiting for spring.")
+  LilyPad lily_1(id: 63, q: Q_LILY, sp: SP_BLOOM, x: -71, z: 8, r: 1.8, hint: "A sleeping lily bud, waiting for spring.")
+  LilyPad lily_2(id: 64, q: Q_LILY, sp: SP_BLOOM, x: -75.5, z: 7.5, r: 1.8, hint: "A sleeping lily bud, waiting for spring.")
+  LilyPad lily_3(id: 65, q: Q_LILY, sp: SP_BLOOM, x: -78.5, z: 6, r: 1.8, hint: "A sleeping lily bud, waiting for spring.")
+  LilyPad lily_4(id: 66, q: Q_LILY, sp: SP_BLOOM, x: -82.5, z: 3, r: 1.8, hint: "A sleeping lily bud, waiting for spring.")
+
+  Floe floe_0(id: 67, q: Q_ISLE, sp: SP_FROST, x: -58.8, z: -7.2, r: 2.2, hint: "Deep water. If only it were solid...")
+  Floe floe_1(id: 68, q: Q_ISLE, sp: SP_FROST, x: -62.1, z: -7.4, r: 2.2, hint: "Deep water. If only it were solid...")
+  Floe floe_2(id: 69, q: Q_ISLE, sp: SP_FROST, x: -65.3, z: -7.6, r: 2.2, hint: "Deep water. If only it were solid...")
+  Floe floe_3(id: 70, q: Q_ISLE, sp: SP_FROST, x: -68.4, z: -7.8, r: 2.2, hint: "Deep water. If only it were solid...")
+  Beacon beacon(id: 71, q: Q_ISLE, sp: SP_SPARK, x: -73.2, z: -6.2, hint: "The old signal beacon. It needs a flame.")
+
+  LemonadeBarrel lemon_0(id: 72, q: Q_DRINKS, sp: SP_FROST, x: -3.4, z: 3.6, r: 1.3, hint: "Warm lemonade. It needs to be chilled.")
+  LemonadeBarrel lemon_1(id: 73, q: Q_DRINKS, sp: SP_FROST, x: -1.8, z: 3.9, r: 1.3, hint: "Warm lemonade. It needs to be chilled.")
+  LemonadeBarrel lemon_2(id: 74, q: Q_DRINKS, sp: SP_FROST, x: 5.0, z: 3.8, r: 1.3, hint: "Warm lemonade. It needs to be chilled.")
+
+  Boulder boulder_0(id: 75, q: Q_ROCKS, sp: SP_LIFT, x: road_x(33), z: 33, to_x: road_x(33) + 6.5, to_z: 32, r: 2.6, hint: "A boulder far too heavy to push. If only you could lift it...")
+  Boulder boulder_1(id: 76, q: Q_ROCKS, sp: SP_LIFT, x: road_x(36.5), z: 36.5, to_x: road_x(36.5) - 6.5, to_z: 36, r: 2.6, hint: "A boulder far too heavy to push. If only you could lift it...")
+  Boulder boulder_2(id: 77, q: Q_ROCKS, sp: SP_LIFT, x: road_x(40), z: 40, to_x: road_x(40) + 6.5, to_z: 40.5, r: 2.6, hint: "A boulder far too heavy to push. If only you could lift it...")
+
+  MineLamp mine_lamp_0(id: 78, q: Q_MINE, sp: SP_SPARK, x: 22.5, z: 64, hint: "A miner's lamp, unlit.")
+  MineLamp mine_lamp_1(id: 79, q: Q_MINE, sp: SP_SPARK, x: 24.5, z: 57.5, hint: "A miner's lamp, unlit.")
+  MineLamp mine_lamp_2(id: 80, q: Q_MINE, sp: SP_SPARK, x: 35.5, z: 57.5, hint: "A miner's lamp, unlit.")
+  MineLamp mine_lamp_3(id: 81, q: Q_MINE, sp: SP_SPARK, x: 37.5, z: 64, hint: "A miner's lamp, unlit.")
+  MineLamp mine_lamp_4(id: 82, q: Q_MINE, sp: SP_SPARK, x: 30, z: 67, hint: "A miner's lamp, unlit.")
+
+  Sheep sheep_0(id: 83, q: Q_SHEEP, sp: SP_LIFT, x: -31, z: 70, to_x: -18.5, to_z: 54.5, hint: "The sheep won't budge. Maybe it would like to fly?")
+  Sheep sheep_1(id: 84, q: Q_SHEEP, sp: SP_LIFT, x: -5, z: 80, to_x: -15, to_z: 57.5, hint: "The sheep won't budge. Maybe it would like to fly?")
+  Sheep sheep_2(id: 85, q: Q_SHEEP, sp: SP_LIFT, x: 12, z: 52, to_x: -13, to_z: 54, hint: "The sheep won't budge. Maybe it would like to fly?")
+  Sheep sheep_3(id: 86, q: Q_SHEEP, sp: SP_LIFT, x: -36, z: 48, to_x: -19, to_z: 58, hint: "The sheep won't budge. Maybe it would like to fly?")
+  Sheep sheep_4(id: 87, q: Q_SHEEP, sp: SP_LIFT, x: 50, z: 50, to_x: -13.5, to_z: 58.5, hint: "The sheep won't budge. Maybe it would like to fly?")
+
+  RoofCat cat(id: 88, q: Q_CAT, sp: SP_LIFT, x: 0.6, y: 6.0, gy: 6.6, z: 19.65, to_x: 2.8, to_z: 15.8, r: 3, hint: "The cat is stuck up there. It needs a gentle lift down.")
+
+  Planter planter_0(id: 89, q: Q_FESTIVAL, sp: SP_BLOOM, x: SQ_X + 4.6, z: SQ_Z + 3.3, r: 1.6, hint: "An empty planter, waiting for flowers.")
+  Planter planter_1(id: 90, q: Q_FESTIVAL, sp: SP_BLOOM, x: SQ_X - 4.6, z: SQ_Z + 3.3, r: 1.6, hint: "An empty planter, waiting for flowers.")
+  Planter planter_2(id: 91, q: Q_FESTIVAL, sp: SP_BLOOM, x: SQ_X - 4.6, z: SQ_Z - 3.3, r: 1.6, hint: "An empty planter, waiting for flowers.")
+  Planter planter_3(id: 92, q: Q_FESTIVAL, sp: SP_BLOOM, x: SQ_X + 4.6, z: SQ_Z - 3.3, r: 1.6, hint: "An empty planter, waiting for flowers.")
+  Fountain fountain(id: 93, q: Q_FESTIVAL, sp: SP_SPLASH, x: SQ_X, z: SQ_Z, r: 3.2, hint: "The fountain is dry. It needs water.")
+  IceSculpture sculpture(id: 94, q: Q_FESTIVAL, sp: SP_FROST, x: -12.4, z: -14.4, r: 1.8, hint: "Elder Bram wanted an ice swan here.")
+  GreatLantern great_lantern(id: 95, q: Q_FESTIVAL, sp: SP_LIFT, x: 6.8, z: -14.0, lit_id: 96, r: 2.8, hint: "The Great Lantern must be raised high first.")
+  Target great_lantern_wick(id: 96, q: Q_FESTIVAL, sp: SP_SPARK, x: 6.8, z: -14.0, r: 2.8, req: 95, gy: 5.4, hint: "Raise the Great Lantern with Lift before lighting it.")
+}
+
+side_quests {
+  for i in 0..6 {
+    const a = i * 1.047
+    FairyShroom "shroom_{i}"(id: 97 + i, q: Q_FAIRY, sp: SP_BLOOM, x: -78 + cos(a) * 4, z: 44 + sin(a) * 4, r: 1.6, hint: "A wilted fairy mushroom. It needs to grow again.")
+  }
+  fairy_floor : MvMeadow { Position: {-78, 0.019, 44}; Cylinder: {length: 0.01, radius: 5.5, segments: 32}; Rgb: {120, 170, 90}; TextureTransform: {11 / TILE_GRASS, 11 / TILE_GRASS, 0, 0} }
+  Weed tower_thorn_0(id: 103, q: Q_TOWER, sp: SP_SPARK, x: -22, z: 66, hint: "Thornweed chokes the path. Burn it!")
+  Weed tower_thorn_1(id: 104, q: Q_TOWER, sp: SP_SPARK, x: -22.5, z: 73, hint: "Thornweed chokes the path. Burn it!")
+  Weed tower_thorn_2(id: 105, q: Q_TOWER, sp: SP_SPARK, x: -25, z: 79, hint: "Thornweed chokes the path. Burn it!")
+  Beacon tower_beacon(id: 106, q: Q_TOWER, sp: SP_SPARK, x: -26, z: 83, hint: "The watchtower beacon. It needs a flame.")
+}
+
+wisps {
+  const mx = [-26, 27, 4, -38, 93, 58, 91, 38, -36, 6, 44, -6, -88, -90, -73, -52, -38, 48, 60, 4]
+  const mz = [30, -24, 26, -21, -28, 27, 4, -25, -70, -90, -82, -48, 20, -28, -11.5, -40, 88, 60, 88, 92]
+  for i in 0..20 {
+    Wisp "wisp_{i}"(i: i, x: mx[i], z: mz[i])
+  }
+}
+
+npcs {
+  Npc elder(id: N_ELDER, x: -7.6, z: -15.2, face: 0.3)
+  Npc pella(id: N_PELLA, x: 10.4, z: -15.6, face: -0.3)
+  Npc mira(id: N_MIRA, x: -23.6, z: 15.4, face: -0.6)
+  Npc dorn(id: N_DORN, x: 21.2, z: 3.4, face: 0.4)
+  Npc rosa(id: N_ROSA, x: -0.6, z: 3.5, face: 0.2)
+  Npc tam(id: N_TAM, x: 4.6, z: 15.6, face: -0.3)
+  Npc oswin(id: N_OSWIN, x: 47, z: -8.5, face: 0.3)
+  Npc maud(id: N_MAUD, x: 78.5, z: 11, face: -1.5)
+  Npc gareth(id: N_GARETH, x: -17, z: -59, face: 0)
+  Npc fennick(id: N_FENNICK, x: 15, z: -71, face: 0.3)
+  Npc lou(id: N_LOU, x: -55.5, z: 6.5, face: -1.4)
+  Npc gruff(id: N_GRUFF, x: 18, z: 63, face: 0.5)
+  Npc ada(id: N_ADA, x: -16, z: 49.5, face: 0.2)
+
+  Villager walker_a(seed: 0.1, x0: -34, z0: -0.4, x1: -14, z1: 0.4, period: 9)
+  Villager walker_b(seed: 0.4, x0: 12, z0: 1.2, x1: 30, z1: 1.6, period: 10)
+  Villager walker_c(seed: 0.7, x0: -24, z0: 14.4, x1: -2, z1: 14.4, period: 11)
+  Villager walker_d(seed: 0.9, x0: 40, z0: 2.5, x1: 70, z1: 3, period: 14)
+}
+
+async {
+  for z in 0..200 {
+    for x in 0..200 {
+      const wx = x - 100 + 0.5
+      const wz = z - 100 + 0.5
+      if in_water(wx, wz) {
+        blocked[z * GRID_N + x] = true
+      }
+    }
+  }
+  for j in 0..19 {
+    for i in 0..39 {
+      if tree_here(i, j) {
+        block_disc(tree_x(i, j), tree_z(i, j), 0.7)
+      }
+    }
+  }
+  for j in 0..14 {
+    for i in 0..29 {
+      if rock_here(i, j) {
+        block_disc(rock_x(i, j), rock_z(i, j), 1.2)
+      }
+    }
+  }
+  for i in 0..9 {
+    const a = i * 0.698 + 0.2
+    if abs(sin(a) * 9.5 + 8) > 2.5 || cos(a) > 0 {
+      block_disc(18 + cos(a) * 9.5, -80 + sin(a) * 9.5, 0.6)
+    }
+  }
+  block_rect(16.8, -80.8, 19.2, -79.2)
+  block_rect(-48, WALL_N0, road_x(-36) - 3, WALL_N1)
+  block_rect(road_x(-36) + 3, WALL_N0, 100, WALL_N1)
+  block_rect(-48, WALL_S0, road_x(36) - 3, WALL_S1)
+  block_rect(road_x(36) + 3, WALL_S0, 100, WALL_S1)
+  world_ready = true
+}

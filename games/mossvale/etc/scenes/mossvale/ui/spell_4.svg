@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+<defs><linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff0b8"/><stop offset="0.35" stop-color="#e2b456"/><stop offset="0.7" stop-color="#b07a2a"/><stop offset="1" stop-color="#6e4614"/></linearGradient>
+<linearGradient id="leaf" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9cc070"/><stop offset="1" stop-color="#3e6a34"/></linearGradient>
+</defs>
+<ellipse cx="64" cy="36" rx="17" ry="27" fill="#fffaf0" stroke="#3a2410" stroke-width="3" stroke-linejoin="round" transform="rotate(0 64 64)"/>
+<ellipse cx="64" cy="36" rx="17" ry="27" fill="#fffaf0" stroke="#3a2410" stroke-width="3" stroke-linejoin="round" transform="rotate(72 64 64)"/>
+<ellipse cx="64" cy="36" rx="17" ry="27" fill="#fffaf0" stroke="#3a2410" stroke-width="3" stroke-linejoin="round" transform="rotate(144 64 64)"/>
+<ellipse cx="64" cy="36" rx="17" ry="27" fill="#fffaf0" stroke="#3a2410" stroke-width="3" stroke-linejoin="round" transform="rotate(216 64 64)"/>
+<ellipse cx="64" cy="36" rx="17" ry="27" fill="#fffaf0" stroke="#3a2410" stroke-width="3" stroke-linejoin="round" transform="rotate(288 64 64)"/>
+<circle cx="64" cy="64" r="15" fill="#ffd84a" stroke="#3a2410" stroke-width="3"/>
+<circle cx="60" cy="60" r="4" fill="#fff6c8"/>
+</svg>

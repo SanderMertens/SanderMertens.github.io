@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 340" width="256" height="340">
+<defs><linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff0b8"/><stop offset="0.35" stop-color="#e2b456"/><stop offset="0.7" stop-color="#b07a2a"/><stop offset="1" stop-color="#6e4614"/></linearGradient>
+<linearGradient id="leaf" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9cc070"/><stop offset="1" stop-color="#3e6a34"/></linearGradient>
+<linearGradient id="cork" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7a5230"/><stop offset="0.45" stop-color="#c08a56"/><stop offset="1" stop-color="#6a4426"/></linearGradient></defs>
+<path d="M44 300 Q30 270 40 248" fill="none" stroke="#2a1c0e" stroke-width="5" stroke-linecap="round"/>
+<path d="M44 300 Q30 270 40 248" fill="none" stroke="#5c7a3a" stroke-width="2.6" stroke-linecap="round"/>
+<path d="M212 300 Q226 270 216 248" fill="none" stroke="#2a1c0e" stroke-width="5" stroke-linecap="round"/>
+<path d="M212 300 Q226 270 216 248" fill="none" stroke="#5c7a3a" stroke-width="2.6" stroke-linecap="round"/>
+<path d="M104 112 V60 H152 V112" fill="none" stroke="#2a1c0e" stroke-width="9" stroke-linejoin="round"/>
+<path d="M104 112 V60 H152 V112" fill="none" stroke="url(#gold)" stroke-width="5" stroke-linejoin="round"/>
+<circle cx="128" cy="210" r="112" fill="none" stroke="#2a1c0e" stroke-width="17"/>
+<circle cx="128" cy="210" r="112" fill="none" stroke="url(#gold)" stroke-width="11"/>
+<circle cx="128" cy="210" r="120" fill="none" stroke="#2a1c0e" stroke-width="2" opacity="0.7"/>
+<circle cx="128" cy="210" r="105" fill="none" stroke="#fff4c8" stroke-width="1.4" opacity="0.6"/>
+<line x1="70.07" y1="127.27" x2="77.53" y2="137.91" stroke="#f4e8c8" stroke-width="2.4" stroke-linecap="round" opacity="0.75"/>
+<line x1="57.84" y1="137.35" x2="62.70" y2="142.38" stroke="#f4e8c8" stroke-width="1.4" stroke-linecap="round" opacity="0.50"/>
+<line x1="47.34" y1="149.22" x2="52.93" y2="153.43" stroke="#f4e8c8" stroke-width="1.4" stroke-linecap="round" opacity="0.50"/>
+<line x1="38.82" y1="162.58" x2="50.30" y2="168.69" stroke="#f4e8c8" stroke-width="2.4" stroke-linecap="round" opacity="0.75"/>
+<line x1="32.50" y1="177.12" x2="39.12" y2="179.40" stroke="#f4e8c8" stroke-width="1.4" stroke-linecap="round" opacity="0.50"/>
+<line x1="28.53" y1="192.46" x2="35.43" y2="193.68" stroke="#f4e8c8" stroke-width="1.4" stroke-linecap="round" opacity="0.50"/>
+<line x1="27.02" y1="208.24" x2="40.01" y2="208.46" stroke="#f4e8c8" stroke-width="2.4" stroke-linecap="round" opacity="0.75"/>
+<line x1="27.98" y1="224.06" x2="34.91" y2="223.08" stroke="#f4e8c8" stroke-width="1.4" stroke-linecap="round" opacity="0.50"/>
+<line x1="31.41" y1="239.53" x2="38.11" y2="237.48" stroke="#f4e8c8" stroke-width="1.4" stroke-linecap="round" opacity="0.50"/>
+<line x1="37.22" y1="254.28" x2="48.91" y2="248.58" stroke="#f4e8c8" stroke-width="2.4" stroke-linecap="round" opacity="0.75"/>
+<line x1="45.27" y1="267.93" x2="51.00" y2="263.92" stroke="#f4e8c8" stroke-width="1.4" stroke-linecap="round" opacity="0.50"/>
+<line x1="55.35" y1="280.16" x2="60.38" y2="275.30" stroke="#f4e8c8" stroke-width="1.4" stroke-linecap="round" opacity="0.50"/>
+<line x1="67.22" y1="290.66" x2="75.04" y2="280.28" stroke="#f4e8c8" stroke-width="2.4" stroke-linecap="round" opacity="0.75"/>
+<circle cx="207.20" cy="130.80" r="5" fill="url(#gold)" stroke="#2a1c0e" stroke-width="1.6"/>
+<circle cx="48.80" cy="130.80" r="5" fill="url(#gold)" stroke="#2a1c0e" stroke-width="1.6"/>
+<circle cx="48.80" cy="289.20" r="5" fill="url(#gold)" stroke="#2a1c0e" stroke-width="1.6"/>
+<circle cx="207.20" cy="289.20" r="5" fill="url(#gold)" stroke="#2a1c0e" stroke-width="1.6"/>
+<rect x="90" y="94" width="76" height="20" rx="7" fill="url(#gold)" stroke="#2a1c0e" stroke-width="2.6"/>
+<line x1="96" y1="104" x2="160" y2="104" stroke="#6e4614" stroke-width="1.4" opacity="0.7"/>
+<circle cx="128" cy="104" r="6.5" fill="#6f9cff" stroke="#2a1c0e" stroke-width="1.8"/>
+<circle cx="126" cy="102" r="2" fill="#ffffff" opacity="0.9"/>
+<rect x="96" y="44" width="64" height="18" rx="7" fill="url(#gold)" stroke="#2a1c0e" stroke-width="2.6"/>
+<path d="M110 46 L108 16 Q108 8 116 8 H140 Q148 8 148 16 L146 46 Z" fill="url(#cork)" stroke="#2a1c0e" stroke-width="2.6" stroke-linejoin="round"/>
+<path d="M114 18 H142 M113 28 H143 M112 38 H144" fill="none" stroke="#5a3a1e" stroke-width="1.2" opacity="0.55"/>
+<circle cx="120" cy="22" r="1.6" fill="#5a3a1e" opacity="0.6"/><circle cx="135" cy="33" r="1.4" fill="#5a3a1e" opacity="0.6"/>
+<path d="M150 50 q16 4 18 22 q1 10 -6 14" fill="none" stroke="#2a1c0e" stroke-width="4.4" stroke-linecap="round"/>
+<path d="M150 50 q16 4 18 22 q1 10 -6 14" fill="none" stroke="#c9a46a" stroke-width="2.2" stroke-linecap="round"/>
+<path d="M156 82 l12 4 l-2 26 l-14 -4 Z" fill="#f2e2b8" stroke="#2a1c0e" stroke-width="2" stroke-linejoin="round" transform="rotate(-8 160 96)"/>
+<path d="M158 92 l8 2 M157 99 l7 2" stroke="#7a5a36" stroke-width="1.4" transform="rotate(-8 160 96)"/><path d="M92.00 104.00 Q73.22 111.38 63.91 93.48 Q82.69 86.10 92.00 104.00 Z" fill="url(#leaf)" stroke="#2a1c0e" stroke-width="1.6"/>
+<path d="M164.00 104.00 Q173.28 86.08 192.08 93.43 Q182.79 111.35 164.00 104.00 Z" fill="url(#leaf)" stroke="#2a1c0e" stroke-width="1.6"/>
+<path d="M84.00 96.00 Q78.29 109.65 64.11 105.40 Q69.82 91.75 84.00 96.00 Z" fill="url(#leaf)" stroke="#2a1c0e" stroke-width="1.6"/>
+<path d="M172.00 96.00 Q186.17 91.73 191.90 105.37 Q177.74 109.64 172.00 96.00 Z" fill="url(#leaf)" stroke="#2a1c0e" stroke-width="1.6"/>
+<path d="M52.00 286.00 Q52.06 303.49 34.68 305.39 Q34.61 287.90 52.00 286.00 Z" fill="url(#leaf)" stroke="#2a1c0e" stroke-width="1.6"/>
+<path d="M204.00 286.00 Q221.39 287.87 221.35 305.36 Q203.96 303.49 204.00 286.00 Z" fill="url(#leaf)" stroke="#2a1c0e" stroke-width="1.6"/>
+<path d="M40.00 266.00 Q45.28 278.37 33.53 284.93 Q28.25 272.55 40.00 266.00 Z" fill="url(#leaf)" stroke="#2a1c0e" stroke-width="1.6"/>
+<path d="M216.00 266.00 Q227.76 272.53 222.50 284.92 Q210.74 278.38 216.00 266.00 Z" fill="url(#leaf)" stroke="#2a1c0e" stroke-width="1.6"/>
+
+</svg>

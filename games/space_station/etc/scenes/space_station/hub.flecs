@@ -1,0 +1,52 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.light
+using box.material
+using box.movement
+
+template StationHubBody {
+  skirt : StationDark { Position: {0, 0.14, 0}; Cylinder: {radius: 2.72, length: 0.28, segments: 8} }
+  base : StationHull { Position: {0, 0.75, 0}; Cylinder: {radius: 2.5, length: 1, segments: 8} }
+  mid : StationPanel { Position: {0, 1.9, 0}; Frustum: {radius_bottom: 2.3, radius_top: 1.7, length: 1.3, segments: 8} }
+  band : StationDark { Position: {0, 1.3, 0}; Cylinder: {radius: 2.54, length: 0.14, segments: 8} }
+  band_light : StationCyanLight { Position: {0, 1.3, 0}; Cylinder: {radius: 2.56, length: 0.03, segments: 8} }
+  deck : StationHull { Position: {0, 2.7, 0}; Cylinder: {radius: 1.8, length: 0.3, segments: 24, smooth: true} }
+  deck_trim : StationGold { Position: {0, 2.86, 0}; Torus: {radius: 1.46, tube: 0.04, segments: 40, rings: 6, smooth: true} }
+  dome : StationGlass { Position: {0, 2.85, 0}; HemiSphere: {radius: 1.4, segments: 28, smooth: true} }
+  console : StationDark { Position: {0, 3.02, 0}; Cylinder: {radius: 0.6, length: 0.3, segments: 16} }
+  console_top : StationCyanLight { Position: {0, 3.19, 0}; Cylinder: {radius: 0.45, length: 0.03, segments: 16} }
+  for i in 0..6 {
+    const a = i * PI / 3
+    { (IsA, StationWindow); Position: {cos(a) * 0.95, 3, sin(a) * 0.95}; Rotation: {0, -a, 0}; Box: {0.3, 0.1, 0.14} }
+    { (IsA, StationDark); Position: {cos(a) * 0.95, 2.93, sin(a) * 0.95}; Rotation: {0, -a, 0}; Box: {0.34, 0.14, 0.18} }
+  }
+  for i in 0..8 {
+    const a = i * PI / 4 + PI / 8
+    { (IsA, StationDark); Position: {cos(a) * 2.32, 0.87, sin(a) * 2.32}; Rotation: {0, -a, 0}; Box: {0.06, 0.42, 1.02} }
+    { (IsA, StationWindow); Position: {cos(a) * 2.36, 0.87, sin(a) * 2.36}; Rotation: {0, -a, 0}; Box: {0.05, 0.3, 0.84} }
+    { (IsA, StationBlue); Position: {cos(a) * 2.02, 1.9, sin(a) * 2.02}; Rotation: {0, -a, 0.37}; Box: {0.04, 0.9, 0.9} }
+    { (IsA, StationDark); Position: {cos(a) * 2.06, 1.9, sin(a) * 2.06}; Rotation: {0, -a, 0.37}; Box: {0.03, 0.04, 1.04} }
+    { (IsA, StationChrome); Position: {cos(a - PI / 8) * 2.62, 0.3, sin(a - PI / 8) * 2.62}; Cylinder: {radius: 0.09, length: 0.34, segments: 8} }
+  }
+  StationPipeX pipe_n(length: 1.8, radius: 0.04) { Position: {0, 0.36, 2.5} }
+  StationPipeX pipe_s(length: 1.8, radius: 0.04) { Position: {0, 0.36, -2.5} }
+  StationAntenna ant_a(tall: 1) { Position: {1.24, 2.85, 0.5} }
+  StationAntenna ant_b(tall: 0.7) { Position: {-1.24, 2.85, -0.5} }
+  mast : StationTruss { Position: {0, 4.15, 0}; Cylinder: {radius: 0.06, length: 1.8, segments: 8} }
+  mast_tip : StationRedLight { Position: {0, 5.1, 0}; Sphere: {radius: 0.12, segments: 10} }
+  radar {
+    Position: {0, 4.55, 0}
+    Rotation: {0, 0, 0}
+    AngularVelocity: {0, 1.1, 0}
+    arm : StationWhite { Position: {0, 0, 0}; Box: {1.3, 0.1, 0.22} }
+    tip : StationGold { Position: {0.6, 0, 0}; Box: {0.1, 0.24, 0.3} }
+    tail : StationDark { Position: {-0.6, 0, 0}; Box: {0.18, 0.16, 0.16} }
+  }
+  glow {
+    Position: {0, 3.5, 0}
+    PointLight: {intensity: 14, range: 9}
+    Rgb: {120, 210, 255}
+  }
+}

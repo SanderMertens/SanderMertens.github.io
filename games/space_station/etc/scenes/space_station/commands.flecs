@@ -1,0 +1,148 @@
+include state
+
+using flecs.script
+using flecs.script.math
+using box.app
+
+async {
+  while true {
+    await on.change(st_click)
+    const now = AppStatus[AppStatus].elapsed
+    const i = st_req_slot
+    const kind = st_kind_of(i, st_grid_0, st_grid_1, st_grid_2)
+    const word = floor(i / 12)
+    if !st_lost && st_tool > 0 && st_tool != K_DEMOLISH && kind == K_EMPTY {
+      if !st_near(st_built, i) {
+        st_alert = "A module must connect to the station."
+        st_alert_until = now + 4
+      } else if st_credits < st_cost(st_tool) {
+        st_alert = "Not enough credits for a {st_kind_name(st_tool)}."
+        st_alert_until = now + 4
+      } else {
+        st_credits = st_credits - st_cost(st_tool)
+        st_built = st_built + st_bit(i)
+        if word == 0 {
+          st_grid_0 = st_bits_set(st_grid_0, i % 12, 4, st_tool)
+        } else if word == 1 {
+          st_grid_1 = st_bits_set(st_grid_1, i % 12, 4, st_tool)
+        } else {
+          st_grid_2 = st_bits_set(st_grid_2, i % 12, 4, st_tool)
+        }
+        if st_tool == K_PAX {
+          st_free_pax = st_free_pax + st_bit(i)
+        } else if st_tool == K_CARGO {
+          st_free_cargo = st_free_cargo + st_bit(i)
+        }
+        st_rising = st_bit(i)
+        st_rise_at = now + 0.08
+        st_sparks = st_bit(i)
+        st_spark_until = now + 1.3
+        st_dirty = true
+      }
+    } else if !st_lost && st_tool == K_DEMOLISH && kind > K_HUB {
+      const dock_busy = (kind == K_PAX && !st_has(st_free_pax, i)) || (kind == K_CARGO && !st_has(st_free_cargo, i))
+      if dock_busy {
+        st_alert = "That dock has a ship on it. Wait until the ship has left."
+        st_alert_until = now + 5
+      } else {
+        st_credits = st_credits + st_cost(kind) / 2
+        st_built = st_built - st_bit(i)
+        if word == 0 {
+          st_grid_0 = st_bits_set(st_grid_0, i % 12, 4, 0)
+        } else if word == 1 {
+          st_grid_1 = st_bits_set(st_grid_1, i % 12, 4, 0)
+        } else {
+          st_grid_2 = st_bits_set(st_grid_2, i % 12, 4, 0)
+        }
+        if kind == K_PAX {
+          st_free_pax = st_free_pax - st_bit(i)
+        } else if kind == K_CARGO {
+          st_free_cargo = st_free_cargo - st_bit(i)
+        }
+        st_dirty = true
+      }
+    }
+    st_tool = 0
+  }
+}
+
+async {
+  while true {
+    await on.change(st_req)
+    const op = st_req_op
+    const room = max(st_storage - st_food - st_goods, 0)
+
+    if (op > 0 && op <= K_BAY) || op == K_DEMOLISH {
+      st_tool = match st_tool == op { true: 0; _: op }
+    } else if op == OP_CANCEL {
+      st_tool = 0
+    } else if op == OP_PAUSE {
+      st_speed = match st_speed { 0: 1; _: 0 }
+    } else if op >= OP_SPEED && op < OP_RESTART {
+      st_speed = op - OP_SPEED
+      st_tool = 0
+    } else if op == OP_BUY_FOOD && st_cargo_docked > 0 {
+      const amount = min(min(10, st_stock_food), min(room, st_credits / st_price_food))
+      if amount > 0 {
+        st_food = st_food + amount
+        st_stock_food = st_stock_food - amount
+        st_credits = st_credits - amount * st_price_food
+      }
+    } else if op == OP_BUY_GOODS && st_cargo_docked > 0 {
+      const amount = min(min(10, st_stock_goods), min(room, st_credits / st_price_goods_buy))
+      if amount > 0 {
+        st_goods = st_goods + amount
+        st_stock_goods = st_stock_goods - amount
+        st_credits = st_credits - amount * st_price_goods_buy
+      }
+    } else if op == OP_SELL_GOODS && st_cargo_docked > 0 {
+      const amount = min(min(10, st_goods), st_demand_goods)
+      if amount > 0 {
+        st_goods = st_goods - amount
+        st_demand_goods = st_demand_goods - amount
+        st_credits = st_credits + amount * st_price_goods_sell
+      }
+    } else if op == OP_RESTART {
+      st_tool = 0
+      st_speed = 1
+      st_lost = false
+      st_rank = 0
+      st_credits = 2500
+      st_income = 0
+      st_residents = 8
+      st_visitors = 0
+      st_food = 40
+      st_goods = 0
+      st_air = 80
+      st_reputation = 50
+      st_growth = 0
+      st_decline = 0
+      st_visitor_spend = 0
+      st_grid_0 = st_start_grid_0
+      st_grid_1 = st_start_grid_1
+      st_grid_2 = st_start_grid_2
+      st_built = st_start_built
+      st_free_pax = 0
+      st_free_cargo = 0
+      st_ship_state = 0
+      st_ship_timer = 0
+      st_ship_patience = 0
+      st_ship_dock = 0
+      st_ship_visitors = 0
+      st_next_pax = st_beat + 6
+      st_next_cargo = st_beat + 10
+      st_pax_docked = 0
+      st_pax_holding = 0
+      st_cargo_docked = 0
+      st_cargo_holding = 0
+      st_ships_served = 0
+      st_ships_lost = 0
+      st_stock_food = 0
+      st_stock_goods = 0
+      st_demand_goods = 0
+      st_alert = "A new station. Good luck, Director."
+      st_alert_until = AppStatus[AppStatus].elapsed + 6
+      st_dirty = true
+    }
+  }
+}

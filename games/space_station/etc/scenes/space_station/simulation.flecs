@@ -1,0 +1,159 @@
+include state
+
+using flecs.script
+using flecs.script.math
+using box.app
+
+async {
+  while true {
+    await on.change(st_frame_b)
+    await ui.changed(st_frame_a)
+  }
+}
+
+async {
+  while true {
+    await ui.changed(st_frame_b)
+    await on.change(st_frame_a)
+  }
+}
+
+async {
+  while true {
+    await on.change(st_frame_a)
+
+    if st_dirty {
+      st_dirty = false
+      tally_supply = 0
+      tally_demand = 0
+      tally_housing = 0
+      tally_life = 0
+      tally_air = 0
+      tally_food = 0
+      tally_storage = 100
+      tally_upkeep = 0
+      tally_pax = 0
+      tally_cargo = 0
+      tally_modules = 0
+      for i in 0..st_slots {
+        const kind = st_kind_of(i, st_grid_0, st_grid_1, st_grid_2)
+        tally_supply = tally_supply + st_power_made(kind)
+        tally_demand = tally_demand + st_power_used(kind)
+        tally_upkeep = tally_upkeep + st_upkeep(kind)
+        tally_housing = tally_housing + match kind { 7: 12; 1: 2; _: 0 }
+        tally_life = tally_life + match kind { 4: 16; 1: 2; _: 0 }
+        tally_air = tally_air + match kind { 5: 3; _: 0 }
+        tally_food = tally_food + match kind { 6: 0.8; _: 0 }
+        tally_storage = tally_storage + match kind { 10: 80; _: 0 }
+        tally_pax = tally_pax + match kind { 8: 1; _: 0 }
+        tally_cargo = tally_cargo + match kind { 9: 1; _: 0 }
+        tally_modules = tally_modules + match kind { 0: 0; _: 1 }
+      }
+      st_power_supply = tally_supply
+      st_power_demand = tally_demand
+      st_housing = tally_housing
+      st_life_cap = tally_life
+      st_air_rate = tally_air
+      st_food_rate = tally_food
+      st_storage = tally_storage
+      st_upkeep_total = tally_upkeep
+      st_pax_docks = tally_pax
+      st_cargo_docks = tally_cargo
+      st_modules = tally_modules
+      st_power_ratio = min(1, st_power_supply / max(st_power_demand, 0.01))
+    }
+
+    if st_rising != 0 && AppStatus[AppStatus].elapsed >= st_rise_at {
+      st_rising = 0
+    }
+    if st_sparks != 0 && AppStatus[AppStatus].elapsed >= st_spark_until {
+      st_sparks = 0
+    }
+    if st_alert != "" && AppStatus[AppStatus].elapsed >= st_alert_until {
+      st_alert = ""
+    }
+
+    const now = AppStatus[AppStatus].elapsed
+    if st_speed > 0 && !st_lost && now >= st_next_beat {
+      st_next_beat = now + 1.0 / st_speed
+      st_beat = st_beat + 1
+
+      const people = st_residents + st_visitors
+      const ratio = st_power_ratio
+      const crowded = people > st_life_cap * ratio
+
+      const air_drain = people * 0.1 + st_modules * 0.02
+      const leak = match crowded { true: people * 0.1; _: 0 }
+      st_air = clamp(st_air + st_air_rate * ratio - air_drain - leak, 0, 100)
+
+      st_food = clamp(st_food + st_food_rate * ratio - people * 0.05, 0, max(st_storage - st_goods, 0))
+
+      const rent = st_residents * 0.5
+      const net = rent + st_visitor_spend - st_upkeep_total
+      st_income = net
+      st_credits = st_credits + net
+
+      const comfy = st_residents < st_housing && st_food > 2 && st_air > 30 && !crowded && ratio >= 0.6
+      if comfy {
+        st_growth = st_growth + 0.05 + st_residents * 0.003
+        if st_growth >= 1 {
+          st_growth = st_growth - 1
+          st_residents = st_residents + 1
+        }
+      }
+
+      const starving = st_food <= 0
+      const choking = st_air <= 5
+      const press_food = match starving { true: 0.12; _: 0 }
+      const press_air = match choking { true: 0.25; _: 0 }
+      const press_life = match crowded { true: 0.04; _: 0 }
+      const press_home = match st_residents > st_housing { true: 0.08; _: 0 }
+      const pressure = press_food + press_air + press_life + press_home
+      if pressure > 0 {
+        st_decline = st_decline + pressure
+        if st_decline >= 1 {
+          st_decline = st_decline - 1
+          st_residents = max(st_residents - 1, 0)
+          if starving {
+            st_alert = "A resident left: the station has run out of food."
+          } else if choking {
+            st_alert = "A resident left: the air is running out."
+          } else if crowded {
+            st_alert = "A resident left: life support is overloaded."
+          } else {
+            st_alert = "A resident left: there is not enough housing."
+          }
+          st_alert_until = now + 6
+        }
+      } else {
+        st_decline = 0
+      }
+
+      if st_rank < 1 && st_residents >= 20 {
+        st_rank = 1
+        st_alert = "Promoted to Outpost! Next goal: 50 residents."
+        st_alert_until = now + 8
+      } else if st_rank == 1 && st_residents >= 50 {
+        st_rank = 2
+        st_alert = "Promoted to Colony! Next goal: 100 residents and 20000 credits."
+        st_alert_until = now + 8
+      } else if st_rank == 2 && st_residents >= 100 && st_credits >= 20000 {
+        st_rank = 3
+        st_alert = "Promoted to Starport! You won. The station is yours to keep growing."
+        st_alert_until = now + 15
+      }
+
+      if st_residents <= 0 {
+        st_lost = true
+        st_alert = "Everyone has left the station."
+        st_alert_until = now + 9999
+      } else if st_credits < -1500 {
+        st_lost = true
+        st_alert = "The station is bankrupt."
+        st_alert_until = now + 9999
+      }
+
+      await ui.changed(st_tick)
+    }
+  }
+}

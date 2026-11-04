@@ -1,0 +1,364 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.layout
+using box.text
+using box.spatial
+using box.picking
+using box.input
+using box.transition
+
+actions {
+  ignite { box.input.Action: {description: "Crank the reactor"} }
+  caution { box.input.Action: {description: "Reset the master caution"} }
+  step { box.input.Action: {description: "Next step of the checklist"}; Binding: {key: Space} }
+  view_a { box.input.Action: {description: "Look ahead"}; Binding: {key: Num1} }
+  view_b { box.input.Action: {description: "Look at the pilot panel"}; Binding: {key: Num2} }
+  view_c { box.input.Action: {description: "Look at the center stack"}; Binding: {key: Num3} }
+  view_d { box.input.Action: {description: "Look at the comms bay"}; Binding: {key: Num4} }
+  view_e { box.input.Action: {description: "Look at the breakers"}; Binding: {key: Num5} }
+  view_f { box.input.Action: {description: "Look at the overhead"}; Binding: {key: Num6} }
+  look { box.input.Action: {description: "Free look"}; Binding: {key: MouseRight} }
+  roll_l { box.input.Action: {description: "Roll left"}; Binding: {key: A} }
+  roll_r { box.input.Action: {description: "Roll right"}; Binding: {key: D} }
+  nose_u { box.input.Action: {description: "Nose up"}; Binding: {key: S} }
+  nose_d { box.input.Action: {description: "Nose down"}; Binding: {key: W} }
+  help { box.input.Action: {description: "Toggle the help line"}; Binding: {key: H} }
+  clear_course { box.input.Action: {description: "Clear the plotted course"} }
+  trim_zero { box.input.Action: {description: "Level the ship"} }
+}
+
+template PilotBay {
+  Position: {-0.38, 0.695, -0.885}
+  Rotation: {-0.36, 0, 0}
+
+  Panel face(w: 920, h: 510, tone: {78, 86, 92}) {
+    Column screen(v: Top, y: -8, gap: 2) {
+      Crt nav(tex: tex_nav, on: crt_nav, w: 436, h: 327, glow: GREEN, glow_power: 0.05)
+      Row under(gap: 26) {
+        Knob range(label: "RANGE", sig: KN_RANGE, r: 21)
+        SegReadout speed(value: floor(kn[KN_THROTTLE] * 980 + eng_rpm * 20), digits: 4, label: "THRUST", dark: !bus)
+        DrumCounter trip(value: trip_units, digits: 6, label: "TRIP AU")
+        Knob gain(label: "SCOPE", sig: KN_GAIN, r: 21)
+      }
+    }
+
+    Column left(h: Left, v: Top, x: 16, y: -10, gap: 4) {
+      Gauge rpm(label: "CORE", unit: "KRPM", value: eng_rpm, r: 56, lo: 0, step: 2, red_from: 0.84)
+      Gauge volt(label: "BUS", unit: "VOLTS", value: bus_volts, r: 56, lo: 0, step: 10, majors: 4, hue: {180, 240, 255}, red_from: 1.1)
+    }
+
+    Column right(h: Right, v: Top, x: -16, y: -10, gap: 4) {
+      Gauge temp(label: "TEMP", unit: "x100 K", value: eng_temp, r: 56, lo: 0, step: 4, red_from: 0.72)
+      Gauge hullg(label: "HULL", unit: "kPa", value: hull_temp, r: 56, lo: 0, step: 25, majors: 4, hue: {255, 200, 120}, red_from: 0.9)
+    }
+
+    Row inner_l(h: Left, v: Top, x: 148, y: -22, gap: 4) {
+      LedBar fa(value: fuel_a * bool_f(sw[SW_FUEL_A]), count: 18, len: 210, thick: 13, label: "F1", warn: 2, crit: 2, hue: AMBER)
+      LedBar fb(value: fuel_b * bool_f(sw[SW_FUEL_B]), count: 18, len: 210, thick: 13, label: "F2", warn: 2, crit: 2, hue: AMBER)
+    }
+
+    Row inner_r(h: Right, v: Top, x: -148, y: -22, gap: 4) {
+      LedBar cl(value: coolant, count: 18, len: 210, thick: 13, label: "CL", warn: 2, crit: 2, hue: CYAN)
+      LedBar rx(value: reactor, count: 18, len: 210, thick: 13, label: "RX", warn: 0.7, crit: 0.92)
+    }
+
+    Row bottom_l(h: Left, v: Bottom, x: 22, y: 6, gap: 10) {
+      GuardSwitch main(label: "MAIN BUS", sig: SW_MAIN, beacon: true)
+    }
+
+    Silk engine(x: -347, y: 112, w: 196, h: 272, text: "ENGINE", gap: 64)
+    Silk plant(x: 347, y: 112, w: 196, h: 272, text: "PLANT", gap: 58)
+    Patch grime_a(x: -420, y: -120, w: 170, h: 240, tilt: 0.4, tint: {14, 12, 10}, fade: 0.5)
+    Patch rub_a(x: 330, y: -190, w: 240, h: 160, tilt: 1.1, tint: {150, 142, 118}, fade: 0.14)
+    Patch run_a(x: -448, y: 10, w: 60, h: 300, tint: {16, 12, 8}, fade: 0.55, tex: tex_streak)
+    Patch run_b(x: 448, y: 60, w: 50, h: 280, tint: {16, 12, 8}, fade: 0.5, tex: tex_streak)
+    Scrawl tally(text: "HH HH HH ||", size: 30, tilt: -0.03, ink: {14, 12, 12}) { Position: {-296, -148, 1.0} }
+    Scrawl tally_note(text: "tolls dodged", size: 19, tilt: -0.03, ink: {14, 12, 12}) { Position: {-296, -172, 1.0} }
+
+    Row bottom_r(h: Right, v: Bottom, x: -18, y: 8, gap: 2) {
+      ToggleSwitch fuel_a(label: "FUEL 1", sig: SW_FUEL_A, led: true)
+      ToggleSwitch fuel_b(label: "FUEL 2", sig: SW_FUEL_B, led: true)
+    }
+
+    note {
+      Position: {-296, -84, 0}
+      Tape strip(w: 150, h: 72, tilt: 0.09)
+      Scrawl words(text: "1 main bus\n2 ignite (hold!)\n3 pick a place\n4 yank handle", size: 21, tilt: 0.09) { Position: {0, 0, 1.6} }
+    }
+
+    Tape patch(w: 104, h: 28, x: 300, y: -92, tilt: -0.14, tone: {200, 200, 196})
+    Scrawl patch_note(text: "F2 gauge lies", size: 21, tilt: -0.14) { Position: {300, -92, 1.6} }
+
+    photo {
+      Position: {284, -164, 1.2}
+      Rotation: {0, 0, -0.09}
+      print { Position: {0, 0, 0}; Quad: {62, 75}; Rgb: {176, 172, 158}; PbrMaterial: {metallic: 0, roughness: 0.42}; PbrTextures: {albedo: tex_photo}; NoShadow; SpatialIgnore }
+      Tape pin(w: 34, h: 12, x: 0, y: 34, tilt: 0.1, tone: {180, 176, 150})
+    }
+  }
+}
+
+template CenterBay {
+  Position: {0.3, 0.695, -0.885}
+  Rotation: {-0.36, 0, 0}
+
+  Panel face(w: 420, h: 510, tone: {84, 90, 94}) {
+    Column stack(v: Top, y: -8, gap: 8) {
+      Crt sys(tex: tex_sys, on: crt_sys, w: 304, h: 228, glow: GREEN, glow_power: 0.07, curve: 1100)
+      Row caps(gap: 6) {
+        CapButton ignite(legend: "IGNITE", sub: "HOLD", hue: RED, lit: igniting, action: actions.ignite, mode: ActionTriggerHold, w: 104, h: 62)
+        CapButton caution(legend: "MASTER", sub: "CAUTION", hue: AMBER, lit: fault && blink, action: actions.caution, w: 104, h: 62)
+        CapButton armed(legend: "JUMP", sub: "READY", hue: GREEN, lit: stage == STAGE_PLOTTED, w: 104, h: 62)
+      }
+      Row a0(gap: 3) {
+        Annunciator f0(legend: "FUEL LOW", active: sw[SW_FUEL_B] && fuel_b < 0.4)
+        Annunciator f1(legend: "COOLANT", hue: RED, active: coolant < 0.3)
+        Annunciator f2(legend: "GYRO", active: !sw[SW_GYRO] && bus)
+        Annunciator f3(legend: "HOLO", hue: CYAN, active: sw[SW_HOLO])
+      }
+    }
+  }
+}
+
+template CommsBay {
+  Position: {0.885, 0.695, -0.655}
+  Rotation: {-0.36, -0.55, 0}
+
+  Panel face(w: 880, h: 510, tone: {82, 88, 92}) {
+    Row body(gap: 30, v: Top, y: -14) {
+      Crt com(tex: tex_com, on: crt_com, w: 380, h: 285, glow: {255, 170, 70}, glow_power: 0.1, curve: 1200)
+      Column side(gap: 8) {
+        Knob tune(label: "TUNER", sig: KN_TUNE, r: 44, speed: 0.0016, ticks: 21)
+        Row small(gap: 6) {
+          Knob dim(label: "DIM", sig: KN_DIM, r: 18)
+          Knob vol(label: "SQUELCH", sig: KN_GAIN + 3, r: 18)
+        }
+      }
+    }
+    SubPlate radio_door(x: -376, y: 40, w: 150, h: 340, tone: {52, 70, 66})
+    Dzus d_a(x: -436, y: 196)
+    Dzus d_b(x: -316, y: 196, turn: 1.8)
+    Dzus d_c(x: -436, y: -116, turn: 1.1)
+    Dzus d_d(x: -316, y: -116, turn: 0.3)
+    Thump dent(x: -376, y: 124)
+    Dymo hit(text: "HIT HERE", x: -376, y: 62, size: 13, tilt: 0.04, tone: {168, 28, 20}, len: 84)
+
+    speaker {
+      Position: {-376, -40, 0.6}
+      SpatialIgnore
+      rim : Soot { Rotation: {PI / 2, 0, 0}; Tube: {radius: 58, thickness: 6, length: 3, segments: 36, smooth: true} }
+      cone : BlackAnod { Rotation: {PI / 2, 0, 0}; Cylinder: {radius: 54, length: 0.6, segments: 32, smooth: true}; Rgb: {10, 10, 10} }
+      for i in 0..37 {
+        const a = i * 2.39996
+        const rr = sqrt(i / 37.0) * 47
+        "hole_{i}" : BareSteel { Position: {cos(a) * rr, sin(a) * rr, 1.2}; Rotation: {PI / 2, 0, 0}; Cylinder: {radius: 2.4, length: 0.8, segments: 6}; Rgb: {96, 92, 84} }
+      }
+    }
+
+    Column sig_col(h: Right, v: Top, x: -30, y: -34) {
+      Gauge signal(label: "SIG", unit: "dB", value: radio_signal(kn[KN_TUNE]) * bool_f(bus), r: 36, lo: 0, step: 20, majors: 3, hue: {255, 196, 120}, red_from: 2)
+    }
+
+    Tape freqs(w: 150, h: 92, x: 370, y: 62, tilt: 0.05, tone: {226, 218, 178})
+    Scrawl freqs_note(text: "61.4 toll (no!)\n33.0 ice miners\n47.7 salvors\n71.2 mom", size: 19, tilt: 0.05) { Position: {370, 62, 1.6} }
+    Patch run_a(x: 80, y: -140, w: 80, h: 220, tint: {16, 12, 8}, fade: 0.4, tex: tex_streak)
+
+    Row sw_row(v: Bottom, y: 12, gap: 6) {
+      ToggleSwitch comms(label: "VOX", sig: SW_COMMS, led: true)
+      ToggleSwitch beacon(label: "BEACON", sig: SW_BEACON, led: true)
+      ToggleSwitch holo(label: "HOLO", sig: SW_HOLO, led: true)
+      ToggleSwitch hud(label: "HUD", sig: SW_HUD, led: true)
+      ToggleSwitch cabin(label: "CABIN", sig: SW_CABIN, led: true)
+      ToggleSwitch shutter(label: "SHUTTERS", sig: SW_SHUTTER, led: true, cap: {190, 50, 36})
+    }
+    note {
+      Position: {300, -150, 0}
+      Tape strip(w: 170, h: 54, tilt: -0.07, tone: {216, 216, 170})
+      Scrawl words(text: "radio works if you\nhit it", size: 22, tilt: -0.07) { Position: {0, 0, 1.6} }
+    }
+  }
+}
+
+template BreakerBay {
+  Position: {-1.10, 0.695, -0.66}
+  Rotation: {-0.36, 0.72, 0}
+
+  Panel face(w: 700, h: 510, tone: {76, 84, 90}) {
+    SubPlate fuse_door(x: 0, y: 0, w: 664, h: 470, tone: {62, 66, 64})
+    Column body(gap: 4, v: Middle, y: 6) {
+      Tag head(text: "POWER DISTRIBUTION", w: 640, h: 24, tone: {28, 28, 28}, ink: {232, 186, 96})
+      Row bk0(gap: 3) {
+        for i in 0..6 {
+          Breaker "b_{i}"(label: breaker_name(i), popped: i == 3)
+        }
+      }
+      Row bk1(gap: 3) {
+        for i in 6..12 {
+          Breaker "b_{i}"(label: breaker_name(i), popped: i == 11, flag: i == 11)
+        }
+      }
+      Row r0(gap: 6) {
+        ToggleSwitch a(label: "GYRO", sig: SW_GYRO, led: true)
+        ToggleSwitch b(label: "COOL", sig: SW_COOL, led: true)
+        ToggleSwitch c(label: "FANS", sig: SW_FANS, led: true)
+        ToggleSwitch d(label: "HEAT", sig: SW_HEAT, led: true)
+        ToggleSwitch e(label: "SHLD", sig: SW_SHIELD, led: true)
+        ToggleSwitch f(label: "NAV", sig: SW_NAV, led: true)
+        ToggleSwitch g(label: "AUX 1", sig: SW_SPARE_A)
+        ToggleSwitch h(label: "AUX 2", sig: SW_SPARE_B)
+      }
+      Row r1(gap: 3) {
+        Annunciator a0(legend: "BUS A", hue: GREEN, active: bus)
+        Annunciator a1(legend: "BUS B", hue: GREEN, active: bus && !fault)
+        Annunciator a2(legend: "CELLS", hue: GREEN, active: sw[SW_FUEL_A] || sw[SW_FUEL_B])
+        Annunciator a3(legend: "VENT", active: sw[SW_FANS])
+        Annunciator a4(legend: "SHIELD", hue: CYAN, active: sw[SW_SHIELD])
+        Annunciator a5(legend: "FAULT", hue: RED, active: fault)
+        Annunciator a6(legend: "AUX", active: sw[SW_SPARE_A] && sw[SW_SPARE_B])
+      }
+    }
+    Column amps_col(h: Right, v: Bottom, x: -26, y: 14) {
+      Gauge amps(label: "AMPS", unit: "x10", value: bus_volts * 0.74 + eng_rpm * 0.1, r: 40, lo: 0, step: 10, majors: 5, hue: {180, 240, 255}, red_from: 0.9)
+    }
+    Column aux_col(h: Left, v: Bottom, x: 26, y: 14) {
+      Gauge amps_b(label: "AUX", unit: "x10", value: bus_volts * 0.3, r: 40, lo: 0, step: 10, majors: 5, hue: {255, 216, 150}, red_from: 0.9)
+    }
+    Tape patch(w: 170, h: 36, x: 96, y: -206, tilt: 0.05, tone: {200, 200, 196})
+    Scrawl patch_note(text: "toll xpdr stays OUT", size: 22, tilt: 0.05) { Position: {96, -206, 1.6} }
+    fuse_louver { Position: {-110, -204, 0.4}; Louver g(w: 170, h: 54, slats: 5, tone: {26, 26, 26}) }
+    Patch run_a(x: -300, y: -40, w: 70, h: 260, tint: {16, 12, 8}, fade: 0.45, tex: tex_streak)
+    Patch run_b(x: 310, y: 20, w: 50, h: 200, tint: {16, 12, 8}, fade: 0.35, tex: tex_streak)
+  }
+}
+
+template Pedestal {
+  Position: {0.24, 0.585, -0.27}
+  Rotation: {-1.32, 0, 0}
+
+  Panel face(w: 330, h: 880, tone: {70, 76, 80}) {
+    Row levers(v: Top, y: -18, gap: 14) {
+      Lever throttle(label: "THRUST", sig: KN_THROTTLE, handle: {30, 30, 32})
+      Lever jump(label: "JUMP", sig: KN_JUMP, top_label: "SAFE", low_label: "PULL", handle: {168, 28, 20}, spring: true, pull: true, locked: stage != STAGE_PLOTTED)
+    }
+    Silk gate(x: 0, y: 248, w: 276, h: 386)
+    Dymo slow(text: "NOT THIS WAY", x: -116, y: 96, size: 10, tilt: 1.57, len: 92)
+    receipt {
+      Position: {0, -68, 0}
+      SpatialIgnore
+      slot : BlackAnod { Position: {0, 0, 3}; RoundedBox: {230, 46, 6, 2, segments: 2} }
+      mouth { Position: {0, 2, 6.2}; Box: {180, 5, 0.4}; Rgb: {2, 2, 2}; PbrMaterial: {metallic: 0, roughness: 0.9} }
+      Dymo title(text: "INVOICE", x: 0, y: 14, size: 9, len: 60, tilt: 0)
+      strip : Paper { Position: {6, -82, 7}; Rotation: {0.05, 0, -0.03}; Box: {150, 170, 0.5}; Rgb: {200, 192, 160} }
+      words {
+        Position: {6, -82, 7.5}
+        Rotation: {0.05, 0, -0.03}
+        Text: {value: "DM-7 ACCT 47912\n--------------\nDOCKING x3  UNPAID\nFUEL       UNPAID\nCOFFEE MACH UNPAID\n--------------\nPAY OR DRIFT", size: 13, font: font_mono, align: Center, line_height: 16}
+        Rgb: {14, 12, 12}
+      }
+    }
+    Column lower(v: Bottom, y: 16, gap: 8) {
+      Row knobs(gap: 8) {
+        CapButton course_clear(legend: "CLEAR", sub: "COURSE", hue: AMBER, action: actions.clear_course, w: 96, h: 50)
+        CapButton trim(legend: "TRIM", sub: "ZERO", hue: GREEN, action: actions.trim_zero, w: 96, h: 50)
+      }
+      Tag plate(text: "DM-7  DUST MERCHANT", w: 290, h: 30, size: 20, tone: {36, 34, 30}, ink: {216, 186, 120})
+    }
+  }
+}
+
+template Overhead {
+  Position: {-0.05, 2.28, 0.62}
+  Rotation: {1.14, 0, 0}
+
+  hanger_a : BareSteel { Beam: {a: {-0.5, 0.26, -0.02}, b: {-0.5, 0.42, -0.5}, w: 0.03, h: 0.03}; Rgb: {92, 90, 82} }
+  hanger_b : BareSteel { Beam: {a: {0.5, 0.26, -0.02}, b: {0.5, 0.42, -0.5}, w: 0.03, h: 0.03}; Rgb: {92, 90, 82} }
+  hanger_c : BareSteel { Beam: {a: {-0.5, -0.26, -0.02}, b: {-0.5, -0.2, -0.56}, w: 0.03, h: 0.03}; Rgb: {92, 90, 82} }
+  hanger_d : BareSteel { Beam: {a: {0.5, -0.26, -0.02}, b: {0.5, -0.2, -0.56}, w: 0.03, h: 0.03}; Rgb: {92, 90, 82} }
+  shroud : Soot { Position: {0, 0, -0.05}; RoundedBox: {1.15, 0.67, 0.08, 0.012, segments: 2}; TextureTransform: {scale_x: 1.4, scale_y: 0.8}; Rgb: {38, 38, 36} }
+  Cable feed_a(a: {-0.36, 0.2, -0.09}, b: {-0.44, 0.34, -0.5}, sag: 0.02, thick: 0.018) { Position: {0, 0, 0} }
+  Cable feed_b(a: {-0.32, 0.2, -0.09}, b: {-0.38, 0.34, -0.5}, sag: 0.02, thick: 0.012, tone: {120, 24, 16}) { Position: {0, 0, 0} }
+  Cable feed_c(a: {0.32, 0.2, -0.09}, b: {0.42, 0.36, -0.5}, sag: 0.02, thick: 0.014, tone: {150, 118, 28}) { Position: {0, 0, 0} }
+
+  Panel face(w: 1120, h: 640, tone: {74, 80, 84}) {
+    Column body(gap: 8) {
+      Tag head(text: "OVERHEAD  -  CIRCUITS AND THINGS THAT USED TO WORK", w: 1060, h: 26, tone: {26, 26, 26}, ink: {232, 186, 96})
+      Row r0(gap: 4) {
+        for i in 0..14 {
+          ToggleSwitch "t_{i}"(label: "CB {i + 1}", sig: SW_SPARE_C, cap: match i % 5 { 0: {190, 50, 36}; _: {205, 205, 208} })
+        }
+      }
+      Row r1(gap: 3) {
+        Annunciator a0(legend: "HYD", active: bus)
+        Annunciator a1(legend: "O2", hue: GREEN, active: bus)
+        Annunciator a2(legend: "CO2", active: fault)
+        Annunciator a3(legend: "SCRUB", hue: GREEN, active: bus && sw[SW_FANS])
+        Annunciator a4(legend: "SMOKE", hue: RED, active: fault)
+        Annunciator a5(legend: "AFT DOOR", active: bus)
+        Annunciator a6(legend: "GALLEY", hue: GREEN, active: bus)
+        Annunciator a7(legend: "BILGE", active: false)
+        Annunciator a8(legend: "BEACON", hue: CYAN, active: sw[SW_BEACON])
+        Annunciator a9(legend: "CARGO", active: bus)
+        Annunciator a10(legend: "COFFEE", hue: GREEN, active: sw[SW_SPARE_D])
+      }
+      Row r2(gap: 26) {
+        GuardSwitch cursed(label: "DO NOT", sig: SW_SPARE_D)
+        Gauge cabin_o2(label: "O2", unit: "PCT", value: 0.82 * bool_f(bus), r: 52, lo: 0, step: 25, majors: 4, red_from: 2)
+        Gauge cabin_t(label: "CABIN", unit: "C", value: hull_temp + 0.2, r: 52, lo: 0, step: 10, majors: 4, hue: {180, 240, 255}, red_from: 0.9)
+        LedBar load_a(value: bus_volts, count: 20, vertical: false, len: 320, thick: 16, label: "LOAD A")
+        DrumCounter hours(value: 88213, digits: 6, label: "HOURS SINCE LAST INSPECTION")
+      }
+      Row r3(gap: 30) {
+        fan {
+          Layout: {}
+          LayoutItem: {width: {mode: Fixed, value: 96}, height: {mode: Fixed, value: 96}}
+          rim : Soot { Rotation: {PI / 2, 0, 0}; Tube: {radius: 46, thickness: 5, length: 6, segments: 32, smooth: true} }
+          blades {
+            Rotation: {0, 0, clock * match sw[SW_FANS] && bus { true: 9; _: 0 }}
+            for i in 0..5 {
+              "blade_{i}" : BareSteel { Rotation: {0.4, 0, i * 2 * PI / 5}; Position: {cos(i * 2 * PI / 5) * 22, sin(i * 2 * PI / 5) * 22, 1}; Box: {38, 16, 1}; Rgb: {120, 118, 110} }
+            }
+            hub : BlackAnod { Rotation: {PI / 2, 0, 0}; Cylinder: {radius: 8, length: 5, segments: 14, smooth: true} }
+          }
+        }
+        scrub { Layout: {}; LayoutItem: {width: {mode: Fixed, value: 300}, height: {mode: Fixed, value: 60}}; Louver g(w: 300, h: 60, slats: 5, tone: {30, 30, 30}) }
+        vent_slot { Layout: {}; LayoutItem: {width: {mode: Fixed, value: 170}, height: {mode: Fixed, value: 24}}; Dymo vent_label(text: "CABIN AIR - IF ANY", x: 0, y: 0, size: 13, len: 170) }
+      }
+    }
+    Tape t_a(w: 240, h: 54, x: -350, y: -255, tilt: 0.03)
+    Scrawl coffee_note(text: "NOT a coffee switch!", size: 30, tilt: 0.03) { Position: {-350, -255, 2.6} }
+    Tape t_b(w: 150, h: 34, x: 410, y: -270, tilt: -0.05, tone: {180, 180, 176})
+    Scrawl t_b_note(text: "CB 6 = do not ask", size: 22, tilt: -0.05) { Position: {410, -270, 1.6} }
+    Patch run_a(x: -500, y: 10, w: 70, h: 300, tint: {16, 12, 8}, fade: 0.45, tex: tex_streak)
+  }
+}
+
+template Brow {
+  Position: {-0.14, 0.966, -0.928}
+  Rotation: {-0.3, 0, 0}
+
+  Panel face(w: 1000, h: 72, tone: {40, 40, 38}) {
+    Row lights(gap: 3) {
+      Annunciator a0(legend: "MASTER", sub: "CAUTION", hue: RED, active: fault && blink, h: 50, size: 18)
+      Annunciator a1(legend: "REACTOR", sub: "COLD", active: bus && reactor < 0.05, h: 50, size: 18)
+      Annunciator a2(legend: "CORE", sub: "HOT", hue: RED, active: eng_temp > 0.72, h: 50, size: 18)
+      Annunciator a3(legend: "NAV", sub: "NO FIX", active: bus && course < 0, h: 50, size: 18)
+      Annunciator a4(legend: "JUMP", sub: "READY", hue: GREEN, active: stage == STAGE_PLOTTED, h: 50, size: 18)
+      Annunciator a5(legend: "SHUTTERS", sub: "CLOSED", hue: CYAN, active: sw[SW_SHUTTER], h: 50, size: 18)
+      Annunciator a6(legend: "COOLANT", sub: "LOW", hue: RED, active: coolant < 0.3, h: 50, size: 18)
+      Annunciator a7(legend: "HATCH", sub: "AJAR", active: bus, h: 50, size: 18)
+      Annunciator a8(legend: "FUEL", sub: "IMBAL", active: abs(fuel_a - fuel_b) > 0.3 && sw[SW_FUEL_A] && sw[SW_FUEL_B], h: 50, size: 18)
+      Annunciator a9(legend: "RAD", sub: "ALERT", hue: RED, active: here == DEST_CINDER && !in_tunnel, h: 50, size: 18)
+    }
+  }
+}
+
+PilotBay bay_pilot()
+CenterBay bay_center()
+CommsBay bay_comms()
+BreakerBay bay_breakers()
+Pedestal pedestal()
+Brow brow()
+Overhead overhead()

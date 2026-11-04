@@ -1,0 +1,17 @@
+include dust_merchant/assets
+include dust_merchant/materials
+include dust_merchant/state
+include dust_merchant/audio
+include dust_merchant/kit
+include dust_merchant/widgets
+include dust_merchant/crt
+include dust_merchant/screens
+include dust_merchant/hull
+include dust_merchant/panels
+include dust_merchant/hud
+include dust_merchant/holo
+include dust_merchant/props
+include dust_merchant/sky
+include dust_merchant/fx
+include dust_merchant/rig
+include dust_merchant/logic

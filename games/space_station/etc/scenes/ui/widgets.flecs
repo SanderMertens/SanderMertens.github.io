@@ -1,0 +1,70 @@
+// The widget library of box, the script module box.widgets. box.ui loads it when a world imports
+// it; a scene writes `using box.widgets` and instantiates the templates:
+//
+//   Panel settings(title: "Audio") {
+//     Slider volume(min: 0, max: 100, step: 1, value: 80)
+//     Checkbox mute(label: "Mute")
+//   }
+//
+// Behavior and looks are separate templates. A headless template (HeadlessButton) owns the state
+// in mut variables and the async blocks that follow the input; the styled template (Button :
+// HeadlessButton) inherits it and only draws, from the theme in box.ui.theme[UiTheme]. An
+// application restyles a widget by inheriting the headless template in a template of its own.
+//
+// Values: a widget with a value has `prop value`, the initial value, and `mut current`, the value
+// now, in every widget. On a change by the user the widget assigns current and calls
+// ui.changed(this), so a scene awaits the change on the widget or any ancestor of it and reads the
+// mut of the template it instantiated:
+//
+//   async {
+//     while true {
+//       const e = await on.change(settings)
+//       volume_level = settings.volume[Slider.mut].current
+//     }
+//   }
+//
+// Setting the mut from C or the terminal (set settings.volume Slider.mut {current: 20}) changes
+// the widget without a change event. So does a later change of the value prop: current takes the
+// new value, so a form that passes its own muts as the values of its widgets resets them by
+// assigning those muts.
+//
+// Interactive widgets show hover, pressed and focused looks, with a focus ring only while the
+// focus came from the keyboard (FocusStatus.visible). They are Focusable, so a FocusScope above
+// them makes Tab move between them, and follow the keyboard of their WAI-ARIA role through
+// the on.activate (Enter, Space, a click), on.key_down and on.key_up of flecs, whose key is a
+// key value such as "ArrowLeft", "Enter" or " ". A widget counts an on.activate only when
+// ui.activation(e) returns it: that is the entity box.ui activates, the Interactive entity a click
+// went to rather than the label under the cursor, 0 for a click released away from it, with
+// another button or for Enter and Space on a widget with KeyCapture. on.activate, on.focus and
+// on.blur reach the ancestors of the widget that gained or lost the focus too, so a widget checks
+// ui.activation(e) == this for its own activation and e.target == this for its own focus, and
+// await focus(e) moves the focus from a script. `prop disabled` dims a widget with the
+// disabled_opacity of the theme and makes it ignore input and Tab. Widgets fit their content;
+// a `width` prop fixes their width, 0 fits.
+//
+// The pointer shows a hand (CursorPointer) over what can be clicked or dragged: buttons, check
+// boxes, switches, radio buttons, sliders, steppers, dropdowns, tabs, list rows, the headers of
+// collapsibles and scroll bars; an I-beam (CursorText) over text fields; a crossed circle
+// (CursorNotAllowed) over disabled widgets.
+//
+// Containers hold other widgets: a ScrollView scrolls its children, a TabView shows the page of
+// one of its Tab children, a Collapsible shows or hides its children. Content they hide is
+// clipped away, so it is not drawn, picked or reached with Tab. Content a ScrollView only
+// scrolled out of view is reached with Tab, which scrolls it into view. Popups such as the list of a
+// Dropdown float (LayoutFloat) above the other widgets and outside every clip.
+
+module box.widgets
+
+include theme
+include label
+include button
+include toggle
+include radio
+include slider
+include progress
+include stepper
+include text_input
+include dropdown
+include scroll
+include tabs
+include collapsible

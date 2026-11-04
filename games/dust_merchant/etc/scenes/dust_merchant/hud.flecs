@@ -1,0 +1,159 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.layout
+using box.text
+using box.spatial
+using box.picking
+using box.input
+using box.transition
+
+template Glow {
+  prop text: string = ""
+  prop size: f32 = 16
+  prop hue: Rgb = {140, 255, 170}
+  prop power: f32 = 1.2
+  prop align: box.layout.Align = Center
+  prop font: entity = font_mono
+
+  Text: {value: text, size: size, font: font, align: align}
+  Rgb: hue
+  Emissive: {strength: power, color: hue}
+  BlendMode: Additive
+  SpatialIgnore
+}
+
+template GlowLine {
+  prop x1: f32 = 0
+  prop y1: f32 = 0
+  prop x2: f32 = 10
+  prop y2: f32 = 0
+  prop w: f32 = 1.2
+  prop hue: Rgb = {140, 255, 170}
+  prop power: f32 = 1.5
+
+  Position: {0, 0, 0}
+  Line: {x1: x1, y1: y1, x2: x2, y2: y2, width: w}
+  Rgb: hue
+  Emissive: {strength: power, color: hue}
+  BlendMode: Additive
+  SpatialIgnore
+}
+
+template Ladder {
+  prop deg: i32 = 0
+  const y = deg * 3.2
+
+  Position: {0, y, 0}
+  GlowLine a(x1: -64, y1: 0, x2: -22, y2: 0, w: match deg == 0 { true: 1.6; _: 1 })
+  GlowLine b(x1: 22, y1: 0, x2: 64, y2: 0, w: match deg == 0 { true: 1.6; _: 1 })
+  Glow n_a(text: "{abs(deg) * 1.0:.0}", size: 9, power: 0.9) { Position: {-74, 0, 0} }
+  Glow n_b(text: "{abs(deg) * 1.0:.0}", size: 9, power: 0.9) { Position: {74, 0, 0} }
+}
+
+template HudTape {
+  prop value: f32 = 0
+  prop x: f32 = -110
+  prop label: string = ""
+  prop span: f32 = 120
+
+  Position: {x, 0, 0}
+  GlowLine rail(x1: 0, y1: -60, x2: 0, y2: 60, w: 1)
+  for i in 0..9 {
+    const py = (i - 4) * 15.0 - (value * 4 - floor(value * 4)) * 15
+    "t_{i}" { GlowLine: {x1: 0, y1: py, x2: match i % 2 { 0: 9; _: 5 }, y2: py, w: 1} }
+  }
+  Glow head(text: label, size: 10, power: 1) { Position: {0, 70, 0} }
+  Glow read(text: "{value * span:.0}", size: 13, power: 1.6) { Position: {0, -72, 0} }
+}
+
+template HudSymbology {
+  const show = sw[SW_HUD] && bus && !in_tunnel
+  const lock = stage == STAGE_PLOTTED
+
+  Scale: {match show { true: 1; _: 0.001 }, match show { true: 1; _: 0.001 }, 1}
+  Transition: [Scale: {duration: 0.18, timing_function: EaseOut}]
+
+  ring {
+    Rotation: {0, 0, clock * match lock { true: 1.4; _: 0.18 }}
+    Circle: {44}
+    Rgb: {0, 0, 0}
+    BlendMode: Additive
+    Border: {width: 1.2, color: {140, 255, 170, 255}}
+    SpatialIgnore
+    for i in 0..4 {
+      "tick_{i}" {
+        Rotation: {0, 0, i * PI / 2}
+        GlowLine g(x1: 44, y1: 0, x2: 56, y2: 0, w: 1.5)
+      }
+    }
+  }
+
+  GlowLine pip_a(x1: -13, y1: 0, x2: -4, y2: 0, w: 1.4, power: 2.4)
+  GlowLine pip_b(x1: 4, y1: 0, x2: 13, y2: 0, w: 1.4, power: 2.4)
+  GlowLine pip_c(x1: 0, y1: -13, x2: 0, y2: -4, w: 1.4, power: 2.4)
+
+  window {
+    Layout: {}
+    LayoutItem: {width: {mode: Fixed, value: 180}, height: {mode: Fixed, value: 150}}
+    ClipChildren
+    horizon {
+      Rotation: {0, 0, attitude_roll}
+      scroll_y {
+        Position: {0, 0 - attitude_pitch * 183, 0}
+        for i in -4..5 {
+          Ladder "l_{i + 4}"(deg: i * 10)
+        }
+      }
+    }
+  }
+
+  HudTape spd(value: eng_rpm + kn[KN_THROTTLE] * 0.4, x: -130, label: "VEL", span: 900)
+  HudTape alt(value: reactor, x: 130, label: "PWR", span: 100)
+
+  Glow title(
+    text: match stage {
+      1: "REACTOR COLD"
+      2: match course >= 0 { true: "PLOT {plot * 100:.0}%"; _: "SELECT DEST" }
+      3: "PULL JUMP HANDLE"
+      4: "CHARGING"
+      _: ""
+    },
+    size: 15,
+    power: match stage { 3: 2.6; 4: 3; _: 1.2 }
+  ) { Position: {0, -84, 0} }
+
+  Glow dest_line(text: match course >= 0 { true: dest_code(course); _: dest_code(here) }, size: 11, power: 1) { Position: {0, 86, 0} }
+}
+
+template Combiner {
+  Position: {-0.38, 1.29, -0.92}
+  Rotation: {0.05, 0.0, 0}
+
+  post_a : Soot { Position: {-0.152, -0.15, 0.01}; Box: {0.012, 0.27, 0.016}; SpatialIgnore }
+  post_b : Soot { Position: {0.152, -0.15, 0.01}; Box: {0.012, 0.27, 0.016}; SpatialIgnore }
+  rail : BlackAnod { Position: {0, -0.262, 0}; Box: {0.33, 0.02, 0.05}; SpatialIgnore }
+  rail_b : BareSteel { Position: {0, -0.248, 0.018}; Box: {0.3, 0.005, 0.01}; SpatialIgnore }
+
+  glass {
+    Position: {0, 0.012, 0}
+    Rect: {0.3, 0.22}
+    Rgb: {96, 150, 130}
+    BlendMode: AlphaBlend
+    Opacity: {match sw[SW_HUD] && bus { true: 0.055; _: 0.035 }}
+    Transition: [Opacity: {duration: 0.3}]
+    Border: {width: 0.0012, radius: 0.012, color: {190, 240, 220, 60}}
+    NoShadow
+    SpatialIgnore
+  }
+
+  symbology {
+    Position: {0, 0.012, 0.002}
+    Scale: {0.00066, 0.00066, 0.00066}
+    HudSymbology s()
+  }
+}
+
+Combiner combiner()

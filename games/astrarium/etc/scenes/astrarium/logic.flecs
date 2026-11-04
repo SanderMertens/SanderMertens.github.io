@@ -1,0 +1,123 @@
+using flecs.script
+using flecs.script.math
+using box.app
+
+async {
+  while true {
+    await on.change(ui_tick_b)
+    await ui.changed(ui_tick_a)
+  }
+}
+
+async {
+  while true {
+    await ui.changed(ui_tick_b)
+    await on.change(ui_tick_a)
+  }
+}
+
+afford_check {}
+level_check {}
+
+export mut var_might: i32 = 0
+export mut var_ward: i32 = 0
+export mut var_haste: i32 = 0
+export mut var_aether: i32 = 0
+export mut var_focus: entity = 0
+export mut last_focus: entity = 0
+export mut next_regen: f64 = 0
+export mut pending_level: bool = false
+
+async {
+  while true {
+    await on.change(ui_tick_a)
+    const now = AppStatus[AppStatus].elapsed
+
+    if !title_go && now > 0.6 {
+      title_go = true
+    }
+
+    if atlas_press && !atlas_holding && !atlas_hold_spent {
+      atlas_holding = true
+      atlas_hold_since = now
+    } else if !atlas_press {
+      atlas_holding = false
+      atlas_hold_spent = false
+    }
+
+    if atlas_holding && now - atlas_hold_since >= HOLD_SECONDS {
+      atlas_holding = false
+      atlas_hold_spent = true
+      rq_op = OP_AWAKEN
+      await ui.changed(rq)
+    }
+
+    if banner_on && now >= banner_until {
+      banner_on = false
+    }
+
+    if aegis_on && now >= aegis_until {
+      aegis_on = false
+    }
+
+    if spell_cooling != 0 {
+      if has_bit(spell_cooling, 0) && now >= spell_ready_0 { spell_cooling = spell_cooling - 1 }
+      if has_bit(spell_cooling, 1) && now >= spell_ready_1 { spell_cooling = spell_cooling - 2 }
+      if has_bit(spell_cooling, 2) && now >= spell_ready_2 { spell_cooling = spell_cooling - 4 }
+      if has_bit(spell_cooling, 3) && now >= spell_ready_3 { spell_cooling = spell_cooling - 8 }
+      if has_bit(spell_cooling, 4) && now >= spell_ready_4 { spell_cooling = spell_cooling - 16 }
+      if has_bit(spell_cooling, 5) && now >= spell_ready_5 { spell_cooling = spell_cooling - 32 }
+    }
+
+    if now >= next_regen {
+      next_regen = now + 0.25
+      hero_mp = min(hero_mp_max, hero_mp + (2.6 + stat_aether * 0.05) * 0.25)
+      if aegis_on {
+        hero_hp = min(hero_hp_max, hero_hp + 1.6)
+      } else {
+        hero_hp = max(hero_hp_max * 0.22, hero_hp - 0.22)
+      }
+      await ui.changed(afford_check)
+    }
+
+    if pending_level {
+      pending_level = false
+      await ui.changed(level_check)
+    }
+  }
+}
+
+async {
+  while true {
+    await on.change(afford_check)
+    const m = hero_mp
+    const h = hero_hp
+    const a0 = match m >= spell_cost(0) && h > spell_blood(0) { true: 1; _: 0 }
+    const a1 = match m >= spell_cost(1) && h > spell_blood(1) { true: 2; _: 0 }
+    const a2 = match m >= spell_cost(2) && h > spell_blood(2) { true: 4; _: 0 }
+    const a3 = match m >= spell_cost(3) && h > spell_blood(3) { true: 8; _: 0 }
+    const a4 = match m >= spell_cost(4) && h > spell_blood(4) { true: 16; _: 0 }
+    const a5 = match m >= spell_cost(5) && h > spell_blood(5) { true: 32; _: 0 }
+    const mask = a0 + a1 + a2 + a3 + a4 + a5
+    if mask != spell_afford {
+      spell_afford = mask
+    }
+  }
+}
+
+async {
+  while true {
+    await on.change(level_check)
+    while hero_xp >= xp_needed(hero_level) {
+      hero_xp = hero_xp - xp_needed(hero_level)
+      hero_level = hero_level + 1
+      hero_points = hero_points + 1
+      banner_text = "Level {hero_level}"
+      banner_sub = "A new star point turns in your palm"
+      banner_on = true
+      banner_until = AppStatus[AppStatus].elapsed + 2.8
+      fx_level_serial = fx_level_serial + 1
+    }
+  }
+}
+

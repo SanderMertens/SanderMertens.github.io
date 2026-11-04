@@ -1,0 +1,254 @@
+using flecs.script
+using flecs.script.math
+
+export const st_grid_w: i32 = 7
+export const st_grid_h: i32 = 5
+export const st_slots: i32 = 35
+export const st_pitch: f32 = 6
+export const st_hub_slot: i32 = 17
+
+export const K_EMPTY: i32 = 0
+export const K_HUB: i32 = 1
+export const K_SOLAR: i32 = 2
+export const K_REACTOR: i32 = 3
+export const K_LIFE: i32 = 4
+export const K_AIR: i32 = 5
+export const K_FARM: i32 = 6
+export const K_HAB: i32 = 7
+export const K_PAX: i32 = 8
+export const K_CARGO: i32 = 9
+export const K_BAY: i32 = 10
+export const K_DEMOLISH: i32 = 99
+
+fn st_cost(k: i32) -> i32 {
+  match k {
+    2: 350
+    3: 1600
+    4: 550
+    5: 450
+    6: 400
+    7: 500
+    8: 650
+    9: 650
+    10: 250
+    _: 0
+  }
+}
+
+fn st_power_made(k: i32) -> f32 {
+  match k {
+    1: 2
+    2: 7
+    3: 32
+    _: 0
+  }
+}
+
+fn st_power_used(k: i32) -> f32 {
+  match k {
+    1: 1
+    3: 0
+    4: 3
+    5: 3
+    6: 2
+    7: 1
+    8: 2
+    9: 2
+    10: 1
+    _: 0
+  }
+}
+
+fn st_upkeep(k: i32) -> f32 {
+  match k {
+    0: 0
+    1: 0
+    2: 0.2
+    3: 2.2
+    8: 0.8
+    9: 0.8
+    _: 0.4
+  }
+}
+
+fn st_kind_name(k: i32) -> string {
+  match k {
+    1: "Command Hub"
+    2: "Solar Array"
+    3: "Fusion Reactor"
+    4: "Life Support"
+    5: "Atmosphere Plant"
+    6: "Hydroponics"
+    7: "Habitat Ring"
+    8: "Passenger Dock"
+    9: "Cargo Dock"
+    10: "Cargo Bay"
+    _: "Empty bay"
+  }
+}
+
+fn st_kind_blurb(k: i32) -> string {
+  match k {
+    1: "The heart of the station. Cannot be sold."
+    2: "Makes 7 power."
+    3: "Makes 32 power, with a high upkeep."
+    4: "Scrubs and recycles for 16 people. Uses 3 power."
+    5: "Makes air: 3 per second at full power. Uses 3 power."
+    6: "Grows 0.8 food per second at full power. Uses 2 power."
+    7: "Houses 12 residents, who pay rent. Uses 1 power."
+    8: "Lands one visitor ship at a time. Visitors pay to land and spend money while here."
+    9: "Lands one freighter at a time. A docked freighter opens the market."
+    10: "Stores 80 more tonnes of food and goods."
+    _: ""
+  }
+}
+
+fn st_x(i: i32) -> f32 {
+  ((i % st_grid_w) - (st_grid_w - 1) / 2.0) * st_pitch
+}
+
+fn st_z(i: i32) -> f32 {
+  (floor(i / st_grid_w) - (st_grid_h - 1) / 2.0) * st_pitch
+}
+
+fn st_bits_raw(mask: u64, i: i32, width: i32) -> u64 {
+  const one: u64 = 1
+  (mask >> (i * width)) & ((one << width) - one)
+}
+
+fn st_bits_get(mask: u64, i: i32, width: i32) -> i32 {
+  st_bits_raw(mask, i, width)
+}
+
+fn st_bits_set(mask: u64, i: i32, width: i32, value: u64) -> u64 {
+  mask - (st_bits_raw(mask, i, width) << (i * width)) + (value << (i * width))
+}
+
+fn st_bit(i: i32) -> u64 {
+  const one: u64 = 1
+  one << i
+}
+
+fn st_has(mask: u64, i: i32) -> bool {
+  st_bits_raw(mask, i, 1) == 1
+}
+
+fn st_near(mask: u64, i: i32) -> bool {
+  const x = i % st_grid_w
+  const y = floor(i / st_grid_w)
+  (x > 0 && st_has(mask, i - 1)) || (x < st_grid_w - 1 && st_has(mask, i + 1)) || (y > 0 && st_has(mask, i - st_grid_w)) || (y < st_grid_h - 1 && st_has(mask, i + st_grid_w))
+}
+
+fn st_kind_of(i: i32, w0: u64, w1: u64, w2: u64) -> i32 {
+  const word = match floor(i / 12) {
+    0: w0
+    1: w1
+    _: w2
+  }
+  st_bits_get(word, i % 12, 4)
+}
+
+export const st_start_built: u64 = (1 << 17) | (1 << 16) | (1 << 18) | (1 << 10) | (1 << 24) | (1 << 15) | (1 << 19)
+
+export const st_start_grid_0: u64 = 7 << 40
+export const st_start_grid_1: u64 = (2 << 12) | (4 << 16) | (1 << 20) | (5 << 24) | (2 << 28)
+export const st_start_grid_2: u64 = 6
+
+export const OP_BUY_FOOD: i32 = 101
+export const OP_BUY_GOODS: i32 = 102
+export const OP_SELL_GOODS: i32 = 103
+export const OP_SPEED: i32 = 200
+export const OP_RESTART: i32 = 300
+export const OP_CANCEL: i32 = 301
+export const OP_PAUSE: i32 = 302
+
+export mut st_tool: i32 = 0
+export mut st_hover_slot: i32 = -1
+export mut st_hover_op: i32 = -1
+export mut st_hover_stat: i32 = -1
+export mut st_req_op: i32 = 0
+export mut st_req_slot: i32 = 0
+export mut st_alert: string = "Welcome, Director. Build a Passenger Dock to start earning from visitors."
+export mut st_alert_until: f64 = 12
+export mut st_speed: i32 = 1
+export mut st_lost = false
+export mut st_rank: i32 = 0
+
+export mut st_credits: f64 = 2500
+export mut st_income: f64 = 0
+export mut st_residents: i32 = 8
+export mut st_visitors: i32 = 0
+export mut st_food: f64 = 40
+export mut st_goods: f64 = 0
+export mut st_air: f64 = 80
+export mut st_reputation: f64 = 50
+
+export mut st_growth: f64 = 0
+export mut st_decline: f64 = 0
+export mut st_beat: i32 = 0
+export mut st_next_beat: f64 = 0
+export mut st_visitor_spend: f64 = 0
+
+export mut st_grid_0: u64 = st_start_grid_0
+export mut st_grid_1: u64 = st_start_grid_1
+export mut st_grid_2: u64 = st_start_grid_2
+export mut st_built: u64 = st_start_built
+export mut st_rising: u64 = 0
+export mut st_rise_at: f64 = 0
+export mut st_sparks: u64 = 0
+export mut st_spark_until: f64 = 0
+export mut st_free_pax: u64 = 0
+export mut st_free_cargo: u64 = 0
+export mut st_modules: i32 = 0
+
+export mut st_power_supply: f64 = 0
+export mut st_power_demand: f64 = 0
+export mut st_power_ratio: f64 = 1
+export mut st_housing: i32 = 0
+export mut st_life_cap: f64 = 0
+export mut st_air_rate: f64 = 0
+export mut st_food_rate: f64 = 0
+export mut st_storage: f64 = 0
+export mut st_upkeep_total: f64 = 0
+export mut st_pax_docks: i32 = 0
+export mut st_cargo_docks: i32 = 0
+
+export mut st_dirty = true
+export mut tally_supply: f64 = 0
+export mut tally_demand: f64 = 0
+export mut tally_housing: i32 = 0
+export mut tally_life: f64 = 0
+export mut tally_air: f64 = 0
+export mut tally_food: f64 = 0
+export mut tally_storage: f64 = 0
+export mut tally_upkeep: f64 = 0
+export mut tally_pax: i32 = 0
+export mut tally_cargo: i32 = 0
+export mut tally_modules: i32 = 0
+
+export mut st_next_pax: i32 = 6
+export mut st_next_cargo: i32 = 10
+export mut st_ship_state: u64 = 0
+export mut st_ship_timer: u64 = 0
+export mut st_ship_patience: u64 = 0
+export mut st_ship_dock: u64 = 0
+export mut st_ship_visitors: u64 = 0
+export mut st_pax_docked: i32 = 0
+export mut st_pax_holding: i32 = 0
+export mut st_cargo_docked: i32 = 0
+export mut st_cargo_holding: i32 = 0
+export mut st_ships_served: i32 = 0
+export mut st_ships_lost: i32 = 0
+
+export mut st_price_food: f64 = 10
+export mut st_price_goods_buy: f64 = 12
+export mut st_price_goods_sell: f64 = 16
+export mut st_stock_food: f64 = 0
+export mut st_stock_goods: f64 = 0
+export mut st_demand_goods: f64 = 0
+
+st_frame_a {}
+st_frame_b {}
+st_tick {}
+st_req {}
+st_click {}

@@ -1,0 +1,33 @@
+using flecs.script
+using flecs.script.math
+using box.app
+
+async {
+  while true {
+    await on.change(rq)
+    const op = rq_op
+    const now = AppStatus[AppStatus].elapsed
+    if op == OP_CAST {
+      const i = rq_arg
+      const cooling = has_bit(spell_cooling, i)
+      if !cooling && hero_mp >= spell_cost(i) && hero_hp > spell_blood(i) {
+        hero_mp = hero_mp - spell_cost(i)
+        hero_hp = hero_hp - spell_blood(i)
+        const ready = now + spell_cooldown(i) * haste_scale(stat_haste)
+        if i == 0 { spell_ready_0 = ready }
+        if i == 1 { spell_ready_1 = ready; hero_hp = min(hero_hp_max, hero_hp + 60) }
+        if i == 2 { spell_ready_2 = ready; aegis_on = true; aegis_until = now + 8 }
+        if i == 3 { spell_ready_3 = ready }
+        if i == 4 { spell_ready_4 = ready; hero_dust = hero_dust + 250 + stat_might * 2 }
+        if i == 5 { spell_ready_5 = ready; hero_mp = min(hero_mp_max, hero_mp + 90) }
+        spell_cooling = spell_cooling + (1 << i)
+        hero_xp = hero_xp + spell_xp(i) * (1 + stat_might * 0.006)
+        pending_level = true
+        fx_cast = i
+        fx_cast_serial = fx_cast_serial + 1
+        await ui.changed(afford_check)
+      }
+    }
+  }
+}
+

@@ -1,0 +1,66 @@
+// The themes of the widget library. Widgets read box.ui.theme[UiTheme] reactively, so assigning
+// one of these to it restyles every widget in the next frame:
+//
+//   box { ui { theme { UiTheme: LightTheme } } }
+//
+// The theme entity belongs to box.ui, so a script that assigns it never owns or deletes it.
+
+module box.widgets
+
+using box.ui
+
+// The dark theme a new UiTheme holds, in the style of the flecs script widget examples
+export const DarkTheme: UiTheme = {
+  background: {32, 35, 41},
+  surface: {46, 50, 58},
+  surface_alt: {38, 41, 48},
+  border: {70, 76, 87},
+  text: {214, 218, 224},
+  text_muted: {164, 170, 180},
+  accent: {98, 168, 122},
+  accent_text: {22, 26, 30},
+  hover: {60, 65, 75},
+  pressed: {36, 39, 46},
+  focus: {120, 172, 240},
+  danger: {210, 104, 91},
+  selection: {60, 104, 84},
+  caret: {214, 218, 224},
+  disabled_opacity: 0.45,
+  font_size: 14,
+  small_font_size: 12,
+  heading_font_size: 18,
+  radius: 4,
+  padding: 8,
+  spacing: 8,
+  control_height: 28,
+  focus_width: 2,
+  caret_blink: 0.5
+}
+
+// A light theme with the same metrics
+export const LightTheme: UiTheme = {
+  background: {232, 235, 240},
+  surface: {250, 251, 253},
+  surface_alt: {222, 226, 233},
+  border: {190, 196, 206},
+  text: {33, 37, 43},
+  text_muted: {102, 110, 122},
+  accent: {44, 128, 82},
+  accent_text: {255, 255, 255},
+  hover: {236, 239, 244},
+  pressed: {210, 215, 224},
+  focus: {38, 110, 220},
+  danger: {196, 64, 52},
+  selection: {178, 214, 192},
+  caret: {33, 37, 43},
+  disabled_opacity: 0.45,
+  font_size: 14,
+  small_font_size: 12,
+  heading_font_size: 18,
+  radius: 4,
+  padding: 8,
+  spacing: 8,
+  control_height: 28,
+  focus_width: 2,
+  caret_blink: 0.5
+}

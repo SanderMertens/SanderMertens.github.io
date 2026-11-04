@@ -1,0 +1,871 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.light
+using box.spatial
+using box.particle
+using box.transition
+
+export const HULL_NOSE_Z: f32 = -2.35
+export const HULL_FRAME_Z: f32 = 1.05
+export const HULL_RINGS: i32 = 6
+export const HULL_ARCS: i32 = 6
+
+fn hull_z(s: f32) -> f32 {
+  lerp(HULL_NOSE_Z, HULL_FRAME_Z, s)
+}
+
+fn hull_grow(s: f32, power: f32) -> f32 {
+  1 - pow(max(1 - s, 0), power)
+}
+
+fn hull_half(s: f32) -> f32 {
+  0.34 + 1.66 * hull_grow(s, 2.4)
+}
+
+fn hull_crown(s: f32) -> f32 {
+  1.5 + 1.22 * hull_grow(s, 2.2)
+}
+
+fn hull_sill(s: f32) -> f32 {
+  0.86 - 0.12 * smoothstep(0.2, 0.85, clamp(s, 0, 1))
+}
+
+fn hull_ridge(s: f32) -> f32 {
+  0.2 * hull_grow(s, 1.5)
+}
+
+fn ring_s(k: i32) -> f32 {
+  match k { 0: 0; 1: 0.13; 2: 0.31; 3: 0.52; 4: 0.72; 5: 0.87; _: 1 }
+}
+
+fn arc_t(j: i32) -> f32 {
+  match j { 0: -1; 1: -0.7; 2: -0.34; 3: 0; 4: 0.34; 5: 0.7; _: 1 }
+}
+
+fn pane_solid(k: i32, j: i32) -> bool {
+  (k == 5 && j >= 1 && j <= 4) || (k == 4 && (j == 2 || j == 3))
+}
+
+fn frame_node(k: i32, j: i32) -> bool {
+  k >= 2 || (j != 2 && j != 3 && j != 4)
+}
+
+fn arc_x(t: f32) -> f32 {
+  const a = t * PI / 2
+  sin(a) * (1 + 0.25 * sqr(cos(a)))
+}
+
+fn arc_y(t: f32) -> f32 {
+  const a = t * PI / 2
+  cos(a) * (1 + 0.25 * sqr(sin(a)))
+}
+
+fn hull_pt(s: f32, t: f32) -> P3 {
+  const low = hull_sill(s)
+  {hull_half(s) * arc_x(t), low + (hull_crown(s) - low) * arc_y(t) + hull_ridge(s) * sqr(max(1 - abs(t), 0)), hull_z(s)}
+}
+
+fn hull_d_s(s: f32, t: f32) -> P3 {
+  const a = hull_pt(s - 0.01, t)
+  const b = hull_pt(s + 0.01, t)
+  {(b.x - a.x) * 50, (b.y - a.y) * 50, (b.z - a.z) * 50}
+}
+
+fn hull_d_t(s: f32, t: f32) -> P3 {
+  const a = hull_pt(s, t - 0.01)
+  const b = hull_pt(s, t + 0.01)
+  {(b.x - a.x) * 50, (b.y - a.y) * 50, (b.z - a.z) * 50}
+}
+
+fn hull_in(s: f32, t: f32) -> P3 {
+  const u = hull_d_t(s, t)
+  const v = hull_d_s(s, t)
+  const n: P3 = {u.y * v.z - u.z * v.y, u.z * v.x - u.x * v.z, u.x * v.y - u.y * v.x}
+  const l = sqrt(sqr(n.x) + sqr(n.y) + sqr(n.z))
+  {n.x / l, n.y / l, n.z / l}
+}
+
+fn patch_pt(s: f32, t: f32, o: P3, lift: f32) -> P3 {
+  const p = hull_pt(s, t)
+  const n = hull_in(s, t)
+  {p.x + n.x * lift - o.x, p.y + n.y * lift - o.y, p.z + n.z * lift - o.z}
+}
+
+fn patch_v(s: f32, t: f32, o: P3, lift: f32) -> box.types.vec3 {
+  const p = patch_pt(s, t, o, lift)
+  {p.x, p.y, p.z}
+}
+
+fn hull_v(s: f32, t: f32) -> box.types.vec3 {
+  const p = hull_pt(s, t)
+  {p.x, p.y, p.z}
+}
+
+fn normal_v(s: f32, t: f32) -> box.types.vec3 {
+  const n = hull_in(s, t)
+  {n.x, n.y, n.z}
+}
+
+fn ring_seg(s: f32, t0: f32, t1: f32) -> box.geometry.PathSegment3D {
+  const a = hull_pt(s, t0)
+  const b = hull_pt(s, t1)
+  const da = hull_d_t(s, t0)
+  const db = hull_d_t(s, t1)
+  const h = (t1 - t0) / 3
+  {
+    kind: CubicBezier,
+    end: {b.x, b.y, b.z},
+    control1: {a.x + da.x * h, a.y + da.y * h, a.z + da.z * h},
+    control2: {b.x - db.x * h, b.y - db.y * h, b.z - db.z * h}
+  }
+}
+
+fn long_seg(t: f32, s0: f32, s1: f32) -> box.geometry.PathSegment3D {
+  const a = hull_pt(s0, t)
+  const b = hull_pt(s1, t)
+  const da = hull_d_s(s0, t)
+  const db = hull_d_s(s1, t)
+  const h = (s1 - s0) / 3
+  {
+    kind: CubicBezier,
+    end: {b.x, b.y, b.z},
+    control1: {a.x + da.x * h, a.y + da.y * h, a.z + da.z * h},
+    control2: {b.x - db.x * h, b.y - db.y * h, b.z - db.z * h}
+  }
+}
+
+fn wall_x(s: f32, side: f32, q: f32) -> f32 {
+  side * hull_half(s) * (1 - 0.15 * q * q)
+}
+
+fn wall_y(s: f32, q: f32) -> f32 {
+  hull_sill(s) * (1 - q)
+}
+
+prefab FrameShape {
+  Path2D: {
+    start: {0.5, 0.24},
+    segments: [
+      {kind: Line, end: {0.24, 0.5}}, {kind: Line, end: {-0.24, 0.5}}, {kind: Line, end: {-0.5, 0.24}},
+      {kind: Line, end: {-0.5, -0.24}}, {kind: Line, end: {-0.24, -0.5}}, {kind: Line, end: {0.24, -0.5}},
+      {kind: Line, end: {0.5, -0.24}}
+    ],
+    closed: true
+  }
+}
+prefab FrameProfile { Profile2D: {outer: FrameShape} }
+
+prefab HoodShape {
+  Path2D: {
+    start: {-0.05, -0.06},
+    segments: [
+      {kind: Line, end: {-0.065, 0.02}},
+      {kind: CubicBezier, end: {-0.01, 0.06}, control1: {-0.07, 0.05}, control2: {-0.045, 0.06}},
+      {kind: CubicBezier, end: {0.31, -0.03}, control1: {0.12, 0.062}, control2: {0.26, 0.03}},
+      {kind: Line, end: {0.31, -0.06}}
+    ],
+    closed: true
+  }
+}
+prefab HoodProfile { Profile2D: {outer: HoodShape} }
+
+prefab PodShape {
+  Path2D: {
+    start: {0.5, -0.04},
+    segments: [
+      {kind: CubicBezier, end: {0.3, 0.42}, control1: {0.5, 0.16}, control2: {0.42, 0.34}},
+      {kind: CubicBezier, end: {0, 0.5}, control1: {0.2, 0.47}, control2: {0.1, 0.5}},
+      {kind: CubicBezier, end: {-0.3, 0.42}, control1: {-0.1, 0.5}, control2: {-0.2, 0.47}},
+      {kind: CubicBezier, end: {-0.5, -0.04}, control1: {-0.42, 0.34}, control2: {-0.5, 0.16}},
+      {kind: CubicBezier, end: {-0.22, -0.5}, control1: {-0.5, -0.24}, control2: {-0.38, -0.44}},
+      {kind: Line, end: {0.22, -0.5}},
+      {kind: CubicBezier, end: {0.5, -0.04}, control1: {0.38, -0.44}, control2: {0.5, -0.24}}
+    ],
+    closed: true
+  }
+}
+prefab PodProfile { Profile2D: {outer: PodShape} }
+
+fn pod_z(t: f32) -> f32 {
+  lerp(9, -8.2, t)
+}
+
+fn pod_w(t: f32) -> f32 {
+  0.92 + 2.1 * (1 - pow(t, 2.2))
+}
+
+fn pod_h(t: f32) -> f32 {
+  0.6 + 1.1 * (1 - sqr(t))
+}
+
+fn pod_x(t: f32) -> f32 {
+  3.35 - 0.6 * t
+}
+
+fn pod_y(t: f32) -> f32 {
+  0.05 + 0.38 * pow(t, 1.5)
+}
+
+fn pod_sec(t: f32, side: f32) -> box.geometry.LoftSection {
+  {
+    profile: PodProfile,
+    offset: {side * pod_x(t), pod_y(t), pod_z(t)},
+    rotation: {PI / 2, 0, 0},
+    scale: {pod_w(t), pod_h(t)}
+  }
+}
+
+fn pod_top(t: f32, side: f32, across: f32, lift: f32) -> P3 {
+  const q = abs(across)
+  {side * pod_x(t) + across * pod_w(t), pod_y(t) + pod_h(t) * (0.5 - q * q * 1.25) + lift, pod_z(t)}
+}
+
+fn pod_seg(a: f32, b: f32, side: f32, across: f32, lift: f32) -> box.geometry.PathSegment3D {
+  const p = pod_top(b, side, across, lift)
+  {kind: Line, end: {p.x, p.y, p.z}}
+}
+
+template HullPatch {
+  prop s0: f32 = 0
+  prop s1: f32 = 1
+  prop t0: f32 = -1
+  prop t1: f32 = 1
+  prop tile: f32 = 1
+  prop lift: f32 = 0
+  prop origin: P3 = {0, 0, 0}
+
+  const sm = (s0 + s1) / 2
+  const tm = (t0 + t1) / 2
+
+  Mesh3: {
+    vertices: [
+      patch_v(s0, t0, origin, lift), patch_v(s0, tm, origin, lift), patch_v(s0, t1, origin, lift),
+      patch_v(sm, t0, origin, lift), patch_v(sm, tm, origin, lift), patch_v(sm, t1, origin, lift),
+      patch_v(s1, t0, origin, lift), patch_v(s1, tm, origin, lift), patch_v(s1, t1, origin, lift)
+    ],
+    normals: [
+      normal_v(s0, t0), normal_v(s0, tm), normal_v(s0, t1),
+      normal_v(sm, t0), normal_v(sm, tm), normal_v(sm, t1),
+      normal_v(s1, t0), normal_v(s1, tm), normal_v(s1, t1)
+    ],
+    uvs: [
+      {0, 0}, {tile / 2, 0}, {tile, 0},
+      {0, tile / 2}, {tile / 2, tile / 2}, {tile, tile / 2},
+      {0, tile}, {tile / 2, tile}, {tile, tile}
+    ],
+    indices: [0, 1, 4, 0, 4, 3, 1, 2, 5, 1, 5, 4, 3, 4, 7, 3, 7, 6, 4, 5, 8, 4, 8, 7]
+  }
+}
+
+template WallPatch {
+  prop sa: f32 = 0
+  prop sb: f32 = 1
+  prop side: f32 = 1
+
+  const sm = (sa + sb) / 2
+
+  Mesh3: {
+    vertices: [
+      {wall_x(sa, side, 0), wall_y(sa, 0), hull_z(sa)}, {wall_x(sa, side, 0.5), wall_y(sa, 0.5), hull_z(sa)}, {wall_x(sa, side, 1), wall_y(sa, 1), hull_z(sa)},
+      {wall_x(sb, side, 0), wall_y(sb, 0), hull_z(sb)}, {wall_x(sb, side, 0.5), wall_y(sb, 0.5), hull_z(sb)}, {wall_x(sb, side, 1), wall_y(sb, 1), hull_z(sb)}
+    ],
+    uvs: [{0, 0}, {0, 0.5}, {0, 1}, {1, 0}, {1, 0.5}, {1, 1}],
+    indices: [0, 1, 4, 0, 4, 3, 1, 2, 5, 1, 5, 4]
+  }
+}
+
+template RingFrame {
+  prop s: f32 = 0
+  prop w: f32 = 0.034
+  prop tone: Rgb = {78, 74, 66}
+  prop t0: f32 = -1
+  prop t1: f32 = 1
+
+  const across = t0 < 0 && t1 > 0
+  const e0 = t0
+  const e6 = t1
+  const e3 = match across { true: 0; _: lerp(t0, t1, 0.5) }
+  const e1 = lerp(e0, e3, 0.3333)
+  const e2 = lerp(e0, e3, 0.6667)
+  const e4 = lerp(e3, e6, 0.3333)
+  const e5 = lerp(e3, e6, 0.6667)
+
+  run {
+    Path3D: {
+      start: {hull_pt(s, e0).x, hull_pt(s, e0).y, hull_pt(s, e0).z},
+      segments: [ring_seg(s, e0, e1), ring_seg(s, e1, e2), ring_seg(s, e2, e3), ring_seg(s, e3, e4), ring_seg(s, e4, e5), ring_seg(s, e5, e6)]
+    }
+  }
+
+  Sweep: {path: run, profile: FrameProfile, scale: {w, w * 1.25}, rings: 72}
+  Rgb: tone
+  PbrMaterial: {metallic: 1, roughness: 1}
+  PbrTextures: {albedo: tex_steel, orm: tex_steel_orm, normal: tex_steel_normal}
+  TextureTransform: {scale_x: 0.25, scale_y: 7}
+  SpatialIgnore
+}
+
+template LongFrame {
+  prop t: f32 = 0
+  prop w: f32 = 0.03
+  prop tone: Rgb = {78, 74, 66}
+  prop s0: f32 = 0
+
+  const d = (1 - s0) / 6
+
+  run {
+    Path3D: {
+      start: {hull_pt(s0, t).x, hull_pt(s0, t).y, hull_pt(s0, t).z},
+      segments: [
+        long_seg(t, s0, s0 + d), long_seg(t, s0 + d, s0 + 2 * d), long_seg(t, s0 + 2 * d, s0 + 3 * d),
+        long_seg(t, s0 + 3 * d, s0 + 4 * d), long_seg(t, s0 + 4 * d, s0 + 5 * d), long_seg(t, s0 + 5 * d, 1)
+      ]
+    }
+  }
+
+  Sweep: {path: run, profile: FrameProfile, scale: {w * 0.7, w * 0.85}, taper: 1.5, rings: 72}
+  Rgb: tone
+  PbrMaterial: {metallic: 1, roughness: 1}
+  PbrTextures: {albedo: tex_steel, orm: tex_steel_orm, normal: tex_steel_normal}
+  TextureTransform: {scale_x: 0.25, scale_y: 7}
+  SpatialIgnore
+}
+
+template WallRib {
+  prop s: f32 = 1
+  prop side: f32 = 1
+  prop w: f32 = 0.05
+
+  run {
+    Path3D: {
+      start: {wall_x(s, side, 0), wall_y(s, 0), hull_z(s)},
+      segments: [{
+        kind: CubicBezier,
+        end: {wall_x(s, side, 1), 0, hull_z(s)},
+        control1: {wall_x(s, side, 0.33), wall_y(s, 0.33), hull_z(s)},
+        control2: {wall_x(s, side, 0.66), wall_y(s, 0.66), hull_z(s)}
+      }]
+    }
+  }
+
+  Sweep: {path: run, profile: FrameProfile, scale: {w, w * 1.4}, rings: 12}
+  Rgb: {58, 56, 50}
+  PbrMaterial: {metallic: 1, roughness: 1}
+  PbrTextures: {albedo: tex_steel, orm: tex_steel_orm, normal: tex_steel_normal}
+  TextureTransform: {scale_x: 0.25, scale_y: 2}
+}
+
+template Glazing {
+  for k in 0..HULL_RINGS {
+    for j in 0..HULL_ARCS {
+      if pane_solid(k, j) {
+        "roof_{k}_{j}" : Quilt {
+          HullPatch: {s0: ring_s(k), s1: ring_s(k + 1), t0: arc_t(j), t1: arc_t(j + 1)}
+          TextureTransform: {scale_x: 0.9, scale_y: 0.9}
+        }
+      } else {
+        "pane_{k}_{j}" {
+          HullPatch: {s0: ring_s(k), s1: ring_s(k + 1), t0: arc_t(j), t1: arc_t(j + 1)}
+          Rgb: {112, 108, 102}
+          BlendMode: AlphaBlend
+          PbrMaterial: {metallic: 0, roughness: 0.05}
+          PbrTextures: {albedo: tex_grime}
+          NoShadow
+          SpatialIgnore
+        }
+      }
+    }
+  }
+
+  nose_cap {
+    Position: {0, 0, 0}
+    const hub: P3 = {0, 1.14, HULL_NOSE_Z - 0.2}
+    Mesh3: {
+      vertices: [
+        hull_v(0, arc_t(0)), hull_v(0, arc_t(1)), hull_v(0, arc_t(2)), hull_v(0, arc_t(3)), hull_v(0, arc_t(4)), hull_v(0, arc_t(5)), hull_v(0, arc_t(6)),
+        {hub.x, hub.y, hub.z}
+      ],
+      uvs: [{0, 1}, {0, 0.5}, {0.25, 0}, {0.5, 0}, {0.75, 0}, {1, 0.5}, {1, 1}, {0.5, 0.6}],
+      indices: [7, 1, 0, 7, 2, 1, 7, 3, 2, 7, 4, 3, 7, 5, 4, 7, 6, 5, 7, 0, 6]
+    }
+    Rgb: {112, 108, 102}
+    BlendMode: AlphaBlend
+    PbrMaterial: {metallic: 0, roughness: 0.05}
+    PbrTextures: {albedo: tex_grime}
+    NoShadow
+    SpatialIgnore
+  }
+}
+
+template Ribs {
+  RingFrame nose_ring(s: ring_s(0), w: 0.074, tone: {46, 44, 40}) { Position: {0, 0, 0} }
+  RingFrame ring_1a(s: ring_s(1), w: 0.032, t0: -1, t1: arc_t(2)) { Position: {0, 0, 0} }
+  RingFrame ring_1b(s: ring_s(1), w: 0.032, t0: arc_t(4), t1: 1) { Position: {0, 0, 0} }
+  RingFrame ring_2(s: ring_s(2), w: 0.036) { Position: {0, 0, 0} }
+  RingFrame ring_3(s: ring_s(3), w: 0.062, tone: {52, 50, 46}) { Position: {0, 0, 0} }
+  RingFrame ring_4(s: ring_s(4), w: 0.036) { Position: {0, 0, 0} }
+  RingFrame ring_5(s: ring_s(5), w: 0.048) { Position: {0, 0, 0} }
+  RingFrame main_frame(s: ring_s(6), w: 0.112, tone: {52, 50, 46}) { Position: {0, 0, 0} }
+  LongFrame sill_l(t: -1, w: 0.1, tone: {44, 42, 38}) { Position: {0, 0, 0} }
+  LongFrame lower_l(t: arc_t(1), w: 0.042) { Position: {0, 0, 0} }
+  LongFrame upper_l(t: arc_t(2), w: 0.036, s0: ring_s(2)) { Position: {0, 0, 0} }
+  LongFrame spine(t: 0, w: 0.074, tone: {46, 44, 40}) { Position: {0, 0, 0} }
+  LongFrame upper_r(t: arc_t(4), w: 0.036, s0: ring_s(2)) { Position: {0, 0, 0} }
+  LongFrame lower_r(t: arc_t(5), w: 0.042) { Position: {0, 0, 0} }
+  LongFrame sill_r(t: 1, w: 0.1, tone: {44, 42, 38}) { Position: {0, 0, 0} }
+
+  for k in 1..7 {
+    for j in 0..7 {
+      if frame_node(k, j) {
+        const s = ring_s(k)
+        const t = arc_t(j)
+        const p = hull_pt(s, t)
+        const n = hull_in(s, t)
+        const wide = 0.05 + (k == 3 || k == 6) * 0.03
+        "gusset_{k}_{j}" : BareSteel {
+          Beam: {a: {p.x + n.x * 0.012, p.y + n.y * 0.012, p.z + n.z * 0.012}, b: {p.x + n.x * 0.028, p.y + n.y * 0.028, p.z + n.z * 0.028}, w: wide * 1.7, h: wide * 1.7}
+          Rgb: {64, 62, 56}
+          PbrMaterial: {metallic: 1, roughness: 0.5}
+          NoShadow
+          SpatialIgnore
+        }
+        "boss_{k}_{j}" : BareSteel {
+          Position: {p.x + n.x * 0.03, p.y + n.y * 0.03, p.z + n.z * 0.03}
+          Sphere: {radius: 0.017, segments: 8, smooth: true}
+          Rgb: {108, 104, 96}
+          NoShadow
+          SpatialIgnore
+        }
+      }
+    }
+  }
+
+  for i in 0..26 {
+    const t = -0.96 + i * 0.0768
+    const a = hull_pt(ring_s(3) + 0.012, t)
+    const b = hull_pt(ring_s(3) - 0.012, t)
+    const n = hull_in(ring_s(3), t)
+    "rivet_a_{i}" : BareSteel { Position: {a.x + n.x * 0.04, a.y + n.y * 0.04, a.z + n.z * 0.04}; Sphere: {radius: 0.006, segments: 6}; Rgb: {120, 116, 106}; NoShadow; SpatialIgnore }
+    "rivet_b_{i}" : BareSteel { Position: {b.x + n.x * 0.04, b.y + n.y * 0.04, b.z + n.z * 0.04}; Sphere: {radius: 0.006, segments: 6}; Rgb: {120, 116, 106}; NoShadow; SpatialIgnore }
+    const c = hull_pt(ring_s(6) - 0.018, t)
+    const m = hull_in(ring_s(6), t)
+    "rivet_c_{i}" : BareSteel { Position: {c.x + m.x * 0.075, c.y + m.y * 0.075, c.z + m.z * 0.075}; Sphere: {radius: 0.008, segments: 6}; Rgb: {120, 116, 106}; NoShadow; SpatialIgnore }
+  }
+
+  sealer {
+    for j in 0..2 {
+      const side = match j { 0: -1; _: 1 }
+      "bar_{j}" : Rubber { Beam: {a: {side * 0.012, hull_pt(ring_s(0), 0).y - 0.02, hull_z(ring_s(0))}, b: {side * 0.012, hull_pt(ring_s(2), 0).y - 0.02, hull_z(ring_s(2))}, w: 0.006, h: 0.012}; NoShadow; SpatialIgnore }
+    }
+  }
+}
+
+template AftHull {
+  for k in 0..2 {
+    for j in 0..6 {
+      const s0 = 1 + k * 0.1676
+      const s1 = s0 + 0.1676
+      "skin_{k}_{j}" : Quilt {
+        HullPatch: {s0: s0, s1: s1, t0: arc_t(j), t1: arc_t(j + 1)}
+        TextureTransform: {scale_x: 0.9, scale_y: 0.72}
+      }
+    }
+  }
+
+  RingFrame aft_a(s: 1.1676, w: 0.07, tone: {52, 50, 46}) { Position: {0, 0, 0} }
+  RingFrame aft_b(s: 1.3352, w: 0.07, tone: {52, 50, 46}) { Position: {0, 0, 0} }
+
+  bulkhead : PaintedSteel {
+    Position: {0, 1.36, 2.2}
+    Box: {4.4, 2.8, 0.08}
+    TextureTransform: {scale_x: 3.4, scale_y: 2.2}
+    Rgb: {96, 92, 82}
+  }
+
+  hatch {
+    Position: {0, 1.12, 2.15}
+    frame : Soot { Rotation: {PI / 2, 0, 0}; Torus: {radius: 0.62, tube: 0.06, segments: 40, rings: 10, smooth: true} }
+    door : PaintedSteel { Position: {0, 0, 0.01}; Rotation: {PI / 2, 0, 0}; Cylinder: {radius: 0.6, length: 0.04, segments: 36, smooth: true}; Rgb: {128, 116, 88} }
+    wheel : BareSteel { Position: {0, 0, -0.08}; Rotation: {PI / 2, 0, 0}; Torus: {radius: 0.17, tube: 0.014, segments: 24, rings: 8, smooth: true} }
+    axle : BareSteel { Position: {0, 0, -0.05}; Rotation: {PI / 2, 0, 0}; Cylinder: {radius: 0.022, length: 0.07, segments: 12, smooth: true} }
+    spoke_a : BareSteel { Position: {0, 0, -0.08}; Rotation: {0, 0, 0.5}; Box: {0.34, 0.016, 0.016} }
+    spoke_b : BareSteel { Position: {0, 0, -0.08}; Rotation: {0, 0, 2.07}; Box: {0.34, 0.016, 0.016} }
+    for i in 0..8 {
+      "dog_{i}" : BareSteel {
+        Position: {cos(i * PI / 4) * 0.56, sin(i * PI / 4) * 0.56, -0.03}
+        Rotation: {0, 0, i * PI / 4}
+        Box: {0.1, 0.05, 0.02}
+      }
+    }
+    hazard { Position: {0, -0.8, -0.005}; Quad: {1.1, 0.09}; Rotation: {0, PI, 0}; Rgb: {180, 170, 150}; PbrMaterial: {metallic: 0, roughness: 0.7}; PbrTextures: {albedo: tex_hazard}; TextureTransform: {scale_x: 5, scale_y: 0.4} }
+    glow { Position: {0, 0.85, -0.06}; Sphere: {radius: 0.022, segments: 10, smooth: true}; Rgb: {24, 6, 4}; Emissive: {strength: 3, color: {255, 60, 40}} }
+    glow_light { Position: {0, 0.8, -0.2}; PointLight: {intensity: 0.3, range: 1.8}; Rgb: {255, 70, 50} }
+  }
+}
+
+template Lower {
+  floor : Soot {
+    Position: {0, -0.03, 0.2}
+    Box: {3.8, 0.06, 4.2}
+    PbrTextures: {albedo: tex_grate, orm: tex_steel_orm, normal: tex_steel_normal}
+    TextureTransform: {scale_x: 5, scale_y: 5.5}
+  }
+
+  for k in 2..8 {
+    const a = k * 1.0 / 6
+    const b = (k + 1) * 1.0 / 6
+    "wall_l_{k}" : Quilt { WallPatch: {sa: b, sb: a, side: -1}; TextureTransform: {scale_x: 0.8, scale_y: 0.8} }
+    "wall_r_{k}" : Quilt { WallPatch: {sa: a, sb: b, side: 1}; TextureTransform: {scale_x: 0.8, scale_y: 0.8} }
+    WallRib "rib_l_{k}"(s: a, side: -1) { Position: {0, 0, 0} }
+    WallRib "rib_r_{k}"(s: a, side: 1) { Position: {0, 0, 0} }
+  }
+
+  for k in 0..3 {
+    const a = k * 0.11
+    const b = (k + 1) * 0.11
+    "deck_{k}" : Soot {
+      Position: {0, 0, 0}
+      Mesh3: {
+        vertices: [
+          {0 - hull_half(b), hull_sill(b) - 0.01, hull_z(b)}, {hull_half(b), hull_sill(b) - 0.01, hull_z(b)},
+          {hull_half(a), hull_sill(a) - 0.01, hull_z(a)}, {0 - hull_half(a), hull_sill(a) - 0.01, hull_z(a)}
+        ],
+        uvs: [{0, 1}, {2, 1}, {2, 0}, {0, 0}],
+        indices: [0, 1, 2, 0, 2, 3]
+      }
+    }
+  }
+
+  shelf : Soot {
+    Position: {0, 0, 0}
+    Mesh3: {
+      vertices: [
+        {-0.72, 1.025, -1.0}, {0.38, 1.025, -1.0}, {1.15, 1.025, -1.52}, {-1.15, 1.025, -1.52},
+        {0.7, 1.025, -0.9}, {1.44, 1.025, -1.0},
+        {1.4, 1.025, -0.4}, {1.76, 1.025, -0.4},
+        {-1.0, 1.025, -0.9}, {-1.44, 1.025, -1.0},
+        {-1.5, 1.025, -0.4}, {-1.76, 1.025, -0.4}
+      ],
+      uvs: [
+        {1.3, 0.8}, {2.2, 0.8}, {2.9, 0.4}, {0.9, 0.4},
+        {2.5, 0.9}, {3.1, 0.8}, {3.1, 1.2}, {3.4, 1.2},
+        {1.1, 0.9}, {0.8, 0.8}, {0.7, 1.2}, {0.4, 1.2}
+      ],
+      indices: [0, 1, 2, 0, 2, 3, 1, 4, 5, 1, 5, 2, 4, 6, 7, 4, 7, 5, 9, 8, 0, 9, 0, 3, 11, 10, 8, 11, 8, 9]
+    }
+    Rgb: {58, 54, 46}
+  }
+
+  coaming : Vinyl {
+    Position: {0, 0, 0}
+    run {
+      Path3D: {
+        start: {-1.5, 0.975, -0.4},
+        segments: [
+          {kind: Line, end: {-1.0, 0.975, -0.9}},
+          {kind: CubicBezier, end: {-0.72, 0.975, -1.0}, control1: {-0.92, 0.975, -0.97}, control2: {-0.84, 0.975, -1.0}},
+          {kind: Line, end: {0.38, 0.975, -1.0}},
+          {kind: CubicBezier, end: {0.7, 0.975, -0.9}, control1: {0.5, 0.975, -1.0}, control2: {0.6, 0.975, -0.97}},
+          {kind: Line, end: {1.4, 0.975, -0.4}}
+        ]
+      }
+    }
+    Sweep: {path: run, profile: HoodProfile, scale: {1, 1}, rings: 96}
+    TextureTransform: {scale_x: 1.4, scale_y: 18}
+  }
+
+  dash_face : Soot { Position: {-0.14, 0.47, -1.02}; Box: {1.5, 0.94, 0.05}; TextureTransform: {scale_x: 2.4, scale_y: 1.5} }
+  knee_l : Soot { Position: {-1.18, 0.47, -0.77}; Rotation: {0, 0.72, 0}; Box: {0.86, 0.94, 0.05}; TextureTransform: {scale_x: 1.4, scale_y: 1.5} }
+  knee_r : Soot { Position: {1.02, 0.47, -0.76}; Rotation: {0, -0.55, 0}; Box: {1.04, 0.94, 0.05}; TextureTransform: {scale_x: 1.6, scale_y: 1.5} }
+
+  ledge_l : Soot { Position: {-1.72, 0.7, 0.32}; Rotation: {0.0, 0, -0.12}; RoundedBox: {0.34, 0.05, 1.44, 0.018, segments: 2}; TextureTransform: {scale_x: 0.6, scale_y: 2.4} }
+  ledge_r : Soot { Position: {1.72, 0.7, 0.32}; Rotation: {0.0, 0, 0.12}; RoundedBox: {0.34, 0.05, 1.44, 0.018, segments: 2}; TextureTransform: {scale_x: 0.6, scale_y: 2.4} }
+  rail_l { Tube3: {a: {-1.76, 1.04, -0.22}, b: {-1.92, 1.04, 0.92}, r: 0.014, tone: {120, 118, 112}} }
+  rail_r { Tube3: {a: {1.76, 1.04, -0.22}, b: {1.92, 1.04, 0.92}, r: 0.014, tone: {120, 118, 112}} }
+
+  pedestal : BoneWhite { Position: {0.24, 0.26, -0.3}; RoundedBox: {0.34, 0.52, 0.96, 0.02, segments: 2}; TextureTransform: {scale_x: 0.6, scale_y: 1}; Rgb: {120, 114, 100} }
+}
+
+template Seat {
+  Position: {1.02, 0, 0.42}
+  Rotation: {0, -0.12, 0}
+  rail_a : Soot { Position: {-0.2, 0.03, 0}; Box: {0.05, 0.05, 0.8} }
+  rail_b : Soot { Position: {0.2, 0.03, 0}; Box: {0.05, 0.05, 0.8} }
+  post : BareSteel { Position: {0, 0.24, 0.02}; Rotation: {0, 0, 0}; Cylinder: {radius: 0.05, length: 0.42, segments: 14, smooth: true} }
+  pan : Quilt { Position: {0, 0.52, 0}; Rotation: {0.05, 0, 0}; RoundedBox: {0.5, 0.11, 0.52, 0.05, segments: 4}; TextureTransform: {scale_x: 0.5, scale_y: 0.5}; Rgb: {78, 40, 26} }
+  back : Quilt { Position: {0, 0.92, 0.28}; Rotation: {0.14, 0, 0}; RoundedBox: {0.48, 0.74, 0.12, 0.05, segments: 4}; TextureTransform: {scale_x: 0.5, scale_y: 0.7}; Rgb: {78, 40, 26} }
+  head : Quilt { Position: {0, 1.36, 0.34}; Rotation: {0.08, 0, 0}; RoundedBox: {0.28, 0.17, 0.1, 0.04, segments: 4}; TextureTransform: {scale_x: 0.3, scale_y: 0.2}; Rgb: {66, 36, 24} }
+  shell : Soot { Position: {0, 0.92, 0.36}; Rotation: {0.14, 0, 0}; Box: {0.42, 0.68, 0.03} }
+  strap_a { Position: {-0.12, 1.02, 0.2}; Rotation: {0.14, 0, 0.05}; Box: {0.045, 0.56, 0.008}; Rgb: {100, 88, 54}; PbrMaterial: {metallic: 0, roughness: 0.9} }
+  strap_b { Position: {0.12, 1.02, 0.2}; Rotation: {0.14, 0, -0.05}; Box: {0.045, 0.56, 0.008}; Rgb: {100, 88, 54}; PbrMaterial: {metallic: 0, roughness: 0.9} }
+  buckle : Brass { Position: {0, 0.72, 0.205}; Rotation: {0.14, 0, 0}; Box: {0.07, 0.05, 0.012} }
+}
+
+template DustCanister {
+  prop at: P3 = {0, 0, 0}
+  prop cap: Rgb = {186, 134, 46}
+  prop spin: f32 = 0
+
+  Position: {at.x, at.y, at.z}
+  Rotation: {PI / 2, 0, 0}
+  SpatialIgnore
+  body : HullPlate { Rotation: {0, spin, 0}; Cylinder: {radius: 0.15, length: 0.44, segments: 18, smooth: true}; Rgb: {134, 124, 100}; TextureTransform: {scale_x: 0.4, scale_y: 0.3}; NoShadow }
+  band_a : Soot { Position: {0, 0.17, 0}; Cylinder: {radius: 0.158, length: 0.03, segments: 18, smooth: true}; NoShadow }
+  band_b : Soot { Position: {0, -0.17, 0}; Cylinder: {radius: 0.158, length: 0.03, segments: 18, smooth: true}; NoShadow }
+  lid { Position: {0, -0.235, 0}; Frustum: {radius_bottom: 0.15, radius_top: 0.09, length: 0.04, segments: 18, smooth: true}; Rgb: cap; PbrMaterial: {metallic: 0.6, roughness: 0.6}; NoShadow }
+  valve : Brass { Position: {0, -0.265, 0}; Cylinder: {radius: 0.03, length: 0.03, segments: 8}; NoShadow }
+}
+
+template Sponson {
+  prop side: f32 = 1
+
+  const eg = eng_rpm
+
+  body : HullPlate {
+    Position: {0, 0, 0}
+    Loft: {
+      sections: [
+        pod_sec(0, side), pod_sec(0.16, side), pod_sec(0.32, side), pod_sec(0.46, side), pod_sec(0.58, side),
+        pod_sec(0.68, side), pod_sec(0.76, side), pod_sec(0.83, side), pod_sec(0.89, side), pod_sec(0.94, side), pod_sec(1, side)
+      ],
+      cap_start: true, cap_end: true, rings: 60
+    }
+    TextureTransform: {scale_x: 2.4, scale_y: 5.5}
+    Rgb: {150, 142, 124}
+    NoShadow
+    SpatialIgnore
+  }
+
+  chine_top : Oxide {
+    Position: {0, 0, 0}
+    run {
+      Path3D: {
+        start: {pod_top(0.35, side, 0 - side * 0.3, 0.01).x, pod_top(0.35, side, 0 - side * 0.3, 0.01).y, pod_top(0.35, side, 0 - side * 0.3, 0.01).z},
+        segments: [
+          pod_seg(0.35, 0.5, side, 0 - side * 0.3, 0.01), pod_seg(0.5, 0.62, side, 0 - side * 0.3, 0.01), pod_seg(0.62, 0.72, side, 0 - side * 0.3, 0.01),
+          pod_seg(0.72, 0.8, side, 0 - side * 0.3, 0.01), pod_seg(0.8, 0.88, side, 0 - side * 0.3, 0.01), pod_seg(0.88, 0.95, side, 0 - side * 0.3, 0.01)
+        ]
+      }
+    }
+    Sweep: {path: run, profile: FrameProfile, scale: {0.09, 0.03}, rings: 48}
+    TextureTransform: {scale_x: 0.5, scale_y: 8}
+    NoShadow
+    SpatialIgnore
+  }
+
+  rack_rail_a : Soot { Beam: {a: pod_top(0.5, side, 0.06, 0.03), b: pod_top(0.76, side, 0.06, 0.03), w: 0.05, h: 0.05}; NoShadow; SpatialIgnore }
+  rack_rail_b : Soot { Beam: {a: pod_top(0.5, side, -0.06, 0.03), b: pod_top(0.76, side, -0.06, 0.03), w: 0.05, h: 0.05}; NoShadow; SpatialIgnore }
+  for i in 0..7 {
+    const t = 0.52 + i * 0.036
+    const hue: Rgb = match i % 4 { 0: {186, 134, 46}; 1: {128, 58, 38}; 2: {66, 96, 92}; _: {176, 168, 148} }
+    DustCanister "can_{i}"(at: {pod_top(t, side, 0, 0.19).x, pod_top(t, side, 0, 0.19).y, pod_top(t, side, 0, 0.19).z}, cap: hue, spin: i * 0.7)
+    "strap_{i}" : Canvas {
+      Position: {pod_top(t, side, 0, 0.19).x, pod_top(t, side, 0, 0.19).y, pod_top(t, side, 0, 0.19).z + 0.1}
+      Rotation: {PI / 2, 0, 0}
+      Tube: {radius: 0.166, thickness: 0.012, length: 0.04, segments: 18, smooth: true}
+      Rgb: {100, 88, 54}
+      NoShadow
+      SpatialIgnore
+    }
+  }
+
+  for i in 0..6 {
+    "vent_{i}" : Soot { Beam: {a: pod_top(0.8 + i * 0.016, side, 0.2, 0.012), b: pod_top(0.8 + i * 0.016, side, -0.04, 0.012), w: 0.09, h: 0.03}; NoShadow; SpatialIgnore }
+  }
+
+  intake {
+    const lip = pod_top(1, side, 0, 0)
+    Position: {side * pod_x(1), pod_y(1), pod_z(1) - 0.18}
+    Rotation: {PI / 2, 0, 0}
+    SpatialIgnore
+    cowl : Soot { Position: {0, 0, 0}; Frustum: {radius_bottom: 0.33, radius_top: 0.46, length: 0.42, segments: 32, smooth: true}; NoShadow }
+    lip_ring : BareSteel { Position: {0, -0.22, 0}; Torus: {radius: 0.46, tube: 0.034, segments: 36, rings: 10, smooth: true}; Rgb: {132, 128, 118}; NoShadow }
+    band : Oxide { Position: {0, 0.17, 0}; Cylinder: {radius: 0.35, length: 0.06, segments: 32, smooth: true}; NoShadow }
+    throat { Position: {0, -0.1, 0}; Cylinder: {radius: 0.3, length: 0.02, segments: 28, smooth: true}; Rgb: {4, 4, 5}; Emissive: {strength: 0.02 + eg * 2.4, color: {255, 150, 70}}; Transition: [Emissive: {duration: 0.5}]; NoShadow }
+    hub : BareSteel { Position: {0, -0.32, 0}; Rotation: {PI, 0, 0}; Cone: {radius: 0.13, length: 0.42, segments: 18, smooth: true}; NoShadow }
+    for i in 0..8 {
+      "vane_{i}" : Soot {
+        Rotation: {0, i * PI / 4, 0}
+        blade : Soot { Position: {0.29, -0.14, 0}; Box: {0.34, 0.26, 0.016}; NoShadow }
+      }
+    }
+  }
+
+  lance {
+    Tube3 shaft(a: pod_top(0.86, side, 0 - side * 0.24, 0.1), b: {side * 2.36, 0.74, -10.8}, r: 0.03, tone: {92, 90, 86})
+    Tube3 strut_a(a: pod_top(0.86, side, 0 - side * 0.24, 0), b: pod_top(0.86, side, 0 - side * 0.24, 0.11), r: 0.022, tone: {60, 58, 54})
+    Tube3 strut_b(a: pod_top(0.97, side, 0 - side * 0.2, -0.02), b: {side * 2.48, 0.73, pod_z(0.97)}, r: 0.018, tone: {60, 58, 54})
+    for i in 0..5 {
+      "collar_{i}" : BareSteel {
+        Position: {lerp(pod_top(0.86, side, 0 - side * 0.24, 0.1).x, side * 2.36, 0.15 + i * 0.17), lerp(pod_top(0.86, side, 0 - side * 0.24, 0.1).y, 0.74, 0.15 + i * 0.17), lerp(pod_top(0.86, side, 0 - side * 0.24, 0.1).z, -10.8, 0.15 + i * 0.17)}
+        Rotation: {PI / 2, 0, 0}
+        Cylinder: {radius: 0.05, length: 0.05, segments: 12, smooth: true}
+        Rgb: {112, 108, 100}
+        NoShadow
+        SpatialIgnore
+      }
+    }
+    head : Soot { Position: {side * 2.36, 0.74, -10.95}; Rotation: {PI / 2, 0, 0}; Frustum: {radius_bottom: 0.05, radius_top: 0.13, length: 0.3, segments: 18, smooth: true}; NoShadow; SpatialIgnore }
+  }
+
+  tip_light {
+    Position: {side * 2.36, 0.88, -10.9}
+    Sphere: {radius: 0.05, segments: 10, smooth: true}
+    Rgb: {30, 6, 4}
+    Emissive: {strength: match slow_blink && bus { true: 7; _: 0.2 }, color: match side > 0 { true: {80, 255, 130}; _: {255, 60, 40} }}
+    NoShadow
+    SpatialIgnore
+  }
+
+  neck : HullPlate {
+    Position: {0, 0, 0}
+    Loft: {
+      sections: [
+        {profile: PodProfile, offset: {side * 2.1, 0.45, 1.4}, rotation: {PI / 2, 0, 0}, scale: {2.2, 0.8}},
+        {profile: PodProfile, offset: {side * 2.1, 0.5, 0}, rotation: {PI / 2, 0, 0}, scale: {2.2, 0.72}},
+        {profile: PodProfile, offset: {side * 2.1, 0.5, -1.0}, rotation: {PI / 2, 0, 0}, scale: {1.9, 0.56}},
+        {profile: PodProfile, offset: {side * 2.2, 0.5, -1.9}, rotation: {PI / 2, 0, 0}, scale: {1.4, 0.2}}
+      ],
+      cap_start: true, cap_end: true, rings: 18
+    }
+    TextureTransform: {scale_x: 1, scale_y: 1}
+    Rgb: {124, 118, 102}
+    NoShadow
+    SpatialIgnore
+  }
+}
+
+template Wing {
+  prop side: f32 = 1
+
+  Position: {side * 3.6, 0.34, 0}
+  Rotation: {0, 0, side * 0.1}
+
+  plate : HullPlate {
+    Position: {0, 0, 0}
+    BeveledPrism: {
+      footprint: [{0, -0.6}, {side * 7.4, 5.4}, {side * 7.4, 7.2}, {0, 7.6}],
+      depth: 0.18,
+      inset: 0.04,
+      bevel: 0.04
+    }
+    TextureTransform: {scale_x: 0.5, scale_y: 0.5}
+    Rgb: {132, 124, 106}
+    NoShadow
+    SpatialIgnore
+  }
+
+  strip : Oxide { Beam: {a: {side * 1.1, 0.1, 0.7}, b: {side * 6.8, 0.1, 5.6}, w: 0.26, h: 0.012}; NoShadow; SpatialIgnore }
+
+  nacelle {
+    Position: {side * 4.0, 0.42, 4.0}
+    Rotation: {PI / 2, 0, 0}
+    shell : HullPlate { Position: {0, 0, 0}; Cylinder: {radius: 0.62, length: 3.6, segments: 28, smooth: true}; TextureTransform: {scale_x: 2, scale_y: 2}; Rgb: {126, 118, 100}; NoShadow; SpatialIgnore }
+    inlet : Soot { Position: {0, -1.95, 0}; Frustum: {radius_bottom: 0.46, radius_top: 0.62, length: 0.3, segments: 28, smooth: true}; NoShadow; SpatialIgnore }
+    spinner : BareSteel { Position: {0, -2.1, 0}; Cone: {radius: 0.2, length: 0.4, segments: 18, smooth: true}; Rotation: {PI, 0, 0}; NoShadow; SpatialIgnore }
+    for i in 0..5 {
+      "gill_{i}" {
+        Position: {0, -0.4 + i * 0.42, 0}
+        Torus: {radius: 0.625, tube: 0.02, segments: 30, rings: 6, smooth: true}
+        Rgb: {16, 10, 6}
+        Emissive: {strength: 0.1 + eng_rpm * 7, color: {120, 190, 255}}
+        Transition: [Emissive: {duration: 0.4}]
+        NoShadow
+        SpatialIgnore
+      }
+    }
+    strut : Soot { Position: {side * 0, 0, 0.62}; Box: {0.14, 1.6, 0.36}; NoShadow; SpatialIgnore }
+  }
+}
+
+template Fuselage {
+  mass : HullPlate {
+    Position: {0, 0.9, 8.6}
+    RoundedBox: {7.6, 4.6, 13, 0.5, segments: 6}
+    TextureTransform: {scale_x: 4, scale_y: 4}
+    Rgb: {122, 116, 100}
+    NoShadow
+    SpatialIgnore
+  }
+  flank_l : Oxide { Position: {-3.8, 1.6, 4.4}; Box: {0.04, 0.4, 4.6}; NoShadow; SpatialIgnore }
+  flank_r : Oxide { Position: {3.8, 1.6, 4.4}; Box: {0.04, 0.4, 4.6}; NoShadow; SpatialIgnore }
+  scoop_l : Soot { Position: {-2.9, 1.9, 2.04}; Box: {1.2, 0.5, 0.1}; NoShadow; SpatialIgnore }
+  scoop_r : Soot { Position: {2.9, 1.9, 2.04}; Box: {1.2, 0.5, 0.1}; NoShadow; SpatialIgnore }
+  antenna { Tube3: {a: {1.24, 0.84, -1.9}, b: {1.5, 1.82, -2.9}, r: 0.009, tone: {120, 118, 112}}; SpatialIgnore }
+  antenna_tip : SignalRed { Position: {1.5, 1.82, -2.9}; Sphere: {radius: 0.02, segments: 10, smooth: true}; NoShadow; SpatialIgnore }
+}
+
+template CabinLights {
+  lip_light_a { Position: {-0.4, 0.89, -0.72}; PointLight: {intensity: 0.05 + flood * 0.26, range: 1.4}; Rgb: {255, 206, 160} }
+  lip_light_b { Position: {0.42, 0.89, -0.72}; PointLight: {intensity: 0.04 + flood * 0.18, range: 1.4}; Rgb: {255, 206, 160} }
+  dome { Position: {0, 2.0, 1.0}; PointLight: {intensity: 0.12 + flood * 1.6, range: 5}; Rgb: {255, 236, 216} }
+  aft_fill { Position: {0.9, 1.5, 1.7}; PointLight: {intensity: flood * 0.4, range: 2.6}; Rgb: {255, 214, 170} }
+  fill_red { Position: {-0.3, 0.3, -0.2}; PointLight: {intensity: 0.5 - flood * 0.46, range: 3}; Rgb: {255, 36, 24} }
+}
+
+template Hull {
+  Glazing glazing()
+  Ribs ribs()
+  AftHull aft()
+  Lower lower()
+  Seat seat()
+  Sponson port(side: -1)
+  Sponson starboard(side: 1)
+  Wing wing_l(side: -1)
+  Wing wing_r(side: 1)
+  Fuselage fuselage()
+  CabinLights lights()
+  Cable c_a(a: {-0.44, 2.86, 0.5}, b: {-0.42, 2.34, 0.34}, sag: 0.05, thick: 0.02) { Position: {0, 0, 0} }
+  Cable c_b(a: {-1.5, 1.92, 0.96}, b: {-0.5, 2.5, 0.96}, sag: 0.1, thick: 0.014, tone: {90, 30, 22}) { Position: {0, 0, 0} }
+  Cable c_c(a: {1.6, 1.8, 0.96}, b: {0.5, 2.52, 0.96}, sag: 0.14, thick: 0.016, tone: {120, 100, 40}) { Position: {0, 0, 0} }
+}
+
+template Trinket {
+  prop x: f32 = 0
+  prop y: f32 = 0
+  prop z: f32 = 0
+  prop drop: f32 = 0.18
+
+  const swing = sin(clock * 1.9) * 0.05 + sin(clock * 0.7) * 0.04 + shake * sin(clock * 21) * 0.26 - attitude_roll * 0.3
+
+  Position: {x, y, z}
+  Rotation: {sin(clock * 1.3) * 0.03, 0, swing}
+  SpatialIgnore
+  chain : BareSteel { Position: {0, 0 - drop / 2, 0}; Cylinder: {radius: 0.0016, length: drop, segments: 6} }
+  charm : Brass { Position: {0, -0.024 - drop, 0}; Rotation: {PI / 2, 0, 0.5}; Torus: {radius: 0.024, tube: 0.0055, segments: 18, rings: 8, smooth: true} }
+  bead : SignalRed { Position: {0, -0.024 - drop, 0}; Sphere: {radius: 0.01, segments: 10, smooth: true} }
+  coin_a : Brass { Position: {0.014, -0.066 - drop, 0}; Rotation: {PI / 2, 0, 0.3}; Cylinder: {radius: 0.015, length: 0.002, segments: 16, smooth: true} }
+  coin_b : Brass { Position: {-0.012, -0.076 - drop, 0.002}; Rotation: {PI / 2, 0, -0.5}; Cylinder: {radius: 0.012, length: 0.002, segments: 14, smooth: true}; Rgb: {150, 112, 56} }
+  coin_c : BareSteel { Position: {0.002, -0.094 - drop, -0.002}; Rotation: {PI / 2, 0, 0.1}; Cylinder: {radius: 0.01, length: 0.002, segments: 14, smooth: true} }
+  link : BareSteel { Position: {0, -0.06 - drop, 0}; Cylinder: {radius: 0.0012, length: 0.03, segments: 6} }
+}
+
+template Clutter {
+  mug {
+    Position: {-0.82, 1.075, -1.12}
+    SpatialIgnore
+    wall : PaintedSteel { Rotation: {0, 0, 0}; Tube: {radius: 0.042, thickness: 0.004, length: 0.095, segments: 24, smooth: true}; Rgb: {120, 56, 40} }
+    bottom : PaintedSteel { Position: {0, -0.044, 0}; Cylinder: {radius: 0.04, length: 0.006, segments: 20}; Rgb: {120, 56, 40} }
+    brew { Position: {0, 0.028, 0}; Cylinder: {radius: 0.038, length: 0.002, segments: 20, smooth: true}; Rgb: {18, 9, 5}; PbrMaterial: {metallic: 0, roughness: 0.12} }
+    handle { Position: {0.05, 0, 0}; Rotation: {PI / 2, 0, 0}; TorusShell: {radius: 0.024, tube: 0.005, ring_start: -1.8, ring_end: 1.8, tube_start: 0, tube_end: 6.283, segments: 14, rings: 8}; Rgb: {120, 56, 40}; PbrMaterial: {metallic: 0, roughness: 0.5} }
+  }
+  wrench {
+    Position: {0.58, 1.03, -1.12}
+    Rotation: {0, 0.5, 0}
+    SpatialIgnore
+    bar : BareSteel { Position: {0, 0, 0}; Box: {0.17, 0.006, 0.018} }
+    head : BareSteel { Position: {0.09, 0, 0}; Cylinder: {radius: 0.02, length: 0.008, segments: 6} }
+  }
+  rag { Position: {0.94, 1.02, -0.86}; Rotation: {0.02, 0.8, 0.06}; RoundedBox: {0.2, 0.012, 0.13, 0.005, segments: 2}; Rgb: {92, 40, 30}; PbrMaterial: {metallic: 0, roughness: 1}; SpatialIgnore }
+  Trinket lucky(x: -0.74, y: 2.28, z: -0.65, drop: 0.86)
+  Cable loop_a(a: {-1.8, 0.74, 0.1}, b: {-1.38, 0.66, -0.42}, sag: 0.1, thick: 0.016) { Position: {0, 0, 0} }
+  Cable loop_b(a: {-1.7, 0.74, 0.3}, b: {-1.2, 0.3, -0.5}, sag: 0.14, thick: 0.012, tone: {100, 34, 24}) { Position: {0, 0, 0} }
+  Cable loop_c(a: {1.3, 0.92, -0.5}, b: {1.74, 0.7, 0.1}, sag: 0.1, thick: 0.014) { Position: {0, 0, 0} }
+  Cable loop_d(a: {1.3, 0.5, -0.42}, b: {1.7, 0.72, 0.3}, sag: 0.16, thick: 0.009, tone: {150, 120, 44}) { Position: {0, 0, 0} }
+}
+
+Hull ship()
+Clutter clutter()

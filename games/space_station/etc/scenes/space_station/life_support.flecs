@@ -1,0 +1,46 @@
+using flecs.script
+using box.transform
+using box.geometry
+using box.material
+using box.movement
+
+template StationFan {
+  housing : StationDark { Position: {0, 0, 0}; Cylinder: {radius: 0.72, length: 0.24, segments: 24, smooth: true} }
+  rim : StationChrome { Position: {0, 0.1, 0}; Torus: {radius: 0.7, tube: 0.05, segments: 28, rings: 6, smooth: true} }
+  well : StationRecess { Position: {0, 0.11, 0}; Cylinder: {radius: 0.66, length: 0.012, segments: 24} }
+  rotor {
+    Position: {0, 0.14, 0}
+    Rotation: {0, 0, 0}
+    AngularVelocity: {0, 5, 0}
+    a : StationPanel { Position: {0, 0, 0}; Rotation: {0.25, 0, 0}; Box: {1.2, 0.02, 0.2} }
+    b : StationPanel { Position: {0, 0, 0}; Rotation: {0.25, 1.5708, 0}; Box: {1.2, 0.02, 0.2} }
+    hub : StationGold { Position: {0, 0.03, 0}; Cylinder: {radius: 0.12, length: 0.06, segments: 12} }
+  }
+}
+
+template StationLifeSupportBody {
+  hall : StationHull { Position: {0, 0.8, 0}; RoundedBox: {4.8, 1.6, 4.2, 0.18, segments: 2} }
+  stripe : StationTeal { Position: {0, 0.5, 0}; Box: {4.84, 0.26, 4.24} }
+  trim : StationCyanLight { Position: {0, 0.66, 0}; Box: {4.86, 0.025, 4.26} }
+  roof : StationPanel { Position: {0, 1.67, 0}; Box: {4.4, 0.14, 3.8} }
+  StationFan fan_a() { Position: {-1.15, 1.82, -0.25} }
+  StationFan fan_b() { Position: {1.15, 1.82, -0.25} }
+  StationVent roof_vent_a(w: 1, d: 0.42) { Position: {-1.15, 1.74, 1.3} }
+  StationVent roof_vent_b(w: 1, d: 0.42) { Position: {1.15, 1.74, 1.3} }
+  StationGreebleBlock unit_a(w: 0.5, h: 0.22, d: 0.42, led: StationGreenLight) { Position: {0, 1.74, 1.3} }
+  StationAntenna antenna(tall: 0.8) { Position: {0, 1.74, -0.25} }
+  for i in 0..3 {
+    { (IsA, StationTeal); Position: {-1.7 + i * 1.7, 1, 2.45}; Rotation: {1.5708, 0, 0}; Capsule: {radius: 0.3, length: 0.7, segments: 16, smooth: true} }
+    { (IsA, StationChrome); Position: {-1.7 + i * 1.7, 1, 2.6}; Rotation: {1.5708, 0, 0}; Cylinder: {radius: 0.32, length: 0.04, segments: 16, smooth: true} }
+    { (IsA, StationDark); Position: {-1.7 + i * 1.7, 0.42, 2.3}; Box: {0.5, 0.2, 0.5} }
+    { (IsA, StationCyanLight); Position: {-1.7 + i * 1.7, 1.02, 2.76}; Box: {0.2, 0.08, 0.02} }
+  }
+  StationPipeX pipe(length: 4.2, radius: 0.07, clamps: 6) { Position: {0, 1.38, 2.3} }
+  StationPipeX pipe_low(length: 4.2, radius: 0.04, clamps: 4) { Position: {0, 0.26, 2.2} }
+  for i in 0..5 {
+    { (IsA, StationDark); Position: {-1.9 + i * 0.95, 0.95, -2.12}; Box: {0.6, 0.7, 0.02} }
+    { (IsA, StationWindow); Position: {-1.9 + i * 0.95, 1.1, -2.135}; Box: {0.44, 0.22, 0.012} }
+  }
+  StationSteam steam_a(rate: 12, seed: 11) { Position: {-1.15, 1.82, 1.3} }
+  StationSteam steam_b(rate: 12, seed: 12) { Position: {1.15, 1.82, 1.3} }
+}

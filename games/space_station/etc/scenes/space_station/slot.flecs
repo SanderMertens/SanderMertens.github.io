@@ -1,0 +1,152 @@
+
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.input
+using box.picking
+using box.particle
+using box.transition
+
+template StationConnector {
+  prop span: f32 = 1.2
+
+  tube : StationPanel { Position: {0, 0.55, 0}; Rotation: {0, 0, 1.5708}; Cylinder: {radius: 0.42, length: span, segments: 18, smooth: true} }
+  rib_a : StationDark { Position: {-span * 0.3, 0.55, 0}; Rotation: {0, 0, 1.5708}; Cylinder: {radius: 0.47, length: 0.1, segments: 18, smooth: true} }
+  rib_b : StationDark { Position: {span * 0.3, 0.55, 0}; Rotation: {0, 0, 1.5708}; Cylinder: {radius: 0.47, length: 0.1, segments: 18, smooth: true} }
+  light : StationCyanLight { Position: {0, 0.98, 0}; Box: {span * 0.5, 0.02, 0.1} }
+  StationPipeX feed_a(length: span, radius: 0.05, clamps: 2) { Position: {0, 0.2, 0.3} }
+  StationPipeX feed_b(length: span, radius: 0.05, clamps: 2) { Position: {0, 0.2, -0.3} }
+  { (IsA, StationWindow); Position: {0, 0.55, 0.42}; Box: {0.3, 0.14, 0.012} }
+  { (IsA, StationWindow); Position: {0, 0.55, -0.42}; Box: {0.3, 0.14, 0.012} }
+}
+
+template StationSlotView {
+  prop idx: i32 = 0
+
+  const kind = st_kind_of(idx, st_grid_0, st_grid_1, st_grid_2)
+  const hover = st_hover_slot == idx
+  const empty = kind == K_EMPTY
+  const placing = st_tool > 0 && st_tool != K_DEMOLISH
+  const selling = st_tool == K_DEMOLISH
+  const linked = st_near(st_built, idx)
+  const affordable = st_credits >= st_cost(st_tool)
+  const can_place = placing && empty && linked && affordable
+  const pad_free = (kind != K_PAX && kind != K_CARGO) || st_has(st_free_pax | st_free_cargo, idx)
+  const can_sell = selling && kind > K_HUB && pad_free
+  const east = idx % st_grid_w < st_grid_w - 1 && st_has(st_built, idx) && st_has(st_built, idx + 1)
+  const south = floor(idx / st_grid_w) < st_grid_h - 1 && st_has(st_built, idx) && st_has(st_built, idx + st_grid_w)
+  const busy = !st_has(st_free_pax | st_free_cargo, idx)
+  const raised = !st_has(st_rising, idx)
+  const sparks = st_has(st_sparks, idx)
+
+  Position: {0, 0, 0}
+
+  pad : StationBayFloor {
+    Position: {0, 0.03, 0}
+    Box: {5.6, 0.06, 5.6}
+    if can_place && hover {
+      Rgb: {110, 240, 150}
+      Emissive: {strength: 1.6, color: {80, 255, 130}}
+    } else if can_place {
+      Rgb: {110, 220, 150}
+      Emissive: {strength: 0.18, color: {60, 220, 110}}
+    } else if placing && empty && hover {
+      Rgb: {200, 70, 60}
+      Emissive: {strength: 1.1, color: {255, 70, 50}}
+    } else if can_sell && hover {
+      Rgb: {220, 80, 60}
+      Emissive: {strength: 1.4, color: {255, 70, 50}}
+    } else if hover {
+      Rgb: {205, 218, 232}
+      Emissive: {strength: 0, color: {0, 0, 0}}
+    } else {
+      Rgb: {150, 160, 172}
+      Emissive: {strength: 0, color: {0, 0, 0}}
+    }
+    Transition: [Rgb: {duration: 0.12}, Emissive: {duration: 0.12}]
+  }
+
+  if empty {
+    StationHatch service(size: 0.62) { Position: {0, 0.06, 0} }
+  }
+
+  if east {
+    StationConnector link_e(span: 2.2) { Position: {st_pitch / 2, 0, 0} }
+  }
+  if south {
+    StationConnector link_s(span: 2.2) { Position: {0, 0, st_pitch / 2}; Rotation: {0, 1.5708, 0} }
+  }
+
+  unit {
+    const lift = match raised { true: 0.06; _: -4.5 }
+    Position: {0, lift, 0}
+    Transition: [Position: {duration: 1.1, timing_function: EaseOut}]
+    if kind == K_HUB {
+      StationHubBody body()
+    } else if kind == K_SOLAR {
+      StationSolarBody body()
+    } else if kind == K_REACTOR {
+      StationReactorBody body()
+    } else if kind == K_LIFE {
+      StationLifeSupportBody body()
+    } else if kind == K_AIR {
+      StationAtmosphereBody body()
+    } else if kind == K_FARM {
+      StationHydroponicsBody body()
+    } else if kind == K_HAB {
+      StationHabitatBody body()
+    } else if kind == K_PAX {
+      StationPassengerDockBody body(busy: busy)
+    } else if kind == K_CARGO {
+      StationCargoDockBody body(busy: busy)
+    } else if kind == K_BAY {
+      StationCargoBayBody body()
+    }
+  }
+
+  welder {
+    Position: {0, 0.3, 0}
+    ParticleEmitter: {
+      max: 240,
+      rate: match sparks { true: 160; _: 0 },
+      shape: EmitterBox, extents: {2.5, 0.05, 2.5},
+      direction: {0, 1, 0}, spread: 45, speed: {1.5, 4.5},
+      lifetime: {0.25, 0.7}, size: {0.03, 0.09}, opacity: {0.6, 1},
+      acceleration: {0, -3, 0}, color: {255, 214, 140}, seed: 40 + idx
+    }
+  }
+}
+
+template StationSlot {
+  prop idx: i32 = 0
+
+  Position: {st_x(idx), 0, st_z(idx)}
+  Interactive
+  Cursor: {CursorPointer}
+
+  StationSlotView view(idx: idx)
+
+  async {
+    while true {
+      await on.enter(this)
+      st_hover_slot = idx
+    }
+  }
+
+  async {
+    while true {
+      await on.leave(this)
+      st_hover_slot = -1
+    }
+  }
+
+  async {
+    while true {
+      await on.click(this)
+      st_req_slot = idx
+      await ui.changed(st_click)
+    }
+  }
+}

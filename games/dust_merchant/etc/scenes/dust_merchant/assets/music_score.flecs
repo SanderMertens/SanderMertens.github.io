@@ -1,0 +1,176 @@
+// The score of dust_merchant_loop.ogg, the music of the dust merchant scene, played by the synth of
+// box.audio. make_music.py next to it runs it headless, captures the master and encodes the loop;
+// the scene itself never loads this file.
+//
+// 16 bars of 4/4 at 120 bpm, 32 seconds, in A minor: a pad per bar, a bass, a plucked lead, a
+// kick, a rim and hats. A step is an eighth note, 15 frames at the fixed delta of 1/60 s that
+// make_music.py runs with, so every note starts on a frame.
+using flecs.script
+using flecs.script.math
+using box.app
+using box.audio
+
+hall { AudioBus: {output: master, kind: AudioChannelReturn}; Reverb: {decay: 1.6, damping: 0.55, predelay: 0.03, size: 0.7} }
+band { AudioBus: {output: master, volume: 0.55, sends: [{bus: hall, level: 0.35}]} }
+kit { AudioBus: {output: master, volume: 0.5, sends: [{bus: hall, level: 0.12}]} }
+
+// A chord of three notes and an octave, swelling over a bar
+template Pad {
+  prop a: f32 = 220
+  prop b: f32 = 261.63
+  prop c: f32 = 329.63
+
+  AudioOutput: {bus: band}
+  SynthSound: {seed: 5}
+  SynthEnvelope: {attack: 0.7, decay: 0.5, sustain: 0.75, hold: 0.6, release: 1.1}
+  SynthFilter: {kind: SynthLowPass, cutoff: 900, resonance: 0.15}
+  SynthFilterEnvelope: {attack: 1.5, sustain: 1, hold: 1.41, amount: 0.83}
+  low { SynthOscillator: {wave: SynthSaw, frequency: a, level: 0.15} }
+  mid { SynthOscillator: {wave: SynthSaw, frequency: b * 1.003, level: 0.12} }
+  high { SynthOscillator: {wave: SynthTriangle, frequency: c, level: 0.2} }
+  air { SynthOscillator: {wave: SynthSaw, frequency: a * 1.994, level: 0.05} }
+}
+
+// A plucked bass whose filter closes as it decays
+template Bass {
+  prop f: f32 = 55
+
+  AudioOutput: {bus: band}
+  SynthSound: {level_variance: 0.05}
+  SynthEnvelope: {attack: 0.004, decay: 0.42}
+  SynthFilter: {kind: SynthLowPass, cutoff: 220, resonance: 0.25}
+  SynthFilterEnvelope: {decay: 0.3, amount: 1.67}
+  body { SynthOscillator: {wave: SynthSaw, frequency: f, level: 0.4} }
+  sub { SynthOscillator: {wave: SynthSine, frequency: f, level: 0.5} }
+}
+
+// A twangy pluck with a short ring an octave up
+template Lead {
+  prop f: f32 = 440
+
+  AudioOutput: {bus: band}
+  SynthSound: {level_variance: 0.08}
+  SynthEnvelope: {attack: 0.006, decay: 0.5}
+  SynthFilter: {kind: SynthLowPass, cutoff: 700, resonance: 0.3}
+  SynthFilterEnvelope: {decay: 0.35, amount: 2.193}
+  pluck { SynthOscillator: {wave: SynthSquare, frequency: f, level: 0.14} }
+  body { SynthOscillator: {wave: SynthTriangle, frequency: f, level: 0.28} }
+  ring {
+    SynthOscillator: {wave: SynthSine, frequency: f * 2, level: 0.08}
+    SynthEnvelope: {attack: 0.003, decay: 0.2}
+  }
+}
+
+prefab Kick {
+  AudioOutput: {bus: kit}
+  SynthSound: {}
+  SynthEnvelope: {attack: 0.002, decay: 0.28}
+  SynthFilter: {kind: SynthLowPass, cutoff: 2400}
+  tone { SynthOscillator: {wave: SynthSine, frequency: 150, frequency_end: 46, sweep: 0.09, level: 0.9} }
+  tap {
+    SynthOscillator: {wave: SynthNoise, level: 0.25}
+    SynthEnvelope: {attack: 0.001, decay: 0.008}
+  }
+}
+
+prefab Rim {
+  AudioOutput: {bus: kit}
+  SynthSound: {seed: 4, level_variance: 0.1}
+  SynthEnvelope: {attack: 0.001, decay: 0.06}
+  SynthFilter: {kind: SynthBandPass, cutoff: 1800, resonance: 0.5}
+  noise { SynthOscillator: {wave: SynthNoise, level: 0.6} }
+  tone { SynthOscillator: {wave: SynthTriangle, frequency: 820, level: 0.3} }
+}
+
+prefab Hat {
+  AudioOutput: {bus: kit}
+  SynthSound: {seed: 9, level_variance: 0.2}
+  SynthEnvelope: {attack: 0.001, decay: 0.045}
+  SynthFilter: {kind: SynthHighPass, cutoff: 7000, resonance: 0.2}
+  SynthOscillator: {wave: SynthNoise, level: 0.5}
+}
+
+Pad pad_am(a: 220, b: 261.63, c: 329.63)
+Pad pad_f(a: 174.61, b: 220, c: 261.63)
+Pad pad_c(a: 196, b: 261.63, c: 329.63)
+Pad pad_g(a: 196, b: 246.94, c: 293.66)
+Pad pad_dm(a: 174.61, b: 220, c: 293.66)
+Pad pad_e(a: 164.81, b: 207.65, c: 246.94)
+
+Bass bass_a(f: 55)
+Bass bass_c(f: 65.41)
+Bass bass_d(f: 73.42)
+Bass bass_e(f: 82.41)
+Bass bass_f(f: 87.31)
+Bass bass_g(f: 98)
+
+Lead lead_a4(f: 440)
+Lead lead_c5(f: 523.25)
+Lead lead_d5(f: 587.33)
+Lead lead_e5(f: 659.26)
+Lead lead_g5(f: 783.99)
+Lead lead_a5(f: 880)
+Lead lead_g4(f: 392)
+Lead lead_e4(f: 329.63)
+Lead lead_b4(f: 493.88)
+Lead lead_gs4(f: 415.3)
+
+const PADS = [pad_am, pad_f, pad_c, pad_g, pad_dm, pad_e]
+const BASSES = [bass_a, bass_f, bass_c, bass_g, bass_d, bass_e]
+const LEADS = [lead_a4, lead_c5, lead_d5, lead_e5, lead_g5, lead_a5, lead_g4, lead_e4, lead_b4, lead_gs4]
+
+// The chord of every bar: 0 Am, 1 F, 2 C, 3 G, 4 Dm, 5 E
+const BARS = [0, 0, 1, 3, 0, 0, 1, 5, 4, 0, 1, 2, 1, 3, 5, 5]
+const BASS_HITS = [1, 0, 0, 1, 1, 0, 1, 0]
+const KICKS = [1, 0, 0, 0, 1, 0, 0, 0]
+
+// The lead per eighth note, -1 a rest: 0 A4, 1 C5, 2 D5, 3 E5, 4 G5, 5 A5, 6 G4, 7 E4, 8 B4,
+// 9 G#4
+const MELODY = [
+  -1, -1, -1, -1, -1, -1, -1, -1,
+  -1, -1, -1, -1, 3, -1, 2, -1,
+  0, -1, -1, 1, -1, -1, 0, -1,
+  6, -1, -1, -1, 8, -1, 2, -1,
+  3, -1, -1, 3, 4, -1, 3, -1,
+  2, -1, 1, -1, 0, -1, -1, -1,
+  1, -1, -1, 0, -1, -1, 7, -1,
+  9, -1, -1, -1, 8, -1, -1, -1,
+  2, -1, -1, -1, 1, -1, 2, -1,
+  3, -1, -1, -1, -1, -1, 0, -1,
+  1, -1, 0, -1, 1, -1, 2, -1,
+  3, -1, -1, -1, 4, -1, 3, -1,
+  5, -1, -1, 4, -1, -1, 3, -1,
+  2, -1, -1, -1, 8, -1, -1, -1,
+  9, -1, -1, -1, 8, -1, 2, -1,
+  -1, -1, -1, -1, 8, -1, -1, -1
+]
+
+async {
+  for bar in 0..16 {
+    const chord = BARS[bar]
+    for beat in 0..8 {
+      if beat == 0 {
+        const pad_on = box.audio.play(PADS[chord], 0.9)
+      }
+      if BASS_HITS[beat] == 1 {
+        const bass_on = box.audio.play(BASSES[chord], match beat == 0 { true: 0.9; _: 0.65 })
+      }
+      if KICKS[beat] == 1 && (bar > 0 || beat == 0) {
+        const kick_on = box.audio.play(Kick, 0.9)
+      }
+      if bar >= 4 && (beat == 2 || beat == 6) {
+        const rim_on = box.audio.play(Rim, 0.45)
+      }
+      if bar >= 2 && beat % 2 == 1 {
+        const hat_on = box.audio.play(Hat, match beat == 3 || beat == 7 { true: 0.4; _: 0.28 })
+      }
+      const n = MELODY[bar * 8 + beat]
+      if n >= 0 {
+        const lead_on = box.audio.play(LEADS[n], 0.75)
+      }
+      for f in 0..15 {
+        await next_frame()
+      }
+    }
+  }
+}

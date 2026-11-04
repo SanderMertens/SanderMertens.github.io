@@ -1,0 +1,131 @@
+using flecs.script
+using flecs.script.math
+
+export const LAKE_X: f32 = -72
+export const LAKE_Z: f32 = -6
+export const LAKE_R: f32 = 15
+export const ISLE_X: f32 = -75
+export const ISLE_Z: f32 = -8
+export const ISLE_R: f32 = 5.5
+export const WALL_N0: f32 = -41
+export const WALL_N1: f32 = -31
+export const WALL_S0: f32 = 31
+export const WALL_S1: f32 = 41
+export const SQ_X: f32 = 0.8
+export const SQ_Z: f32 = -8.9
+
+fn road_x(z: f64) -> f64 {
+  2.5 * sin(z * 0.045)
+}
+
+fn road_z(x: f64) -> f64 {
+  1.2 * sin(x * 0.05 + 0.5)
+}
+
+fn river_x(z: f64) -> f64 {
+  -44 + 2.5 * sin(z * 0.06 + 1)
+}
+
+fn on_ns_road(x: f64, z: f64) -> bool {
+  abs(x - road_x(z)) < 3 && z > -84 && z < 90
+}
+
+fn on_ew_road(x: f64, z: f64) -> bool {
+  abs(z - road_z(x)) < 3 && x > -60 && x < 92
+}
+
+fn on_road(x: f64, z: f64) -> bool {
+  on_ns_road(x, z) || on_ew_road(x, z)
+}
+
+fn in_lake(x: f64, z: f64) -> bool {
+  dist2(x, z, LAKE_X, LAKE_Z) < LAKE_R * LAKE_R && dist2(x, z, ISLE_X, ISLE_Z) > ISLE_R * ISLE_R
+}
+
+fn near_lake(x: f64, z: f64, pad: f64) -> bool {
+  dist2(x, z, LAKE_X, LAKE_Z) < (LAKE_R + pad) * (LAKE_R + pad)
+}
+
+fn in_river(x: f64, z: f64) -> bool {
+  abs(x - river_x(z)) < 3
+}
+
+fn in_water(x: f64, z: f64) -> bool {
+  in_lake(x, z) || in_river(x, z)
+}
+
+fn in_village(x: f64, z: f64) -> bool {
+  x > -40 && x < 32 && z > -30 && z < 31
+}
+
+fn in_farm(x: f64, z: f64) -> bool {
+  x > 33 && x < 95 && z > -29 && z < 29
+}
+
+fn camp_spot(x: f64, z: f64) -> bool {
+  dist2(x, z, -20, -60) < 11 * 11 || (abs(z + 60) < 3 && x > -20 && x < 2)
+}
+
+fn shrine_spot(x: f64, z: f64) -> bool {
+  dist2(x, z, 18, -80) < 12 * 12 || (abs(z + 72) < 3 && x > 0 && x < 18)
+}
+
+fn grove_spot(x: f64, z: f64) -> bool {
+  dist2(x, z, 36, -58) < 10 * 10 || (abs(z + 58) < 3 && x > 0 && x < 36)
+}
+
+fn hill_spot(x: f64, z: f64) -> bool {
+  dist2(x, z, -31, 70) < 9 || dist2(x, z, -5, 80) < 9 || dist2(x, z, 12, 52) < 9 || dist2(x, z, -36, 48) < 9 || dist2(x, z, 50, 50) < 9 || dist2(x, z, -38, 88) < 9 || dist2(x, z, 48, 60) < 9 || dist2(x, z, 60, 88) < 9 || dist2(x, z, 4, 92) < 9 || dist2(x, z, -30, 86) < 16 || dist2(x, z, -26, 79) < 64 || (abs(x + 22) < 3 && z > 60 && z < 80)
+}
+
+fn wood_spot(x: f64, z: f64) -> bool {
+  dist2(x, z, -36, -70) < 9 || dist2(x, z, 6, -90) < 9 || dist2(x, z, 44, -82) < 9 || dist2(x, z, -6, -48) < 9
+}
+
+fn forest_clear(x: f64, z: f64) -> bool {
+  on_ns_road(x, z) || camp_spot(x, z) || shrine_spot(x, z) || grove_spot(x, z) || wood_spot(x, z) || abs(x - river_x(z)) < 5
+}
+
+fn quarry_spot(x: f64, z: f64) -> bool {
+  dist2(x, z, 26, 63) < 15 * 15 || (abs(z - 62) < 3 && x > 0 && x < 26)
+}
+
+fn pasture_spot(x: f64, z: f64) -> bool {
+  dist2(x, z, -16, 56) < 10 * 10 || (abs(z - 56) < 3 && x > -16 && x < 0)
+}
+
+fn hills_clear(x: f64, z: f64) -> bool {
+  on_ns_road(x, z) || quarry_spot(x, z) || pasture_spot(x, z) || hill_spot(x, z) || abs(x - river_x(z)) < 5
+}
+
+fn tree_x(i: i32, j: i32) -> f64 {
+  -38 + i * 3.4 + (hash2(i, j) - 0.5) * 2.2
+}
+
+fn tree_z(i: i32, j: i32) -> f64 {
+  -93 + j * 3.4 + (hash2(j * 1.7, i * 3.1) - 0.5) * 2.2
+}
+
+fn tree_here(i: i32, j: i32) -> bool {
+  const x = tree_x(i, j)
+  const z = tree_z(i, j)
+  const wall = z > WALL_N0 - 1
+  const h = hash2(i * 0.73 + 5, j * 1.31 + 2)
+  x < 94 && !forest_clear(x, z) && match wall { true: h > 0.04; _: h > 0.42 }
+}
+
+fn rock_x(i: i32, j: i32) -> f64 {
+  -38 + i * 4.6 + (hash2(i + 11, j) - 0.5) * 3
+}
+
+fn rock_z(i: i32, j: i32) -> f64 {
+  WALL_S0 + 0.5 + j * 4.6 + (hash2(j + 3, i * 2.3) - 0.5) * 3
+}
+
+fn rock_here(i: i32, j: i32) -> bool {
+  const x = rock_x(i, j)
+  const z = rock_z(i, j)
+  const h = hash2(i * 1.9 + 1, j * 0.77 + 9)
+  const wall = z < WALL_S1 + 1
+  x < 94 && z < 94 && !hills_clear(x, z) && match wall { true: h > 0.0; _: h > 0.72 }
+}

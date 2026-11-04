@@ -1,0 +1,143 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.layout
+using box.text
+using box.spatial
+using box.picking
+using box.camera
+using box.view
+using box.light
+using box.surface
+using box.transition
+
+template Ink {
+  prop text: string = ""
+  prop size: f32 = 26
+  prop hue: Rgb = GREEN
+  prop font: entity = font_crt
+  prop align: box.layout.Align = Left
+  prop width: f32 = 0
+
+  Text: {value: text, size: size, font: font, align: align, width: width}
+  Rgb: hue
+  SpatialIgnore
+}
+
+template Stroke {
+  prop x1: f32 = 0
+  prop y1: f32 = 0
+  prop x2: f32 = 10
+  prop y2: f32 = 0
+  prop w: f32 = 1.5
+  prop hue: Rgb = GREEN
+
+  Position: {0, 0, 0}
+  Line: {x1: x1, y1: y1, x2: x2, y2: y2, width: w}
+  Rgb: hue
+  BlendMode: Additive
+  SpatialIgnore
+}
+
+template RingLine {
+  prop r: f32 = 100
+  prop w: f32 = 1.5
+  prop hue: Rgb = GREEN
+
+  Circle: {r}
+  Rgb: {0, 0, 0}
+  BlendMode: Additive
+  Border: {width: w, color: {hue.r, hue.g, hue.b, 255}}
+  SpatialIgnore
+}
+
+template CrtFeed {
+  prop tex: entity = 0
+  prop on: bool = false
+  prop w: i32 = 800
+  prop h: i32 = 600
+  prop tint: Rgb = {2, 10, 5}
+
+  Scene: {}
+
+  camera { Position: {0, 0, 100}; Camera: {ortho: true, ortho_scale: 1} }
+
+  rollbar {
+    Position: {0, 0, 40}
+    Rect: {w, 70}
+    Image: {texture: tex_halo}
+    Rgb: {tint.r * 3, tint.g * 3, tint.b * 3}
+    BlendMode: Additive
+    SpatialIgnore
+  }
+
+  lines { Position: {0, 0, 50}; Rect: {w, h}; Image: {texture: tex_scanlines}; Rgb: {255, 255, 255}; BlendMode: AlphaBlend; SpatialIgnore }
+  shade { Position: {0, 0, 60}; Rect: {w, h}; Image: {texture: tex_vignette}; Rgb: {255, 255, 255}; BlendMode: AlphaBlend; SpatialIgnore }
+
+  rtt_views {
+    rtt_view { View: {camera: camera, clear: {enabled: true, color: {0, 0, 0, 255}}, lighting: {enabled: false}, culling: {enabled: false}} }
+  }
+  rtt_surface { Surface: {width: w, height: h, texture: tex, view_root: rtt_views} }
+}
+
+template Raster : parent CrtFeed {
+  Scale: {1, match on { true: 1; _: 0.004 }, 1}
+  Transition: [Scale: {duration: match on { true: 0.32; _: 0.13 }, timing_function: EaseOut}]
+  back { Position: {0, 0, -5}; Rect: {w + 4, h + 4}; Rgb: tint; SpatialIgnore }
+}
+
+template Crt {
+  prop tex: entity = 0
+  prop on: bool = false
+  prop w: f32 = 420
+  prop h: f32 = 315
+  prop glow: Rgb = GREEN
+  prop glow_power: f32 = 0.22
+  prop curve: f32 = 1500
+  prop brightness: f32 = 2.4
+
+  const halfw = w / 2 / curve
+  const halfh = h / 2 / curve
+  const pad = 16
+
+  Layout: {}
+  LayoutItem: {width: {mode: Fixed, value: w + pad * 2 + 8}, height: {mode: Fixed, value: h + pad * 2 + 8}}
+
+  hood_t : Soot { Position: {0, h / 2 + pad / 2 + 2, 14}; Box: {w + pad * 2 + 8, pad + 4, 28}; TextureTransform: {scale_x: 0.6, scale_y: 0.05}; SpatialIgnore }
+  hood_b : Soot { Position: {0, 0 - h / 2 - pad / 2 - 2, 14}; Box: {w + pad * 2 + 8, pad + 4, 28}; TextureTransform: {scale_x: 0.6, scale_y: 0.05}; SpatialIgnore }
+  hood_l : Soot { Position: {0 - w / 2 - pad / 2 - 2, 0, 14}; Box: {pad + 4, h + 8, 28}; TextureTransform: {scale_x: 0.05, scale_y: 0.6}; SpatialIgnore }
+  hood_r : Soot { Position: {w / 2 + pad / 2 + 2, 0, 14}; Box: {pad + 4, h + 8, 28}; TextureTransform: {scale_x: 0.05, scale_y: 0.6}; SpatialIgnore }
+  gasket_t : Rubber { Position: {0, h / 2 + 2, 17}; Box: {w + 6, 5, 28}; SpatialIgnore }
+  gasket_b : Rubber { Position: {0, 0 - h / 2 - 2, 17}; Box: {w + 6, 5, 28}; SpatialIgnore }
+  gasket_l : Rubber { Position: {0 - w / 2 - 2, 0, 17}; Box: {5, h + 6, 28}; SpatialIgnore }
+  gasket_r : Rubber { Position: {w / 2 + 2, 0, 17}; Box: {5, h + 6, 28}; SpatialIgnore }
+
+  tube {
+    Position: {0, 0, 22 - curve}
+    EllipsoidShell: {
+      radius: {curve, curve, curve},
+      longitude_start: PI / 2 - halfw,
+      longitude_end: PI / 2 + halfw,
+      latitude_start: 0 - halfh,
+      latitude_end: halfh,
+      segments: 32,
+      rings: 24
+    }
+    Rgb: {6, 7, 6}
+    PbrMaterial: {metallic: 1, roughness: 0.55}
+    Emissive: {strength: match on { true: brightness; _: 0 }, color: {255, 255, 255}}
+    Transition: [Emissive: {duration: 0.4}]
+    PbrTextures: {emissive: tex}
+    TextureTransform: {scale_x: -1, scale_y: -1, offset_x: 1, offset_y: 1}
+    TextureWrap: WrapClamp
+    NoShadow
+  }
+
+  spill {
+    Position: {0, 0, 170}
+    PointLight: {intensity: match on { true: glow_power; _: 0 }, range: 1.6}
+    Rgb: glow
+  }
+}

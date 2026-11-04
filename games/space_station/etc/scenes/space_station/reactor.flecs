@@ -1,0 +1,51 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.light
+using box.material
+using box.movement
+
+template StationReactorBody {
+  base : StationDark { Position: {0, 0.3, 0}; RoundedBox: {4.8, 0.6, 4.8, 0.1, segments: 1} }
+  vessel : StationHull { Position: {0, 2.05, 0}; Sphere: {radius: 1.7, segments: 36, smooth: true} }
+  skirt : StationPanel { Position: {0, 0.95, 0}; Frustum: {radius_bottom: 1.8, radius_top: 1.1, length: 0.8, segments: 24, smooth: true} }
+  belt : StationDark { Position: {0, 2.05, 0}; Cylinder: {radius: 1.73, length: 0.3, segments: 36, smooth: true} }
+  for i in 0..12 {
+    const a = i * PI / 6
+    { (IsA, StationPlasma); Position: {cos(a) * 1.74, 2.05, sin(a) * 1.74}; Rotation: {0, -a, 0}; Box: {0.02, 0.1, 0.3} }
+    { (IsA, StationChrome); Position: {cos(a + 0.26) * 1.74, 2.05, sin(a + 0.26) * 1.74}; Rotation: {0, 0, 1.5708}; Sphere: {radius: 0.05, segments: 6} }
+  }
+  cap : StationPanel { Position: {0, 3.7, 0}; Cylinder: {radius: 0.55, length: 0.2, segments: 20, smooth: true} }
+  cap_glow : StationPlasma { Position: {0, 3.82, 0}; Cylinder: {radius: 0.36, length: 0.03, segments: 20} }
+  ring {
+    Position: {0, 2.05, 0}
+    Rotation: {0, 0, 0.32}
+    AngularVelocity: {0, 0.9, 0}
+    tube : StationCopper { Position: {0, 0, 0}; Torus: {radius: 2.1, tube: 0.13, segments: 56, rings: 10, smooth: true} }
+    inner : StationPlasma { Position: {0, 0, 0}; Torus: {radius: 2.1, tube: 0.145, segments: 56, rings: 4} ; Scale: {1, 0.12, 1} }
+    for i in 0..6 {
+      const a = i * PI / 3
+      { (IsA, StationDark); Position: {cos(a) * 2.1, 0, sin(a) * 2.1}; Rotation: {0, -a, 0}; Box: {0.4, 0.42, 0.28} }
+      { (IsA, StationCyanLight); Position: {cos(a) * 2.32, 0, sin(a) * 2.32}; Rotation: {0, -a, 0}; Box: {0.02, 0.16, 0.16} }
+    }
+  }
+  for i in 0..4 {
+    const a = i * PI / 2 + PI / 4
+    { (IsA, StationDark); Position: {cos(a) * 2.5, 2.2, sin(a) * 2.5}; Cylinder: {radius: 0.2, length: 3.2, segments: 14, smooth: true} }
+    { (IsA, StationHazard); Position: {cos(a) * 2.5, 3.8, sin(a) * 2.5}; Cylinder: {radius: 0.24, length: 0.14, segments: 14} }
+    { (IsA, StationCyanLight); Position: {cos(a) * 2.5, 1, sin(a) * 2.5}; Cylinder: {radius: 0.22, length: 0.06, segments: 14} }
+    { (IsA, StationCopper); Position: {cos(a) * 1.75, 0.72, sin(a) * 1.75}; Rotation: {0, -a, 1.5708}; Cylinder: {radius: 0.07, length: 1.3, segments: 10, smooth: true} }
+    { (IsA, StationChrome); Position: {cos(a) * 2.5, 1.7, sin(a) * 2.5}; Cylinder: {radius: 0.22, length: 0.05, segments: 14} }
+    { (IsA, StationChrome); Position: {cos(a) * 2.5, 2.7, sin(a) * 2.5}; Cylinder: {radius: 0.22, length: 0.05, segments: 14} }
+  }
+  { (IsA, StationHazard); Position: {0, 0.62, 2.35}; Box: {3, 0.03, 0.12} }
+  { (IsA, StationHazard); Position: {0, 0.62, -2.35}; Box: {3, 0.03, 0.12} }
+  StationVent vent_a(w: 0.9, d: 0.5) { Position: {-1.7, 0.6, 0} }
+  StationVent vent_b(w: 0.9, d: 0.5) { Position: {1.7, 0.6, 0} }
+  glow {
+    Position: {0, 3, 0}
+    PointLight: {intensity: 30, range: 11}
+    Rgb: {120, 190, 255}
+  }
+}

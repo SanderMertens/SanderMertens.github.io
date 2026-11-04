@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 340" width="256" height="340">
+<defs><linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff0b8"/><stop offset="0.35" stop-color="#e2b456"/><stop offset="0.7" stop-color="#b07a2a"/><stop offset="1" stop-color="#6e4614"/></linearGradient>
+<linearGradient id="leaf" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9cc070"/><stop offset="1" stop-color="#3e6a34"/></linearGradient>
+</defs>
+<g fill="none" stroke="#ffffff" stroke-linecap="round">
+<path d="M48 176 A86 86 0 0 1 104 132" stroke-width="11" opacity="0.32"/>
+<path d="M118 126 A86 86 0 0 1 132 125" stroke-width="11" opacity="0.32"/>
+<path d="M210 244 A86 86 0 0 1 162 290" stroke-width="6" opacity="0.14"/>
+<path d="M113 70 V104" stroke-width="5" opacity="0.3"/>
+</g>
+<ellipse cx="80" cy="172" rx="9" ry="5" fill="#ffffff" opacity="0.5" transform="rotate(-40 80 172)"/>
+</svg>

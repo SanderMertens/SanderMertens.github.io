@@ -1,0 +1,44 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.light
+using box.material
+
+template StationPlantRow {
+  prop seed: i32 = 0
+
+  bed : StationSoil { Position: {0, 0, 0}; Box: {3.6, 0.18, 0.56} }
+  tray : StationDark { Position: {0, -0.1, 0}; Box: {3.7, 0.08, 0.66} }
+  drip : StationCopper { Position: {0, 0.12, 0.27}; Rotation: {0, 0, 1.5708}; Cylinder: {radius: 0.015, length: 3.6, segments: 6} }
+  for i in 0..9 {
+    const s = (i * 7 + seed * 13) % 5
+    const h = 0.2 + s * 0.05
+    { (IsA, StationLeaf); Position: {-1.6 + i * 0.4, 0.1 + h, 0.06 * (s - 2)}; IcoSphere: {radius: h, segments: 2} }
+    { (IsA, StationLeafDark); Position: {-1.42 + i * 0.4, 0.09 + h * 0.6, -0.07 * (s - 2)}; IcoSphere: {radius: h * 0.68, segments: 2} }
+  }
+}
+
+template StationHydroponicsBody {
+  floor : StationPanel { Position: {0, 0.15, 0}; RoundedBox: {4.9, 0.3, 4.6, 0.06, segments: 1} }
+  collar : StationDark { Position: {0, 0.33, 0}; Scale: {1.2, 1, 1.1}; Cylinder: {radius: 2.08, length: 0.1, segments: 36, smooth: true} }
+  collar_light : StationCyanLight { Position: {0, 0.385, 0}; Scale: {1.2, 1, 1.1}; Torus: {radius: 2.08, tube: 0.02, segments: 40, rings: 4} }
+  for i in 0..5 {
+    StationPlantRow "row_{i}"(seed: i) { Position: {0, 0.5, -1.6 + i * 0.8} }
+  }
+  for i in 0..3 {
+    const z = -1.2 + i * 1.2
+    { (IsA, StationTruss); Position: {0, 0.3, z}; Rotation: {1.5708, 0, 0}; Scale: {1.2, 1, 0.95}; Torus: {radius: sqrt(4.2 - z * z), tube: 0.05, segments: 32, rings: 6, smooth: true} }
+  }
+  { (IsA, StationTruss); Position: {0, 2.2, 0}; Box: {0.08, 0.08, 2.5} }
+  dome : StationGlass { Position: {0, 0.3, 0}; Scale: {1.2, 0.95, 1.1}; HemiSphere: {radius: 2.05, segments: 32, smooth: true} }
+  grow_a : StationGrowLight { Position: {0, 1.86, -0.9}; Box: {3, 0.04, 0.12} }
+  grow_b : StationGrowLight { Position: {0, 1.86, 0.9}; Box: {3, 0.04, 0.12} }
+  glow {
+    Position: {0, 1.7, 0}
+    PointLight: {intensity: 7, range: 5}
+    Rgb: {255, 150, 220}
+  }
+  StationGreebleBlock pump_a(w: 0.5, h: 0.2, d: 0.34, led: StationGreenLight) { Position: {-2.1, 0.3, 2} }
+  StationGreebleBlock pump_b(w: 0.5, h: 0.2, d: 0.34, led: StationAmberLight) { Position: {2.1, 0.3, 2} }
+}

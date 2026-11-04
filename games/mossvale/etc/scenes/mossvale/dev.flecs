@@ -1,0 +1,37 @@
+using flecs.script
+using flecs.script.math
+
+struct DevCmd(n: i32, op: i32, x: f32, z: f32)
+
+dev { DevCmd: {n: 0, op: 0, x: 0, z: 0} }
+
+async {
+  mut seen: i32 = 0
+  while true {
+    await next_frame()
+    const c = dev[DevCmd]
+    if c.n != seen {
+      seen = c.n
+      if c.op == 0 {
+        px = c.x
+        pz = c.z
+        cam_x = c.x
+        cam_z = c.z
+      } else if c.op == 1 {
+        for s in 1..7 {
+          known[s] = true
+        }
+      } else if c.op == 2 {
+        spell = floor(c.x)
+      } else if c.op == 3 {
+        mana = mana_max
+      } else if c.op == 5 {
+        hour = c.x
+        hour_goal = c.x
+      } else if c.op == 4 {
+        mana = mana_max
+        emit CastReq(x: c.x, z: c.z)
+      }
+    }
+  }
+}

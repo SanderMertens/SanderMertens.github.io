@@ -1,0 +1,250 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.camera
+using box.view
+using box.light
+using box.effects
+using box.surface
+using box.movement
+using box.transition
+
+template RelicMetal {
+  prop tone: f32 = 1
+  Rgb: {235 * tone, 196 * tone, 120 * tone}
+  PbrMaterial: {metallic: 1, roughness: 0.28}
+}
+
+template RelicBlade {
+  prop hue: Rgb = {255, 255, 255}
+
+  edge {
+    Position: {0, 0.5, 0}
+    Scale: {1, 1, 0.2}
+
+    body {
+      Rotation: {0, PI / 4, 0}
+      Frustum: {segments: 4, smooth: false, length: 1.86, radius_bottom: 0.25, radius_top: 0.17}
+      Rgb: {226, 230, 240}
+      PbrMaterial: {metallic: 0.72, roughness: 0.3}
+    }
+
+    point {
+      Position: {0, 1.17, 0}
+      Rotation: {0, PI / 4, 0}
+      Cone: {segments: 4, length: 0.48, radius: 0.17}
+      Rgb: {226, 230, 240}
+      PbrMaterial: {metallic: 0.72, roughness: 0.3}
+    }
+  }
+
+  fuller {
+    Position: {0, 0.32, 0}
+    Box: {0.06, 1.42, 0.1}
+    Rgb: hue
+    Emissive: {strength: 1.5, color: hue}
+  }
+
+  guard {
+    Position: {0, -0.46, 0}
+    RelicMetal: {}
+    RoundedBox: {1.0, 0.13, 0.2, radius: 0.05}
+  }
+
+  grip {
+    Position: {0, -0.82, 0}
+    Cylinder: {segments: 16, smooth: true, length: 0.62, radius: 0.07}
+    Rgb: {58, 36, 30}
+    PbrMaterial: {roughness: 0.6}
+  }
+
+  pommel {
+    Position: {0, -1.18, 0}
+    IcoSphere: {radius: 0.12, segments: 1}
+    Rgb: hue
+    Emissive: {strength: 0.8, color: hue}
+  }
+}
+
+template RelicOrb {
+  prop hue: Rgb = {255, 255, 255}
+
+  core {
+    Position: {0, 0.15, 0}
+    IcoSphere: {radius: 0.72, segments: 3, smooth: true}
+    Rgb: hue
+    Emissive: {strength: 0.3, color: hue}
+    PbrMaterial: {metallic: 0.3, roughness: 0.22}
+  }
+
+  ring_a {
+    Position: {0, 0.15, 0}
+    Rotation: {1.2, 0, 0.3}
+    AngularVelocity: {0.6, 0.2, 0}
+    RelicMetal: {}
+    Torus: {segments: 64, rings: 12, smooth: true, radius: 1.02, tube: 0.035}
+  }
+
+  ring_b {
+    Position: {0, 0.15, 0}
+    Rotation: {0.2, 0, 1.1}
+    AngularVelocity: {-0.4, 0, 0.5}
+    RelicMetal: {}
+    Torus: {segments: 64, rings: 12, smooth: true, radius: 1.2, tube: 0.025}
+  }
+
+  plinth {
+    Position: {0, -1.12, 0}
+    RelicMetal: {}
+    Frustum: {segments: 32, smooth: false, length: 0.3, radius_bottom: 0.56, radius_top: 0.3}
+  }
+}
+
+template RelicCrown {
+  prop hue: Rgb = {255, 255, 255}
+
+  band {
+    Position: {0, -0.25, 0}
+    RelicMetal: {}
+    Tube: {segments: 48, smooth: true, length: 0.42, radius: 0.92, thickness: 0.08}
+  }
+
+  rim {
+    Position: {0, -0.46, 0}
+    RelicMetal: {}
+    Torus: {segments: 48, rings: 10, smooth: true, radius: 0.92, tube: 0.045}
+  }
+
+  for i in 0..8 {
+    const a = i * PI / 4
+    const tall = match i % 2 { 0: 0.9; _: 0.56 }
+    "spike_{i}" {
+      Position: {cos(a) * 0.9, tall / 2 - 0.04, sin(a) * 0.9}
+      RelicMetal: {}
+      Cone: {segments: 6, length: tall, radius: 0.13}
+    }
+    if i % 2 == 0 {
+      "gem_{i}" {
+        Position: {cos(a) * 0.9, tall - 0.02, sin(a) * 0.9}
+        IcoSphere: {radius: 0.1, segments: 1}
+        Rgb: hue
+        Emissive: {strength: 2, color: hue}
+      }
+    }
+  }
+
+  jewel {
+    Position: {0, -0.24, 0.98}
+    IcoSphere: {radius: 0.17, segments: 1}
+    Rgb: hue
+    Emissive: {strength: 1, color: hue}
+  }
+}
+
+template RelicBand {
+  prop hue: Rgb = {255, 255, 255}
+
+  hoop {
+    Position: {0, -0.25, 0}
+    Rotation: {PI / 2, 0, 0}
+    RelicMetal: {}
+    Torus: {segments: 64, rings: 16, smooth: true, radius: 0.84, tube: 0.13}
+  }
+
+  mount {
+    Position: {0, 0.66, 0}
+    RelicMetal: {tone: 0.8}
+    Frustum: {segments: 8, smooth: false, length: 0.22, radius_bottom: 0.14, radius_top: 0.3}
+  }
+
+  stone {
+    Position: {0, 0.98, 0}
+    Scale: {1, 1.2, 1}
+    IcoSphere: {radius: 0.34, segments: 1}
+    Rgb: hue
+    Emissive: {strength: 0.42, color: hue}
+    PbrMaterial: {metallic: 0.3, roughness: 0.12}
+  }
+}
+
+template RelicPiece : OneShot {
+  prop model: i32 = 0
+  prop hue: Rgb = {255, 255, 255}
+
+  const k = match go { true: 1; _: 0.72 }
+
+  Position: {0, 0, 0}
+  Scale: {k, k, k}
+  Transition: [Scale: {duration: 0.42, timing_function: EaseOut}]
+
+  if model == 0 {
+    RelicBlade art(hue: hue) { Rotation: {0, 0, 0.42} }
+  } else if model == 1 {
+    RelicOrb art(hue: hue)
+  } else if model == 2 {
+    RelicCrown art(hue: hue) { Rotation: {0.34, 0, 0} }
+  } else {
+    RelicBand art(hue: hue) { Rotation: {0.2, 0, 0} }
+  }
+}
+
+relic_bloom { Bloom: {intensity: 0.28, threshold: 1.1, threshold_softness: 0.4} }
+relic_film { Tonemap: {operator_: TonyMcMapface} }
+
+template RelicStage {
+  relic {
+    Scene: {}
+
+    camera {
+      Position: {0, 0, 6.4}
+      Camera: {fov: 38}
+    }
+
+    sun {
+      Rotation: {-0.7, 0.6, 0}
+      DirectionalLight: {intensity: 6}
+      Rgb: {255, 240, 220}
+    }
+
+    fill {
+      Rotation: {0.3, 2.6, 0}
+      DirectionalLight: {intensity: 2.2}
+      Rgb: {150, 170, 255}
+    }
+
+    ambient {
+      AmbientLight: {sky: {110, 120, 170}, ground: {60, 44, 40}, intensity: 1.3}
+    }
+
+    glint {
+      Position: {1.6, 1.8, 2.4}
+      PointLight: {intensity: 30, range: 12}
+      Rgb: {relic_r, relic_g, relic_b}
+    }
+
+    turntable {
+      Position: {0, 0, 0}
+      AngularVelocity: {0, 0.62, 0}
+      RelicPiece "piece_{relic_serial}"(model: relic_model, hue: {relic_r, relic_g, relic_b})
+    }
+  }
+
+  relic_views {
+    view {
+      View: {
+        camera: relic.camera,
+        clear: {enabled: true, color: {0, 0, 0, 0}},
+        shadows: {enabled: false},
+        effects: [{enabled: true, effect: relic_bloom}, {enabled: true, effect: relic_film}]
+      }
+    }
+  }
+
+  relic_surface {
+    Surface: {width: 720, height: 720, texture: relic_texture, view_root: relic_views}
+  }
+}
+
+RelicStage relic_stage()

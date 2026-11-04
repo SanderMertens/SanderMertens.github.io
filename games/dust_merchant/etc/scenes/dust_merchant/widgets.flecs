@@ -1,0 +1,1177 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.layout
+using box.text
+using box.spatial
+using box.picking
+using box.input
+using box.transition
+
+export const INK_ON: Rgb = {226, 218, 196}
+export const INK_OFF: Rgb = {74, 72, 66}
+export const AMBER: Rgb = {255, 168, 58}
+export const GREEN: Rgb = {98, 255, 142}
+export const RED: Rgb = {255, 56, 36}
+export const CYAN: Rgb = {96, 216, 255}
+
+// The steps of a knob or a lever over its travel that click, see audio.flecs
+export const DETENTS: f32 = 24
+
+template Label {
+  prop text: string = ""
+  prop size: f32 = 14
+  prop font: entity = font_stencil
+  prop align: box.layout.Align = Center
+  prop width: f32 = 0
+  prop ink: Rgb = INK_ON
+  prop z: f32 = 0.6
+
+  Text: {value: text, size: size, font: font, align: align, width: width}
+  if bus {
+    Rgb: ink
+  } else {
+    Rgb: {ink.r * 0.16, ink.g * 0.16, ink.b * 0.16}
+  }
+  Transition: [Rgb: {duration: 0.9, delay: 0.15, timing_function: EaseOut}]
+  SpatialIgnore
+}
+
+template Tape {
+  prop w: f32 = 180
+  prop h: f32 = 60
+  prop x: f32 = 0
+  prop y: f32 = 0
+  prop tilt: f32 = 0
+  prop tone: Rgb = {238, 226, 186}
+
+  Position: {x, y, 1.1}
+  Rotation: {0, 0, tilt}
+  Quad: {w, h}
+  Rgb: tone
+  BlendMode: AlphaBlend
+  PbrMaterial: {metallic: 0, roughness: 0.8}
+  PbrTextures: {albedo: tex_tape}
+  NoShadow
+  SpatialIgnore
+}
+
+template Scrawl {
+  prop text: string = ""
+  prop size: f32 = 30
+  prop width: f32 = 0
+  prop tilt: f32 = 0
+  prop ink: Rgb = {26, 26, 40}
+
+  Rotation: {0, 0, tilt}
+  Text: {value: text, size: size, font: font_hand, align: Center, width: width, line_height: size * 0.84}
+  Rgb: ink
+  SpatialIgnore
+}
+
+template Row {
+  prop gap: f32 = 8
+  prop x: f32 = 0
+  prop y: f32 = 0
+  prop h: box.layout.Align = Center
+  prop v: VAlign = Middle
+
+  Layout: {direction: Row, spacing: gap, h: Center, v: Middle}
+  LayoutItem: {h: h, v: v, x: x, y: y}
+}
+
+template Column {
+  prop gap: f32 = 8
+  prop x: f32 = 0
+  prop y: f32 = 0
+  prop h: box.layout.Align = Center
+  prop v: VAlign = Middle
+
+  Layout: {direction: Column, spacing: gap, h: Center, v: Middle}
+  LayoutItem: {h: h, v: v, x: x, y: y}
+}
+
+template Gap {
+  prop w: f32 = 8
+  prop h: f32 = 8
+  LayoutItem: {width: {mode: Fixed, value: w}, height: {mode: Fixed, value: h}}
+}
+
+template Screw {
+  prop x: f32 = 0
+  prop y: f32 = 0
+  prop turn: f32 = 0.4
+
+  Position: {x, y, 0.5}
+  head : BareSteel { Rotation: {PI / 2, 0, 0}; Cylinder: {radius: 5, length: 2.4, segments: 10, smooth: true}; Rgb: {140, 136, 128} }
+  slot : BlackAnod { Position: {0, 0, 1.25}; Rotation: {0, 0, turn}; Box: {9, 1.3, 0.3} }
+  SpatialIgnore
+}
+
+template Panel {
+  prop w: f32 = 400
+  prop h: f32 = 200
+  prop tone: Rgb = {66, 68, 66}
+  prop edge: bool = true
+
+  Scale: {0.001, 0.001, 0.001}
+  Layout: {}
+  LayoutItem: {width: {mode: Fixed, value: w}, height: {mode: Fixed, value: h}}
+
+  seam : BlackAnod { Position: {0, 0, -8}; Box: {w + 6, h + 6, 12}; Rgb: {8, 8, 8}; SpatialIgnore }
+
+  plate : PaintedSteel {
+    Position: {0, 0, -6}
+    RoundedBox: {w, h, 12, 2.4, segments: 2}
+    Rgb: tone
+    TextureTransform: {scale_x: w / 860, scale_y: h / 860}
+  }
+
+  if edge {
+    Screw s_a(x: 0 - w / 2 + 12, y: h / 2 - 12, turn: 0.2)
+    Screw s_b(x: w / 2 - 12, y: h / 2 - 12, turn: 1.3)
+    Screw s_c(x: 0 - w / 2 + 12, y: 12 - h / 2, turn: 2.1)
+    Screw s_d(x: w / 2 - 12, y: 12 - h / 2, turn: 0.7)
+    const across: i32 = floor(w / 170)
+    for i in 1..across {
+      const sx = 0 - w / 2 + 12 + i * (w - 24) / across
+      Screw "s_t_{i}"(x: sx, y: h / 2 - 12, turn: i * 1.7)
+      Screw "s_b_{i}"(x: sx, y: 12 - h / 2, turn: i * 0.9 + 0.4)
+    }
+    const down: i32 = floor(h / 170)
+    for i in 1..down {
+      const sy = 0 - h / 2 + 12 + i * (h - 24) / down
+      Screw "s_l_{i}"(x: 0 - w / 2 + 12, y: sy, turn: i * 2.3)
+      Screw "s_r_{i}"(x: w / 2 - 12, y: sy, turn: i * 1.1 + 0.8)
+    }
+  }
+}
+
+template Patch {
+  prop x: f32 = 0
+  prop y: f32 = 0
+  prop z: f32 = 0.2
+  prop w: f32 = 100
+  prop h: f32 = 100
+  prop tilt: f32 = 0
+  prop tint: Rgb = {30, 24, 18}
+  prop fade: f32 = 1
+  prop tex: entity = tex_patch
+
+  Position: {x, y, z}
+  Rotation: {0, 0, tilt}
+  Quad: {w, h}
+  Rgb: tint
+  BlendMode: AlphaBlend
+  Opacity: {fade}
+  PbrMaterial: {metallic: 0, roughness: 0.95}
+  PbrTextures: {albedo: tex}
+  NoShadow
+  SpatialIgnore
+}
+
+template Silk {
+  prop x: f32 = 0
+  prop y: f32 = 0
+  prop w: f32 = 200
+  prop h: f32 = 100
+  prop text: string = ""
+  prop gap: f32 = 0
+  prop ink: Rgb = {92, 88, 76}
+
+  const tone: Rgb = match bus { true: ink; _: {ink.r * 0.1, ink.g * 0.1, ink.b * 0.1} }
+  const run = (w - gap) / 2
+
+  Position: {x, y, 0.45}
+  SpatialIgnore
+  top { Position: {0, h / 2, 0}; Rect: {w, 1.4}; Rgb: tone; Transition: [Rgb: {duration: 0.9, delay: 0.2}] }
+  left { Position: {0 - w / 2, 0, 0}; Rect: {1.4, h}; Rgb: tone; Transition: [Rgb: {duration: 0.9, delay: 0.2}] }
+  right { Position: {w / 2, 0, 0}; Rect: {1.4, h}; Rgb: tone; Transition: [Rgb: {duration: 0.9, delay: 0.2}] }
+  low_a { Position: {0 - w / 2 + run / 2, 0 - h / 2, 0}; Rect: {run, 1.4}; Rgb: tone; Transition: [Rgb: {duration: 0.9, delay: 0.2}] }
+  low_b { Position: {w / 2 - run / 2, 0 - h / 2, 0}; Rect: {run, 1.4}; Rgb: tone; Transition: [Rgb: {duration: 0.9, delay: 0.2}] }
+  if text != "" {
+    Label words(text: text, size: 13, ink: {150, 144, 124}) { Position: {0, 0 - h / 2, 0.1} }
+  }
+}
+
+template Dymo {
+  prop text: string = ""
+  prop x: f32 = 0
+  prop y: f32 = 0
+  prop tilt: f32 = 0
+  prop size: f32 = 13
+  prop tone: Rgb = {12, 12, 14}
+  prop ink: Rgb = {214, 214, 206}
+  prop len: f32 = 120
+
+  Position: {x, y, 1.3}
+  Rotation: {0, 0, tilt}
+  SpatialIgnore
+  strip { Position: {0, 0, 0}; Box: {len, size * 1.5, 0.6}; Rgb: tone; PbrMaterial: {metallic: 0, roughness: 0.3} }
+  words {
+    Position: {0, 0, 0.4}
+    Text: {value: text, size: size, font: font_mono, align: Center}
+    if bus {
+      Rgb: ink
+    } else {
+      Rgb: {ink.r * 0.12, ink.g * 0.12, ink.b * 0.12}
+    }
+    Transition: [Rgb: {duration: 0.9, delay: 0.15}]
+  }
+}
+
+template SubPlate {
+  prop x: f32 = 0
+  prop y: f32 = 0
+  prop w: f32 = 200
+  prop h: f32 = 100
+  prop tone: Rgb = {58, 96, 92}
+  prop tilt: f32 = 0
+
+  Position: {x, y, 0.16}
+  Rotation: {0, 0, tilt}
+  SpatialIgnore
+  gap { Position: {0, 0, -0.08}; Box: {w + 4, h + 4, 0.14}; Rgb: {6, 6, 6}; PbrMaterial: {metallic: 0, roughness: 0.9} }
+  sheet : PaintedSteel { Position: {0, 0, 0.02}; Box: {w, h, 0.26}; Rgb: tone; TextureTransform: {scale_x: w / 520, scale_y: h / 520} }
+}
+
+template Dzus {
+  prop x: f32 = 0
+  prop y: f32 = 0
+  prop turn: f32 = 0.5
+
+  Position: {x, y, 0.5}
+  SpatialIgnore
+  cup : BareSteel { Rotation: {PI / 2, 0, 0}; Cylinder: {radius: 7, length: 1, segments: 14, smooth: true}; Rgb: {104, 102, 96} }
+  head : BareSteel { Position: {0, 0, 0.9}; Rotation: {PI / 2, 0, 0}; Cylinder: {radius: 4.6, length: 1.2, segments: 12, smooth: true} }
+  slot : BlackAnod { Position: {0, 0, 1.55}; Rotation: {0, 0, turn}; Box: {8, 1.4, 0.2} }
+}
+
+template Louver {
+  prop w: f32 = 200
+  prop h: f32 = 80
+  prop slats: i32 = 6
+  prop tone: Rgb = {30, 30, 30}
+
+  const pitch = h / slats
+
+  SpatialIgnore
+  back { Position: {0, 0, 0.2}; Box: {w, h, 0.4}; Rgb: {6, 6, 6}; PbrMaterial: {metallic: 0, roughness: 0.9} }
+  rim_t : Soot { Position: {0, h / 2 + 2, 1.8}; Box: {w + 8, 4, 3.6} }
+  rim_b : Soot { Position: {0, 0 - h / 2 - 2, 1.8}; Box: {w + 8, 4, 3.6} }
+  rim_l : Soot { Position: {0 - w / 2 - 2, 0, 1.8}; Box: {4, h, 3.6} }
+  rim_r : Soot { Position: {w / 2 + 2, 0, 1.8}; Box: {4, h, 3.6} }
+  for i in 0..slats {
+    "slat_{i}" : PaintedSteel {
+      Position: {0, (i + 0.5) * pitch - h / 2, 1.6}
+      Rotation: {0.7, 0, 0}
+      Box: {w, pitch * 0.72, 0.9}
+      Rgb: tone
+      TextureTransform: {scale_x: w / 520, scale_y: 0.03}
+    }
+  }
+}
+
+template Breaker {
+  prop label: string = ""
+  prop popped: bool = false
+  prop flag: bool = false
+
+  mut out = popped
+  mut hover = false
+
+  Interactive
+  Cursor: {CursorPointer}
+  Layout: {}
+  LayoutItem: {width: {mode: Fixed, value: 48}, height: {mode: Fixed, value: 56}}
+
+  Label words(text: label, size: 11, font: font_mono) { Position: {0, 21, 0.6} }
+
+  mount {
+    Position: {0, -6, 0}
+    SpatialIgnore
+    if hover {
+      halo { Position: {0, 0, 0.9}; Circle: {14}; Rgb: {0, 0, 0}; Border: {width: 1.2, color: {255, 200, 120, 255}}; Opacity: {0.9} }
+    }
+    collar : BareSteel { Position: {0, 0, 0.8}; Rotation: {PI / 2, 0, 0}; Cylinder: {radius: 10, length: 1.6, segments: 6}; Rgb: {112, 110, 104} }
+    stem {
+      Position: {0, 0, match out { true: 7; _: 1.4 }}
+      Transition: [Position: {duration: 0.07, timing_function: EaseOut}]
+      if out {
+        band { Position: {0, 0, 2.6}; Rotation: {PI / 2, 0, 0}; Cylinder: {radius: 9.4, length: 2.4, segments: 16, smooth: true}; Rgb: {226, 222, 206}; PbrMaterial: {metallic: 0, roughness: 0.5} }
+      }
+      cap : Bakelite { Position: {0, 0, 7}; Rotation: {PI / 2, 0, 0}; Cylinder: {radius: 7.4, length: 5, segments: 14, smooth: true}; Rgb: {16, 14, 12} }
+      if flag {
+        tie { Position: {0, 0, 3}; Rotation: {PI / 2, 0, 0}; Torus: {radius: 7, tube: 0.9, segments: 16, rings: 6}; Rgb: {168, 28, 20}; PbrMaterial: {metallic: 0, roughness: 0.5} }
+      }
+    }
+    if flag {
+      Tape tag(w: 36, h: 18, x: 11, y: -15, tilt: -0.4, tone: {216, 60, 40})
+    }
+  }
+
+  async {
+    while true {
+      await on.enter(this)
+      hover = true
+      await on.leave(this)
+      hover = false
+    }
+  }
+
+  async {
+    while true {
+      await on.click(this)
+      out = !out
+      const clack = box.audio.play(SfxBreaker, 0.7)
+    }
+  }
+}
+
+template Thump {
+  prop x: f32 = 0
+  prop y: f32 = 0
+
+  mut hover = false
+
+  Interactive
+  Cursor: {CursorPointer}
+  Position: {x, y, 0.9}
+  Rect: {120, 96}
+  Rgb: {0, 0, 0}
+  BlendMode: Additive
+  if hover {
+    Border: {width: 1.6, color: {255, 200, 120, 255}}
+  } else {
+    Border: {width: 0, color: {0, 0, 0, 0}}
+  }
+
+  for i in 0..7 {
+    "dent_{i}" {
+      Position: {cos(i * 2.39) * (10 + i * 5.2), sin(i * 2.39) * (8 + i * 3.6), -0.2}
+      Rotation: {PI / 2, 0, i * 0.7}
+      Scale: {1, 0.04, 0.8}
+      Sphere: {radius: 13 - i, segments: 12, smooth: true}
+      Rgb: {44 + i * 2, 46 + i * 2, 42 + i * 2}
+      PbrMaterial: {metallic: 0.9, roughness: 0.42}
+      NoShadow
+      SpatialIgnore
+    }
+  }
+
+  async {
+    while true {
+      await on.enter(this)
+      hover = true
+      await on.leave(this)
+      hover = false
+    }
+  }
+
+  async {
+    while true {
+      await on.click(this)
+      const thump = box.audio.play(SfxThump, 0.9)
+      emit Whack()
+    }
+  }
+}
+
+template Tag {
+  prop text: string = ""
+  prop w: f32 = 120
+  prop h: f32 = 22
+  prop tone: Rgb = {30, 30, 30}
+  prop ink: Rgb = INK_ON
+  prop size: f32 = 15
+
+  Layout: {h: Center, v: Middle}
+  LayoutItem: {width: {mode: Fixed, value: w}, height: {mode: Fixed, value: h}}
+  base : BlackAnod { Position: {0, 0, 0.6}; Box: {w, h, 1.2}; Rgb: tone }
+  Label words(text: text, size: size, ink: ink) { Position: {0, 0, 1.5} }
+}
+
+template Lamp {
+  prop lit: bool = false
+  prop hue: Rgb = RED
+  prop r: f32 = 4
+  prop power: f32 = 5
+
+  rim : BareSteel { Rotation: {PI / 2, 0, 0}; Cylinder: {radius: r + 2, length: 2, segments: 16, smooth: true} }
+  dome {
+    Position: {0, 0, 0.8}
+    Scale: {r, r, r * 0.7}
+    Sphere: {radius: 1, segments: 12, smooth: true}
+    Rgb: {hue.r * 0.25, hue.g * 0.25, hue.b * 0.25}
+    PbrMaterial: {metallic: 0, roughness: 0.2}
+    if lit {
+      Emissive: {strength: power, color: hue}
+    } else {
+      Emissive: {strength: 0, color: hue}
+    }
+    Transition: [Emissive: {duration: 0.12, timing_function: EaseOut}]
+  }
+}
+
+template ToggleSwitch {
+  prop label: string = ""
+  prop sig: i32 = SW_SPARE_A
+  prop led: bool = false
+  prop cap: Rgb = {205, 205, 208}
+
+  mut hover = false
+  const on = sw[sig]
+
+  Interactive
+  Cursor: {CursorPointer}
+  Layout: {}
+  LayoutItem: {width: {mode: Fixed, value: 60}, height: {mode: Fixed, value: 96}}
+
+  Label words(text: label, size: 14) { Position: {0, 37, 0.6} }
+
+  mount {
+    Position: {0, -8, 0}
+    SpatialIgnore
+
+    if hover {
+      halo { Position: {0, 0, 0.9}; Circle: {24}; Rgb: {0, 0, 0}; Border: {width: 1.6, color: {255, 200, 120, 255}}; Opacity: {0.9} }
+    }
+
+    washer : BareSteel { Position: {0, 0, 1}; Rotation: {PI / 2, 0, 0}; Cylinder: {radius: 15, length: 2, segments: 24, smooth: true}; Rgb: {120, 118, 112} }
+    nut : Chrome { Position: {0, 0, 4}; Rotation: {PI / 2, 0, 0}; Cylinder: {radius: 11.5, length: 4, segments: 6}; Rgb: {150, 150, 152} }
+    collar : Chrome { Position: {0, 0, 8}; Rotation: {PI / 2, 0, 0}; Cylinder: {radius: 7, length: 6, segments: 16, smooth: true} }
+    arm {
+      Position: {0, 0, 10}
+      Rotation: {match on { true: -0.58; _: 0.58 }, 0, 0}
+      Transition: [Rotation: {duration: 0.075, timing_function: EaseIn}]
+      bat : Chrome { Position: {0, 0, 15}; Rotation: {PI / 2, 0, 0}; Frustum: {radius_bottom: 3.2, radius_top: 5.8, length: 30, segments: 14, smooth: true}; Rgb: cap }
+      tip : Chrome { Position: {0, 0, 30}; Sphere: {radius: 5.8, segments: 14, smooth: true}; Rgb: cap }
+    }
+  }
+
+  if led {
+    Lamp pilot(lit: on && bus, hue: GREEN, r: 3) { Position: {0, -40, 1} }
+  }
+
+  async {
+    while true {
+      await on.enter(this)
+      hover = true
+      await on.leave(this)
+      hover = false
+    }
+  }
+
+  async {
+    while true {
+      await on.click(this)
+      sw[sig] = !sw[sig]
+      const snap = box.audio.play(SfxToggle, 0.8)
+      emit Flipped(sig: sig)
+    }
+  }
+}
+
+template GuardSwitch {
+  prop label: string = ""
+  prop sig: i32 = SW_MAIN
+  prop beacon: bool = false
+
+  mut hover = false
+  mut armed = false
+  const on = sw[sig]
+  const open = armed || on
+
+  Interactive
+  Cursor: {CursorPointer}
+  Layout: {}
+  LayoutItem: {width: {mode: Fixed, value: 96}, height: {mode: Fixed, value: 130}}
+
+  Label words(text: label, size: 15, ink: {255, 214, 160}) { Position: {0, 52, 0.6} }
+
+  hazard { Position: {0, -6, 0.5}; Quad: {74, 92}; Rgb: {255, 255, 255}; PbrMaterial: {metallic: 0, roughness: 0.8}; PbrTextures: {albedo: tex_hazard}; TextureTransform: {scale_x: 0.45, scale_y: 0.55}; SpatialIgnore }
+  shadow_gap : BlackAnod { Position: {0, -6, 0.9}; Box: {54, 72, 0.8} }
+
+  mount {
+    Position: {0, -8, 1.5}
+    SpatialIgnore
+
+    nut : Chrome { Position: {0, 0, 3}; Rotation: {PI / 2, 0, 0}; Cylinder: {radius: 11, length: 4, segments: 6}; Rgb: {150, 150, 152} }
+    arm {
+      Position: {0, 0, 6}
+      Rotation: {match on { true: -0.55; _: 0.55 }, 0, 0}
+      Transition: [Rotation: {duration: 0.08, timing_function: EaseIn}]
+      bat : Chrome { Position: {0, 0, 12}; Rotation: {PI / 2, 0, 0}; Frustum: {radius_bottom: 3.4, radius_top: 6, length: 24, segments: 14, smooth: true} }
+      tip : Chrome { Position: {0, 0, 24}; Sphere: {radius: 6, segments: 14, smooth: true} }
+    }
+  }
+
+  guard {
+    Position: {0, 34, 3}
+    Rotation: {match open { true: -1.95; _: 0 }, 0, 0}
+    Transition: [Rotation: {duration: 0.18, timing_function: EaseOut}]
+    SpatialIgnore
+
+    hinge : BareSteel { Rotation: {0, 0, PI / 2}; Cylinder: {radius: 3.2, length: 48, segments: 12, smooth: true} }
+    lid : SignalRed { Position: {0, -36, 41}; RoundedBox: {46, 78, 3, 1.2, segments: 2} }
+    side_a : SignalRed { Position: {-22, -36, 21}; Box: {2.6, 74, 40} }
+    side_b : SignalRed { Position: {22, -36, 21}; Box: {2.6, 74, 40} }
+    lip : SignalRed { Position: {0, -74, 21}; Box: {46, 2.6, 40} }
+    pull : Brass { Position: {0, -70, 44}; Rotation: {0, 0, PI / 2}; Cylinder: {radius: 2, length: 22, segments: 8, smooth: true} }
+  }
+
+  if beacon {
+    Lamp pilot(lit: slow_blink && stage == STAGE_COLD, hue: AMBER, r: 4, power: 9) { Position: {-38, 52, 1} }
+    Lamp pilot_b(lit: slow_blink && stage == STAGE_COLD, hue: AMBER, r: 4, power: 9) { Position: {38, 52, 1} }
+  }
+
+  async {
+    while true {
+      await on.enter(this)
+      hover = true
+      await on.leave(this)
+      hover = false
+    }
+  }
+
+  async {
+    while true {
+      await on.click(this)
+      if !armed && !sw[sig] {
+        armed = true
+        const lift = box.audio.play(SfxGuard, 0.8)
+      } else if !sw[sig] {
+        sw[sig] = true
+        const snap = box.audio.play(SfxToggle, 1.0)
+        emit Flipped(sig: sig)
+      } else {
+        sw[sig] = false
+        armed = false
+        const snap = box.audio.play(SfxToggle, 1.0)
+        const shut = box.audio.play(SfxGuard, 0.7)
+        emit Flipped(sig: sig)
+      }
+    }
+  }
+}
+
+template CapButton {
+  prop legend: string = ""
+  prop sub: string = ""
+  prop hue: Rgb = AMBER
+  prop lit: bool = false
+  prop w: f32 = 68
+  prop h: f32 = 52
+  prop size: f32 = 15
+  prop action: entity = 0
+  prop mode: ActionTriggerMode = ActionTriggerClick
+
+  mut down = false
+  mut hover = false
+
+  Interactive
+  Cursor: {CursorPointer}
+  Layout: {}
+  LayoutItem: {width: {mode: Fixed, value: w + 10}, height: {mode: Fixed, value: h + 10}}
+
+  housing : BlackAnod { Position: {0, 0, 2.5}; Box: {w + 10, h + 10, 5}; SpatialIgnore }
+  cap {
+    Position: {0, 0, match down { true: 5; _: 8 }}
+    Transition: [Position: {duration: 0.05}]
+    SpatialIgnore
+    body {
+      Position: {0, 0, 0}
+      RoundedBox: {w, h, 8, 1.6, segments: 2}
+      Rgb: {hue.r * 0.06 + 5, hue.g * 0.06 + 5, hue.b * 0.06 + 5}
+      PbrMaterial: {metallic: 0, roughness: 0.24}
+      if lit {
+        Emissive: {strength: 1.1, color: hue}
+      } else if hover && bus {
+        Emissive: {strength: 0.32, color: hue}
+      } else {
+        Emissive: {strength: 0.02, color: hue}
+      }
+      Transition: [Emissive: {duration: 0.14, timing_function: EaseOut}]
+    }
+    if lit {
+      words_lit {
+        Position: {0, match sub == "" { true: 0; _: 7 }, 4.3}
+        Text: {value: legend, size: size, font: font_stencil, align: Center}
+        Rgb: {1, 1, 1}
+        SpatialIgnore
+      }
+      if sub != "" {
+        minor_lit {
+          Position: {0, -11, 4.3}
+          Text: {value: sub, size: size * 0.72, font: font_stencil, align: Center}
+          Rgb: {1, 1, 1}
+          SpatialIgnore
+        }
+      }
+    } else {
+      words {
+        Position: {0, match sub == "" { true: 0; _: 7 }, 4.3}
+        Text: {value: legend, size: size, font: font_stencil, align: Center}
+        if bus {
+          Rgb: {hue.r * 0.8, hue.g * 0.8, hue.b * 0.8}
+        } else {
+          Rgb: {hue.r * 0.14, hue.g * 0.14, hue.b * 0.14}
+        }
+        Transition: [Rgb: {duration: 0.5}]
+        SpatialIgnore
+      }
+      if sub != "" {
+        minor {
+          Position: {0, -11, 4.3}
+          Text: {value: sub, size: size * 0.72, font: font_stencil, align: Center}
+          if bus {
+            Rgb: {hue.r * 0.56, hue.g * 0.56, hue.b * 0.56}
+          } else {
+            Rgb: {hue.r * 0.1, hue.g * 0.1, hue.b * 0.1}
+          }
+          Transition: [Rgb: {duration: 0.5}]
+          SpatialIgnore
+        }
+      }
+    }
+  }
+
+  async {
+    while true {
+      await on.enter(this)
+      hover = true
+      await on.leave(this)
+      hover = false
+    }
+  }
+
+  async {
+    while true {
+      await on.press(this)
+      down = true
+      const press = box.audio.play(SfxButton, 0.8)
+      await on.release(this)
+      down = false
+      const release = box.audio.play(SfxButton, 0.45)
+    }
+  }
+
+  if action != 0 {
+    ActionTrigger: {action: action, mode: mode}
+  }
+}
+
+template Knob {
+  prop label: string = ""
+  prop sig: i32 = KN_DIM
+  prop r: f32 = 22
+  prop lo_label: string = ""
+  prop hi_label: string = ""
+  prop ticks: i32 = 11
+  prop speed: f32 = 0.004
+
+  mut hover = false
+  const v = kn[sig]
+  const turn = 2.36 - v * 4.71
+
+  Interactive
+  Cursor: {CursorPointer}
+  Layout: {}
+  LayoutItem: {width: {mode: Fixed, value: r * 3.6}, height: {mode: Fixed, value: r * 4.1}}
+
+  Label words(text: label, size: 14) { Position: {0, r * 1.72, 0.6} }
+
+  scale_marks {
+    Position: {0, -r * 0.18, 0.5}
+    SpatialIgnore
+    for i in 0..ticks {
+      const a = 2.36 - i * 4.71 / (ticks - 1)
+      "tick_{i}" {
+        Position: {cos(a) * r * 1.34, sin(a) * r * 1.34, 0}
+        Rotation: {0, 0, a}
+        Rect: {match i % 5 == 0 { true: r * 0.32; _: r * 0.18 }, 1.5}
+        if bus {
+          Rgb: {200, 192, 170}
+        } else {
+          Rgb: {38, 36, 32}
+        }
+        Transition: [Rgb: {duration: 0.9, delay: 0.2}]
+      }
+    }
+  }
+
+  if hover {
+    halo { Position: {0, -r * 0.18, 0.8}; Circle: {r * 1.12}; Rgb: {0, 0, 0}; Border: {width: 1.4, color: {255, 200, 120, 255}}; Opacity: {0.9}; SpatialIgnore }
+  }
+
+  rotor {
+    Position: {0, -r * 0.18, 1}
+    Rotation: {0, 0, turn - PI / 2}
+    Transition: [Rotation: {duration: 0.06}]
+    SpatialIgnore
+    skirt : BlackAnod { Position: {0, 0, 2}; Rotation: {PI / 2, 0, 0}; Cylinder: {radius: r, length: 4, segments: 32, smooth: true} }
+    grip : Bakelite { Position: {0, 0, 12}; Rotation: {PI / 2, 0, 0}; Frustum: {radius_bottom: r * 0.8, radius_top: r * 0.68, length: 18, segments: 16} }
+    crown : BareSteel { Position: {0, 0, 21.3}; Rotation: {PI / 2, 0, 0}; Cylinder: {radius: r * 0.62, length: 0.6, segments: 24, smooth: true}; Rgb: {150, 144, 130} }
+    mark { Position: {0, r * 0.82, 4.2}; Box: {r * 0.1, r * 0.34, 0.5}; Rgb: {240, 236, 224}; Emissive: {strength: match bus { true: 0.6; _: 0.02 }, color: {255, 236, 200}} }
+    line { Position: {0, r * 0.32, 21.8}; Box: {1.8, r * 0.6, 0.5}; Rgb: {30, 28, 24} }
+  }
+
+  async {
+    while true {
+      await on.enter(this)
+      hover = true
+      await on.leave(this)
+      hover = false
+    }
+  }
+
+  async {
+    while true {
+      const e = await on.drag(this)
+      const was = kn[sig]
+      kn[sig] = clamp(kn[sig] + (e.delta_x - e.delta_y) * speed, 0, 1)
+      if floor(kn[sig] * DETENTS) != floor(was * DETENTS) {
+        const tick = box.audio.play(SfxDetent, 0.7)
+      }
+    }
+  }
+
+  async {
+    while true {
+      const e = await on.scroll(this)
+      const was = kn[sig]
+      kn[sig] = clamp(kn[sig] + e.delta_y * 0.02, 0, 1)
+      if floor(kn[sig] * DETENTS) != floor(was * DETENTS) {
+        const tick = box.audio.play(SfxDetent, 0.7)
+      }
+    }
+  }
+}
+
+template Lever {
+  prop label: string = ""
+  prop sig: i32 = KN_THROTTLE
+  prop top_label: string = "FULL"
+  prop low_label: string = "IDLE"
+  prop travel: f32 = 300
+  prop reach: f32 = 230
+  prop pull: bool = false
+  prop handle: Rgb = {34, 34, 36}
+  prop spring: bool = false
+  prop locked: bool = false
+  prop speed: f32 = 0.0042
+
+  mut hover = false
+  mut dragging = false
+  const v = kn[sig]
+  const swing = match pull { true: v - 0.5; _: 0.5 - v }
+
+  Interactive
+  Cursor: {CursorPointer}
+  Layout: {}
+  LayoutItem: {width: {mode: Fixed, value: 104}, height: {mode: Fixed, value: travel + 54}}
+
+  Label name(text: label, size: 15) { Position: {0, travel / 2 + 15, 0.8} }
+
+  slot : BlackAnod { Position: {0, 0, 0.4}; Box: {18, travel - 12, 1}; SpatialIgnore }
+  slot_lip_a : BareSteel { Position: {-13, 0, 1.2}; Box: {4, travel, 2.2}; Rgb: {108, 104, 96}; SpatialIgnore }
+  slot_lip_b : BareSteel { Position: {13, 0, 1.2}; Box: {4, travel, 2.2}; Rgb: {108, 104, 96}; SpatialIgnore }
+
+  for i in 0..11 {
+    "mark_{i}" {
+      Position: {-28, (i - 5) * travel / 11.5, 0.5}
+      Rect: {match i % 5 == 0 { true: 18; _: 10 }, 1.8}
+      if bus {
+        Rgb: {204, 196, 172}
+      } else {
+        Rgb: {38, 36, 32}
+      }
+      Transition: [Rgb: {duration: 0.9, delay: 0.2}]
+      SpatialIgnore
+    }
+  }
+
+  Label up(text: top_label, size: 13) { Position: {-30, travel / 2 - 12, 0.8} }
+  Label dn(text: low_label, size: 13) { Position: {-30, 12 - travel / 2, 0.8} }
+
+  pivot {
+    Position: {0, 0, 0 - reach * 0.56}
+    Rotation: {swing, 0, 0}
+    Transition: [Rotation: {duration: 0.05}]
+    SpatialIgnore
+
+    shaft : Chrome { Position: {0, 0, reach * 0.5}; Rotation: {PI / 2, 0, 0}; Cylinder: {radius: 7, length: reach, segments: 14, smooth: true}; Rgb: {150, 150, 154} }
+    grip_band : Brass { Position: {0, 0, reach * 0.96}; Rotation: {PI / 2, 0, 0}; Cylinder: {radius: 13, length: 7, segments: 18, smooth: true} }
+    grip_core { Position: {0, 0, reach + 24}; Rotation: {PI / 2, 0, 0}; Capsule: {radius: 16, length: 38, segments: 18, smooth: true}; Rgb: handle; PbrMaterial: {metallic: 0, roughness: 0.42} }
+    bar { Position: {0, 0, reach + 60}; Rotation: {0, 0, PI / 2}; Capsule: {radius: 9, length: 64, segments: 12, smooth: true}; Rgb: handle; PbrMaterial: {metallic: 0, roughness: 0.42} }
+  }
+
+  async {
+    while true {
+      await on.enter(this)
+      hover = true
+      await on.leave(this)
+      hover = false
+    }
+  }
+
+  async {
+    while true {
+      await on.press(this)
+      dragging = true
+      await on.release(this)
+      dragging = false
+      if spring && kn[sig] > 0 {
+        kn[sig] = 0
+        const back = box.audio.play(SfxBreaker, 0.6)
+      }
+    }
+  }
+
+  async {
+    while true {
+      const e = await on.drag(this)
+      if !locked {
+        const was = kn[sig]
+        kn[sig] = clamp(kn[sig] + (match pull { true: e.delta_y; _: 0 - e.delta_y }) * speed, 0, 1)
+        if floor(kn[sig] * DETENTS) != floor(was * DETENTS) {
+          const tick = box.audio.play(SfxDetent, 0.5)
+        }
+      }
+    }
+  }
+}
+
+template Gauge {
+  prop label: string = ""
+  prop unit: string = ""
+  prop value: f32 = 0
+  prop r: f32 = 58
+  prop hue: Rgb = {255, 216, 150}
+  prop red_from: f32 = 0.82
+  prop majors: i32 = 5
+  prop lo: i32 = 0
+  prop step: i32 = 20
+  prop sweep: f32 = 4.5
+
+  const a0 = sweep / 2 + PI / 2
+  const dial = a0 - clamp(value, 0, 1.04) * sweep
+  const ink_lit = bus
+  const face_hue: Rgb = match ink_lit { true: hue; _: {30, 26, 20} }
+
+  Layout: {}
+  LayoutItem: {width: {mode: Fixed, value: r * 2.3}, height: {mode: Fixed, value: r * 2.3}}
+
+  bezel : Chrome { Position: {0, 0, 4}; Rotation: {PI / 2, 0, 0}; Tube: {radius: r + 7, thickness: 7.5, length: 9, segments: 48, smooth: true}; Rgb: {126, 124, 118}; PbrMaterial: {metallic: 1, roughness: 0.3} }
+  well : BlackAnod { Position: {0, 0, 0.4}; Rotation: {PI / 2, 0, 0}; Cylinder: {radius: r + 2, length: 0.8, segments: 48, smooth: true}; Rgb: {10, 10, 11} }
+
+  face {
+    Position: {0, 0, 1}
+    SpatialIgnore
+
+    disc { Position: {0, 0, 0}; Circle: {r}; Rgb: {10, 11, 12} }
+    pool { Position: {0, 0, 0.1}; Rect: {r * 2.5, r * 2.5}; Image: {texture: tex_halo}; Rgb: {face_hue.r * 0.16, face_hue.g * 0.16, face_hue.b * 0.16}; BlendMode: Additive; Transition: [Rgb: {duration: 1.1}] }
+
+    for i in 0..(majors * 5 + 1) {
+      const a = a0 - i * sweep / (majors * 5)
+      const major = i % 5 == 0
+      const frac = i / (majors * 5.0)
+      "t_{i}" {
+        Position: {cos(a) * r * 0.84, sin(a) * r * 0.84, 0.3}
+        Rotation: {0, 0, a}
+        Rect: {match major { true: r * 0.2; _: r * 0.1 }, match major { true: r * 0.04; _: r * 0.024 }}
+        if frac >= red_from && ink_lit {
+          Rgb: {255, 70, 40}
+        } else {
+          Rgb: face_hue
+        }
+        Transition: [Rgb: {duration: 0.8, delay: 0.2}]
+      }
+    }
+
+    for i in 0..(majors + 1) {
+      const a = a0 - i * sweep / majors
+      "n_{i}" {
+        Position: {cos(a) * r * 0.57, sin(a) * r * 0.57, 0.3}
+        Text: {value: "{lo + i * step}", size: r * 0.2, font: font_mono, align: Center}
+        Rgb: face_hue
+        Transition: [Rgb: {duration: 0.8, delay: 0.2}]
+      }
+    }
+
+    name { Position: {0, r * 0.32, 0.3}; Text: {value: label, size: r * 0.2, font: font_stencil, align: Center}; Rgb: face_hue; Transition: [Rgb: {duration: 0.8, delay: 0.2}] }
+    units { Position: {0, 0 - r * 0.42, 0.3}; Text: {value: unit, size: r * 0.17, font: font_mono, align: Center}; Rgb: face_hue; Transition: [Rgb: {duration: 0.8, delay: 0.2}] }
+  }
+
+  needle {
+    Position: {0, 0, 2.6}
+    Rotation: {0, 0, dial}
+    Transition: [Rotation: {duration: 0.35, timing_function: EaseOut}]
+    SpatialIgnore
+    blade { Position: {r * 0.37, 0, 0}; Box: {r * 1.05, r * 0.035, 0.6}; Rgb: {255, 96, 40}; Emissive: {strength: match ink_lit { true: 2.2; _: 0.02 }, color: {255, 100, 40}}; Transition: [Emissive: {duration: 0.8}] }
+    tail { Position: {0 - r * 0.16, 0, 0}; Box: {r * 0.32, r * 0.07, 0.6}; Rgb: {20, 20, 22} }
+    hub : BlackAnod { Position: {0, 0, 0.8}; Rotation: {PI / 2, 0, 0}; Cylinder: {radius: r * 0.09, length: 1.6, segments: 16, smooth: true} }
+  }
+
+  glass {
+    Position: {0, 0, 3}
+    Scale: {r + 1, r * 0.1, r + 1}
+    Rotation: {PI / 2, 0, 0}
+    HemiSphere: {radius: 1, segments: 28, smooth: true}
+    Rgb: {220, 230, 240}
+    PbrMaterial: {metallic: 0, roughness: 0.06}
+    BlendMode: AlphaBlend
+    Opacity: {0.09}
+    NoShadow
+    SpatialIgnore
+  }
+}
+
+template LedBar {
+  prop value: f32 = 0
+  prop count: i32 = 16
+  prop vertical: bool = true
+  prop len: f32 = 160
+  prop thick: f32 = 16
+  prop hue: Rgb = GREEN
+  prop warn: f32 = 0.7
+  prop crit: f32 = 0.9
+  prop label: string = ""
+
+  Layout: {}
+  LayoutItem: {
+    width: {mode: Fixed, value: match vertical { true: thick + 18; _: len + 12 }},
+    height: {mode: Fixed, value: match vertical { true: len + 28; _: thick + 28 }}
+  }
+
+  back : BlackAnod { Position: {0, match vertical { true: -6; _: -6 }, 0.6}; Box: {match vertical { true: thick + 8; _: len + 8 }, match vertical { true: len + 8; _: thick + 8 }, 1.2}; Rgb: {12, 12, 13}; SpatialIgnore }
+
+  if label != "" {
+    Label words(text: label, size: 13) { Position: {0, match vertical { true: len / 2 + 7; _: thick / 2 + 9 }, 0.8} }
+  }
+
+  for i in 0..count {
+    const f = (i + 0.5) / count
+    const lit = value > 0.004 && f <= value && bus
+    const pos = (f - 0.5) * len
+    const seg = len / count * 0.74
+    const tint: Rgb = match f >= crit { true: RED; _: match f >= warn { true: AMBER; _: hue } }
+    "seg_{i}" {
+      Position: {match vertical { true: 0; _: pos }, match vertical { true: pos - 6; _: -6 }, 1.5}
+      Box: {match vertical { true: thick; _: seg }, match vertical { true: seg; _: thick }, 0.6}
+      Rgb: {tint.r * 0.13, tint.g * 0.13, tint.b * 0.13}
+      PbrMaterial: {metallic: 0, roughness: 0.4}
+      if lit {
+        Emissive: {strength: 3.2, color: tint}
+      } else {
+        Emissive: {strength: 0, color: tint}
+      }
+      Transition: [Emissive: {duration: 0.06}]
+      SpatialIgnore
+    }
+  }
+}
+
+template Annunciator {
+  prop legend: string = ""
+  prop sub: string = ""
+  prop hue: Rgb = AMBER
+  prop active: bool = false
+  prop w: f32 = 86
+  prop h: f32 = 38
+  prop size: f32 = 13
+
+  const shown = (active || lamp_test) && bus
+
+  Layout: {}
+  LayoutItem: {width: {mode: Fixed, value: w + 4}, height: {mode: Fixed, value: h + 4}}
+
+  bezel : BlackAnod { Position: {0, 0, 1}; Box: {w + 4, h + 4, 2}; SpatialIgnore }
+  tile {
+    Position: {0, 0, 2.3}
+    Box: {w, h, 0.8}
+    Rgb: {hue.r * 0.05 + 3, hue.g * 0.05 + 3, hue.b * 0.05 + 3}
+    PbrMaterial: {metallic: 0, roughness: 0.25}
+    if shown {
+      Emissive: {strength: 0.46, color: hue}
+    } else {
+      Emissive: {strength: 0, color: hue}
+    }
+    Transition: [Emissive: {duration: 0.09, timing_function: EaseOut}]
+    SpatialIgnore
+  }
+  if shown {
+    words_lit {
+      Position: {-0.2, match sub == "" { true: 0; _: size * 0.5 }, 2.9}
+      Text: {value: legend, size: size, font: font_stencil, align: Center}
+      Rgb: {1, 1, 1}
+      SpatialIgnore
+    }
+    words_lit_b {
+      Position: {0.2, match sub == "" { true: 0; _: size * 0.5 }, 2.92}
+      Text: {value: legend, size: size, font: font_stencil, align: Center}
+      Rgb: {1, 1, 1}
+      SpatialIgnore
+    }
+    if sub != "" {
+      minor_lit {
+        Position: {-0.18, 0 - size * 0.56, 2.9}
+        Text: {value: sub, size: size * 0.86, font: font_stencil, align: Center}
+        Rgb: {1, 1, 1}
+        SpatialIgnore
+      }
+      minor_lit_b {
+        Position: {0.18, 0 - size * 0.56, 2.92}
+        Text: {value: sub, size: size * 0.86, font: font_stencil, align: Center}
+        Rgb: {1, 1, 1}
+        SpatialIgnore
+      }
+    }
+  } else {
+    words {
+      Position: {0, match sub == "" { true: 0; _: size * 0.5 }, 2.9}
+      Text: {value: legend, size: size, font: font_stencil, align: Center}
+      if bus {
+        Rgb: {hue.r * 0.62, hue.g * 0.62, hue.b * 0.62}
+      } else {
+        Rgb: {hue.r * 0.1, hue.g * 0.1, hue.b * 0.1}
+      }
+      Transition: [Rgb: {duration: 0.5}]
+      SpatialIgnore
+    }
+    if sub != "" {
+      minor {
+        Position: {0, 0 - size * 0.56, 2.9}
+        Text: {value: sub, size: size * 0.86, font: font_stencil, align: Center}
+        if bus {
+          Rgb: {hue.r * 0.46, hue.g * 0.46, hue.b * 0.46}
+        } else {
+          Rgb: {hue.r * 0.08, hue.g * 0.08, hue.b * 0.08}
+        }
+        Transition: [Rgb: {duration: 0.5}]
+        SpatialIgnore
+      }
+    }
+  }
+}
+
+fn digit_mask(d: i32) -> i32 {
+  match d {
+    0: 63
+    1: 6
+    2: 91
+    3: 79
+    4: 102
+    5: 109
+    6: 125
+    7: 7
+    8: 127
+    _: 111
+  }
+}
+
+template SegDigit {
+  prop digit: i32 = 0
+  prop hue: Rgb = {255, 72, 40}
+  prop s: f32 = 26
+  prop blank: bool = false
+
+  const mask = match blank { true: 0; _: digit_mask(digit) }
+  const k = s * 0.14
+
+  Layout: {}
+  LayoutItem: {width: {mode: Fixed, value: s * 0.8}, height: {mode: Fixed, value: s * 1.5}}
+
+  for i in 0..7 {
+    const on = has_bit(mask, i)
+    const horizontal = i == 0 || i == 3 || i == 6
+    const px = match i { 1: s * 0.32; 2: s * 0.32; 4: 0 - s * 0.32; 5: 0 - s * 0.32; _: 0 }
+    const py = match i { 0: s * 0.62; 1: s * 0.31; 2: 0 - s * 0.31; 3: 0 - s * 0.62; 4: 0 - s * 0.31; 5: s * 0.31; _: 0 }
+    "bar_{i}" {
+      Position: {px, py, 0.6}
+      Box: {match horizontal { true: s * 0.5; _: k }, match horizontal { true: k; _: s * 0.5 }, 0.4}
+      Rgb: {hue.r * 0.07, hue.g * 0.07, hue.b * 0.07}
+      if on {
+        Emissive: {strength: 3.6, color: hue}
+      } else {
+        Emissive: {strength: 0, color: hue}
+      }
+      SpatialIgnore
+    }
+  }
+}
+
+template SegReadout {
+  prop value: i32 = 0
+  prop digits: i32 = 4
+  prop hue: Rgb = {255, 72, 40}
+  prop s: f32 = 26
+  prop label: string = ""
+  prop dark: bool = false
+
+  Layout: {direction: Column, spacing: 3, h: Center, v: Middle}
+
+  if label != "" {
+    Label words(text: label, size: 13)
+  }
+
+  window {
+    Layout: {direction: Row, spacing: s * 0.14, padding: {6, 6, 8, 8}, h: Center, v: Middle}
+    pane : BlackAnod { Rgb: {6, 5, 5}; Position: {0, 0, 0}; Box: {(s * 0.94) * digits + 14, s * 1.5 + 12, 0.8}; LayoutFloat: {h: Center, v: Middle, anchor_h: Center, anchor_v: Middle}; SpatialIgnore }
+    for i in 0..digits {
+      SegDigit "d_{i}"(digit: floor(value / floor(pow(10, digits - 1 - i))) % 10, hue: hue, s: s, blank: dark)
+    }
+  }
+}
+
+template DrumDigit {
+  prop digit: f32 = 0
+  prop r: f32 = 26
+  prop w: f32 = 19
+
+  const spin = digit * (2 * PI / 10)
+
+  Layout: {}
+  LayoutItem: {width: {mode: Fixed, value: w}, height: {mode: Fixed, value: 24}}
+
+  drum {
+    Position: {0, 0, 0 - r + 2.6}
+    Rotation: {spin, 0, 0}
+    Transition: [Rotation: {duration: 0.45, timing_function: EaseInOut}]
+    SpatialIgnore
+    body { Rotation: {0, 0, PI / 2}; Cylinder: {radius: r, length: w - 2, segments: 24, smooth: true}; Rgb: {18, 17, 16}; PbrMaterial: {metallic: 0.2, roughness: 0.5} }
+    for i in 0..10 {
+      "face_{i}" {
+        Rotation: {0 - i * (2 * PI / 10), 0, 0}
+        glyph {
+          Position: {0, 0, r + 0.2}
+          Text: {value: "{i}", size: 17, font: font_mono, align: Center}
+          Rgb: {226, 216, 190}
+        }
+      }
+    }
+  }
+}
+
+template DrumCounter {
+  prop value: i32 = 0
+  prop digits: i32 = 6
+  prop label: string = ""
+
+  Layout: {direction: Column, spacing: 3, h: Center, v: Middle}
+
+  if label != "" {
+    Label words(text: label, size: 13)
+  }
+
+  frame {
+    Layout: {direction: Row, spacing: 1.5, padding: {3, 3, 4, 4}, h: Center, v: Middle}
+    bezel_t : BlackAnod { Position: {0, 16, 1.4}; Box: {digits * 20.5 + 14, 4, 2.8}; LayoutFloat: {h: Center, v: Middle, anchor_h: Center, anchor_v: Middle, y: 16}; SpatialIgnore }
+    bezel_b : BlackAnod { Position: {0, -16, 1.4}; Box: {digits * 20.5 + 14, 4, 2.8}; LayoutFloat: {h: Center, v: Middle, anchor_h: Center, anchor_v: Middle, y: -16}; SpatialIgnore }
+    for i in 0..digits {
+      DrumDigit "d_{i}"(digit: floor(value / floor(pow(10, digits - 1 - i))) % 10)
+    }
+  }
+}

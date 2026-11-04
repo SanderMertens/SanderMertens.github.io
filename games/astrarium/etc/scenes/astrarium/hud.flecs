@@ -1,0 +1,726 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.layout
+using box.text
+using box.picking
+using box.input
+using box.transition
+using box.movement
+using box.widgets
+
+template Aegis : OneShot {
+  prop size: f32 = 132
+
+  const k = match go { true: 1; _: 0.6 }
+  const a = match go { true: 1; _: 0 }
+
+  Position: {0, 0, 7}
+  Scale: {k, k, 1}
+  Opacity: {a}
+  Rect: {size * 1.18, size * 1.18}
+  Image: {texture: tex_dashes}
+  Rgb: {120, 255, 180}
+  Emissive: {strength: 0.7, color: {70, 255, 150}}
+  BlendMode: Additive
+  AngularVelocity: {0, 0, 0.9}
+  Transition: [
+    Scale: {duration: 0.45, timing_function: EaseOut},
+    Opacity: {duration: 0.3}
+  ]
+  box.spatial.SpatialIgnore
+}
+
+template Orb {
+  prop ratio: f32 = 1
+  prop size: f32 = 132
+  prop deep: Rgb = {120, 20, 30}
+  prop bright: Rgb = {240, 60, 70}
+  prop dark: Rgb = {26, 8, 12}
+  prop value: string = ""
+  prop label: string = ""
+  prop icon: entity = 0
+  prop shielded: bool = false
+
+  const inner = size * 0.86
+  const face = inner * 2.1
+  const level = clamp(ratio, 0, 1)
+  const surface = (level - 0.5) * inner
+
+  Layout: {}
+  LayoutItem: {width: {mode: Fixed, value: size}, height: {mode: Fixed, value: size}}
+
+  Halo glow(size: size * 1.9, color: {bright.r * 0.34, bright.g * 0.34, bright.b * 0.34}, z: -2)
+
+  glass {
+    Position: {0, 0, 0}
+    Layout: {}
+    LayoutItem: {h: Center, v: Middle, width: {mode: Fixed, value: inner}, height: {mode: Fixed, value: inner}}
+    Rect: {1, 1}
+    Rgb: dark
+    Border: {radius: inner / 2}
+    ClipChildren
+    box.spatial.SpatialIgnore
+
+    back {
+      Position: {0, surface - face * 0.545, 1}
+      Rect: {face, face}
+      Rgb: deep
+      Border: {radius: face * 0.31}
+      AngularVelocity: {0, 0, 0.95}
+      Transition: [Position: {duration: 0.9, timing_function: EaseOut}]
+    }
+
+    front {
+      Position: {0, surface - face * 0.575, 2}
+      Rect: {face, face}
+      Rgb: bright
+      Emissive: {strength: 0.28, color: bright}
+      Border: {radius: face * 0.36}
+      AngularVelocity: {0, 0, -0.62}
+      Transition: [Position: {duration: 0.9, timing_function: EaseOut}]
+    }
+
+    depth {
+      Position: {0, surface - face * 0.62, 3}
+      Rect: {face, face}
+      Rgb: deep
+      Opacity: {0.6}
+      Border: {radius: face * 0.42}
+      AngularVelocity: {0, 0, 0.35}
+      Transition: [Position: {duration: 0.9, timing_function: EaseOut}]
+    }
+  }
+
+  gloss {
+    Position: {0, 0, 4}
+    Rect: {inner, inner}
+    Image: {texture: tex_orb_gloss}
+    Rgb: {255, 255, 255}
+    BlendMode: Additive
+    box.spatial.SpatialIgnore
+  }
+
+  rim {
+    Position: {0, 0, 5}
+    Rect: {size, size}
+    Image: {texture: tex_orb_frame}
+    Rgb: ui_gold
+    box.spatial.SpatialIgnore
+  }
+
+  if shielded {
+    Aegis ward(size: size)
+  }
+
+  readout {
+    Position: {0, 0, 6}
+    Layout: {direction: Column, h: Center, v: Middle}
+    amount {
+      Text: {value: value, size: 21, font: font_display}
+      Rgb: {255, 255, 255}
+      box.spatial.SpatialIgnore
+    }
+    name {
+      Text: {value: label, size: 10, font: font_display}
+      Rgb: {255, 244, 226}
+      box.spatial.SpatialIgnore
+    }
+  }
+}
+
+template CooldownWipe : OneShot {
+  prop seconds: f32 = 1
+  prop size: f32 = 62
+
+  const sy = match go { true: 0.0001; _: 1 }
+  const py = match go { true: size / 2; _: 0 }
+
+  Position: {0, py, 3}
+  Scale: {1, sy, 1}
+  Rect: {size, size}
+  Rgb: {4, 6, 16}
+  Opacity: {0.8}
+  Transition: [
+    Scale: {duration: seconds},
+    Position: {duration: seconds}
+  ]
+  box.spatial.SpatialIgnore
+}
+
+template ReadyFlash : OneShot {
+  prop size: f32 = 62
+
+  const k = match go { true: 1.9; _: 1 }
+  const a = match go { true: 0; _: 1 }
+
+  Position: {0, 0, 5}
+  Scale: {k, k, 1}
+  Opacity: {a}
+  Rect: {size * 1.5, size * 1.5}
+  Image: {texture: tex_halo}
+  Rgb: {255, 226, 160}
+  BlendMode: Additive
+  Transition: [
+    Scale: {duration: 0.55, timing_function: EaseOut},
+    Opacity: {duration: 0.55, timing_function: EaseOut}
+  ]
+  box.spatial.SpatialIgnore
+}
+
+fn spell_r(i: i32) -> i32 {
+  match i { 0: 255; 1: 86; 2: 120; 3: 186; 4: 255; _: 255 }
+}
+
+fn spell_g(i: i32) -> i32 {
+  match i { 0: 130; 1: 196; 2: 240; 3: 146; 4: 226; _: 70 }
+}
+
+fn spell_b(i: i32) -> i32 {
+  match i { 0: 70; 1: 255; 2: 160; 3: 255; 4: 150; _: 90 }
+}
+
+template SpellFace {
+  prop index: i32 = 0
+  prop hover: bool = false
+  prop down: bool = false
+
+  const size = 62
+  const hue: Rgb = {spell_r(index), spell_g(index), spell_b(index)}
+  const cooling = has_bit(spell_cooling, index)
+  const afford = has_bit(spell_afford, index)
+  const live = afford && !cooling
+  const lift = match down { true: -1; _: match hover { true: 5; _: 0 } }
+  const k = match hover { true: 1.06; _: 1 }
+
+  Position: {0, lift, 0}
+  Scale: {k, k, 1}
+  Transition: [
+    Position: {duration: 0.16, timing_function: EaseOut},
+    Scale: {duration: 0.16, timing_function: EaseOut}
+  ]
+  box.spatial.SpatialIgnore
+
+  Halo glow(size: size * 2.1, color: {hue.r * 0.32, hue.g * 0.32, hue.b * 0.32}, z: -1) {
+    Opacity: {match hover && live { true: 1; _: 0.22 }}
+    Transition: [Opacity: {duration: 0.2}]
+  }
+
+  plate {
+    Position: {0, 0, 0}
+    Layout: {}
+    LayoutItem: {width: {mode: Fixed, value: size}, height: {mode: Fixed, value: size}}
+    Rect: {1, 1}
+    Image: {texture: tex_panel}
+    if live {
+      Rgb: {hue.r * 0.17, hue.g * 0.17, hue.b * 0.2}
+    } else {
+      Rgb: {18, 20, 30}
+    }
+    if hover {
+      Border: {width: 2, radius: 7, color: {ui_pale.r, ui_pale.g, ui_pale.b, 255}}
+    } else {
+      Border: {width: 1, radius: 7, color: {ui_gold.r * 0.7, ui_gold.g * 0.7, ui_gold.b * 0.7, 255}}
+    }
+    Transition: [Rgb: {duration: 0.25}]
+    ClipChildren
+
+    sheen {
+      Position: {0, 12, 1}
+      Rect: {size, size * 0.62}
+      Image: {texture: tex_sheen}
+      Rgb: {hue.r * 0.4, hue.g * 0.4, hue.b * 0.4}
+      BlendMode: Additive
+      box.spatial.SpatialIgnore
+    }
+
+    glyph {
+      Position: {0, 0, 2}
+      Rect: {38, 38}
+      Image: {texture: spell_tex(index)}
+      if live {
+        Rgb: {min(255, hue.r + 70), min(255, hue.g + 70), min(255, hue.b + 70)}
+        Emissive: {strength: 0.22, color: hue}
+      } else {
+        Rgb: {88, 90, 104}
+        Emissive: {strength: 0, color: hue}
+      }
+      Transition: [Rgb: {duration: 0.25}]
+      box.spatial.SpatialIgnore
+    }
+
+    if cooling {
+      CooldownWipe wipe(seconds: spell_cooldown(index) * haste_scale(stat_haste), size: size)
+    } else {
+      ReadyFlash flash(size: size)
+    }
+  }
+
+  key {
+    Position: {-size / 2 + 11, size / 2 - 11, 4}
+    Rect: {17, 17}
+    Rgb: {8, 10, 22}
+    Border: {width: 1, radius: 3, color: {ui_gold.r * 0.8, ui_gold.g * 0.8, ui_gold.b * 0.8, 255}}
+    box.spatial.SpatialIgnore
+    letter {
+      Position: {0, 0, 1}
+      Text: {value: "{index + 1}", size: 11, font: font_display}
+      Rgb: ui_pale
+      box.spatial.SpatialIgnore
+    }
+  }
+
+  if spell_cost(index) > 0 {
+    cost {
+      Position: {size / 2 - 13, -size / 2 + 8, 4}
+      Text: {value: "{spell_cost(index):.0}", size: 11, font: font_body}
+      if has_bit(spell_afford, index) {
+        Rgb: {150, 214, 255}
+      } else {
+        Rgb: {255, 96, 86}
+      }
+      box.spatial.SpatialIgnore
+    }
+  }
+}
+
+template SpellSlot {
+  prop index: i32 = 0
+
+  mut hover = false
+  mut down = false
+
+  Interactive
+  Cursor: {CursorPointer}
+  LayoutItem: {width: {mode: Fixed, value: 66}, height: {mode: Fixed, value: 66}}
+  Layout: {}
+  Rect: {1, 1}
+  Rgb: {0, 0, 0}
+  BlendMode: Additive
+
+  SpellFace face(index: index, hover: hover, down: down)
+
+  async {
+    while true {
+      await on.enter(this)
+      hover = true
+      spell_hover = index
+      await on.leave(this)
+      hover = false
+      spell_hover = -1
+    }
+  }
+
+  async {
+    while true {
+      await on.press(this)
+      down = true
+      await on.release(this)
+      down = false
+    }
+  }
+
+  async {
+    while true {
+      await on.click(this)
+      rq_op = OP_CAST
+      rq_arg = index
+      await ui.changed(rq)
+    }
+  }
+}
+
+template XpBar {
+  const need = xp_needed(hero_level)
+  const f = clamp(hero_xp / need, 0, 1)
+  const w = 472
+
+  Layout: {}
+  LayoutItem: {width: {mode: Fixed, value: w}, height: {mode: Fixed, value: 10}}
+  box.spatial.SpatialIgnore
+
+  track {
+    Position: {0, 0, 0}
+    Rect: {w, 6}
+    Rgb: {8, 10, 22}
+    Border: {width: 1, radius: 3, color: {ui_gold.r * 0.5, ui_gold.g * 0.5, ui_gold.b * 0.5, 255}}
+  }
+
+  fill {
+    Position: {(f - 1) * w / 2, 0, 1}
+    Scale: {max(f, 0.001), 1, 1}
+    Rect: {w - 2, 4}
+    Rgb: ui_pale
+    Emissive: {strength: 0.9, color: {255, 190, 90}}
+    Transition: [
+      Position: {duration: 0.6, timing_function: EaseOut},
+      Scale: {duration: 0.6, timing_function: EaseOut}
+    ]
+  }
+
+  for i in 1..10 {
+    "notch_{i}" {
+      Position: {w * (i / 10.0 - 0.5), 0, 2}
+      Rect: {1, 6}
+      Rgb: {6, 8, 18}
+    }
+  }
+}
+
+template BottomDeck {
+  const shown = hud_go && screen != SCREEN_TITLE
+  const y = match shown { true: 0; _: -190 }
+
+  LayoutItem: {h: Center, v: Bottom, width: {mode: Grow}, height: {mode: Grow}, y: y}
+  Layout: {direction: Row, v: Bottom, padding: {0, 14, 22, 22}}
+  Transition: [Position: {duration: 0.8, delay: match shown { true: 0.35; _: 0 }, timing_function: EaseInOut}]
+
+  Orb hp(
+    ratio: hero_hp / hero_hp_max,
+    deep: {124, 16, 34},
+    bright: {226, 44, 60},
+    dark: {28, 6, 12},
+    value: "{hero_hp:.0}",
+    label: "VITALITY",
+    shielded: aegis_on)
+
+  spacer_a {
+    LayoutItem: {width: {mode: Grow}}
+  }
+
+  deck {
+    Layout: {direction: Column, h: Center, spacing: 8}
+    InputBlocker
+
+    level_row {
+      Layout: {direction: Row, spacing: 8, v: Middle}
+      Caption level(text: "Level {hero_level}", size: 13, font: font_display, color: ui_pale)
+      Caption xp(text: "{hero_xp:.0} / {xp_needed(hero_level):.0}", size: 12, color: ui_muted)
+    }
+
+    XpBar xp()
+
+    bar {
+      Layout: {direction: Row, spacing: 14, padding: {8, 8, 12, 12}}
+      Rect: {1, 1}
+      Image: {texture: tex_panel}
+      Rgb: ui_ink
+      Border: {width: 1, radius: 8, color: {ui_gold.r * 0.5, ui_gold.g * 0.5, ui_gold.b * 0.5, 255}}
+      for i in 0..6 {
+        SpellSlot "slot_{i}"(index: i)
+      }
+    }
+  }
+
+  spacer_b {
+    LayoutItem: {width: {mode: Grow}}
+  }
+
+  Orb mp(
+    ratio: hero_mp / hero_mp_max,
+    deep: {16, 52, 150},
+    bright: {44, 134, 245},
+    dark: {6, 10, 34},
+    value: "{hero_mp:.0}",
+    label: "AETHER")
+}
+
+const nav_tab_width: f32 = 142
+
+template NavFace {
+  prop index: i32 = 0
+  prop label: string = ""
+  prop hover: bool = false
+
+  const active = screen == index
+
+  Layout: {direction: Row, h: Center, v: Middle}
+  LayoutItem: {width: {mode: Grow}, height: {mode: Grow}}
+  box.spatial.SpatialIgnore
+
+  name {
+    Text: {value: label, size: 17, font: font_display}
+    if active {
+      Rgb: {255, 246, 220}
+      Emissive: {strength: 0.5, color: {255, 200, 120}}
+    } else if hover {
+      Rgb: ui_pale
+      Emissive: {strength: 0.12, color: {255, 200, 120}}
+    } else {
+      Rgb: {ui_gold.r * 0.72, ui_gold.g * 0.72, ui_gold.b * 0.72}
+      Emissive: {strength: 0, color: {255, 200, 120}}
+    }
+    Transition: [Rgb: {duration: 0.2}, Emissive: {duration: 0.2}]
+    box.spatial.SpatialIgnore
+  }
+}
+
+template NavTab {
+  prop index: i32 = 0
+  prop label: string = ""
+  prop op: i32 = 0
+
+  mut hover = false
+
+  Interactive
+  Cursor: {CursorPointer}
+  Layout: {direction: Row}
+  LayoutItem: {width: {mode: Fixed, value: nav_tab_width}, height: {mode: Grow}}
+  Rect: {1, 1}
+  Rgb: {0, 0, 0}
+  BlendMode: Additive
+
+  NavFace face(index: index, label: label, hover: hover)
+
+  async {
+    while true {
+      await on.enter(this)
+      hover = true
+      await on.leave(this)
+      hover = false
+    }
+  }
+
+  async {
+    while true {
+      await on.click(this)
+      rq_op = op
+      await ui.changed(rq)
+    }
+  }
+}
+
+template NavMarker {
+  const x = (screen - 2) * nav_tab_width
+
+  LayoutFloat: {h: Center, v: Bottom, anchor_h: Center, anchor_v: Bottom, x: x, y: 2}
+  LayoutItem: {width: {mode: Fixed, value: nav_tab_width}, height: {mode: Fixed, value: 14}}
+  Transition: [Position: {duration: 0.42, timing_function: EaseInOut}]
+  box.spatial.SpatialIgnore
+
+  beam {
+    Position: {0, 0, 0}
+    Rect: {nav_tab_width * 0.86, 22}
+    Image: {texture: tex_halo}
+    Rgb: {ui_gold.r * 0.5, ui_gold.g * 0.4, ui_gold.b * 0.24}
+    BlendMode: Additive
+  }
+
+  rule {
+    Position: {0, 0, 1}
+    Rect: {nav_tab_width * 0.72, 1}
+    Rgb: ui_pale
+  }
+
+  gem {
+    Position: {0, 0, 2}
+    Rotation: {0, 0, PI / 4}
+    Rect: {7, 7}
+    Rgb: {255, 248, 226}
+    Emissive: {strength: 1.5, color: {255, 200, 110}}
+  }
+}
+
+template Pill {
+  prop icon: entity = 0
+  prop text: string = ""
+  prop tint: Rgb = {255, 255, 255}
+  prop width: f32 = 112
+
+  Layout: {direction: Row, spacing: 7, v: Middle, padding: {5, 5, 10, 12}}
+  LayoutItem: {width: {min: width, max: 0}}
+  Rect: {1, 1}
+  Image: {texture: tex_panel}
+  Rgb: ui_ink
+  Border: {width: 1, radius: 14, color: {ui_gold.r * 0.45, ui_gold.g * 0.45, ui_gold.b * 0.45, 255}}
+
+  Icon glyph(tex: icon, size: 17, color: tint) {
+    Emissive: {strength: 0.4, color: tint}
+  }
+  Caption amount(text: text, size: 14, font: font_display, color: ui_pale)
+}
+
+template Crest {
+  const need = xp_needed(hero_level)
+  const f = clamp(hero_xp / need, 0, 1)
+
+  Layout: {direction: Row, spacing: 12, v: Middle}
+
+  ring {
+    Layout: {}
+    LayoutItem: {width: {mode: Fixed, value: 58}, height: {mode: Fixed, value: 58}}
+    box.spatial.SpatialIgnore
+
+    disc {
+      Position: {0, 0, 0}
+      Circle: {25}
+      Rgb: ui_ink
+      Border: {width: 1, color: {ui_gold.r * 0.7, ui_gold.g * 0.7, ui_gold.b * 0.7, 255}}
+    }
+
+    mark {
+      Position: {0, 0, 1}
+      Rect: {36, 36}
+      Image: {texture: tex_sigil}
+      Rgb: ui_pale
+      Emissive: {strength: 0.4, color: {255, 190, 100}}
+      AngularVelocity: {0, 0, 0.16}
+    }
+
+    for i in 0..40 {
+      "tick_{i}" {
+        const a = PI / 2 - i * PI / 20
+        const lit = (i + 0.5) / 40 < f
+        Position: {0, 0, 2}
+        Line: {cos(a) * 26, sin(a) * 26, cos(a) * 29, sin(a) * 29, width: 1.6}
+        if lit {
+          Rgb: ui_pale
+          Emissive: {strength: 0.8, color: {255, 190, 100}}
+        } else {
+          Rgb: {ui_dim.r * 0.6, ui_dim.g * 0.6, ui_dim.b * 0.6}
+          Emissive: {strength: 0, color: {255, 190, 100}}
+        }
+        Transition: [Rgb: {duration: 0.3}, Emissive: {duration: 0.3}]
+      }
+    }
+  }
+
+  who {
+    Layout: {direction: Column, spacing: 1}
+    Caption name(text: "Ilyra Vane", size: 19, font: font_display, color: ui_pale)
+    Caption role(text: "Star-Warden, level {hero_level}", size: 13, color: ui_muted, font: font_italic)
+  }
+}
+
+template TopBar {
+  const shown = hud_go && screen != SCREEN_TITLE
+  const y = match shown { true: 0; _: 100 }
+
+  LayoutItem: {h: Center, v: Top, width: {mode: Grow}, height: {mode: Grow}, y: y}
+  Layout: {direction: Row, v: Middle, padding: {8, 8, 22, 22}}
+  Transition: [Position: {duration: 0.8, delay: match shown { true: 0.2; _: 0 }, timing_function: EaseInOut}]
+
+  Crest crest()
+
+  left_gap {
+    LayoutItem: {width: {mode: Grow}}
+  }
+
+  tabs {
+    Layout: {direction: Row}
+    LayoutItem: {height: {mode: Fixed, value: 46}}
+    NavTab t_atlas(index: 1, label: "Atlas", op: OP_NAV_ATLAS)
+    NavTab t_armory(index: 2, label: "Armory", op: OP_NAV_ARMORY)
+    NavTab t_rites(index: 3, label: "Rites", op: OP_NAV_RITES)
+    NavMarker marker()
+  }
+
+  right_gap {
+    LayoutItem: {width: {mode: Grow}}
+  }
+
+  purse {
+    Layout: {direction: Row, spacing: 8, v: Middle}
+    Pill points(icon: tex_sigil, text: "{hero_points}", tint: {150, 214, 255}, width: 76)
+    Pill dust(icon: tex_stat_aether, text: "{hero_dust}", tint: {255, 214, 130}, width: 112)
+  }
+}
+
+template SpellTip {
+  const shown = spell_hover >= 0 && screen != SCREEN_TITLE
+  const i = max(spell_hover, 0)
+  const a = match shown { true: 1; _: 0 }
+  const x = (i - 2.5) * 80
+  const hue: Rgb = {spell_r(i), spell_g(i), spell_b(i)}
+
+  LayoutItem: {h: Center, v: Bottom, width: {mode: Fixed, value: 300}, x: x, y: 164}
+  Layout: {direction: Column, padding: {12, 12, 14, 14}, spacing: 4}
+  Rect: {1, 1}
+  Image: {texture: tex_panel}
+  Rgb: ui_ink
+  Border: {width: 1, radius: 5, color: {hue.r, hue.g, hue.b, 255}}
+  Opacity: {a}
+  Transition: [
+    Opacity: {duration: 0.14},
+    Position: {duration: 0.16, timing_function: EaseOut}
+  ]
+  box.spatial.SpatialIgnore
+
+  Caption name(text: spell_name(i), size: 17, font: font_display, color: hue)
+  Caption blurb(text: spell_desc(i), size: 14, width: 272, color: ui_text)
+  meta {
+    Layout: {direction: Row, spacing: 16}
+    Caption cost(text: "{spell_cost(i):.0} aether", size: 12, color: {150, 214, 255})
+    Caption cool(text: "{spell_cooldown(i) * haste_scale(stat_haste):.1}s recharge", size: 12, color: ui_muted)
+    Caption xp(text: "+{spell_xp(i):.0} xp", size: 12, color: ui_pale)
+  }
+}
+
+template Banner {
+  const a = match banner_on { true: 1; _: 0 }
+  const y = match banner_on { true: -84; _: -54 }
+
+  LayoutItem: {h: Center, v: Top, width: {mode: Fixed, value: 640}, height: {mode: Fixed, value: 96}, y: y}
+  Layout: {}
+  Opacity: {a}
+  Transition: [
+    Opacity: {duration: 0.35, timing_function: EaseOut},
+    Position: {duration: 0.5, timing_function: EaseOut}
+  ]
+  box.spatial.SpatialIgnore
+
+  shade {
+    LayoutItem: {h: Center, v: Middle, width: {mode: Fixed, value: 900}, height: {mode: Fixed, value: 190}}
+    Rect: {1, 1}
+    Image: {texture: tex_halo}
+    Rgb: {0, 0, 0}
+    Opacity: {0.9}
+    box.spatial.SpatialIgnore
+  }
+
+  lines {
+    LayoutItem: {width: {mode: Grow}, height: {mode: Grow}}
+    Layout: {direction: Column, h: Center, v: Middle, spacing: 3}
+    box.spatial.SpatialIgnore
+
+    Caption big(text: banner_text, size: 38, font: font_display, color: ui_pale) {
+      Emissive: {strength: 0.5, color: {255, 190, 100}}
+    }
+    Caption small(text: banner_sub, size: 17, font: font_italic, color: ui_text)
+  }
+}
+
+template Hud {
+  LayoutItem: {width: {mode: Grow}, height: {mode: Grow}}
+  Layout: {}
+
+  rows {
+    LayoutItem: {width: {mode: Grow}, height: {mode: Grow}}
+    Layout: {direction: Column}
+
+    top_slot {
+      Layout: {}
+      LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: HUD_TOP}}
+      TopBar top()
+    }
+
+    stage {
+      Layout: {}
+      LayoutItem: {width: {mode: Grow}, height: {mode: Grow, content_min: false}}
+      AtlasPage atlas(index: SCREEN_ATLAS)
+      ArmoryPage armory(index: SCREEN_ARMORY)
+      RitesPage rites(index: SCREEN_RITES)
+    }
+
+    bottom_slot {
+      Layout: {}
+      LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: HUD_BOTTOM}}
+      BottomDeck bottom()
+    }
+  }
+
+  SpellTip tip()
+  Banner banner()
+}

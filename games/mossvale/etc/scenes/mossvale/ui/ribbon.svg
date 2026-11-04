@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 72" width="400" height="72">
+<defs><linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff0b8"/><stop offset="0.35" stop-color="#e2b456"/><stop offset="0.7" stop-color="#b07a2a"/><stop offset="1" stop-color="#6e4614"/></linearGradient>
+<linearGradient id="leaf" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9cc070"/><stop offset="1" stop-color="#3e6a34"/></linearGradient>
+</defs>
+<path d="M6 16 H44 L44 60 H6 L18 38 Z" fill="#2c4424" stroke="#1a1208" stroke-width="2.5" stroke-linejoin="round"/>
+<path d="M394 16 H356 L356 60 H394 L382 38 Z" fill="#2c4424" stroke="#1a1208" stroke-width="2.5" stroke-linejoin="round"/>
+<path d="M44 60 L56 68 L56 58 Z M356 60 L344 68 L344 58 Z" fill="#1c2c16"/>
+<rect x="36" y="8" width="328" height="52" rx="3" fill="#4a6a3a" stroke="#1a1208" stroke-width="2.5"/>
+<rect x="42" y="13" width="316" height="42" rx="2" fill="none" stroke="url(#gold)" stroke-width="2"/>
+<rect x="36" y="9" width="328" height="8" fill="#ffffff" opacity="0.12"/>
+</svg>

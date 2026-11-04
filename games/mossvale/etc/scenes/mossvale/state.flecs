@@ -1,0 +1,310 @@
+using flecs.script
+using flecs.script.math
+
+export const GRID_N: i32 = 200
+export const GRID_HALF: i32 = 100
+export const BOUND: f32 = 95
+export const HALF_PI: f32 = 1.5707963
+
+export const SP_NONE: i32 = 0
+export const SP_SPARK: i32 = 1
+export const SP_SPLASH: i32 = 2
+export const SP_GUST: i32 = 3
+export const SP_BLOOM: i32 = 4
+export const SP_FROST: i32 = 5
+export const SP_LIFT: i32 = 6
+export const SPELLS: i32 = 6
+
+export const QUESTS: i32 = 26
+export const NPCS: i32 = 13
+export const TARGETS: i32 = 128
+export const MOTES: i32 = 20
+
+export const Q_HEARTH: i32 = 0
+export const Q_LAMPS: i32 = 1
+export const Q_BREAD: i32 = 2
+export const Q_WEEDS: i32 = 3
+export const Q_HERBS: i32 = 4
+export const Q_FIRE: i32 = 5
+export const Q_FIELDS: i32 = 6
+export const Q_MILL: i32 = 7
+export const Q_LAUNDRY: i32 = 8
+export const Q_FOG: i32 = 9
+export const Q_CAMP: i32 = 10
+export const Q_TRIAL: i32 = 11
+export const Q_GROVE: i32 = 12
+export const Q_PUMPKIN: i32 = 13
+export const Q_BRIDGE: i32 = 14
+export const Q_LILY: i32 = 15
+export const Q_ISLE: i32 = 16
+export const Q_DRINKS: i32 = 17
+export const Q_ROCKS: i32 = 18
+export const Q_MINE: i32 = 19
+export const Q_SHEEP: i32 = 20
+export const Q_CAT: i32 = 21
+export const Q_FESTIVAL: i32 = 22
+export const Q_MOTES: i32 = 23
+export const Q_FAIRY: i32 = 24
+export const Q_TOWER: i32 = 25
+
+export const N_ELDER: i32 = 0
+export const N_PELLA: i32 = 1
+export const N_MIRA: i32 = 2
+export const N_DORN: i32 = 3
+export const N_ROSA: i32 = 4
+export const N_TAM: i32 = 5
+export const N_OSWIN: i32 = 6
+export const N_MAUD: i32 = 7
+export const N_GARETH: i32 = 8
+export const N_FENNICK: i32 = 9
+export const N_LOU: i32 = 10
+export const N_GRUFF: i32 = 11
+export const N_ADA: i32 = 12
+
+export const QS_LOCKED: i32 = 0
+export const QS_OPEN: i32 = 1
+export const QS_ACTIVE: i32 = 2
+export const QS_RETURN: i32 = 3
+export const QS_DONE: i32 = 4
+
+event Cast(spell: i32, x: f32, z: f32)
+event Progress(q: i32, id: i32)
+event Toast(text: string)
+event Learn(sp: i32)
+event QuestDone(q: i32)
+event Talk(npc: i32)
+event Mote(i: i32)
+event Impact(spell: i32, x: f32, z: f32)
+event Fizzle(x: f32, z: f32)
+
+fn fract(v: f64) -> f64 {
+  v - floor(v)
+}
+
+fn hash(i: f64) -> f64 {
+  fract(sin(i * 12.9898 + 4.1414) * 43758.5453)
+}
+
+fn hash2(x: f64, z: f64) -> f64 {
+  fract(sin(x * 12.9898 + z * 78.233) * 43758.5453)
+}
+
+fn bool_f(b: bool) -> f32 {
+  match b { true: 1; _: 0 }
+}
+
+fn dist2(ax: f64, az: f64, bx: f64, bz: f64) -> f64 {
+  (ax - bx) * (ax - bx) + (az - bz) * (az - bz)
+}
+
+fn cell(x: f64, z: f64) -> i32 {
+  (floor(z) + GRID_HALF) * GRID_N + floor(x) + GRID_HALF
+}
+
+fn wrap_angle(a: f64) -> f64 {
+  a - floor((a + PI) / (2 * PI)) * 2 * PI
+}
+
+fn spell_name(s: i32) -> string {
+  match s {
+    1: "Spark"
+    2: "Splash"
+    3: "Gust"
+    4: "Bloom"
+    5: "Frost"
+    6: "Lift"
+    _: ""
+  }
+}
+
+fn spell_cost(s: i32) -> f32 {
+  match s {
+    1: 8
+    2: 10
+    3: 12
+    4: 14
+    5: 14
+    6: 16
+    _: 0
+  }
+}
+
+fn spell_blurb(s: i32) -> string {
+  match s {
+    1: "A spark of flame. Lights lamps, ovens and braziers, and burns away weeds."
+    2: "A splash of water. Waters thirsty plants and puts out fires."
+    3: "A gust of wind. Turns sails, dries cloth, scatters leaves, fog and pests."
+    4: "A breath of spring. Makes plants grow and wilted things green again."
+    5: "A touch of winter. Freezes water and chills whatever needs cooling."
+    6: "A lifting charm. Raises heavy things and carries them where they belong."
+    _: ""
+  }
+}
+
+fn spell_r(s: i32) -> f32 {
+  match s { 1: 255; 2: 90; 3: 200; 4: 120; 5: 170; 6: 200; _: 255 }
+}
+
+fn spell_g(s: i32) -> f32 {
+  match s { 1: 150; 2: 170; 3: 235; 4: 220; 5: 230; 6: 140; _: 255 }
+}
+
+fn spell_b(s: i32) -> f32 {
+  match s { 1: 50; 2: 255; 3: 225; 4: 90; 5: 255; 6: 255; _: 255 }
+}
+
+fn npc_name(n: i32) -> string {
+  match n {
+    0: "Elder Bram"
+    1: "Pella the Baker"
+    2: "Mira the Herbalist"
+    3: "Dorn the Smith"
+    4: "Rosa of the Sleepy Toad"
+    5: "Little Tam"
+    6: "Farmer Oswin"
+    7: "Granny Maud"
+    8: "Gareth the Woodcutter"
+    9: "Fennick the Hermit"
+    10: "Old Lou"
+    11: "Gruff the Miner"
+    12: "Ada the Shepherd"
+    _: ""
+  }
+}
+
+fn rank_name(done: i32) -> string {
+  match done >= 22 {
+    true: "Archmage of Mossvale"
+    _: match done >= 16 {
+      true: "Village Wizard"
+      _: match done >= 10 {
+        true: "Hedge Mage"
+        _: match done >= 4 {
+          true: "Journeyman"
+          _: "Apprentice"
+        }
+      }
+    }
+  }
+}
+
+export mut game_state: i32 = 0
+export mut clock: f64 = 0
+export mut dt: f32 = 0.016
+
+export mut px: f32 = -10.6
+export mut pz: f32 = 14.6
+export mut pyaw: f32 = 3.14159
+export mut moving = false
+export mut sprinting = false
+export mut walk_phase: f32 = 0
+export mut cast_anim: f32 = 0
+
+export mut cam_x: f32 = -10.6
+export mut cam_z: f32 = 14.6
+export mut cam_dist: f32 = 30
+export mut cam_pitch: f32 = 1.02
+
+export mut aim_x: f32 = 0
+export mut aim_z: f32 = 0
+export mut aim_on = false
+
+export mut spell: i32 = 1
+export mut known: bool[8] = {}
+export mut mana: f32 = 100
+export mut mana_max: f32 = 100
+
+export mut orb_on = false
+export mut orb_spell: i32 = 1
+export mut orb_x: f32 = 0
+export mut orb_y: f32 = 0
+export mut orb_z: f32 = 0
+
+export mut qs: i32[32] = {}
+export mut qp: i32[32] = {}
+export mut done_count: i32 = 0
+export mut ts: i32[128] = {}
+export mut t_x: f32[128] = {}
+export mut t_z: f32[128] = {}
+export mut t_sp: i32[128] = {}
+export mut t_q: i32[128] = {}
+export mut t_lv: i32[128] = {}
+export mut t_req: i32[128] = {}
+export mut t_on: bool[128] = {}
+export mut delivered: bool[16] = {}
+
+export mut npc_x: f32[16] = {}
+export mut npc_z: f32[16] = {}
+export mut npc_mark: i32[16] = {}
+export mut near_npc: i32 = -1
+export mut talk_npc: i32 = -1
+export mut talk_topic: i32 = 0
+export mut talk_line: i32 = 0
+
+export mut mote_got: bool[24] = {}
+export mut m_x: f32[24] = {}
+export mut m_z: f32[24] = {}
+export mut obj_on = false
+export mut obj_x: f32 = 0
+export mut obj_z: f32 = 0
+export mut obj_q: i32 = -1
+export mut obj_npc = false
+export mut motes: i32 = 0
+
+export mut blocked: bool[40000] = {}
+
+export mut hour: f32 = 8.5
+export mut hour_goal: f32 = 8.5
+
+export mut toast: string = ""
+export mut toast_until: f64 = 0
+export mut banner: string = ""
+export mut banner_sub: string = ""
+export mut banner_until: f64 = 0
+
+export mut track_t: string[4] = {}
+export mut track_s: string[4] = {}
+export mut track_n: i32 = 0
+
+proc block_rect(x0: f32, z0: f32, x1: f32, z1: f32) {
+  for z in floor(z0)..ceil(z1) {
+    for x in floor(x0)..ceil(x1) {
+      if x >= -GRID_HALF && x < GRID_HALF && z >= -GRID_HALF && z < GRID_HALF {
+        blocked[(z + GRID_HALF) * GRID_N + x + GRID_HALF] = true
+      }
+    }
+  }
+}
+
+proc unblock_rect(x0: f32, z0: f32, x1: f32, z1: f32) {
+  for z in floor(z0)..ceil(z1) {
+    for x in floor(x0)..ceil(x1) {
+      if x >= -GRID_HALF && x < GRID_HALF && z >= -GRID_HALF && z < GRID_HALF {
+        blocked[(z + GRID_HALF) * GRID_N + x + GRID_HALF] = false
+      }
+    }
+  }
+}
+
+proc block_disc(cx: f32, cz: f32, r: f32) {
+  for z in floor(cz - r)..ceil(cz + r) {
+    for x in floor(cx - r)..ceil(cx + r) {
+      if (x + 0.5 - cx) * (x + 0.5 - cx) + (z + 0.5 - cz) * (z + 0.5 - cz) <= r * r {
+        if x >= -GRID_HALF && x < GRID_HALF && z >= -GRID_HALF && z < GRID_HALF {
+          blocked[(z + GRID_HALF) * GRID_N + x + GRID_HALF] = true
+        }
+      }
+    }
+  }
+}
+
+proc say(text: string) {
+  toast = text
+  toast_until = clock + 4.5
+}
+
+proc announce(title: string, sub: string) {
+  banner = title
+  banner_sub = sub
+  banner_until = clock + 4.5
+}

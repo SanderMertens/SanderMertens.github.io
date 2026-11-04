@@ -1,0 +1,34 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+
+template StationFreighterBody {
+  spine : StationTruss { Position: {0, 1.25, 0}; Box: {4.8, 0.3, 0.5} }
+  cab : StationHazard { Position: {2.5, 1.5, 0}; RoundedBox: {1.2, 1.2, 1.5, 0.18, segments: 2} }
+  cab_win : StationCyanLight { Position: {3.11, 1.72, 0}; Box: {0.02, 0.38, 1.1} }
+  engine_block : StationDark { Position: {-2.75, 1.4, 0}; RoundedBox: {1, 1.2, 1.7, 0.1, segments: 1} }
+  thrust_a : StationPanel { Position: {-3.4, 1.4, 0.42}; Rotation: {0, 0, 1.5708}; Frustum: {radius_bottom: 0.34, radius_top: 0.24, length: 0.4, segments: 12} }
+  thrust_b : StationPanel { Position: {-3.4, 1.4, -0.42}; Rotation: {0, 0, 1.5708}; Frustum: {radius_bottom: 0.34, radius_top: 0.24, length: 0.4, segments: 12} }
+  glow_a : StationPlasma { Position: {-3.62, 1.4, 0.42}; Rotation: {0, 0, 1.5708}; Cylinder: {radius: 0.26, length: 0.03, segments: 12} }
+  glow_b : StationPlasma { Position: {-3.62, 1.4, -0.42}; Rotation: {0, 0, 1.5708}; Cylinder: {radius: 0.26, length: 0.03, segments: 12} }
+  StationContainer can_a(mat: StationOrange) { Position: {-1.2, 0.45, 0.6}; Scale: {0.95, 0.9, 1} }
+  StationContainer can_b(mat: StationBlue) { Position: {0.9, 0.45, 0.6}; Scale: {0.95, 0.9, 1} }
+  StationContainer can_c(mat: StationTeal) { Position: {-1.2, 0.45, -0.6}; Scale: {0.95, 0.9, 1} }
+  StationContainer can_d(mat: StationRed) { Position: {0.9, 0.45, -0.6}; Scale: {0.95, 0.9, 1} }
+  StationContainer can_e(mat: StationWhite) { Position: {-1.2, 1.4, 0.6}; Scale: {0.95, 0.9, 1} }
+  StationContainer can_f(mat: StationOrange) { Position: {0.9, 1.4, -0.6}; Scale: {0.95, 0.9, 1} }
+  cab_trim : StationDark { Position: {2.5, 1.02, 0}; Box: {1.24, 0.1, 1.54} }
+  beacon : StationAmberLight { Position: {2.5, 2.16, 0}; Sphere: {radius: 0.08, segments: 8} }
+  nav_l : StationGreenLight { Position: {-2.75, 2.04, 0.84}; Sphere: {radius: 0.06, segments: 8} }
+  nav_r : StationRedLight { Position: {-2.75, 2.04, -0.84}; Sphere: {radius: 0.06, segments: 8} }
+  for i in 0..6 {
+    { (IsA, StationDark); Position: {-2 + i * 0.8, 1.42, 0}; Box: {0.08, 0.06, 0.56} }
+  }
+  StationPipeX fuel(length: 4.6, radius: 0.05, clamps: 5) { Position: {0, 1.08, 0.1} }
+  leg_a : StationDark { Position: {1.9, 0.2, 0.7}; Box: {0.14, 0.4, 0.14} }
+  leg_b : StationDark { Position: {1.9, 0.2, -0.7}; Box: {0.14, 0.4, 0.14} }
+  leg_c : StationDark { Position: {-2.2, 0.2, 0.7}; Box: {0.14, 0.4, 0.14} }
+  leg_d : StationDark { Position: {-2.2, 0.2, -0.7}; Box: {0.14, 0.4, 0.14} }
+}

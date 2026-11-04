@@ -1,0 +1,99 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.layout
+using box.text
+using box.spatial
+
+struct P3(x: f32, y: f32, z: f32)
+
+fn span(a: P3, b: P3) -> f32 {
+  sqrt(sqr(b.x - a.x) + sqr(b.y - a.y) + sqr(b.z - a.z))
+}
+
+fn yaw_of(a: P3, b: P3) -> f32 {
+  atan2(b.x - a.x, b.z - a.z)
+}
+
+fn pitch_of(a: P3, b: P3) -> f32 {
+  0 - atan2(b.y - a.y, sqrt(sqr(b.x - a.x) + sqr(b.z - a.z)))
+}
+
+template Beam {
+  prop a: P3 = {0, 0, 0}
+  prop b: P3 = {0, 0, 1}
+  prop w: f32 = 0.05
+  prop h: f32 = 0.05
+  prop roll: f32 = 0
+
+  Position: {(a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2}
+  Rotation: {pitch_of(a, b), yaw_of(a, b), roll}
+  Box: {w, h, span(a, b)}
+}
+
+template Tube3 {
+  prop a: P3 = {0, 0, 0}
+  prop b: P3 = {0, 0, 1}
+  prop r: f32 = 0.02
+  prop tone: Rgb = {168, 168, 170}
+  prop metal: f32 = 1
+  prop rough: f32 = 0.34
+
+  Position: {(a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2}
+  Rotation: {pitch_of(a, b), yaw_of(a, b), 0}
+  rod { Rotation: {PI / 2, 0, 0}; Cylinder: {radius: r, length: span(a, b), segments: 10, smooth: true}; Rgb: tone; PbrMaterial: {metallic: metal, roughness: rough} }
+}
+
+prefab CableShape {
+  Path2D: {
+    start: {0.5, 0},
+    segments: [
+      {kind: Line, end: {0.35, 0.35}}, {kind: Line, end: {0, 0.5}}, {kind: Line, end: {-0.35, 0.35}},
+      {kind: Line, end: {-0.5, 0}}, {kind: Line, end: {-0.35, -0.35}}, {kind: Line, end: {0, -0.5}},
+      {kind: Line, end: {0.35, -0.35}}
+    ],
+    closed: true
+  }
+}
+prefab CableProfile { Profile2D: {outer: CableShape} }
+
+template Cable {
+  prop a: P3 = {0, 0, 0}
+  prop b: P3 = {0, 0, 1}
+  prop sag: f32 = 0.1
+  prop thick: f32 = 0.018
+  prop tone: Rgb = {24, 24, 26}
+
+  run {
+    Path3D: {
+      start: {a.x, a.y, a.z},
+      segments: [{
+        kind: CubicBezier,
+        end: {b.x, b.y, b.z},
+        control1: {lerp(a.x, b.x, 0.3), lerp(a.y, b.y, 0.3) - sag, lerp(a.z, b.z, 0.3)},
+        control2: {lerp(a.x, b.x, 0.7), lerp(a.y, b.y, 0.7) - sag, lerp(a.z, b.z, 0.7)}
+      }]
+    }
+  }
+
+  Sweep: {path: run, profile: CableProfile, scale: {thick, thick}, rings: 20}
+  Rgb: tone
+  PbrMaterial: {metallic: 0, roughness: 0.55}
+  SpatialIgnore
+}
+
+template Sheet {
+  prop a: P3 = {0, 0, 0}
+  prop b: P3 = {1, 0, 0}
+  prop c: P3 = {1, 1, 0}
+  prop d: P3 = {0, 1, 0}
+  prop tile: f32 = 1
+
+  Mesh3: {
+    vertices: [{a.x, a.y, a.z}, {b.x, b.y, b.z}, {c.x, c.y, c.z}, {d.x, d.y, d.z}],
+    uvs: [{0, tile}, {tile, tile}, {tile, 0}, {0, 0}],
+    indices: [0, 1, 2, 0, 2, 3]
+  }
+}

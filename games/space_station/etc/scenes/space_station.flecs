@@ -1,0 +1,109 @@
+include space_station/state
+include space_station/simulation
+include space_station/traffic
+include space_station/commands
+include space_station/materials
+include space_station/detail
+include space_station/deck
+include space_station/hub
+include space_station/solar
+include space_station/reactor
+include space_station/life_support
+include space_station/atmosphere
+include space_station/hydroponics
+include space_station/habitat
+include space_station/passenger_dock
+include space_station/cargo_dock
+include space_station/cargo_bay
+include space_station/shuttle
+include space_station/freighter
+include space_station/slot
+include space_station/ship
+include ui/widgets
+include space_station/hud
+
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.camera
+using box.view
+using box.light
+using box.effects
+using box.surface
+using box.controllers
+using box.layout
+using box.widgets
+
+window { Surface: {width: 1600, height: 1000, vsync: true} }
+station_contact { Gtao: {radius: 0.8, final_value_power: 2.2} }
+station_bloom { Bloom: {intensity: 0.2, threshold: 1.15, threshold_softness: 0.4} }
+station_film { Tonemap: {operator_: TonyMcMapface} }
+station_edges { Smaa: {} }
+station_stars { EnvironmentImage: {path: "etc/scenes/space_station/assets/space.hdr"}; Environment: {resolution: 1024} }
+
+space_station {
+  Scene: {}
+  AmbientLight: {sky: {128, 150, 190}, ground: {66, 96, 150}, intensity: 0.55}
+  ReflectionBake: {resolution: 128, budget_ms: 2, scene_probe: true, scene_probe_height: 12, environment: station_stars}
+
+  camera {
+    Position: {0, 37, 53}
+    Rotation: {-0.62, 0, 0}
+    Camera: {fov: 38, near_: 0.5, far_: 1500}
+    CameraController: {speed: 22}
+  }
+  dock_camera {
+    Position: {-26, 13, 25}
+    Rotation: {-0.32, -0.72, 0}
+    Camera: {fov: 42, near_: 0.2, far_: 1500}
+    CameraController: {speed: 10}
+  }
+  keel_camera {
+    Position: {30, -16, 34}
+    Rotation: {0.3, 0.72, 0}
+    Camera: {fov: 42, near_: 0.2, far_: 1500}
+    CameraController: {speed: 10}
+  }
+
+  sun {
+    Rotation: {0.95, -0.55, 0}
+    DirectionalLight: {intensity: 6.5}
+    Rgb: {255, 244, 226}
+  }
+  rim {
+    Rotation: {0.35, 2.4, 0}
+    DirectionalLight: {intensity: 1.6}
+    Rgb: {120, 170, 255}
+  }
+
+  StationPlanet planet() { Position: {560, -390, -520} }
+  StationStarfield stars()
+  StationDiorama diorama()
+
+  slots {
+    for i in 0..st_slots {
+      StationSlot "slot_{i}"(idx: i)
+    }
+  }
+
+  ships {
+    for i in 0..5 {
+      StationShip "shuttle_{i}"(idx: i, cargo: false)
+      StationShip "freighter_{i}"(idx: i, cargo: true)
+    }
+  }
+}
+
+StationHud station_hud()
+
+main_view {
+  View: {
+    camera: space_station.camera,
+    clear: {enabled: true, color: {3, 5, 10, 255}},
+    shadows: {enabled: true, resolution: 4096, max_distance: 180},
+    lighting: {reflections: true, baked: false, environment: {source: station_stars, intensity: 1, background: true}},
+    effects: [{effect: station_contact}, {effect: station_bloom}, {effect: station_film}, {effect: station_edges}]
+  }
+}

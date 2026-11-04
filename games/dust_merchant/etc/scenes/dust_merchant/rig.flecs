@@ -1,0 +1,53 @@
+using flecs.script
+using box.transform
+using box.camera
+using box.view
+using box.effects
+using box.light
+using box.geometry
+using box.material
+using box.transform
+using box.spatial
+using box.transition
+
+$ { AmbientLight: {sky: {46, 50, 58}, ground: {22, 20, 20}, intensity: 0.5} }
+
+eye {
+  Position: {eye_x, eye_y, eye_z}
+  Rotation: {eye_pitch, eye_yaw, eye_roll}
+  Camera: {fov: eye_fov, near_: 0.03, far_: 20000}
+}
+
+fx_ao { Gtao: {radius: 0.12, final_value_power: 2.2} }
+fx_bloom { Bloom: {intensity: 0.34, threshold: 0.9, threshold_softness: 0.5, low_frequency_boost: 0.5} }
+fx_film { Tonemap: {operator_: TonyMcMapface} }
+fx_edge { Smaa: {} }
+
+main_view {
+  View: {
+    camera: eye,
+    clear: {enabled: true, color: {0, 0, 0, 255}},
+    shadows: {enabled: true, max_distance: 14, resolution: 2048, cascades: 3},
+    lighting: {environment: {source: space_light, intensity: 0.5, background: false}},
+    culling: {enabled: true, occlusion: false, min_dimension_px: 0},
+    effects: [{enabled: true, effect: fx_ao}, {enabled: true, effect: fx_bloom}, {enabled: true, effect: fx_film}, {enabled: true, effect: fx_edge}]
+  }
+}
+
+flash_ui {
+  Scene: {}
+  camera { Position: {0, 0, 100}; Camera: {ortho: true, ortho_scale: 1} }
+  sheet {
+    Position: {0, 0, 0}
+    Rect: {6000, 6000}
+    Rgb: {214, 232, 255}
+    BlendMode: Additive
+    Opacity: {match flash > 0.5 { true: 1; _: 0 }}
+    Transition: [Opacity: {duration: match flash > 0.5 { true: 0.05; _: 0.7 }, timing_function: EaseOut}]
+    SpatialIgnore
+  }
+}
+
+flash_view {
+  View: {camera: flash_ui.camera, order: 4, lighting: {enabled: false}, culling: {enabled: false}}
+}

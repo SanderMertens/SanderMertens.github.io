@@ -1,0 +1,96 @@
+using flecs.script
+using flecs.script.math
+using box.app
+
+async {
+  while true {
+    await on.change(rq)
+    const op = rq_op
+    const now = AppStatus[AppStatus].elapsed
+    if op == OP_BEGIN || op == OP_NAV_ATLAS {
+      screen = SCREEN_ATLAS
+      hud_go = true
+    } else if op == OP_ARMORY || op == OP_NAV_ARMORY {
+      screen = SCREEN_ARMORY
+      hud_go = true
+    } else if op == OP_RITES || op == OP_NAV_RITES {
+      screen = SCREEN_RITES
+      hud_go = true
+    } else if op == OP_TITLE {
+      screen = SCREEN_TITLE
+    }
+  }
+}
+
+actions {
+  Next { box.input.Action: {description: "Next page"}; box.input.Binding: {key: E} }
+  Prev { box.input.Action: {description: "Previous page"}; box.input.Binding: {key: Q} }
+  Back { box.input.Action: {description: "Return to the title"}; box.input.Binding: {key: Escape} }
+  Enter { box.input.Action: {description: "Open the atlas"}; box.input.Binding: {key: Enter} }
+  Cast1 { box.input.Action: {description: "Cast the first spell"}; box.input.Binding: {key: Num1} }
+  Cast2 { box.input.Action: {description: "Cast the second spell"}; box.input.Binding: {key: Num2} }
+  Cast3 { box.input.Action: {description: "Cast the third spell"}; box.input.Binding: {key: Num3} }
+  Cast4 { box.input.Action: {description: "Cast the fourth spell"}; box.input.Binding: {key: Num4} }
+  Cast5 { box.input.Action: {description: "Cast the fifth spell"}; box.input.Binding: {key: Num5} }
+  Cast6 { box.input.Action: {description: "Cast the sixth spell"}; box.input.Binding: {key: Num6} }
+}
+
+async {
+  while true {
+    await on.pressed(actions.Next)
+    if screen != SCREEN_TITLE {
+      screen = screen % 3 + 1
+    }
+  }
+}
+
+async {
+  while true {
+    await on.pressed(actions.Prev)
+    if screen != SCREEN_TITLE {
+      screen = (screen + 1) % 3 + 1
+    }
+  }
+}
+
+async {
+  while true {
+    await on.pressed(actions.Back)
+    screen = SCREEN_TITLE
+  }
+}
+
+async {
+  while true {
+    await on.pressed(actions.Enter)
+    if screen == SCREEN_TITLE {
+      rq_op = OP_BEGIN
+      await ui.changed(rq)
+    }
+  }
+}
+
+template CastKey {
+  prop action: entity = 0
+  prop index: i32 = 0
+
+  async {
+    while true {
+      await on.pressed(action)
+      if screen != SCREEN_TITLE {
+        rq_op = OP_CAST
+        rq_arg = index
+        await ui.changed(rq)
+      }
+    }
+  }
+}
+
+cast_keys {
+  CastKey k1(action: actions.Cast1, index: 0)
+  CastKey k2(action: actions.Cast2, index: 1)
+  CastKey k3(action: actions.Cast3, index: 2)
+  CastKey k4(action: actions.Cast4, index: 3)
+  CastKey k5(action: actions.Cast5, index: 4)
+  CastKey k6(action: actions.Cast6, index: 5)
+}

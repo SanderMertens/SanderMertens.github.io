@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+<defs><linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff0b8"/><stop offset="0.35" stop-color="#e2b456"/><stop offset="0.7" stop-color="#b07a2a"/><stop offset="1" stop-color="#6e4614"/></linearGradient>
+<linearGradient id="leaf" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9cc070"/><stop offset="1" stop-color="#3e6a34"/></linearGradient>
+<radialGradient id="bg" cx="0.5" cy="0.35" r="0.7"><stop offset="0" stop-color="#f6ecd0"/><stop offset="1" stop-color="#c8b688"/></radialGradient>
+<radialGradient id="face" cx="0.4" cy="0.35" r="0.75"><stop offset="0" stop-color="#d39b70"/><stop offset="1" stop-color="#a87b59"/></radialGradient>
+<linearGradient id="cloth" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#be3833"/><stop offset="1" stop-color="#762320"/></linearGradient>
+<clipPath id="disc"><circle cx="64" cy="64" r="64"/></clipPath></defs>
+<g clip-path="url(#disc)">
+<rect width="128" height="128" fill="url(#bg)"/>
+<path d="M0 128 V120 C10 100 34 92 64 92 C94 92 118 100 128 120 V128 Z" fill="#879963"/>
+<path d="M8.00 26.00 Q10.22 16.85 19.55 18.10 Q17.33 27.25 8.00 26.00 Z" fill="#6e8c50" opacity="0.35"/>
+<path d="M36.00 34.00 Q40.83 25.91 49.37 29.86 Q44.55 37.95 36.00 34.00 Z" fill="#6e8c50" opacity="0.35"/>
+<path d="M64.00 26.00 Q71.00 19.70 78.00 26.00 Q71.00 32.30 64.00 26.00 Z" fill="#6e8c50" opacity="0.35"/>
+<path d="M92.00 34.00 Q100.55 30.05 105.37 38.14 Q96.83 42.09 92.00 34.00 Z" fill="#6e8c50" opacity="0.35"/>
+<path d="M120.00 26.00 Q129.33 24.75 131.55 33.90 Q122.22 35.15 120.00 26.00 Z" fill="#6e8c50" opacity="0.35"/>
+<ellipse cx="64" cy="66" rx="31" ry="39" fill="#7f4422" stroke="#2a1c0e" stroke-width="2.4"/>
+<path d="M20 128 C22 104 40 94 64 94 C88 94 106 104 108 128 Z" fill="url(#cloth)" stroke="#2a1c0e" stroke-width="2.4"/>
+<path d="M54 92 C54 100 74 100 74 92 V84 H54 Z" fill="#b0815d" stroke="#2a1c0e" stroke-width="2"/>
+<path d="M50 96 L64 108 L78 96" fill="none" stroke="#551917" stroke-width="3"/>
+<circle cx="64" cy="60" r="25" fill="url(#face)" stroke="#2a1c0e" stroke-width="2.4"/>
+<circle cx="39" cy="62" r="5" fill="url(#face)" stroke="#2a1c0e" stroke-width="2"/>
+<circle cx="89" cy="62" r="5" fill="url(#face)" stroke="#2a1c0e" stroke-width="2"/>
+<path d="M37 62 C35 30 93 30 91 62 C83 50 64 42 58 50 C52 42 43 48 37 62 Z" fill="#965028" stroke="#2a1c0e" stroke-width="2.2"/>
+<circle cx="55" cy="59" r="3.2" fill="#2a1c0e"/><circle cx="73" cy="59" r="3.2" fill="#2a1c0e"/>
+<circle cx="54" cy="58" r="1" fill="#ffffff"/><circle cx="72" cy="58" r="1" fill="#ffffff"/>
+<path d="M50 52 q5 -3 10 0 M68 52 q5 -3 10 0" fill="none" stroke="#5a3018" stroke-width="2" stroke-linecap="round"/>
+<circle cx="49" cy="68" r="5" fill="#e07a6a" opacity="0.35"/><circle cx="79" cy="68" r="5" fill="#e07a6a" opacity="0.35"/>
+<path d="M64 61 q-3 7 1 8" fill="none" stroke="#2a1c0e" stroke-width="1.8" stroke-linecap="round"/>
+<path d="M41 62 C39 90 52 98 64 100 C76 98 89 90 87 62 C78 74 70 70 64 72 C58 70 50 74 41 62 Z" fill="#965028" stroke="#2a1c0e" stroke-width="2.2"/>
+<path d="M57 75 q7 4 14 0" fill="none" stroke="#2a1c0e" stroke-width="2" stroke-linecap="round"/>
+<path d="M37 52 C39 20 89 20 91 52 Z" fill="#3c3c46" stroke="#2a1c0e" stroke-width="2.4"/>
+<path d="M52 50 Q64 44 92 56 Q70 58 52 50 Z" fill="#2a2a32" stroke="#2a1c0e" stroke-width="2"/>
+<circle cx="64" cy="26" r="3" fill="#5a5a66"/>
+</g>
+</svg>

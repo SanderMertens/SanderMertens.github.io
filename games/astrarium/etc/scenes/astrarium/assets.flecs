@@ -1,0 +1,59 @@
+using box.text
+using box.texture
+using box.surface
+
+window { Surface: {width: 1440, height: 810, vsync: true} }
+
+font_display { Font: {path: "etc/scenes/astrarium/assets/fonts/Cinzel.ttf"} }
+font_body { Font: {path: "etc/scenes/astrarium/assets/fonts/Spectral-Regular.ttf"} }
+font_italic { Font: {path: "etc/scenes/astrarium/assets/fonts/Spectral-Italic.ttf"} }
+
+tex_nebula { TexturePath: {path: "etc/scenes/astrarium/assets/nebula.jpg"} }
+tex_vignette { TexturePath: {path: "etc/scenes/astrarium/assets/vignette.png"} }
+tex_halo { TexturePath: {path: "etc/scenes/astrarium/assets/halo.png"} }
+tex_panel { TexturePath: {path: "etc/scenes/astrarium/assets/panel.png"} }
+tex_sheen { TexturePath: {path: "etc/scenes/astrarium/assets/sheen.png"} }
+tex_astro_outer { TexturePath: {path: "etc/scenes/astrarium/assets/astro_outer.svg", width: 1536} }
+tex_astro_mid { TexturePath: {path: "etc/scenes/astrarium/assets/astro_mid.svg", width: 1536} }
+tex_astro_inner { TexturePath: {path: "etc/scenes/astrarium/assets/astro_inner.svg", width: 1536} }
+tex_astro_rose { TexturePath: {path: "etc/scenes/astrarium/assets/astro_rose.svg", width: 1536} }
+tex_rays { TexturePath: {path: "etc/scenes/astrarium/assets/rays.svg", width: 512} }
+tex_corner { TexturePath: {path: "etc/scenes/astrarium/assets/corner.svg", width: 128} }
+tex_divider { TexturePath: {path: "etc/scenes/astrarium/assets/divider.svg", width: 768} }
+tex_orb_frame { TexturePath: {path: "etc/scenes/astrarium/assets/orb_frame.svg", width: 512} }
+tex_orb_gloss { TexturePath: {path: "etc/scenes/astrarium/assets/orb_gloss.svg", width: 512} }
+tex_dashes { TexturePath: {path: "etc/scenes/astrarium/assets/dashes.svg", width: 256} }
+tex_sigil { TexturePath: {path: "etc/scenes/astrarium/assets/sigil.svg", width: 256} }
+
+tex_spell_0 { TexturePath: {path: "etc/scenes/astrarium/assets/icons/lance.svg", width: 128} }
+tex_spell_1 { TexturePath: {path: "etc/scenes/astrarium/assets/icons/mend.svg", width: 128} }
+tex_spell_2 { TexturePath: {path: "etc/scenes/astrarium/assets/icons/aegis.svg", width: 128} }
+tex_spell_3 { TexturePath: {path: "etc/scenes/astrarium/assets/icons/veil.svg", width: 128} }
+tex_spell_4 { TexturePath: {path: "etc/scenes/astrarium/assets/icons/starfall.svg", width: 128} }
+tex_spell_5 { TexturePath: {path: "etc/scenes/astrarium/assets/icons/pact.svg", width: 128} }
+tex_stat_might { TexturePath: {path: "etc/scenes/astrarium/assets/icons/might.svg", width: 96} }
+tex_stat_ward { TexturePath: {path: "etc/scenes/astrarium/assets/icons/ward.svg", width: 96} }
+tex_stat_haste { TexturePath: {path: "etc/scenes/astrarium/assets/icons/haste.svg", width: 96} }
+tex_stat_aether { TexturePath: {path: "etc/scenes/astrarium/assets/icons/aether.svg", width: 96} }
+tex_slot_blade { TexturePath: {path: "etc/scenes/astrarium/assets/icons/blade.svg", width: 96} }
+tex_slot_relic { TexturePath: {path: "etc/scenes/astrarium/assets/icons/relic.svg", width: 96} }
+tex_slot_crown { TexturePath: {path: "etc/scenes/astrarium/assets/icons/crown.svg", width: 96} }
+tex_slot_band { TexturePath: {path: "etc/scenes/astrarium/assets/icons/band.svg", width: 96} }
+tex_heart { TexturePath: {path: "etc/scenes/astrarium/assets/icons/heart.svg", width: 96} }
+tex_ember_fang { TexturePath: {path: "etc/scenes/astrarium/assets/icons/ember_fang.svg", width: 192} }
+tex_tidecaller { TexturePath: {path: "etc/scenes/astrarium/assets/icons/tidecaller.svg", width: 192} }
+tex_thornreaver { TexturePath: {path: "etc/scenes/astrarium/assets/icons/thornreaver.svg", width: 192} }
+tex_ash_dirk { TexturePath: {path: "etc/scenes/astrarium/assets/icons/ash_dirk.svg", width: 192} }
+tex_drowned_heart { TexturePath: {path: "etc/scenes/astrarium/assets/icons/drowned_heart.svg", width: 192} }
+tex_moon_prism { TexturePath: {path: "etc/scenes/astrarium/assets/icons/moon_prism.svg", width: 192} }
+tex_sun_lens { TexturePath: {path: "etc/scenes/astrarium/assets/icons/sun_lens.svg", width: 192} }
+tex_nine_comets { TexturePath: {path: "etc/scenes/astrarium/assets/icons/nine_comets.svg", width: 192} }
+tex_vesper { TexturePath: {path: "etc/scenes/astrarium/assets/icons/vesper.svg", width: 192} }
+tex_last_light { TexturePath: {path: "etc/scenes/astrarium/assets/icons/last_light.svg", width: 192} }
+tex_serpent_loop { TexturePath: {path: "etc/scenes/astrarium/assets/icons/serpent_loop.svg", width: 192} }
+tex_iron_vow { TexturePath: {path: "etc/scenes/astrarium/assets/icons/iron_vow.svg", width: 192} }
+tex_moth_blade { TexturePath: {path: "etc/scenes/astrarium/assets/icons/moth_blade.svg", width: 192} }
+tex_star_compass { TexturePath: {path: "etc/scenes/astrarium/assets/icons/star_compass.svg", width: 192} }
+tex_thorn_circlet { TexturePath: {path: "etc/scenes/astrarium/assets/icons/thorn_circlet.svg", width: 192} }
+tex_mirror_loop { TexturePath: {path: "etc/scenes/astrarium/assets/icons/mirror_loop.svg", width: 192} }
+relic_texture {}

@@ -1,0 +1,345 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.layout
+using box.text
+using box.spatial
+using box.picking
+using box.input
+using box.app
+using box.transition
+
+export const NAV_INK: Rgb = {110, 255, 160}
+export const NAV_DIM: Rgb = {58, 170, 104}
+export const NAV_FAINT: Rgb = {20, 74, 44}
+export const AMB_INK: Rgb = {255, 182, 84}
+export const AMB_DIM: Rgb = {178, 112, 40}
+export const AMB_FAINT: Rgb = {58, 34, 12}
+
+tex_nav {}
+tex_sys {}
+tex_com {}
+
+fn dest_x(i: i32) -> f32 {
+  match i { 0: -40; 1: 188; _: -196 }
+}
+
+fn dest_y(i: i32) -> f32 {
+  match i { 0: 30; 1: 118; _: -138 }
+}
+
+template Blip {
+  prop x: f32 = 0
+  prop y: f32 = 0
+  prop seed: f32 = 0
+  prop speed: f32 = 1.3
+
+  const ang = atan2(y, x)
+  const phase = (clock * speed + ang) / (2 * PI)
+  const lit = (phase - floor(phase)) < 0.05
+
+  Position: {x, y, 2}
+  Rect: {7, 7}
+  if lit {
+    Rgb: {170, 255, 200}
+    Transition: [Rgb: {duration: 0.05}]
+  } else {
+    Rgb: {6, 26, 16}
+    Transition: [Rgb: {duration: 2.4, timing_function: EaseOut}]
+  }
+  BlendMode: Additive
+  SpatialIgnore
+}
+
+template NavNode {
+  prop dest: i32 = 0
+
+  mut hover = false
+  const picked = course == dest
+  const home = here == dest
+
+  Interactive
+  Cursor: {CursorPointer}
+  Position: {dest_x(dest), dest_y(dest), 6}
+  Rect: {196, 92}
+  Rgb: {0, 0, 0}
+  BlendMode: Additive
+  if hover && !home {
+    Border: {width: 1.5, color: {110, 255, 160, 255}}
+  } else {
+    Border: {width: 0, color: {0, 0, 0, 0}}
+  }
+
+  mark {
+    Position: {0, 16, 1}
+    Rotation: {0, 0, PI / 4}
+    Rect: {match picked { true: 20; _: 13 }, match picked { true: 20; _: 13 }}
+    Rgb: {0, 0, 0}
+    BlendMode: Additive
+    Border: {width: 2, color: {110, 255, 160, 255}}
+    SpatialIgnore
+  }
+  if home {
+    core { Position: {0, 16, 1}; Circle: {5}; Rgb: NAV_INK; SpatialIgnore }
+  }
+  Ink words(text: dest_name(dest), size: 30, align: Center, hue: match picked || hover { true: NAV_INK; _: NAV_DIM }) { Position: {0, -8, 1} }
+  Ink code(text: match home { true: "CURRENT"; _: dest_code(dest) }, size: 24, align: Center, hue: NAV_DIM) { Position: {0, -30, 1} }
+
+  async {
+    while true {
+      await on.enter(this)
+      hover = true
+      await on.leave(this)
+      hover = false
+    }
+  }
+
+  async {
+    while true {
+      await on.click(this)
+      emit PickCourse(dest: dest)
+    }
+  }
+}
+
+template NavPage {
+  const range_k = 0.75 + kn[KN_RANGE] * 0.5
+  const sweep = 0 - clock * 1.3
+
+  chart {
+    Position: {0, -18, 0}
+    Scale: {range_k, range_k, 1}
+
+    for i in 0..9 {
+      "gx_{i}" { Stroke: {x1: (i - 4) * 100, y1: -280, x2: (i - 4) * 100, y2: 280, w: 1, hue: NAV_FAINT} }
+    }
+    for i in 0..7 {
+      "gy_{i}" { Stroke: {x1: -420, y1: (i - 3) * 80, x2: 420, y2: (i - 3) * 80, w: 1, hue: NAV_FAINT} }
+    }
+
+    RingLine r1(r: 90, w: 1, hue: NAV_FAINT) { Position: {0, 0, 0} }
+    RingLine r2(r: 180, w: 1, hue: NAV_DIM) { Position: {0, 0, 0} }
+    RingLine r3(r: 270, w: 1, hue: NAV_FAINT) { Position: {0, 0, 0} }
+
+    beam {
+      Rotation: {0, 0, sweep}
+      Stroke main(x1: 0, y1: 0, x2: 330, y2: 0, w: 2.5, hue: {130, 255, 170})
+      for i in 0..7 {
+        "tail_{i}" {
+          Rotation: {0, 0, (i + 1) * 0.045}
+          Stroke s(x1: 0, y1: 0, x2: 330, y2: 0, w: 5, hue: {8 - i, 44 - i * 6, 24 - i * 3})
+        }
+      }
+    }
+
+    Blip b0(x: 120, y: 60)
+    Blip b1(x: -90, y: 150)
+    Blip b2(x: 220, y: -40)
+    Blip b3(x: 60, y: -190)
+    Blip b4(x: -240, y: 40)
+    Blip b5(x: 150, y: -130)
+    Blip b6(x: -130, y: -90)
+    Blip b7(x: 290, y: 90)
+    Blip b8(x: -300, y: -60)
+    Blip b9(x: 30, y: 210)
+
+    if course >= 0 && course != here {
+      route {
+        const dx = dest_x(course) - dest_x(here)
+        const dy = dest_y(course) - dest_y(here)
+        Stroke line(x1: dest_x(here), y1: dest_y(here) + 16, x2: dest_x(here) + dx * plot, y2: dest_y(here) + 16 + dy * plot, w: 3.5, hue: {150, 255, 190})
+      }
+    }
+
+    NavNode n0(dest: 0)
+    NavNode n1(dest: 1)
+    NavNode n2(dest: 2)
+  }
+
+  head {
+    Position: {0, 274, 20}
+    bar { Position: {0, 0, 0}; Rect: {800, 52}; Rgb: {4, 26, 14} }
+    Ink title(text: "NAV-COM III // SECTOR CHART", size: 36, hue: NAV_INK) { Position: {-150, 0, 1} }
+    Ink time(text: "T+{clock:.0}", size: 32, hue: NAV_DIM) { Position: {300, 0, 1} }
+  }
+
+  foot {
+    Position: {0, -272, 20}
+    bar { Position: {0, 0, 0}; Rect: {800, 56}; Rgb: {4, 26, 14} }
+    Ink state(
+      text: match stage {
+        0: "NO POWER"
+        1: "STANDBY  -  REACTOR COLD  -  IGNITE ON CENTER STACK"
+        2: match course >= 0 { true: "COMPUTING JUMP  {plot * 100:.0}%"; _: "SELECT DESTINATION" }
+        3: "COURSE LOCKED  -  PULL JUMP HANDLE"
+        4: "CHARGING"
+        _: "IN TRANSIT"
+      },
+      size: 32,
+      hue: match stage { 3: {190, 255, 200}; _: NAV_INK }
+    ) { Position: {0, 0, 1} }
+  }
+}
+
+template SysLine {
+  prop name: string = ""
+  prop idx: i32 = 0
+  prop ok: bool = true
+  prop show: bool = false
+
+  Layout: {direction: Row}
+  LayoutItem: {width: {mode: Grow}}
+  if show {
+    Ink a(text: name, size: 30, hue: NAV_DIM)
+    grow { LayoutItem: {width: {mode: Grow}} }
+    Ink b(text: match ok { true: "OK"; _: "FAIL" }, size: 30, hue: match ok { true: NAV_INK; _: {255, 120, 90} })
+  }
+}
+
+template SysPage {
+  const lines = boot_lines
+
+  Layout: {direction: Column, spacing: 4, padding: {14, 14, 22, 22}}
+  LayoutItem: {width: {mode: Fixed, value: 640}, height: {mode: Fixed, value: 480}}
+
+  Ink title(text: "SYS MONITOR  BIOS 2.11", size: 34, hue: NAV_INK)
+  rule { LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: 2}}; Rect: {1, 1}; Rgb: NAV_DIM }
+  SysLine l0(name: "CORE MEM 640K", show: lines > 0)
+  SysLine l1(name: "BUS A  28V", show: lines > 1, ok: bus)
+  SysLine l2(name: "BUS B  28V", show: lines > 2, ok: fault == false)
+  SysLine l3(name: "GYRO PLATFORM", show: lines > 3)
+  SysLine l4(name: "COOLANT LOOP", show: lines > 4, ok: coolant > 0.3)
+  SysLine l5(name: "FUEL CELLS", show: lines > 5)
+  SysLine l6(name: "JUMP COMPUTER", show: lines > 6, ok: reactor > 0.4)
+  grow { LayoutItem: {height: {mode: Grow}} }
+  if lines > 6 {
+    Ink hdr(text: "REACTOR OUTPUT {reactor * 100:.0}%", size: 30, hue: match reactor > 0.9 { true: NAV_INK; _: NAV_DIM })
+    track {
+      Layout: {}
+      LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: 26}}
+      Rect: {1, 1}
+      Rgb: {0, 0, 0}
+      BlendMode: Additive
+      Border: {width: 2, color: {32, 104, 62, 255}}
+      fill {
+        LayoutItem: {h: Left, v: Middle, x: 3, width: {mode: Fixed, value: 1 + reactor * 590}, height: {mode: Fixed, value: 18}}
+        Rect: {1, 1}
+        Rgb: NAV_INK
+      }
+    }
+  }
+}
+
+fn wave(x: f32, t: f32, tune: f32) -> f32 {
+  const signal = 1 - min(abs(tune - 0.62) * 9, 1)
+  const noise = perlin2(x * 0.09 + t * 3.1, t * 1.7) * 62 * (1.1 - signal)
+  const tone = sin(x * 0.06 + t * 6.5) * sin(x * 0.012 + t * 1.1) * 58 * signal
+  noise + tone
+}
+
+template ScopeSeg {
+  prop i: i32 = 0
+
+  const xa = -292 + i * 12.0
+  const xb = -292 + (i + 1) * 12.0
+  const t = kn[KN_TUNE]
+
+  Stroke: {x1: xa, y1: wave(xa, clock, t), x2: xb, y2: wave(xb, clock, t), w: 2.6, hue: AMB_INK}
+}
+
+fn com_oro(i: i32) -> string {
+  match i {
+    0: "-- CH 61.4 -- WEAK CARRIER"
+    1: "DUST MERCHANT THIS IS TOLL"
+    2: "STATION ORO. YOU OWE US FOR"
+    3: "THREE MONTHS OF DOCKING AND"
+    4: "ONE (1) COFFEE MACHINE."
+    5: "WE KNOW WHERE YOU DRIFT."
+    _: "-- CARRIER LOST --"
+  }
+}
+
+fn com_naur(i: i32) -> string {
+  match i {
+    0: "-- CH 61.4 -- RELAY NAU-7"
+    1: "DM-7 THE ICE GUILD SAYS HI."
+    2: "ALSO LAST BATCH OF FROST"
+    3: "WAS 30 PCT SWEPT FLOOR."
+    4: "TOLL BOARD POSTED YOUR HULL"
+    5: "NUMBER. NICE PHOTO THOUGH."
+    _: "-- CARRIER LOST --"
+  }
+}
+
+fn com_cinder(i: i32) -> string {
+  match i {
+    0: "-- CH 61.4 -- NO CALLSIGN"
+    1: "YOU THE ONE WHO BUYS ASH?"
+    2: "GOT 3 DRUMS. FOUND THEM."
+    3: "DO NOT ASK WHERE. DO NOT"
+    4: "OPEN THE PURPLE ONE. WE"
+    5: "HEAR YOU HAVE ONE ALREADY."
+    _: "-- CARRIER LOST --"
+  }
+}
+
+fn com_line(i: i32) -> string {
+  match here { 0: com_oro(i); 1: com_naur(i); _: com_cinder(i) }
+}
+
+template ComPage {
+  const t = kn[KN_TUNE]
+  const freq = 18 + t * 70
+  const signal = 1 - min(abs(t - 0.62) * 9, 1)
+  const locked = signal > 0.72
+
+  head {
+    Position: {0, 208, 20}
+    bar { Position: {0, 0, 0}; Rect: {640, 56}; Rgb: {30, 16, 4} }
+    Ink title(text: "VOX-LINK  {freq:.1} MHZ", size: 36, hue: AMB_INK) { Position: {-100, 0, 1} }
+    Ink rx(text: match locked { true: "RX LOCK"; _: "SCAN" }, size: 32, hue: match locked { true: {255, 230, 170}; _: AMB_DIM }) { Position: {240, 0, 1} }
+  }
+
+  scope {
+    Position: {0, 86, 0}
+    Stroke mid(x1: -300, y1: 0, x2: 300, y2: 0, w: 1, hue: AMB_FAINT)
+    for i in 0..7 {
+      "v_{i}" { Stroke: {x1: (i - 3) * 100, y1: -80, x2: (i - 3) * 100, y2: 80, w: 1, hue: AMB_FAINT} }
+    }
+    for i in 0..49 {
+      ScopeSeg "s_{i}"(i: i)
+    }
+  }
+
+  log {
+    Position: {0, -112, 2}
+    box_ {
+      Layout: {direction: Column, spacing: 0, padding: {4, 4, 6, 6}}
+      LayoutItem: {width: {mode: Fixed, value: 600}, height: {mode: Fixed, value: 210}}
+      if locked {
+        for i in 0..7 {
+          if com_shown > i {
+            Ink "line_{i}"(text: com_line(i), size: 28, hue: AMB_INK)
+          }
+        }
+      } else {
+        Ink idle(text: "NO TRAFFIC ON THIS BAND", size: 30, hue: AMB_DIM)
+        Ink idle2(text: "TURN THE TUNER", size: 30, hue: AMB_DIM)
+      }
+    }
+  }
+}
+
+CrtFeed feed_nav(tex: tex_nav, on: crt_nav, w: 800, h: 600) {
+  Raster raster() { NavPage page() }
+}
+
+CrtFeed feed_sys(tex: tex_sys, on: crt_sys, w: 640, h: 480, tint: {2, 10, 6}) {
+  Raster raster() { SysPage page() }
+}
+
+CrtFeed feed_com(tex: tex_com, on: crt_com, w: 640, h: 480, tint: {12, 6, 1}) {
+  Raster raster() { ComPage page() }
+}

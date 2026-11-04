@@ -1,0 +1,44 @@
+using flecs.script
+using box.app
+using box.transform
+using box.camera
+using box.view
+using box.layout
+using box.surface
+using box.picking
+using box.ui
+
+template AuraUi {
+  box.effects.Bloom: {intensity: 0.62 * rite_aura, threshold: 0.68, threshold_softness: 0.3}
+}
+
+aura_ui { AuraUi }
+
+template Interface {
+  ui {
+    Scene: {}
+
+    ScreenCamera camera()
+
+    screen_root {
+      ScreenRoot: {}
+      Layout: {}
+      FocusScope
+
+      Hud hud()
+      Title title()
+    }
+  }
+
+  ui_view {
+    View: {
+      camera: ui.camera,
+      order: 3,
+      lighting: {enabled: false},
+      culling: {enabled: false},
+      effects: [{enabled: true, effect: aura_ui}]
+    }
+  }
+}
+
+Interface interface()

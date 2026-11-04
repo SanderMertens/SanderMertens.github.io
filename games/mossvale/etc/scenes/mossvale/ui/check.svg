@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<defs><linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff0b8"/><stop offset="0.35" stop-color="#e2b456"/><stop offset="0.7" stop-color="#b07a2a"/><stop offset="1" stop-color="#6e4614"/></linearGradient>
+<linearGradient id="leaf" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9cc070"/><stop offset="1" stop-color="#3e6a34"/></linearGradient>
+</defs>
+<path d="M10 34 L26 50 L56 12" fill="none" stroke="#2a1c0e" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 34 L26 50 L56 12" fill="none" stroke="#5c8a3a" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -1,0 +1,44 @@
+using box.text
+using box.texture
+using box.surface
+using box.light
+
+window { Surface: {width: 1920, height: 1080, vsync: true, anisotropy: High} }
+
+font_stencil { Font: {path: "etc/scenes/dust_merchant/assets/fonts/BigShouldersStencil.ttf"} }
+font_mono { Font: {path: "etc/scenes/dust_merchant/assets/fonts/ShareTechMono-Regular.ttf"} }
+font_crt { Font: {path: "etc/scenes/dust_merchant/assets/fonts/VT323-Regular.ttf"} }
+font_hand { Font: {path: "etc/scenes/dust_merchant/assets/fonts/ReenieBeanie.ttf"} }
+
+tex_steel { TexturePath: {path: "etc/scenes/dust_merchant/assets/steel_albedo.jpg"} }
+tex_steel_orm { TexturePath: {path: "etc/scenes/dust_merchant/assets/steel_orm.jpg"} }
+tex_steel_normal { TexturePath: {path: "etc/scenes/dust_merchant/assets/steel_normal.jpg"} }
+tex_plate { TexturePath: {path: "etc/scenes/dust_merchant/assets/plate_albedo.jpg"} }
+tex_plate_orm { TexturePath: {path: "etc/scenes/dust_merchant/assets/plate_orm.jpg"} }
+tex_plate_normal { TexturePath: {path: "etc/scenes/dust_merchant/assets/plate_normal.jpg"} }
+tex_grate { TexturePath: {path: "etc/scenes/dust_merchant/assets/grate_albedo.jpg"} }
+tex_grime { TexturePath: {path: "etc/scenes/dust_merchant/assets/window_grime.png"} }
+tex_hazard { TexturePath: {path: "etc/scenes/dust_merchant/assets/hazard.jpg"} }
+tex_tape { TexturePath: {path: "etc/scenes/dust_merchant/assets/tape.png"} }
+tex_sky { TexturePath: {path: "etc/scenes/dust_merchant/assets/sky.jpg"} }
+tex_oro { TexturePath: {path: "etc/scenes/dust_merchant/assets/planet_oro.jpg"} }
+tex_naur { TexturePath: {path: "etc/scenes/dust_merchant/assets/planet_naur.jpg"} }
+tex_cinder { TexturePath: {path: "etc/scenes/dust_merchant/assets/planet_cinder.jpg"} }
+tex_cinder_glow { TexturePath: {path: "etc/scenes/dust_merchant/assets/planet_cinder_glow.jpg"} }
+tex_rings { TexturePath: {path: "etc/scenes/dust_merchant/assets/rings.png"} }
+tex_halo { TexturePath: {path: "etc/scenes/dust_merchant/assets/halo.png"} }
+tex_limb { TexturePath: {path: "etc/scenes/dust_merchant/assets/limb.png"} }
+tex_vignette { TexturePath: {path: "etc/scenes/dust_merchant/assets/crt_vignette.png"} }
+tex_scanlines { TexturePath: {path: "etc/scenes/dust_merchant/assets/scanlines.png"} }
+tex_beam { TexturePath: {path: "etc/scenes/dust_merchant/assets/holo_beam.png"} }
+tex_tunnel { TexturePath: {path: "etc/scenes/dust_merchant/assets/tunnel.jpg"} }
+tex_quilt { TexturePath: {path: "etc/scenes/dust_merchant/assets/quilt_albedo.jpg"} }
+tex_quilt_normal { TexturePath: {path: "etc/scenes/dust_merchant/assets/quilt_normal.jpg"} }
+tex_patch { TexturePath: {path: "etc/scenes/dust_merchant/assets/patch.png"} }
+tex_streak { TexturePath: {path: "etc/scenes/dust_merchant/assets/streak.png"} }
+tex_crack { TexturePath: {path: "etc/scenes/dust_merchant/assets/crack.png"} }
+tex_coffee { TexturePath: {path: "etc/scenes/dust_merchant/assets/coffee_ring.png"} }
+tex_photo { TexturePath: {path: "etc/scenes/dust_merchant/assets/photo.jpg"} }
+tex_chart { TexturePath: {path: "etc/scenes/dust_merchant/assets/chart.jpg"} }
+
+space_light { EnvironmentImage: {path: "etc/scenes/dust_merchant/assets/space.hdr"}; Environment: {resolution: 256} }
