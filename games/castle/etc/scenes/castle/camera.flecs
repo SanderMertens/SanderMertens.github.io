@@ -108,7 +108,7 @@ async {
     await next_frame()
     const now = AppStatus[AppStatus].elapsed
     const fixed = App[App].delta_time
-    const dt = match fixed > 0 { true: fixed; _: clamp(now - last, 0.001, 0.1) }
+    const dt = fixed > 0 ? fixed : clamp(now - last, 0.001, 0.1)
     last = now
     clock += dt
 
@@ -149,15 +149,15 @@ async {
         const sx = drag_start % GRID
         const sz = (drag_start - sx) / GRID
         const across = abs(hx - sx) >= abs(hz - sz)
-        const end: i32 = match across { true: sz * GRID + hx; _: hz * GRID + sx }
+        const end: i32 = across ? sz * GRID + hx : hz * GRID + sx
         if drag_end != end {
           drag_end = end
         }
       } else {
         const ps = PickStatus[PickStatus]
         const ss = window[SurfaceStatus]
-        const sw = match ss.point_width > 0 { true: ss.point_width; _: 1600 }
-        const sh = match ss.point_height > 0 { true: ss.point_height; _: 960 }
+        const sw = ss.point_width > 0 ? ss.point_width : 1600
+        const sh = ss.point_height > 0 ? ss.point_height : 960
         const th = tan(20 * PI / 180)
         const nx = (ps.cursor.x / sw * 2 - 1) * th * sw / sh
         const ny = (1 - ps.cursor.y / sh * 2) * th
@@ -175,8 +175,8 @@ async {
           const sx = drag_start % GRID
           const sz = (drag_start - sx) / GRID
           const across = abs(cx - sx) >= abs(cz - sz)
-          const ex = match across { true: cx; _: sx }
-          const ez = match across { true: sz; _: cz }
+          const ex = across ? cx : sx
+          const ez = across ? sz : cz
           const end: i32 = ez * GRID + ex
           if drag_end != end {
             drag_end = end

@@ -14,6 +14,7 @@ using box.widgets
 
 const PANEL_W: f32 = 320
 const METER_H: f32 = 110
+const MASTER_SIDE: string[] = ["left", "right"]
 
 template SongButton {
   prop index: i32 = 0
@@ -109,24 +110,10 @@ hud {
         Rgb: {R, G, B}
       }
 
-      orbit_button {
-        SongButton: {index: 0, action: jukebox_actions.pick_orbit}
-      }
-
-      neon_button {
-        SongButton: {index: 1, action: jukebox_actions.pick_neon}
-      }
-
-      harbor_button {
-        SongButton: {index: 2, action: jukebox_actions.pick_harbor}
-      }
-
-      lantern_button {
-        SongButton: {index: 3, action: jukebox_actions.pick_lantern}
-      }
-
-      lane_button {
-        SongButton: {index: 4, action: jukebox_actions.pick_lane}
+      for i in 0..5 {
+        "{SONG_KEY[i]}_button" {
+          SongButton: {index: i, action: SONG_ACTION[i]}
+        }
       }
 
       now {
@@ -209,53 +196,30 @@ hud {
           LayoutItem: {width: {mode: Grow}}
         }
 
-        master_left {
-          Layout: {direction: Column, spacing: 4, h: Center}
-          LayoutItem: {width: {mode: Fixed, value: 16}}
+        for side in 0..2 {
+          "master_{MASTER_SIDE[side]}" {
+            Layout: {direction: Column, spacing: 4, h: Center}
+            LayoutItem: {width: {mode: Fixed, value: 16}}
 
-          well {
-            Layout: {}
-            LayoutItem: {h: Center, width: {mode: Fixed, value: 10}, height: {mode: Fixed, value: METER_H}}
-            Rect: {1, 1}
-            Rgb: {30, 33, 44}
-            Border: {radius: 3}
-
-            level {
-              LayoutItem: {v: Bottom, width: {mode: Grow}, height: {mode: Fixed, value: max(2, master_l * METER_H)}}
+            well {
+              Layout: {}
+              LayoutItem: {h: Center, width: {mode: Fixed, value: 10}, height: {mode: Fixed, value: METER_H}}
               Rect: {1, 1}
-              Rgb: {235, 235, 240}
+              Rgb: {30, 33, 44}
               Border: {radius: 3}
+
+              level {
+                LayoutItem: {v: Bottom, width: {mode: Grow}, height: {mode: Fixed, value: max(2, master_level[side] * METER_H)}}
+                Rect: {1, 1}
+                Rgb: {235, 235, 240}
+                Border: {radius: 3}
+              }
             }
-          }
 
-          name {
-            Text: {value: "L", size: 11}
-            Rgb: {170, 175, 195}
-          }
-        }
-
-        master_right {
-          Layout: {direction: Column, spacing: 4, h: Center}
-          LayoutItem: {width: {mode: Fixed, value: 16}}
-
-          well {
-            Layout: {}
-            LayoutItem: {h: Center, width: {mode: Fixed, value: 10}, height: {mode: Fixed, value: METER_H}}
-            Rect: {1, 1}
-            Rgb: {30, 33, 44}
-            Border: {radius: 3}
-
-            level {
-              LayoutItem: {v: Bottom, width: {mode: Grow}, height: {mode: Fixed, value: max(2, master_r * METER_H)}}
-              Rect: {1, 1}
-              Rgb: {235, 235, 240}
-              Border: {radius: 3}
+            name {
+              Text: {value: side == 0 ? "L" : "R", size: 11}
+              Rgb: {170, 175, 195}
             }
-          }
-
-          name {
-            Text: {value: "R", size: 11}
-            Rgb: {170, 175, 195}
           }
         }
       }

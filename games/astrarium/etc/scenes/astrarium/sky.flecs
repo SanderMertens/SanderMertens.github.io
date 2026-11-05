@@ -17,6 +17,7 @@ template Aura {
 }
 
 aura_sky { Aura }
+sky_edges { Smaa: {} }
 
 template AstroRing {
   prop tex: entity = 0
@@ -39,7 +40,7 @@ fn pose_x(s: i32) -> f32 {
 }
 
 fn pose_y(s: i32) -> f32 {
-  match s { 0: 18; 1: STAGE_Y; 2: STAGE_Y; _: 0 }
+  match s { 0: 18; 1, 2: STAGE_Y; _: 0 }
 }
 
 fn pose_scale(s: i32) -> f32 {
@@ -97,7 +98,7 @@ template Sky {
       clear: {enabled: true, color: {3, 4, 12, 255}},
       lighting: {enabled: false},
       culling: {enabled: false},
-      effects: [{enabled: true, effect: aura_sky}]
+      effects: [{enabled: true, effect: sky_edges}, {enabled: true, effect: aura_sky}]
     }
   }
 
@@ -110,7 +111,7 @@ template Sky {
       Position: {0, 0, 0}
       ParticleEmitter: {
         max: 900,
-        rate: match rite_drift { true: 42 * rite_dust; _: 0 },
+        rate: rite_drift ? 42 * rite_dust : 0,
         shape: EmitterBox,
         extents: {980, 560, 0},
         direction: {0.3, 1, 0},

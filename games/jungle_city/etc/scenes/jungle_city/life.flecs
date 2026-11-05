@@ -4,8 +4,19 @@ using box.geometry
 using box.material
 using box.movement
 using box.particle
+using box.light
+using box.animation
 
-@tree Parent
+CanopyWingFlap {
+  AnimationClip: {duration: 0.5}
+  left {
+    AnimationTrack: {component: Rotation, member: "z", target: "wing_l", curve: {kind: CurveCatmullRom, keys: [{0, 0.55}, {0.25, -0.35}, {0.5, 0.55}]}}
+  }
+  right {
+    AnimationTrack: {component: Rotation, member: "z", target: "wing_r", curve: {kind: CurveCatmullRom, keys: [{0, -0.55}, {0.25, 0.35}, {0.5, -0.55}]}}
+  }
+}
+
 template CanopyBoat {
   prop length: f32 = 5.4
   prop style: i32 = 0
@@ -15,9 +26,9 @@ template CanopyBoat {
   counter {
     Position: {0, 0, 0.012}
     AngularVelocity: {-roll, 0, 0}
-    hull : CanopyWood { Position: {0, 0.2, 0}; Scale: {1, 0.4, 0.5}; Sphere: {radius: length / 2, segments: 16}; TextureTransform: {scale_x: 3, scale_y: 2} }
+    hull : CanopyWood { Position: {0, 0.2, 0}; Scale: {1, 0.4, 0.5}; Sphere: {radius: length / 2, segments: 16} }
     gunwale : CanopyTrim { Position: {0, 0.58, 0}; Scale: {1, 1, 0.5}; Torus: {radius: length / 2 - 0.2, tube: 0.05, segments: 28, rings: 4} }
-    floor : CanopyDeck { Position: {0, 0.52, 0}; Box: {length * 0.66, 0.05, beam * 1.2}; TextureTransform: {scale_x: 2, scale_y: 0.5} }
+    floor : CanopyDeck { Position: {0, 0.52, 0}; Box: {length * 0.66, 0.05, beam * 1.2} }
     for side in 0..2 {
       const x = (side - 0.5) * length * 0.34
       for z in 0..2 {
@@ -37,7 +48,6 @@ template CanopyBoat {
   }
 }
 
-@tree Parent
 template CanopyLily {
   prop seed: f32 = 0
   for i in 0..6 {
@@ -48,7 +58,6 @@ template CanopyLily {
   { Position: {0.2, 0.05, 0.14}; IcoSphere: {radius: 0.06, segments: 1}; Rgb: {252, 214, 228}; PbrMaterial: {roughness: 0.8} }
 }
 
-@tree Parent
 template CanopyBird {
   prop radius: f32 = 20
   prop speed: f32 = 0.2
@@ -62,13 +71,20 @@ template CanopyBird {
     Scale: {1.3, 1.3, 1.3}
     body { Position: {0, 0, 0}; Scale: {0.34, 0.34, 1}; Sphere: {radius: 0.3, segments: 6}; Rgb: color; PbrMaterial: {roughness: 0.7} }
     tail { Position: {0, 0, -0.42}; Box: {0.1, 0.02, 0.4}; Rgb: color; PbrMaterial: {roughness: 0.7} }
-    for side in 0..2 {
-      { Position: {(side - 0.5) * 0.74, 0.03, 0}; Rotation: {0, 0, (0.5 - side) * 0.3}; Box: {0.7, 0.015, 0.26}; Rgb: color; PbrMaterial: {roughness: 0.7} }
+    Animator: {clip: CanopyWingFlap, time: (phase * 0.618 - math.floor(phase * 0.618)) * 0.5, speed: 0.8 + (phase * 0.37 - math.floor(phase * 0.37)) * 0.4}
+    wing_l {
+      Position: {-0.04, 0.03, 0}
+      Rotation: {0, 0, 0.15}
+      { Position: {-0.35, 0, 0}; Box: {0.7, 0.015, 0.26}; Rgb: color; PbrMaterial: {roughness: 0.7} }
+    }
+    wing_r {
+      Position: {0.04, 0.03, 0}
+      Rotation: {0, 0, -0.15}
+      { Position: {0.35, 0, 0}; Box: {0.7, 0.015, 0.26}; Rgb: color; PbrMaterial: {roughness: 0.7} }
     }
   }
 }
 
-@tree Parent
 template CanopyFlock {
   prop count: i32 = 14
   prop phase: f32 = 0
@@ -83,7 +99,6 @@ template CanopyFlock {
   }
 }
 
-@tree Parent
 template CanopyLife {
   prop width: f32 = 200
   prop depth: f32 = 170
@@ -99,7 +114,7 @@ template CanopyLife {
       const g: math.Rng = {seed: seed + fx * 7919 + fz * 104729 + 613}
       const dx = fx - (flocks_x - 1) / 2.0
       const dz = fz - (flocks_z - 1) / 2.0
-      const roam = match dx == 0 && dz == 0 { true: 0.0; _: 1.0 }
+      const roam = dx == 0 && dz == 0 ? 0.0 : 1.0
       const jx = (g.f(0.4) - 0.2) * width / flocks_x * roam
       const jz = (g.f(0.4) - 0.2) * depth / flocks_z * roam
       const jy = (g.f(16) - 8) * roam
@@ -116,10 +131,12 @@ template CanopyLife {
       lifetime: {8, 14}, size: {0.03, 0.07}, opacity: {0.35, 0.8},
       color: {255, 236, 170}, color_variance: {0, 20, 40}, seed: seed + 2
     }
+    ParticleForces: {gravity: {0, 0, 0}, turbulence: 0.12, turbulence_scale: 0.6}
+    ParticleCurves: {opacity: {keys: [{0, 0}, {0.15, 1}, {0.8, 1}, {1, 0}]}}
   }
   const boat_rows = [-0.42, -0.31, -0.17, -0.05, 0.08, 0.2]
   for i in 0..6 {
-    const side = match i % 2 { 0: -1.0; _: 1.0 }
+    const side = i % 2 == 0 ? -1.0 : 1.0
     CanopyBoat(style: i, length: 4.6 + i % 3 * 0.8) { Position: {side * 3.3, -0.42, boat_rows[i] * depth}; Rotation: {0, 1.5708, 0} }
   }
   for i in 0..14 {
@@ -130,22 +147,15 @@ template CanopyLife {
   }
 }
 
-@tree Parent
 template CanopyWaterFx {
   prop depth: f32 = 170
   prop seed: i32 = 17
   prop civic_z: f32 = 0
   prop radius: f32 = 11
   prop height: f32 = 4.52
-  prop light: f32 = 1
   canal_mist {
-    Position: {0, 0.6, 0}
-    ParticleEmitter: {
-      max: 160, rate: 11, shape: EmitterBox, extents: {5, 0.2, depth / 2 - 4},
-      direction: {0, 1, 0}, spread: 60, speed: {0.08, 0.24},
-      lifetime: {12, 20}, size: {3.5, 7}, opacity: {0.008, 0.024},
-      color: {220 * light, 236 * light, 230 * light}, seed: seed + 1
-    }
+    Position: {0, 0.9, 0}
+    FogVolume: {extent: {5.2, 1.4, depth / 2 - 3}, density: 0.035, color: {226, 238, 232}, asymmetry: 0.45, edge_fade: 1.1, noise_strength: 0.75, noise_scale: 6, wind: {0.1, 0.03, 0.35}, light_inscatter: 0}
   }
   spill_lip {
     Position: {0, -0.42, depth / 2 + 0.08}
@@ -153,17 +163,14 @@ template CanopyWaterFx {
       max: 1400, rate: 520, shape: EmitterBox, extents: {4.9, 0.02, 0.02},
       direction: {0, -0.2, 1}, spread: 7, speed: {0.3, 0.9},
       lifetime: {0.5, 0.9}, size: {0.02, 0.07}, opacity: {0.2, 0.5},
-      acceleration: {0, -8, 0}, color: {224 * light, 244 * light, 240 * light}, seed: seed + 3
+      acceleration: {0, -8, 0}, color: {224, 244, 240}, seed: seed + 3
     }
+    ParticleAppearance: {lit: 0.85}
+    ParticleCollision: {height: -4.45, die: true}
   }
   spill_foot {
-    Position: {0, -4.9, depth / 2 + 0.4}
-    ParticleEmitter: {
-      max: 240, rate: 44, shape: EmitterBox, extents: {5, 0.2, 0.3},
-      direction: {0, 1, 0.5}, spread: 40, speed: {0.2, 0.7},
-      lifetime: {1.5, 3}, size: {0.8, 2.1}, opacity: {0.05, 0.14},
-      color: {220 * light, 236 * light, 230 * light}, seed: seed + 4
-    }
+    Position: {0, -4.2, depth / 2 + 1.1}
+    FogVolume: {extent: {5.8, 1.6, 1.6}, density: 0.22, color: {232, 244, 240}, asymmetry: 0.35, edge_fade: 0.9, noise_strength: 0.8, noise_scale: 1.6, wind: {0, 0.6, 0.25}, light_inscatter: 0}
   }
   for i in 0..3 {
     {
@@ -172,8 +179,9 @@ template CanopyWaterFx {
         max: 500, rate: 170, shape: EmitterBox, extents: {0.72, 0.5, 0.02},
         direction: {0, -0.1, 1}, spread: 9, speed: {1, 1.8},
         lifetime: {0.4, 0.7}, size: {0.04, 0.12}, opacity: {0.3, 0.7},
-        acceleration: {0, -7, 0}, color: {224 * light, 244 * light, 240 * light}, seed: seed + 5 + i
+        acceleration: {0, -7, 0}, color: {224, 244, 240}, seed: seed + 5 + i
       }
+      ParticleAppearance: {lit: 0.85}
     }
   }
   fountain {
@@ -182,8 +190,9 @@ template CanopyWaterFx {
       max: 900, rate: 320, shape: EmitterDisc, radius: 0.05,
       direction: {0, 1, 0}, spread: 11, speed: {3.2, 4.4},
       lifetime: {0.8, 1.1}, size: {0.03, 0.08}, opacity: {0.35, 0.75},
-      acceleration: {0, -8, 0}, color: {224 * light, 244 * light, 240 * light}, seed: seed + 41
+      acceleration: {0, -8, 0}, color: {224, 244, 240}, seed: seed + 41
     }
+    ParticleAppearance: {lit: 0.85}
   }
   for side in 0..2 {
     {
@@ -192,8 +201,9 @@ template CanopyWaterFx {
         max: 500, rate: 170, shape: EmitterBox, extents: {0.13, 0.02, 0.1},
         direction: {0, -0.8, 1}, spread: 8, speed: {1.8, 2.8},
         lifetime: {1.5, 2}, size: {0.03, 0.09}, opacity: {0.3, 0.7},
-        acceleration: {0, -3.6, 0}, color: {224 * light, 244 * light, 240 * light}, seed: seed + 51 + side
+        acceleration: {0, -3.6, 0}, color: {224, 244, 240}, seed: seed + 51 + side
       }
+      ParticleAppearance: {lit: 0.85}
     }
   }
 }

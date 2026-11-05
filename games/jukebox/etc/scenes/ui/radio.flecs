@@ -10,6 +10,7 @@ using box.layout
 using box.geometry
 using box.material
 using box.text
+using box.transition
 
 // A group of radio buttons in a column, which owns the value: current is the label of the
 // checked button, "" for none. A disabled group disables its buttons. The group only lays its
@@ -125,11 +126,13 @@ template HeadlessRadioButton : parent RadioGroup {
         down = true
       }
 
-      const arrow = (e.key == "ArrowDown" || e.key == "ArrowRight" || e.key == "ArrowUp" ||
-        e.key == "ArrowLeft")
-      if !off && arrow {
-        const forward = e.key == "ArrowDown" || e.key == "ArrowRight"
-        const next = ui.sibling(this, match forward { true: 1; _: -1 }, Interactive)
+      const step = match e.key {
+        "ArrowDown", "ArrowRight": 1
+        "ArrowUp", "ArrowLeft": -1
+        _: 0
+      }
+      if !off && step != 0 {
+        const next = ui.sibling(this, step, Interactive)
         if next != this {
           pending = next
           await focus(next)
@@ -169,6 +172,7 @@ template RadioButton : HeadlessRadioButton {
   const ring = focused && FocusStatus[FocusStatus].visible
   const checked = current == label
   const size = 16
+  const edge = ring ? t.focus : checked ? t.accent : t.border
 
   Layout: {direction: Row, spacing: t.spacing, v: Middle}
   LayoutItem: {height: {mode: Fixed, value: t.control_height}}
@@ -177,24 +181,11 @@ template RadioButton : HeadlessRadioButton {
     Layout: {}
     LayoutItem: {width: {mode: Fixed, value: size}, height: {mode: Fixed, value: size}}
     Rect: {1, 1}
-
-    if down {
-      Rgb: t.pressed
-    } else if hover {
-      Rgb: t.hover
-    } else {
-      Rgb: t.surface_alt
-    }
-
-    if ring {
-      Border: {
-        width: t.focus_width, radius: size / 2,
-        color: {t.focus.r, t.focus.g, t.focus.b, 255}
-      }
-    } else if checked {
-      Border: {width: 1, radius: size / 2, color: {t.accent.r, t.accent.g, t.accent.b, 255}}
-    } else {
-      Border: {width: 1, radius: size / 2, color: {t.border.r, t.border.g, t.border.b, 255}}
+    Rgb: down ? t.pressed : hover ? t.hover : t.surface_alt
+    Transition: [Rgb: WidgetFade]
+    Border: {
+      width: ring ? t.focus_width : 1, radius: size / 2,
+      color: {edge.r, edge.g, edge.b, 255}
     }
 
     if checked {

@@ -10,11 +10,11 @@ station_tex_deck_normal { TexturePath: {path: "etc/scenes/space_station/assets/d
 station_tex_deck_orm { TexturePath: {path: "etc/scenes/space_station/assets/deck_orm.jpg"} }
 station_tex_solar { TexturePath: {path: "etc/scenes/space_station/assets/solar.jpg"} }
 
-prefab StationHull { Rgb: {226, 230, 236}; PbrMaterial: {metallic: 0.55, roughness: 0.62}; PbrTextures: {albedo: station_tex_hull, normal: station_tex_hull_normal, orm: station_tex_hull_orm} }
-prefab StationPanel { Rgb: {168, 176, 186}; PbrMaterial: {metallic: 0.7, roughness: 0.56}; PbrTextures: {albedo: station_tex_hull, normal: station_tex_hull_normal, orm: station_tex_hull_orm} }
-prefab StationDark { Rgb: {74, 82, 94}; PbrMaterial: {metallic: 0.8, roughness: 0.52}; PbrTextures: {albedo: station_tex_hull, normal: station_tex_hull_normal, orm: station_tex_hull_orm} }
+prefab StationHull { Rgb: {226, 230, 236}; PbrMaterial: {metallic: 0.55, roughness: 0.62}; PbrTextures: {albedo: station_tex_hull, normal: station_tex_hull_normal, orm: station_tex_hull_orm}; TextureMapping: {MappingObject, size: 3, blend: 0.25} }
+prefab StationPanel { Rgb: {168, 176, 186}; PbrMaterial: {metallic: 0.7, roughness: 0.56}; PbrTextures: {albedo: station_tex_hull, normal: station_tex_hull_normal, orm: station_tex_hull_orm}; TextureMapping: {MappingObject, size: 3, blend: 0.25} }
+prefab StationDark { Rgb: {74, 82, 94}; PbrMaterial: {metallic: 0.8, roughness: 0.52}; PbrTextures: {albedo: station_tex_hull, normal: station_tex_hull_normal, orm: station_tex_hull_orm}; TextureMapping: {MappingObject, size: 3, blend: 0.25} }
 prefab StationRecess { Rgb: {18, 22, 28}; PbrMaterial: {metallic: 0.5, roughness: 0.8} }
-prefab StationDeck { Rgb: {112, 120, 132}; PbrMaterial: {metallic: 0.7, roughness: 0.66}; PbrTextures: {albedo: station_tex_hull, normal: station_tex_hull_normal, orm: station_tex_hull_orm} }
+prefab StationDeck { Rgb: {112, 120, 132}; PbrMaterial: {metallic: 0.7, roughness: 0.66}; PbrTextures: {albedo: station_tex_hull, normal: station_tex_hull_normal, orm: station_tex_hull_orm}; TextureMapping: {MappingObject, size: 4, blend: 0.25} }
 prefab StationBayFloor { PbrMaterial: {metallic: 0.65, roughness: 0.74}; PbrTextures: {albedo: station_tex_deck, normal: station_tex_deck_normal, orm: station_tex_deck_orm} }
 prefab StationTruss { Rgb: {146, 152, 162}; PbrMaterial: {metallic: 0.9, roughness: 0.38} }
 prefab StationGold { Rgb: {232, 178, 78}; PbrMaterial: {metallic: 1, roughness: 0.28} }
@@ -27,10 +27,10 @@ prefab StationBlue { Rgb: {52, 108, 178}; PbrMaterial: {metallic: 0.3, roughness
 prefab StationTeal { Rgb: {44, 132, 132}; PbrMaterial: {metallic: 0.3, roughness: 0.4}; ClearCoat: {strength: 0.5, roughness: 0.2}; PbrTextures: {normal: station_tex_hull_normal} }
 prefab StationOrange { Rgb: {214, 112, 44}; PbrMaterial: {metallic: 0.25, roughness: 0.42}; ClearCoat: {strength: 0.5, roughness: 0.2}; PbrTextures: {normal: station_tex_hull_normal} }
 prefab StationWhite { Rgb: {236, 240, 244}; PbrMaterial: {metallic: 0.15, roughness: 0.36}; ClearCoat: {strength: 0.5, roughness: 0.18}; PbrTextures: {normal: station_tex_hull_normal} }
-prefab StationLeaf { Rgb: {64, 158, 72}; PbrMaterial: {roughness: 0.82} }
-prefab StationLeafDark { Rgb: {38, 112, 58}; PbrMaterial: {roughness: 0.86} }
+prefab StationLeaf { Rgb: {64, 158, 72}; PbrMaterial: {roughness: 0.82}; DiffuseTransmission: {factor: 0.4, color: {200, 255, 120}} }
+prefab StationLeafDark { Rgb: {38, 112, 58}; PbrMaterial: {roughness: 0.86}; DiffuseTransmission: {factor: 0.35, color: {170, 240, 110}} }
 prefab StationSoil { Rgb: {62, 44, 32}; PbrMaterial: {roughness: 0.95} }
-prefab StationGlass { Rgb: {176, 220, 238}; PbrMaterial: {metallic: 0.1, roughness: 0.05}; ClearCoat: {strength: 1, roughness: 0.03}; Opacity: {0.28} }
+prefab StationGlass { Rgb: {176, 220, 238}; PbrMaterial: {metallic: 0.1, roughness: 0.05}; ClearCoat: {strength: 1, roughness: 0.03}; Transmission: {transmission_factor: 0.92, ior: 1.45, thickness_factor: 0.04, attenuation_distance: 6, attenuation_color: {200, 235, 250}} }
 prefab StationViewport { Rgb: {18, 34, 52}; PbrMaterial: {metallic: 0.2, roughness: 0.06}; ClearCoat: {strength: 1, roughness: 0.03} }
 prefab StationWindow { Rgb: {255, 226, 170}; Emissive: {strength: 3.4, color: {255, 206, 136}} }
 prefab StationCyanLight { Rgb: {96, 220, 240}; Emissive: {strength: 4.5, color: {80, 214, 255}} }
@@ -39,4 +39,3 @@ prefab StationRedLight { Rgb: {255, 80, 60}; Emissive: {strength: 5, color: {255
 prefab StationAmberLight { Rgb: {255, 180, 70}; Emissive: {strength: 4.5, color: {255, 160, 50}} }
 prefab StationGrowLight { Rgb: {255, 150, 220}; Emissive: {strength: 5, color: {255, 110, 210}} }
 prefab StationPlasma { Rgb: {170, 220, 255}; Emissive: {strength: 11, color: {110, 190, 255}} }
-prefab StationStar { Rgb: {255, 255, 255}; Emissive: {strength: 3, color: {220, 232, 255}} }

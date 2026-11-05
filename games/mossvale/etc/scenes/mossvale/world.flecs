@@ -8,7 +8,7 @@ using box.material
 using box.particle
 
 mossvale {
-  ground : MvGrass { Position: {0, -0.5, 0}; Box: {700, 1, 700}; TextureTransform: {700 / TILE_GRASS, 700 / TILE_GRASS, 0, 0} }
+  ground : MvGrassGround { Position: {0, -0.5, 0}; Box: {GROUND_SPAN, 1, GROUND_SPAN} }
 
   water {
     river_bank : MvSand { Position: {0, 0, 0}; Sweep: {path: MV_RIVER, profile: MvRoadProfile, scale: {8.8, 0.03}, rings: 256}; TextureMapping: {mode: MappingObject, size: 5}; TextureTransform: {1, 1, 0, 0} }
@@ -42,7 +42,7 @@ mossvale {
       for i in 0..39 {
         if tree_here(i, j) {
           const h = hash2(i * 3.3, j * 7.1)
-          Tree "t_{i}_{j}"(seed: h, kind: match h < 0.4 { true: 1; _: match h > 0.92 { true: 3; _: match h > 0.8 { true: 2; _: 0 } } }, s: 1.15) {
+          Tree "t_{i}_{j}"(seed: h, kind: h < 0.4 ? 1 : h > 0.92 ? 3 : h > 0.8 ? 2 : 0, s: 1.15) {
             Position: {tree_x(i, j), 0, tree_z(i, j)}
           }
         }
@@ -66,7 +66,7 @@ mossvale {
         if rock_here(i, j) {
           const h = hash2(i * 1.3, j * 2.7)
           const wall = rock_z(i, j) < WALL_S1 + 1
-          Rock "r_{i}_{j}"(seed: h, s: match wall { true: 1.7 + h * 0.6; _: 1.1 + h * 0.8 }) { Position: {rock_x(i, j), 0, rock_z(i, j)} }
+          Rock "r_{i}_{j}"(seed: h, s: wall ? 1.7 + h * 0.6 : 1.1 + h * 0.8) { Position: {rock_x(i, j), 0, rock_z(i, j)} }
         }
       }
     }
@@ -84,31 +84,6 @@ mossvale {
       const x = -40 + i * 3.1
       if abs(x - road_x(33)) > 4 {
         "cliff_{i}" : MvCliff { Position: {x, 0.8, 32.5 + fract(i * 0.37) * 2}; Rotation: {0, i, 0}; Scale: {2.2, 1.4 + fract(i * 0.61), 1.6}; IcoSphere: {radius: 1, segments: 0} }
-      }
-    }
-  }
-
-  patches {
-    for j in 0..12 {
-      for i in 0..12 {
-        const cx = -96 + i * 16 + 8
-        const cz = -96 + j * 16 + 8
-        const r = 3 + hash2(i * 1.7 + 3, j * 2.3 + 1) * 3
-        const x = cx + (hash2(i * 3.1, j * 0.7 + 5) - 0.5) * 2 * (7.6 - r)
-        const z = cz + (hash2(i * 0.9 + 2, j * 4.3) - 0.5) * 2 * (7.6 - r)
-        const sz = 0.6 + hash2(i + 9, j * 1.1) * 0.4
-        const tx = r * 2 / TILE_GRASS
-        if cz > -32 && cz < 32 || cx < -50 {
-          if (i + j) % 2 == 0 {
-            "p_{i}_{j}" : MvGrass { Position: {x, 0.013, z}; Rotation: {0, i * 1.3 + j, 0}; Scale: {1, 1, sz}; Cylinder: {length: 0.01, radius: r, segments: 28}; Rgb: {112, 164, 76}; TextureTransform: {tx, tx, 0.3, 0.7} }
-          } else {
-            "p_{i}_{j}" : MvGrass { Position: {x, 0.013, z}; Rotation: {0, i * 1.3 + j, 0}; Scale: {1, 1, sz}; Cylinder: {length: 0.01, radius: r, segments: 28}; Rgb: {132, 178, 84}; TextureTransform: {tx, tx, 0.6, 0.2} }
-          }
-        } else if cz < 0 {
-          "p_{i}_{j}" : MvForestFloor { Position: {x, 0.013, z}; Rotation: {0, i * 1.3 + j, 0}; Scale: {1, 1, sz}; Cylinder: {length: 0.01, radius: r, segments: 20}; Rgb: {150, 160, 120}; TextureTransform: {r * 2 / TILE_FOREST, r * 2 / TILE_FOREST, 0, 0} }
-        } else {
-          "p_{i}_{j}" : MvHillGrass { Position: {x, 0.013, z}; Rotation: {0, i * 1.3 + j, 0}; Scale: {1, 1, sz}; Cylinder: {length: 0.01, radius: r, segments: 20}; Rgb: {176, 168, 104}; TextureTransform: {tx, tx, 0, 0} }
-        }
       }
     }
   }

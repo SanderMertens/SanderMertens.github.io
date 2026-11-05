@@ -9,6 +9,8 @@ using box.spatial
 using box.picking
 using box.input
 using box.transition
+using box.movement
+using box.animation
 
 template Glow {
   prop text: string = ""
@@ -47,8 +49,8 @@ template Ladder {
   const y = deg * 3.2
 
   Position: {0, y, 0}
-  GlowLine a(x1: -64, y1: 0, x2: -22, y2: 0, w: match deg == 0 { true: 1.6; _: 1 })
-  GlowLine b(x1: 22, y1: 0, x2: 64, y2: 0, w: match deg == 0 { true: 1.6; _: 1 })
+  GlowLine a(x1: -64, y1: 0, x2: -22, y2: 0, w: deg == 0 ? 1.6 : 1)
+  GlowLine b(x1: 22, y1: 0, x2: 64, y2: 0, w: deg == 0 ? 1.6 : 1)
   Glow n_a(text: "{abs(deg) * 1.0:.0}", size: 9, power: 0.9) { Position: {-74, 0, 0} }
   Glow n_b(text: "{abs(deg) * 1.0:.0}", size: 9, power: 0.9) { Position: {74, 0, 0} }
 }
@@ -63,7 +65,7 @@ template HudTape {
   GlowLine rail(x1: 0, y1: -60, x2: 0, y2: 60, w: 1)
   for i in 0..9 {
     const py = (i - 4) * 15.0 - (value * 4 - floor(value * 4)) * 15
-    "t_{i}" { GlowLine: {x1: 0, y1: py, x2: match i % 2 { 0: 9; _: 5 }, y2: py, w: 1} }
+    "t_{i}" { GlowLine: {x1: 0, y1: py, x2: i % 2 == 0 ? 9 : 5, y2: py, w: 1} }
   }
   Glow head(text: label, size: 10, power: 1) { Position: {0, 70, 0} }
   Glow read(text: "{value * span:.0}", size: 13, power: 1.6) { Position: {0, -72, 0} }
@@ -73,11 +75,12 @@ template HudSymbology {
   const show = sw[SW_HUD] && bus && !in_tunnel
   const lock = stage == STAGE_PLOTTED
 
-  Scale: {match show { true: 1; _: 0.001 }, match show { true: 1; _: 0.001 }, 1}
+  Scale: {show ? 1 : 0.001, show ? 1 : 0.001, 1}
   Transition: [Scale: {duration: 0.18, timing_function: EaseOut}]
 
   ring {
-    Rotation: {0, 0, clock * match lock { true: 1.4; _: 0.18 }}
+    Rotation: {0, 0, 0}
+    AngularVelocity: {0, 0, lock ? 1.4 : 0.18}
     Circle: {44}
     Rgb: {0, 0, 0}
     BlendMode: Additive
@@ -116,7 +119,7 @@ template HudSymbology {
   Glow title(
     text: match stage {
       1: "REACTOR COLD"
-      2: match course >= 0 { true: "PLOT {plot * 100:.0}%"; _: "SELECT DEST" }
+      2: course >= 0 ? "PLOT {plot * 100:.0}%" : "SELECT DEST"
       3: "PULL JUMP HANDLE"
       4: "CHARGING"
       _: ""
@@ -125,7 +128,7 @@ template HudSymbology {
     power: match stage { 3: 2.6; 4: 3; _: 1.2 }
   ) { Position: {0, -84, 0} }
 
-  Glow dest_line(text: match course >= 0 { true: dest_code(course); _: dest_code(here) }, size: 11, power: 1) { Position: {0, 86, 0} }
+  Glow dest_line(text: course >= 0 ? dest_code(course) : dest_code(here), size: 11, power: 1) { Position: {0, 86, 0} }
 }
 
 template Combiner {
@@ -142,7 +145,7 @@ template Combiner {
     Rect: {0.3, 0.22}
     Rgb: {96, 150, 130}
     BlendMode: AlphaBlend
-    Opacity: {match sw[SW_HUD] && bus { true: 0.055; _: 0.035 }}
+    Opacity: {sw[SW_HUD] && bus ? 0.055 : 0.035}
     Transition: [Opacity: {duration: 0.3}]
     Border: {width: 0.0012, radius: 0.012, color: {190, 240, 220, 60}}
     NoShadow

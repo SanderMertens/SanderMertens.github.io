@@ -43,6 +43,9 @@ event PickTool(t: i32)
 event Toast(text: string)
 event RankUp(rank: i32)
 event NewRealm()
+event ToastShown(until: f64)
+event RaidShown(until: f64)
+event PanelDisarm(until: f64)
 
 fn kind_name(k: i32) -> string {
   match k {
@@ -201,7 +204,7 @@ fn house_face(r: i32, kn: i32, ke: i32, ks: i32, kw: i32) -> i32 {
         true: 1
         _: match kn == 11 {
           true: 2
-          _: match kw == 11 { true: 3; _: r }
+          _: kw == 11 ? 3 : r
         }
       }
     }
@@ -209,7 +212,7 @@ fn house_face(r: i32, kn: i32, ke: i32, ks: i32, kw: i32) -> i32 {
 }
 
 fn build_face(t: i32, r: i32, kn: i32, ke: i32, ks: i32, kw: i32) -> i32 {
-  match t == 5 { true: house_face(r, kn, ke, ks, kw); _: r }
+  t == 5 ? house_face(r, kn, ke, ks, kw) : r
 }
 
 fn on_line(x: i32, z: i32, a: i32, b: i32) -> bool {
@@ -249,7 +252,7 @@ fn folk_of(k: i32, lvl: i32) -> i32 {
 fn gold_of(k: i32, lvl: i32, safe: bool) -> f64 {
   match k {
     4: lvl * 3
-    5: match lvl { 1: match safe { true: 2; _: 1 }; 2: 4; _: 8 }
+    5: match lvl { 1: safe ? 2 : 1; 2: 4; _: 8 }
     _: 0
   }
 }
@@ -406,8 +409,8 @@ fn prestige_of(k: i32, lvl: i32, safe: bool) -> f64 {
     1: lvl
     2: lvl * 4
     3: 3 + lvl * 3
-    4: match safe { true: lvl * 40; _: lvl * 20 }
-    5: match lvl { 1: match safe { true: 3; _: 2 }; 2: 6; _: 12 }
+    4: safe ? lvl * 40 : lvl * 20
+    5: match lvl { 1: safe ? 3 : 2; 2: 6; _: 12 }
     6: 3
     7: 4
     8: 1
@@ -450,7 +453,7 @@ fn rank_of(p: f64) -> i32 {
         true: 3
         _: match p >= rank_need(2) {
           true: 2
-          _: match p >= rank_need(1) { true: 1; _: 0 }
+          _: p >= rank_need(1) ? 1 : 0
         }
       }
     }
@@ -474,11 +477,11 @@ fn hash(i: i32) -> f64 {
 }
 
 fn bool_f(b: bool) -> f32 {
-  match b { true: 1; _: 0 }
+  b ? 1 : 0
 }
 
 fn signed(v: f64) -> string {
-  match v >= 0 { true: "+{v:.1}"; _: "{v:.1}" }
+  v >= 0 ? "+{v:.1}" : "{v:.1}"
 }
 
 export mut kind: i32[196] = {}

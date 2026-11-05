@@ -42,8 +42,8 @@ flash_ui {
     Rect: {6000, 6000}
     Rgb: {214, 232, 255}
     BlendMode: Additive
-    Opacity: {match flash > 0.5 { true: 1; _: 0 }}
-    Transition: [Opacity: {duration: match flash > 0.5 { true: 0.05; _: 0.7 }, timing_function: EaseOut}]
+    Opacity: {flash > 0.5 ? 1 : 0}
+    Transition: [Opacity: {duration: flash > 0.5 ? 0.05 : 0.7, timing_function: EaseOut}]
     SpatialIgnore
   }
 }

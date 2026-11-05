@@ -90,7 +90,7 @@ fn hash2(x: f64, z: f64) -> f64 {
 }
 
 fn bool_f(b: bool) -> f32 {
-  match b { true: 1; _: 0 }
+  b ? 1 : 0
 }
 
 fn dist2(ax: f64, az: f64, bx: f64, bz: f64) -> f64 {
@@ -122,8 +122,7 @@ fn spell_cost(s: i32) -> f32 {
     1: 8
     2: 10
     3: 12
-    4: 14
-    5: 14
+    4, 5: 14
     6: 16
     _: 0
   }

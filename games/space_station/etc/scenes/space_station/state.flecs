@@ -111,48 +111,20 @@ fn st_z(i: i32) -> f32 {
   (floor(i / st_grid_w) - (st_grid_h - 1) / 2.0) * st_pitch
 }
 
-fn st_bits_raw(mask: u64, i: i32, width: i32) -> u64 {
-  const one: u64 = 1
-  (mask >> (i * width)) & ((one << width) - one)
-}
+struct StShip(state: i32, timer: i32, patience: i32, dock: i32, visitors: i32)
 
-fn st_bits_get(mask: u64, i: i32, width: i32) -> i32 {
-  st_bits_raw(mask, i, width)
-}
+event Request(op: i32)
+event Click(slot: i32)
+event Built(slot: i32)
+event Tick()
 
-fn st_bits_set(mask: u64, i: i32, width: i32, value: u64) -> u64 {
-  mask - (st_bits_raw(mask, i, width) << (i * width)) + (value << (i * width))
-}
-
-fn st_bit(i: i32) -> u64 {
-  const one: u64 = 1
-  one << i
-}
-
-fn st_has(mask: u64, i: i32) -> bool {
-  st_bits_raw(mask, i, 1) == 1
-}
-
-fn st_near(mask: u64, i: i32) -> bool {
-  const x = i % st_grid_w
-  const y = floor(i / st_grid_w)
-  (x > 0 && st_has(mask, i - 1)) || (x < st_grid_w - 1 && st_has(mask, i + 1)) || (y > 0 && st_has(mask, i - st_grid_w)) || (y < st_grid_h - 1 && st_has(mask, i + st_grid_w))
-}
-
-fn st_kind_of(i: i32, w0: u64, w1: u64, w2: u64) -> i32 {
-  const word = match floor(i / 12) {
-    0: w0
-    1: w1
-    _: w2
-  }
-  st_bits_get(word, i % 12, 4)
-}
-
-export const st_start_built: u64 = (1 << 17) | (1 << 16) | (1 << 18) | (1 << 10) | (1 << 24) | (1 << 15) | (1 << 19)
-
-export const st_start_grid_0: u64 = 7 << 40
-export const st_start_grid_1: u64 = (2 << 12) | (4 << 16) | (1 << 20) | (5 << 24) | (2 << 28)
-export const st_start_grid_2: u64 = 6
+export const st_start_grid: i32[35] = [
+  0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 7, 0, 0, 0,
+  0, 2, 4, 1, 5, 2, 0,
+  0, 0, 0, 6, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0
+]
 
 export const OP_BUY_FOOD: i32 = 101
 export const OP_BUY_GOODS: i32 = 102
@@ -166,10 +138,9 @@ export mut st_tool: i32 = 0
 export mut st_hover_slot: i32 = -1
 export mut st_hover_op: i32 = -1
 export mut st_hover_stat: i32 = -1
-export mut st_req_op: i32 = 0
-export mut st_req_slot: i32 = 0
 export mut st_alert: string = "Welcome, Director. Build a Passenger Dock to start earning from visitors."
-export mut st_alert_until: f64 = 12
+export mut st_alert_seconds: f64 = 12
+export mut st_alert_seq: i32 = 0
 export mut st_speed: i32 = 1
 export mut st_lost = false
 export mut st_rank: i32 = 0
@@ -186,20 +157,13 @@ export mut st_reputation: f64 = 50
 export mut st_growth: f64 = 0
 export mut st_decline: f64 = 0
 export mut st_beat: i32 = 0
-export mut st_next_beat: f64 = 0
 export mut st_visitor_spend: f64 = 0
 
-export mut st_grid_0: u64 = st_start_grid_0
-export mut st_grid_1: u64 = st_start_grid_1
-export mut st_grid_2: u64 = st_start_grid_2
-export mut st_built: u64 = st_start_built
-export mut st_rising: u64 = 0
-export mut st_rise_at: f64 = 0
-export mut st_sparks: u64 = 0
-export mut st_spark_until: f64 = 0
-export mut st_free_pax: u64 = 0
-export mut st_free_cargo: u64 = 0
 export mut st_modules: i32 = 0
+export mut st_grid: i32[35] = st_start_grid
+export mut st_pad_busy: bool[35] = {}
+export mut st_rising: bool[35] = {}
+export mut st_sparks: bool[35] = {}
 
 export mut st_power_supply: f64 = 0
 export mut st_power_demand: f64 = 0
@@ -213,26 +177,9 @@ export mut st_upkeep_total: f64 = 0
 export mut st_pax_docks: i32 = 0
 export mut st_cargo_docks: i32 = 0
 
-export mut st_dirty = true
-export mut tally_supply: f64 = 0
-export mut tally_demand: f64 = 0
-export mut tally_housing: i32 = 0
-export mut tally_life: f64 = 0
-export mut tally_air: f64 = 0
-export mut tally_food: f64 = 0
-export mut tally_storage: f64 = 0
-export mut tally_upkeep: f64 = 0
-export mut tally_pax: i32 = 0
-export mut tally_cargo: i32 = 0
-export mut tally_modules: i32 = 0
-
 export mut st_next_pax: i32 = 6
 export mut st_next_cargo: i32 = 10
-export mut st_ship_state: u64 = 0
-export mut st_ship_timer: u64 = 0
-export mut st_ship_patience: u64 = 0
-export mut st_ship_dock: u64 = 0
-export mut st_ship_visitors: u64 = 0
+export mut st_ships: StShip[10] = {}
 export mut st_pax_docked: i32 = 0
 export mut st_pax_holding: i32 = 0
 export mut st_cargo_docked: i32 = 0
@@ -247,8 +194,58 @@ export mut st_stock_food: f64 = 0
 export mut st_stock_goods: f64 = 0
 export mut st_demand_goods: f64 = 0
 
-st_frame_a {}
-st_frame_b {}
-st_tick {}
-st_req {}
-st_click {}
+fn st_occupied(i: i32) -> bool {
+  i >= 0 && i < st_slots && st_grid[i] != K_EMPTY
+}
+
+fn st_near(i: i32) -> bool {
+  const x = i % st_grid_w
+  const y = floor(i / st_grid_w)
+  (x > 0 && st_occupied(i - 1)) || (x < st_grid_w - 1 && st_occupied(i + 1)) || (y > 0 && st_occupied(i - st_grid_w)) || (y < st_grid_h - 1 && st_occupied(i + st_grid_w))
+}
+
+proc st_notify(message: string, seconds: f64) {
+  st_alert = message
+  st_alert_seconds = seconds
+  st_alert_seq += 1
+}
+
+proc st_retally() {
+  mut supply: f64 = 0
+  mut demand: f64 = 0
+  mut housing: i32 = 0
+  mut life: f64 = 0
+  mut air: f64 = 0
+  mut food: f64 = 0
+  mut storage: f64 = 100
+  mut upkeep: f64 = 0
+  mut pax: i32 = 0
+  mut cargo: i32 = 0
+  mut modules: i32 = 0
+  for i in 0..st_slots {
+    const kind = st_grid[i]
+    supply += st_power_made(kind)
+    demand += st_power_used(kind)
+    upkeep += st_upkeep(kind)
+    housing += match kind { 7: 12; 1: 2; _: 0 }
+    life += match kind { 4: 16; 1: 2; _: 0 }
+    air += kind == K_AIR ? 3 : 0
+    food += kind == K_FARM ? 0.8 : 0
+    storage += kind == K_BAY ? 80 : 0
+    pax += kind == K_PAX ? 1 : 0
+    cargo += kind == K_CARGO ? 1 : 0
+    modules += kind == K_EMPTY ? 0 : 1
+  }
+  st_power_supply = supply
+  st_power_demand = demand
+  st_housing = housing
+  st_life_cap = life
+  st_air_rate = air
+  st_food_rate = food
+  st_storage = storage
+  st_upkeep_total = upkeep
+  st_pax_docks = pax
+  st_cargo_docks = cargo
+  st_modules = modules
+  st_power_ratio = min(1, st_power_supply / max(st_power_demand, 0.01))
+}

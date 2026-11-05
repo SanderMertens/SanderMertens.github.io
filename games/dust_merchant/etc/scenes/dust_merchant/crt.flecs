@@ -83,8 +83,8 @@ template CrtFeed {
 }
 
 template Raster : parent CrtFeed {
-  Scale: {1, match on { true: 1; _: 0.004 }, 1}
-  Transition: [Scale: {duration: match on { true: 0.32; _: 0.13 }, timing_function: EaseOut}]
+  Scale: {1, on ? 1 : 0.004, 1}
+  Transition: [Scale: {duration: on ? 0.32 : 0.13, timing_function: EaseOut}]
   back { Position: {0, 0, -5}; Rect: {w + 4, h + 4}; Rgb: tint; SpatialIgnore }
 }
 
@@ -105,10 +105,10 @@ template Crt {
   Layout: {}
   LayoutItem: {width: {mode: Fixed, value: w + pad * 2 + 8}, height: {mode: Fixed, value: h + pad * 2 + 8}}
 
-  hood_t : Soot { Position: {0, h / 2 + pad / 2 + 2, 14}; Box: {w + pad * 2 + 8, pad + 4, 28}; TextureTransform: {scale_x: 0.6, scale_y: 0.05}; SpatialIgnore }
-  hood_b : Soot { Position: {0, 0 - h / 2 - pad / 2 - 2, 14}; Box: {w + pad * 2 + 8, pad + 4, 28}; TextureTransform: {scale_x: 0.6, scale_y: 0.05}; SpatialIgnore }
-  hood_l : Soot { Position: {0 - w / 2 - pad / 2 - 2, 0, 14}; Box: {pad + 4, h + 8, 28}; TextureTransform: {scale_x: 0.05, scale_y: 0.6}; SpatialIgnore }
-  hood_r : Soot { Position: {w / 2 + pad / 2 + 2, 0, 14}; Box: {pad + 4, h + 8, 28}; TextureTransform: {scale_x: 0.05, scale_y: 0.6}; SpatialIgnore }
+  hood_t : Soot { Position: {0, h / 2 + pad / 2 + 2, 14}; Box: {w + pad * 2 + 8, pad + 4, 28}; TextureMapping: {mode: MappingObject, size: 0.77}; SpatialIgnore }
+  hood_b : Soot { Position: {0, 0 - h / 2 - pad / 2 - 2, 14}; Box: {w + pad * 2 + 8, pad + 4, 28}; TextureMapping: {mode: MappingObject, size: 0.77}; SpatialIgnore }
+  hood_l : Soot { Position: {0 - w / 2 - pad / 2 - 2, 0, 14}; Box: {pad + 4, h + 8, 28}; TextureMapping: {mode: MappingObject, size: 0.77}; SpatialIgnore }
+  hood_r : Soot { Position: {w / 2 + pad / 2 + 2, 0, 14}; Box: {pad + 4, h + 8, 28}; TextureMapping: {mode: MappingObject, size: 0.77}; SpatialIgnore }
   gasket_t : Rubber { Position: {0, h / 2 + 2, 17}; Box: {w + 6, 5, 28}; SpatialIgnore }
   gasket_b : Rubber { Position: {0, 0 - h / 2 - 2, 17}; Box: {w + 6, 5, 28}; SpatialIgnore }
   gasket_l : Rubber { Position: {0 - w / 2 - 2, 0, 17}; Box: {5, h + 6, 28}; SpatialIgnore }
@@ -127,7 +127,8 @@ template Crt {
     }
     Rgb: {6, 7, 6}
     PbrMaterial: {metallic: 1, roughness: 0.55}
-    Emissive: {strength: match on { true: brightness; _: 0 }, color: {255, 255, 255}}
+    ClearCoat: {strength: 1, roughness: 0.04}
+    Emissive: {strength: on ? brightness : 0, color: {255, 255, 255}}
     Transition: [Emissive: {duration: 0.4}]
     PbrTextures: {emissive: tex}
     TextureTransform: {scale_x: -1, scale_y: -1, offset_x: 1, offset_y: 1}
@@ -137,7 +138,7 @@ template Crt {
 
   spill {
     Position: {0, 0, 170}
-    PointLight: {intensity: match on { true: glow_power; _: 0 }, range: 1.6}
+    PointLight: {intensity: on ? glow_power : 0, range: 1.6}
     Rgb: glow
   }
 }

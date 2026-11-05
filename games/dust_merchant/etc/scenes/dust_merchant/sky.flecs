@@ -6,17 +6,37 @@ using box.material
 using box.light
 using box.spatial
 using box.transition
+using box.movement
+using box.animation
 
 export mut sky_pitch: f32 = 0
 export mut sky_yaw: f32 = 0
 export mut sky_roll: f32 = 0
+
+GlareFlickerA {
+  AnimationClip: {duration: 0.1698}
+  flicker {
+    AnimationTrack: {component: PointLight, member: "intensity", curve: {kind: CurveBezier, keys: [
+      {0, 2.2, 14.8, 14.8}, {0.0425, 2.6, 0, 0}, {0.0849, 2.2, -14.8, -14.8}, {0.1274, 1.8, 0, 0}, {0.1698, 2.2, 14.8, 14.8}
+    ]}}
+  }
+}
+
+GlareFlickerB {
+  AnimationClip: {duration: 0.1232}
+  flicker {
+    AnimationTrack: {component: PointLight, member: "intensity", curve: {kind: CurveBezier, keys: [
+      {0, 2.8, 25.5, 25.5}, {0.0308, 3.3, 0, 0}, {0.0616, 2.8, -25.5, -25.5}, {0.0924, 2.3, 0, 0}, {0.1232, 2.8, 25.5, 25.5}
+    ]}}
+  }
+}
 
 template SkyDome {
   Position: {0, 0, 0}
   EllipsoidShell: {radius: {6000, 6000, 6000}, longitude_start: 0, longitude_end: 2 * PI, latitude_start: 0 - PI / 2, latitude_end: PI / 2, thickness: 1, segments: 96, rings: 48}
   Rgb: {0, 0, 0}
   PbrMaterial: {metallic: 1, roughness: 0.03}
-  Emissive: {strength: match in_tunnel { true: 0.05; _: 0.55 }, color: match here { 0: {255, 240, 236}; 1: {176, 226, 255}; _: {255, 150, 110} }}
+  Emissive: {strength: in_tunnel ? 0.05 : 0.55, color: match here { 0: {255, 240, 236}; 1: {176, 226, 255}; _: {255, 150, 110} }}
   Transition: [Emissive: {duration: 0.6}]
   PbrTextures: {emissive: tex_sky}
   NoShadow
@@ -65,7 +85,7 @@ template Sun {
   const hue: Rgb = match dest { 0: {255, 226, 186}; 1: {206, 228, 255}; _: {255, 150, 90} }
 
   Rotation: {sun_pitch(dest), sun_yaw(dest), 0}
-  DirectionalLight: {intensity: match in_tunnel { true: 0; _: 5.5 }, bake: Realtime}
+  DirectionalLight: {intensity: in_tunnel ? 0 : 5.5, bake: Realtime}
   Rgb: hue
 
   disc {
@@ -94,13 +114,13 @@ template StarField {
     const thin = 0.0014 * sqrt(r * r + tip * tip) / big
     const long = (star_mode == STARS_STREAK || star_mode == STARS_SNAP) && i % 5 > 1
     const gone = star_mode != STARS_REST && !long
-    const wide = match long { true: thin; _: match gone { true: 0.001; _: 1 } }
-    const reach = match long { true: len / big; _: match gone { true: 0.001; _: 1 } }
+    const wide = long ? thin : gone ? 0.001 : 1
+    const reach = long ? len / big : gone ? 0.001 : 1
     const secs = match star_mode { 1: 0.62; 0: 0.55; _: 0 }
-    const wait = match star_mode { 1: (i % 11) * 0.008; _: 0 }
-    const ease: box.transition.TimingFunction = match star_mode { 1: EaseIn; _: EaseOut }
+    const wait = star_mode == 1 ? (i % 11) * 0.008 : 0
+    const ease: box.transition.TimingFunction = star_mode == 1 ? EaseIn : EaseOut
     "star_{i}" {
-      Position: {x, y, match long { true: len / 2 - depth; _: 0 - depth }}
+      Position: {x, y, long ? len / 2 - depth : 0 - depth}
       Box: {big, big, big}
       Scale: {wide, wide, reach}
       Transition: [
@@ -108,7 +128,7 @@ template StarField {
         Scale: {duration: secs, delay: wait, timing_function: ease}
       ]
       Rgb: {0, 0, 0}
-      Emissive: {strength: 5 + (i % 5) * 2.5, color: {match i % 3 { 0: 190; _: 245 }, 236, 255}}
+      Emissive: {strength: 5 + (i % 5) * 2.5, color: {i % 3 == 0 ? 190 : 245, 236, 255}}
       NoShadow
       SpatialIgnore
     }
@@ -131,8 +151,8 @@ template Tunnel {
       NoShadow
       SpatialIgnore
     }
-    glare_a { Position: {0.6, 1.9, -0.9}; PointLight: {intensity: 2.2 + sin(clock * 37) * 0.4, range: 5}; Rgb: {150, 196, 255} }
-    glare_b { Position: {-0.2, 1.4, -2.2}; PointLight: {intensity: 2.8 + sin(clock * 51) * 0.5, range: 5}; Rgb: {130, 186, 255} }
+    glare_a { Position: {0.6, 1.9, -0.9}; PointLight: {intensity: 2.2, range: 5}; Rgb: {150, 196, 255}; Animator: {clip: GlareFlickerA} }
+    glare_b { Position: {-0.2, 1.4, -2.2}; PointLight: {intensity: 2.8, range: 5}; Rgb: {130, 186, 255}; Animator: {clip: GlareFlickerB} }
   }
 }
 
@@ -140,17 +160,17 @@ template TollStation {
   Rotation: {0.3, 0.5, 0.22}
   Scale: {1.5, 1.5, 1.5}
   hub : Soot { Rotation: {PI / 2, 0, 0}; Cylinder: {radius: 16, length: 70, segments: 18, smooth: true}; NoShadow; SpatialIgnore }
-  wheel : BoneWhite { Torus: {radius: 58, tube: 6, segments: 40, rings: 10, smooth: true}; Rotation: {PI / 2, 0, clock * 0.05}; NoShadow; SpatialIgnore }
+  wheel : BoneWhite { Torus: {radius: 58, tube: 6, segments: 40, rings: 10, smooth: true}; Rotation: {PI / 2, 0, 0}; AngularVelocity: {0, 0, 0.05}; NoShadow; SpatialIgnore }
   for i in 0..4 {
-    "spoke_{i}" : Soot { Rotation: {0, 0, i * PI / 4 + clock * 0.05}; Box: {116, 3.4, 3.4}; NoShadow; SpatialIgnore }
+    "spoke_{i}" : Soot { Rotation: {0, 0, i * PI / 4}; AngularVelocity: {0, 0, 0.05}; Box: {116, 3.4, 3.4}; NoShadow; SpatialIgnore }
   }
   arm_a : BoneWhite { Position: {0, 0, 44}; Box: {150, 5, 10}; NoShadow; SpatialIgnore }
   barrier_a : Oxide { Position: {80, 0, 44}; Box: {12, 60, 12}; NoShadow; SpatialIgnore }
   barrier_b : Oxide { Position: {-80, 0, 44}; Box: {12, 60, 12}; NoShadow; SpatialIgnore }
-  strobe_a { Position: {80, 34, 44}; Sphere: {radius: 5, segments: 8}; Rgb: {30, 4, 2}; Emissive: {strength: match blink { true: 24; _: 0.2 }, color: {255, 50, 30}}; NoShadow; SpatialIgnore }
-  strobe_b { Position: {-80, 34, 44}; Sphere: {radius: 5, segments: 8}; Rgb: {30, 4, 2}; Emissive: {strength: match blink { true: 0.2; _: 24 }, color: {255, 50, 30}}; NoShadow; SpatialIgnore }
+  strobe_a { Position: {80, 34, 44}; Sphere: {radius: 5, segments: 8}; Rgb: {30, 4, 2}; Emissive: {strength: blink ? 24 : 0.2, color: {255, 50, 30}}; NoShadow; SpatialIgnore }
+  strobe_b { Position: {-80, 34, 44}; Sphere: {radius: 5, segments: 8}; Rgb: {30, 4, 2}; Emissive: {strength: blink ? 0.2 : 24, color: {255, 50, 30}}; NoShadow; SpatialIgnore }
   for i in 0..10 {
-    "window_{i}" { Rotation: {0, 0, i * 0.628 + clock * 0.05}; lit { Position: {58, 0, 6.2}; Box: {5, 3, 0.4}; Rgb: {30, 22, 8}; Emissive: {strength: 7, color: {255, 200, 120}}; NoShadow; SpatialIgnore } }
+    "window_{i}" { Rotation: {0, 0, i * 0.628}; AngularVelocity: {0, 0, 0.05}; lit { Position: {58, 0, 6.2}; Box: {5, 3, 0.4}; Rgb: {30, 22, 8}; Emissive: {strength: 7, color: {255, 200, 120}}; NoShadow; SpatialIgnore } }
   }
 }
 
@@ -160,7 +180,8 @@ template IceLane {
     const rr = 620 + (i * 83) % 420
     "ice_{i}" {
       Position: {cos(a) * rr * 1.4 - 600, 320 + sin(a * 1.7) * 160, -2100 + sin(a) * rr * 0.5}
-      Rotation: {i * 0.9 + clock * 0.03, i * 1.4 + clock * 0.02, i * 0.3}
+      Rotation: {i * 0.9, i * 1.4, i * 0.3}
+      AngularVelocity: {0.03, 0.02, 0}
       Scale: {1 + (i % 3) * 0.3, 0.72, 1 + (i % 2) * 0.4}
       IcoSphere: {radius: 8 + (i * 7) % 26, segments: 1}
       Rgb: {168, 196, 214}
@@ -207,7 +228,8 @@ template Heavens {
       for i in 0..16 {
         "wreck_{i}" : Soot {
           Position: {-1100 + i * 170, 240 + (i * 53) % 150, -1800 - (i * 91) % 500}
-          Rotation: {i * 0.8 + clock * 0.018, i * 1.3 + clock * 0.012, i * 0.4}
+          Rotation: {i * 0.8, i * 1.3, i * 0.4}
+          AngularVelocity: {0.018, 0.012, 0}
           Box: {24 + (i * 31) % 60, 6 + (i * 13) % 14, 12 + (i * 17) % 34}
           NoShadow
           SpatialIgnore

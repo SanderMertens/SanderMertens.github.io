@@ -29,6 +29,7 @@ template RelicBlade {
       Frustum: {segments: 4, smooth: false, length: 1.86, radius_bottom: 0.25, radius_top: 0.17}
       Rgb: {226, 230, 240}
       PbrMaterial: {metallic: 0.72, roughness: 0.3}
+      SpecularAnisotropy: {strength: 0.8, rotation: PI / 2}
     }
 
     point {
@@ -37,6 +38,7 @@ template RelicBlade {
       Cone: {segments: 4, length: 0.48, radius: 0.17}
       Rgb: {226, 230, 240}
       PbrMaterial: {metallic: 0.72, roughness: 0.3}
+      SpecularAnisotropy: {strength: 0.8, rotation: PI / 2}
     }
   }
 
@@ -58,6 +60,7 @@ template RelicBlade {
     Cylinder: {segments: 16, smooth: true, length: 0.62, radius: 0.07}
     Rgb: {58, 36, 30}
     PbrMaterial: {roughness: 0.6}
+    Sheen: {color: {150, 104, 84}, roughness: 0.45}
   }
 
   pommel {
@@ -77,6 +80,7 @@ template RelicOrb {
     Rgb: hue
     Emissive: {strength: 0.3, color: hue}
     PbrMaterial: {metallic: 0.3, roughness: 0.22}
+    ClearCoat: {strength: 1, roughness: 0.04}
   }
 
   ring_a {
@@ -131,6 +135,7 @@ template RelicCrown {
         IcoSphere: {radius: 0.1, segments: 1}
         Rgb: hue
         Emissive: {strength: 2, color: hue}
+        ClearCoat: {strength: 1, roughness: 0.02}
       }
     }
   }
@@ -140,6 +145,7 @@ template RelicCrown {
     IcoSphere: {radius: 0.17, segments: 1}
     Rgb: hue
     Emissive: {strength: 1, color: hue}
+    ClearCoat: {strength: 1, roughness: 0.02}
   }
 }
 
@@ -166,6 +172,7 @@ template RelicBand {
     Rgb: hue
     Emissive: {strength: 0.42, color: hue}
     PbrMaterial: {metallic: 0.3, roughness: 0.12}
+    ClearCoat: {strength: 1, roughness: 0.02}
   }
 }
 
@@ -173,7 +180,7 @@ template RelicPiece : OneShot {
   prop model: i32 = 0
   prop hue: Rgb = {255, 255, 255}
 
-  const k = match go { true: 1; _: 0.72 }
+  const k = go ? 1 : 0.72
 
   Position: {0, 0, 0}
   Scale: {k, k, k}

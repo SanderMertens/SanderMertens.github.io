@@ -6,6 +6,7 @@ using box.light
 using box.geometry
 using box.material
 using box.particle
+using box.animation
 using box.audio
 
 export mut world_ready = false
@@ -71,7 +72,6 @@ template Hearth : Target {
   prop id: i32 = 0
   prop x: f32 = 0
   prop z: f32 = 0
-  mut fl = false
   const lit = ts[id] > 0
   Position: {x, 0, z}
   base : MvStone { Position: {0, 0.45, 0}; Box: {1.8, 0.9, 1.4} }
@@ -80,7 +80,7 @@ template Hearth : Target {
   pot : MvIron { Position: {0.3, 1.2, 0}; Cylinder: {length: 0.4, radius: 0.32, segments: 10} }
   flue : MvDarkStone { Position: {-0.55, 1.6, -0.4}; Box: {0.5, 1.4, 0.5} }
   if lit {
-    flame : MvFlame { Scale: {match fl { true: 1.06; _: 0.94 }, match fl { true: 1.18; _: 0.88 }, match fl { true: 1.06; _: 0.94 }}; Transition: [Scale: {duration: 0.14}]; Position: {0, 0.45, 0.6}; Cone: {length: 0.4, radius: 0.28, segments: 8} }
+    flame : MvFlame { Scale: {1, 1, 1}; Animator: {clip: mv_flicker, time: fract(x * 0.7) * 1.1}; Position: {0, 0.45, 0.6}; Cone: {length: 0.4, radius: 0.28, segments: 8} }
     glow { Position: {0, 1.0, 1.0}; PointLight: {intensity: 4, range: 8}; Rgb: {255, 170, 90} }
     steam {
       Position: {0.3, 1.5, 0}
@@ -89,12 +89,6 @@ template Hearth : Target {
     }
   }
   async { block_rect(x - 1, z - 0.8, x + 1, z + 0.8) }
-  async {
-    while true {
-      await delay(0.12 + fract(x * 0.7 + clock * 3.1) * 0.12)
-      fl = !fl
-    }
-  }
 }
 
 template LampPost : Target {
@@ -107,7 +101,7 @@ template LampPost : Target {
   Rotation: {0, rot, 0}
   Lantern lantern(on: lit)
   if lit {
-    light { Position: {0.5, 2.0, 0}; PointLight: {intensity: 5, range: 11}; Rgb: {255, 196, 120} }
+    light { Position: {0.5, 2.0, 0}; PointLight: {intensity: 5, range: 11, shadows: true}; Rgb: {255, 196, 120} }
   }
   async { block_rect(x - 0.3, z - 0.3, x + 0.3, z + 0.3) }
 }
@@ -185,7 +179,7 @@ template HerbBed : Target {
     soil : MvSoil { Position: {0, 0.3, 0}; Box: {2.4, 0.06, 1.4} }
     for i in 0..6 {
       const hx = -0.9 + (i % 3) * 0.9
-      const hz = match i < 3 { true: -0.35; _: 0.35 }
+      const hz = i < 3 ? -0.35 : 0.35
       "herb_{i}" : MvLeafLight { Position: {hx, 0.6, hz}; Scale: {1, 1.3, 1}; IcoSphere: {radius: 0.3, segments: 1} }
       if i % 2 == 0 {
         "bloom_{i}" : MvPetalBlue { Position: {hx, 0.98, hz}; Sphere: {radius: 0.1, segments: 6} }
@@ -197,7 +191,7 @@ template HerbBed : Target {
     soil : MvSoilDry { Position: {0, 0.3, 0}; Box: {2.4, 0.06, 1.4} }
     for i in 0..6 {
       const hx = -0.9 + (i % 3) * 0.9
-      const hz = match i < 3 { true: -0.35; _: 0.35 }
+      const hz = i < 3 ? -0.35 : 0.35
       "herb_{i}" : MvCropDry { Position: {hx, 0.42, hz}; Rotation: {0.6, i, 0}; Cone: {length: 0.35, radius: 0.12, segments: 4} }
     }
   }
@@ -209,7 +203,6 @@ template HayFire : Target {
   prop q: i32 = 0
   prop x: f32 = 0
   prop z: f32 = 0
-  mut fl = false
   const shown = qs[q] >= QS_OPEN
   const out = ts[id] > 0
   Position: {x, 0, z}
@@ -223,9 +216,9 @@ template HayFire : Target {
   } else {
     hay : MvHay { Position: {0, 0.8, 0}; Scale: {1, 0.85, 1}; IcoSphere: {radius: 1.1, segments: 1} }
     if shown {
-      flame_a : MvFlame { Scale: {match fl { true: 1.06; _: 0.94 }, match fl { true: 1.18; _: 0.88 }, match fl { true: 1.06; _: 0.94 }}; Transition: [Scale: {duration: 0.14}]; Position: {0, 1.6, 0}; Cone: {length: 1.6, radius: 0.7, segments: 8} }
-      flame_b : MvFlame { Scale: {match fl { true: 1.06; _: 0.94 }, match fl { true: 1.18; _: 0.88 }, match fl { true: 1.06; _: 0.94 }}; Transition: [Scale: {duration: 0.14}]; Position: {0.5, 1.3, 0.3}; Cone: {length: 1.1, radius: 0.45, segments: 8} }
-      flame_c : MvFlame { Scale: {match fl { true: 1.06; _: 0.94 }, match fl { true: 1.18; _: 0.88 }, match fl { true: 1.06; _: 0.94 }}; Transition: [Scale: {duration: 0.14}]; Position: {-0.5, 1.2, -0.2}; Cone: {length: 1.0, radius: 0.4, segments: 8} }
+      flame_a : MvFlame { Scale: {1, 1, 1}; Animator: {clip: mv_flicker, time: fract(x * 0.7) * 1.1}; Position: {0, 1.6, 0}; Cone: {length: 1.6, radius: 0.7, segments: 8} }
+      flame_b : MvFlame { Scale: {1, 1, 1}; Animator: {clip: mv_flicker, time: fract(x * 0.7 + 0.37) * 1.1}; Position: {0.5, 1.3, 0.3}; Cone: {length: 1.1, radius: 0.45, segments: 8} }
+      flame_c : MvFlame { Scale: {1, 1, 1}; Animator: {clip: mv_flicker, time: fract(x * 0.7 + 0.71) * 1.1}; Position: {-0.5, 1.2, -0.2}; Cone: {length: 1.0, radius: 0.4, segments: 8} }
       light { Position: {0, 2.4, 0}; PointLight: {intensity: 10, range: 12}; Rgb: {255, 140, 60} }
       smoke {
         Position: {0, 2.5, 0}
@@ -240,12 +233,6 @@ template HayFire : Target {
     }
   }
   async { block_disc(x, z, 1.1) }
-  async {
-    while true {
-      await delay(0.12 + fract(x * 0.7 + clock * 3.1) * 0.12)
-      fl = !fl
-    }
-  }
 }
 
 template CropPatch : Target {
@@ -288,13 +275,13 @@ template Crow : Target {
   prop q: i32 = 0
   prop x: f32 = 0
   prop z: f32 = 0
-  mut peck = false
   const shown = qs[q] >= QS_OPEN
   const gone = ts[id] > 0
   if shown {
     bird {
       if gone {
         Position: {30, 18, -40}
+        Animator: {clip: mv_wingbeat}
       } else {
         Position: {0, 1.0, 0}
       }
@@ -303,22 +290,20 @@ template Crow : Target {
       body : MvDark { Position: {0, 0.45, 0}; Scale: {0.8, 0.8, 1.3}; Sphere: {radius: 0.3, segments: 8} }
       head {
         Position: {0, 0.62, 0.3}
-        Rotation: {match peck && !gone { true: 0.9; _: 0 }, 0, 0}
-        Transition: [Rotation: {duration: 0.12}]
+        if gone {
+          Rotation: {0, 0, 0}
+        } else {
+          Rotation: {0, 0, 0}
+          Animator: {clip: mv_peck, time: fract(id * 0.37) * 3}
+        }
         skull : MvDark { Position: {0, 0.08, 0.05}; Sphere: {radius: 0.18, segments: 8} }
         beak : MvGold { Position: {0, 0.06, 0.25}; Rotation: {HALF_PI, 0, 0}; Cone: {length: 0.2, radius: 0.06, segments: 5} }
       }
       tail : MvDark { Position: {0, 0.5, -0.4}; Rotation: {-0.4, 0, 0}; Box: {0.25, 0.04, 0.35} }
       if gone {
-        wing_a : MvDark { Position: {-0.4, 0.6, 0}; Rotation: {0, 0, match peck { true: 0.7; _: -0.3 }}; Transition: [Rotation: {duration: 0.12}]; Box: {0.7, 0.04, 0.35} }
-        wing_b : MvDark { Position: {0.4, 0.6, 0}; Rotation: {0, 0, match peck { true: -0.7; _: 0.3 }}; Transition: [Rotation: {duration: 0.12}]; Box: {0.7, 0.04, 0.35} }
+        wing_a : MvDark { Position: {-0.4, 0.6, 0}; Rotation: {0, 0, -0.3}; Box: {0.7, 0.04, 0.35} }
+        wing_b : MvDark { Position: {0.4, 0.6, 0}; Rotation: {0, 0, 0.3}; Box: {0.7, 0.04, 0.35} }
       }
-    }
-  }
-  async {
-    while true {
-      await delay(0.15 + fract(id * 0.37 + clock) * 0.9)
-      peck = !peck
     }
   }
 }
@@ -327,7 +312,6 @@ template Laundry : Target {
   prop id: i32 = 0
   prop x: f32 = 0
   prop z: f32 = 0
-  mut flap = false
   const dry = ts[id] > 0
   Position: {x, 0, z}
   pole_a : MvTimber { Position: {-2, 1.1, 0}; Box: {0.12, 2.2, 0.12} }
@@ -337,11 +321,11 @@ template Laundry : Target {
     const cx = -1.3 + i * 1.3
     if dry {
       if i == 0 {
-        "cloth_{i}" : MvClothRed { Position: {cx, 1.65, 0}; Rotation: {match flap { true: 0.45; _: 0.15 }, 0, 0}; Transition: [Rotation: {duration: 0.35}]; Box: {1.0, 0.9, 0.04} }
+        "cloth_{i}" : MvClothRed { Position: {cx, 1.65, 0}; Rotation: {0.3, 0, 0}; Animator: {clip: mv_flap, time: 0}; Box: {1.0, 0.9, 0.04} }
       } else if i == 1 {
-        "cloth_{i}" : MvPetalWhite { Position: {cx, 1.65, 0}; Rotation: {match flap { true: 0.2; _: 0.4 }, 0, 0}; Transition: [Rotation: {duration: 0.35}]; Box: {1.0, 0.9, 0.04} }
+        "cloth_{i}" : MvPetalWhite { Position: {cx, 1.65, 0}; Rotation: {0.3, 0, 0}; Animator: {clip: mv_flap, time: 0.7}; Box: {1.0, 0.9, 0.04} }
       } else {
-        "cloth_{i}" : MvClothBlue { Position: {cx, 1.65, 0}; Rotation: {match flap { true: 0.4; _: 0.1 }, 0, 0}; Transition: [Rotation: {duration: 0.35}]; Box: {1.0, 0.9, 0.04} }
+        "cloth_{i}" : MvClothBlue { Position: {cx, 1.65, 0}; Rotation: {0.3, 0, 0}; Animator: {clip: mv_flap, time: 0.35}; Box: {1.0, 0.9, 0.04} }
       }
     } else {
       "cloth_{i}" { Position: {cx, 1.5, 0}; Box: {0.9, 1.2, 0.06}; Rgb: {120, 116, 120}; PbrMaterial: {roughness: 0.4} }
@@ -354,12 +338,6 @@ template Laundry : Target {
   async {
     block_rect(x - 2.1, z - 0.15, x - 1.9, z + 0.15)
     block_rect(x + 1.9, z - 0.15, x + 2.1, z + 0.15)
-    while true {
-      await delay(0.35)
-      if ts[id] > 0 {
-        flap = !flap
-      }
-    }
   }
 }
 
@@ -378,7 +356,8 @@ template FogBank : Target {
     mist {
       Position: {0, 0.8, 0}
       ParticleEmitter: {max: 60, rate: 10, shape: EmitterBox, extents: {w / 2, 0.6, 1}, direction: {1, 0, 0}, spread: 180, speed: {0.1, 0.3}, lifetime: {3, 5}, size: {1.8, 2.6}, opacity: {0.2, 0.35}, color: {230, 236, 240}, seed: id}
-      ParticleCurves: {opacity: {keys: [{0, 0}, {0.3, 1}, {1, 0}]}}
+      ParticleCurves: {opacity: {keys: [{0, 0}, {0.3, 1}, {1, 0}]}, size: {keys: [{0, 0.8}, {1, 1.4}]}}
+      ParticleAppearance: {softness: 0.8}
     }
   }
   async {
@@ -420,13 +399,12 @@ template Brazier : Target {
   prop id: i32 = 0
   prop x: f32 = 0
   prop z: f32 = 0
-  mut fl = false
   const lit = ts[id] > 0
   Position: {x, 0, z}
   stand : MvDarkStone { Position: {0, 0.6, 0}; Frustum: {length: 1.2, radius_bottom: 0.45, radius_top: 0.3, segments: 8} }
   bowl : MvIron { Position: {0, 1.3, 0}; Frustum: {length: 0.35, radius_bottom: 0.3, radius_top: 0.6, segments: 10} }
   if lit {
-    flame : MvSpirit { Scale: {match fl { true: 1.06; _: 0.94 }, match fl { true: 1.18; _: 0.88 }, match fl { true: 1.06; _: 0.94 }}; Transition: [Scale: {duration: 0.14}]; Position: {0, 1.85, 0}; Cone: {length: 0.9, radius: 0.4, segments: 8} }
+    flame : MvSpirit { Scale: {1, 1, 1}; Animator: {clip: mv_flicker, time: fract(x * 0.7) * 1.1}; Position: {0, 1.85, 0}; Cone: {length: 0.9, radius: 0.4, segments: 8} }
     light { Position: {0, 2.2, 0}; PointLight: {intensity: 6, range: 10}; Rgb: {120, 190, 255} }
     wisps {
       Position: {0, 1.7, 0}
@@ -435,12 +413,6 @@ template Brazier : Target {
     }
   }
   async { block_disc(x, z, 0.6) }
-  async {
-    while true {
-      await delay(0.12 + fract(x * 0.7 + clock * 3.1) * 0.12)
-      fl = !fl
-    }
-  }
 }
 
 template Sapling : Target {
@@ -561,13 +533,12 @@ template Beacon : Target {
   prop id: i32 = 0
   prop x: f32 = 0
   prop z: f32 = 0
-  mut fl = false
   const lit = ts[id] > 0
   Position: {x, 0, z}
   base : MvStone { Position: {0, 0.4, 0}; Cylinder: {length: 0.8, radius: 1.1, segments: 10} }
   bowl : MvBrass { Position: {0, 1.1, 0}; Frustum: {length: 0.6, radius_bottom: 0.6, radius_top: 1.0, segments: 12} }
   if lit {
-    flame : MvFlame { Scale: {match fl { true: 1.06; _: 0.94 }, match fl { true: 1.18; _: 0.88 }, match fl { true: 1.06; _: 0.94 }}; Transition: [Scale: {duration: 0.14}]; Position: {0, 2.0, 0}; Cone: {length: 1.6, radius: 0.7, segments: 10} }
+    flame : MvFlame { Scale: {1, 1, 1}; Animator: {clip: mv_flicker, time: fract(x * 0.7) * 1.1}; Position: {0, 2.0, 0}; Cone: {length: 1.6, radius: 0.7, segments: 10} }
     light { Position: {0, 3, 0}; PointLight: {intensity: 14, range: 22}; Rgb: {255, 190, 110} }
     sparks {
       Position: {0, 1.8, 0}
@@ -576,12 +547,6 @@ template Beacon : Target {
     }
   }
   async { block_disc(x, z, 1.1) }
-  async {
-    while true {
-      await delay(0.12 + fract(x * 0.7 + clock * 3.1) * 0.12)
-      fl = !fl
-    }
-  }
 }
 
 template LemonadeBarrel : Target {
@@ -651,7 +616,6 @@ template Sheep : Target {
   prop to_x: f32 = 0
   prop to_z: f32 = 0
   mut air = false
-  mut graze = false
   const home = ts[id] > 0
   sheep {
     if home {
@@ -676,9 +640,9 @@ template Sheep : Target {
       }
       top_puff : MvWool { Position: {0, 1.18, 0}; Scale: {1, 0.7, 1.4}; Sphere: {radius: 0.3, segments: 10, smooth: true} }
       head {
-        Position: {0, match graze && !air { true: 0.55; _: 0.92 }, 0.72}
-        Rotation: {match graze && !air { true: 0.9; _: 0.3 }, 0, 0}
-        Transition: [Position: {duration: 0.6}, Rotation: {duration: 0.6}]
+        Position: {0, 0.92, 0.72}
+        Rotation: {0.3, 0, 0}
+        Animator: {clip: mv_graze, time: fract(id * 0.61) * 9, paused: air}
         face_ : MvDark { Position: {0, 0, 0.06}; Scale: {0.8, 0.9, 1.25}; Sphere: {radius: 0.2, segments: 12, smooth: true}; Rgb: {50, 44, 42} }
         tuft : MvWool { Position: {0, 0.16, -0.02}; Sphere: {radius: 0.15, segments: 10, smooth: true} }
         ear_a : MvDark { Position: {-0.19, 0.08, -0.02}; Rotation: {0, 0, 0.5}; Scale: {1.6, 0.5, 0.8}; Sphere: {radius: 0.08, segments: 8, smooth: true}; Rgb: {50, 44, 42} }
@@ -691,7 +655,7 @@ template Sheep : Target {
       tail : MvWool { Position: {0, 0.95, -0.72}; Sphere: {radius: 0.12, segments: 8, smooth: true} }
       for l in 0..4 {
         const lx = match l % 2 { 0: -0.25; _: 0.25 }
-        const lz = match l < 2 { true: -0.35; _: 0.35 }
+        const lz = l < 2 ? -0.35 : 0.35
         "leg_{l}" : MvDark { Position: {lx, 0.24, lz}; Capsule: {length: 0.32, radius: 0.06, segments: 6, smooth: true}; Rgb: {50, 44, 42} }
         "hoof_{l}" : MvDark { Position: {lx, 0.04, lz + 0.02}; Cylinder: {length: 0.08, radius: 0.07, segments: 8}; Rgb: {30, 26, 24} }
       }
@@ -705,12 +669,6 @@ template Sheep : Target {
         await delay(1.8)
         air = false
       }
-    }
-  }
-  async {
-    while true {
-      await delay(1.5 + fract(id * 0.61 + clock * 0.3) * 3)
-      graze = !graze
     }
   }
 }
@@ -750,7 +708,7 @@ template Planter : Target {
   prop z: f32 = 0
   const bloom = ts[id] > 0
   const shown = qs[q] >= QS_OPEN
-  Position: {x, match shown { true: 0; _: -3 }, z}
+  Position: {x, shown ? 0 : -3, z}
   pot : MvStone { Position: {0, 0.4, 0}; Frustum: {length: 0.8, radius_bottom: 0.6, radius_top: 0.8, segments: 10} }
   soil : MvSoil { Position: {0, 0.8, 0}; Cylinder: {length: 0.04, radius: 0.72, segments: 10} }
   if bloom {
@@ -813,7 +771,7 @@ template IceSculpture : Target {
   prop z: f32 = 0
   const made = ts[id] > 0
   const shown = qs[q] >= QS_OPEN
-  Position: {x, match shown { true: 0; _: -4 }, z}
+  Position: {x, shown ? 0 : -4, z}
   plinth : MvStone { Position: {0, 0.4, 0}; Box: {1.6, 0.8, 1.6} }
   if made {
     body : MvIce { Position: {0, 1.6, 0}; Scale: {1, 1.6, 1}; IcoSphere: {radius: 0.55, segments: 1} }
@@ -838,7 +796,7 @@ template GreatLantern : Target {
   const up = ts[id] > 0
   const lit = ts[lit_id] > 0
   const shown = qs[q] >= QS_OPEN
-  Position: {x, match shown { true: 0; _: -8 }, z}
+  Position: {x, shown ? 0 : -8, z}
   frame_a : MvTimber { Position: {-2, 3, 0}; Box: {0.3, 6, 0.3} }
   frame_b : MvTimber { Position: {2, 3, 0}; Box: {0.3, 6, 0.3} }
   bar : MvTimber { Position: {0, 6.1, 0}; Box: {4.4, 0.3, 0.3} }
@@ -851,7 +809,7 @@ template GreatLantern : Target {
     Transition: [Position: {duration: 2.5, timing_function: EaseInOut}]
     if lit {
       paper : MvGlow { Position: {0, 0.9, 0}; Scale: {1, 1.25, 1}; Sphere: {radius: 0.9, segments: 14, smooth: true} }
-      light { Position: {0, 0.9, 0}; PointLight: {intensity: 30, range: 30}; Rgb: {255, 200, 130} }
+      light { Position: {0, 0.9, 0}; PointLight: {intensity: 30, range: 30, shadows: true}; Rgb: {255, 200, 130} }
     } else {
       paper : MvClothRed { Position: {0, 0.9, 0}; Scale: {1, 1.25, 1}; Sphere: {radius: 0.9, segments: 14, smooth: true} }
     }
@@ -892,7 +850,7 @@ template Wisp {
   mut up = false
   const got = mote_got[i]
   if !got {
-    Position: {x, match up { true: 1.6; _: 1.0 }, z}
+    Position: {x, up ? 1.6 : 1.0, z}
     Transition: [Position: {duration: 1.3, timing_function: EaseInOut}]
     orb : MvSpirit { Position: {0, 0, 0}; Sphere: {radius: 0.22, segments: 10, smooth: true} }
     light { Position: {0, 0, 0}; PointLight: {intensity: 2, range: 5}; Rgb: {160, 220, 255} }

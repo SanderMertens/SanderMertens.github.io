@@ -7,6 +7,7 @@ using box.material
 using box.input
 using box.picking
 using box.particle
+using box.light
 using box.transition
 
 template StationConnector {
@@ -25,21 +26,20 @@ template StationConnector {
 template StationSlotView {
   prop idx: i32 = 0
 
-  const kind = st_kind_of(idx, st_grid_0, st_grid_1, st_grid_2)
+  const kind = st_grid[idx]
   const hover = st_hover_slot == idx
   const empty = kind == K_EMPTY
   const placing = st_tool > 0 && st_tool != K_DEMOLISH
   const selling = st_tool == K_DEMOLISH
-  const linked = st_near(st_built, idx)
+  const linked = st_near(idx)
   const affordable = st_credits >= st_cost(st_tool)
   const can_place = placing && empty && linked && affordable
-  const pad_free = (kind != K_PAX && kind != K_CARGO) || st_has(st_free_pax | st_free_cargo, idx)
-  const can_sell = selling && kind > K_HUB && pad_free
-  const east = idx % st_grid_w < st_grid_w - 1 && st_has(st_built, idx) && st_has(st_built, idx + 1)
-  const south = floor(idx / st_grid_w) < st_grid_h - 1 && st_has(st_built, idx) && st_has(st_built, idx + st_grid_w)
-  const busy = !st_has(st_free_pax | st_free_cargo, idx)
-  const raised = !st_has(st_rising, idx)
-  const sparks = st_has(st_sparks, idx)
+  const busy = st_pad_busy[idx]
+  const rising = st_rising[idx]
+  const sparks = st_sparks[idx]
+  const can_sell = selling && kind > K_HUB && !busy
+  const east = !empty && idx % st_grid_w < st_grid_w - 1 && st_occupied(idx + 1)
+  const south = !empty && floor(idx / st_grid_w) < st_grid_h - 1 && st_occupied(idx + st_grid_w)
 
   Position: {0, 0, 0}
 
@@ -80,7 +80,7 @@ template StationSlotView {
   }
 
   unit {
-    const lift = match raised { true: 0.06; _: -4.5 }
+    const lift = rising ? -4.5 : 0.06
     Position: {0, lift, 0}
     Transition: [Position: {duration: 1.1, timing_function: EaseOut}]
     if kind == K_HUB {
@@ -110,11 +110,22 @@ template StationSlotView {
     Position: {0, 0.3, 0}
     ParticleEmitter: {
       max: 240,
-      rate: match sparks { true: 160; _: 0 },
+      rate: sparks ? 160 : 0,
       shape: EmitterBox, extents: {2.5, 0.05, 2.5},
       direction: {0, 1, 0}, spread: 45, speed: {1.5, 4.5},
       lifetime: {0.25, 0.7}, size: {0.03, 0.09}, opacity: {0.6, 1},
       acceleration: {0, -3, 0}, color: {255, 214, 140}, seed: 40 + idx
+    }
+    ParticleAppearance: {blend: ParticleAdditive, stretch: 0.06}
+    ParticleCurves: {
+      opacity: {keys: [{0, 1}, {0.7, 0.8}, {1, 0}]},
+      color: {keys: [{0, {255, 255, 235}}, {0.35, {255, 200, 110}}, {1, {255, 90, 40}}]}
+    }
+    ParticleCollision: {height: 0.07, bounce: 0.35, friction: 0.4}
+    if sparks {
+      Rgb: {255, 196, 130}
+      PointLight: {intensity: 6, range: 5}
+      ParticleLight: {intensity: 6, curve: {keys: [{0, 1}, {0.25, 0.35}, {0.5, 1.3}, {0.75, 0.6}, {1, 1}]}, period: 0.18, loop: true}
     }
   }
 }
@@ -145,8 +156,21 @@ template StationSlot {
   async {
     while true {
       await on.click(this)
-      st_req_slot = idx
-      await ui.changed(st_click)
+      emit Click(slot: idx)
+    }
+  }
+
+  async {
+    while true {
+      const e = await Built
+      if e.slot == idx {
+        st_rising[idx] = true
+        st_sparks[idx] = true
+        await delay(0.08)
+        st_rising[idx] = false
+        await delay(1.22)
+        st_sparks[idx] = false
+      }
     }
   }
 }

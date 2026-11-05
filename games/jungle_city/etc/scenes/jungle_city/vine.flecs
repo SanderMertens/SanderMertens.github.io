@@ -3,7 +3,6 @@ using box.transform
 using box.geometry
 using box.material
 
-@tree Parent
 template CanopyVine {
   prop length: f32 = 3
   prop phase: f32 = 0

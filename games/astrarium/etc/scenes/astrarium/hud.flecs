@@ -14,8 +14,8 @@ using box.widgets
 template Aegis : OneShot {
   prop size: f32 = 132
 
-  const k = match go { true: 1; _: 0.6 }
-  const a = match go { true: 1; _: 0 }
+  const k = go ? 1 : 0.6
+  const a = go ? 1 : 0
 
   Position: {0, 0, 7}
   Scale: {k, k, 1}
@@ -135,8 +135,8 @@ template CooldownWipe : OneShot {
   prop seconds: f32 = 1
   prop size: f32 = 62
 
-  const sy = match go { true: 0.0001; _: 1 }
-  const py = match go { true: size / 2; _: 0 }
+  const sy = go ? 0.0001 : 1
+  const py = go ? size / 2 : 0
 
   Position: {0, py, 3}
   Scale: {1, sy, 1}
@@ -153,8 +153,8 @@ template CooldownWipe : OneShot {
 template ReadyFlash : OneShot {
   prop size: f32 = 62
 
-  const k = match go { true: 1.9; _: 1 }
-  const a = match go { true: 0; _: 1 }
+  const k = go ? 1.9 : 1
+  const a = go ? 0 : 1
 
   Position: {0, 0, 5}
   Scale: {k, k, 1}
@@ -182,6 +182,10 @@ fn spell_b(i: i32) -> i32 {
   match i { 0: 70; 1: 255; 2: 160; 3: 255; 4: 150; _: 90 }
 }
 
+fn digits(v: f32) -> i32 {
+  v >= 100 ? 3 : v >= 10 ? 2 : 1
+}
+
 template SpellFace {
   prop index: i32 = 0
   prop hover: bool = false
@@ -189,11 +193,11 @@ template SpellFace {
 
   const size = 62
   const hue: Rgb = {spell_r(index), spell_g(index), spell_b(index)}
-  const cooling = has_bit(spell_cooling, index)
-  const afford = has_bit(spell_afford, index)
+  const cooling = spell_cooling[index]
+  const afford = spell_afford[index]
   const live = afford && !cooling
-  const lift = match down { true: -1; _: match hover { true: 5; _: 0 } }
-  const k = match hover { true: 1.06; _: 1 }
+  const lift = down ? -1 : hover ? 5 : 0
+  const k = hover ? 1.06 : 1
 
   Position: {0, lift, 0}
   Scale: {k, k, 1}
@@ -204,7 +208,7 @@ template SpellFace {
   box.spatial.SpatialIgnore
 
   Halo glow(size: size * 2.1, color: {hue.r * 0.32, hue.g * 0.32, hue.b * 0.32}, z: -1) {
-    Opacity: {match hover && live { true: 1; _: 0.22 }}
+    Opacity: {hover && live ? 1 : 0.22}
     Transition: [Opacity: {duration: 0.2}]
   }
 
@@ -214,11 +218,7 @@ template SpellFace {
     LayoutItem: {width: {mode: Fixed, value: size}, height: {mode: Fixed, value: size}}
     Rect: {1, 1}
     Image: {texture: tex_panel}
-    if live {
-      Rgb: {hue.r * 0.17, hue.g * 0.17, hue.b * 0.2}
-    } else {
-      Rgb: {18, 20, 30}
-    }
+    Rgb: live ? {hue.r * 0.17, hue.g * 0.17, hue.b * 0.2} : {18, 20, 30}
     if hover {
       Border: {width: 2, radius: 7, color: {ui_pale.r, ui_pale.g, ui_pale.b, 255}}
     } else {
@@ -276,24 +276,15 @@ template SpellFace {
     cost {
       Position: {size / 2 - 13, -size / 2 + 8, 4}
       Text: {value: "{spell_cost(index):.0}", size: 11, font: font_body}
-      if has_bit(spell_afford, index) {
-        Rgb: {150, 214, 255}
-      } else {
-        Rgb: {255, 96, 86}
-      }
+      Rgb: afford ? {150, 214, 255} : {255, 96, 86}
       box.spatial.SpatialIgnore
     }
   }
 }
 
-template SpellSlot {
+template SpellSlot : HeadlessButton {
   prop index: i32 = 0
 
-  mut hover = false
-  mut down = false
-
-  Interactive
-  Cursor: {CursorPointer}
   LayoutItem: {width: {mode: Fixed, value: 66}, height: {mode: Fixed, value: 66}}
   Layout: {}
   Rect: {1, 1}
@@ -305,29 +296,16 @@ template SpellSlot {
   async {
     while true {
       await on.enter(this)
-      hover = true
       spell_hover = index
       await on.leave(this)
-      hover = false
       spell_hover = -1
     }
   }
 
   async {
     while true {
-      await on.press(this)
-      down = true
-      await on.release(this)
-      down = false
-    }
-  }
-
-  async {
-    while true {
-      await on.click(this)
-      rq_op = OP_CAST
-      rq_arg = index
-      await ui.changed(rq)
+      await on.change(this)
+      emit Cast(spell: index)
     }
   }
 }
@@ -371,11 +349,11 @@ template XpBar {
 
 template BottomDeck {
   const shown = hud_go && screen != SCREEN_TITLE
-  const y = match shown { true: 0; _: -190 }
+  const y = shown ? 0 : -190
 
   LayoutItem: {h: Center, v: Bottom, width: {mode: Grow}, height: {mode: Grow}, y: y}
   Layout: {direction: Row, v: Bottom, padding: {0, 14, 22, 22}}
-  Transition: [Position: {duration: 0.8, delay: match shown { true: 0.35; _: 0 }, timing_function: EaseInOut}]
+  Transition: [Position: {duration: 0.8, delay: shown ? 0.35 : 0, timing_function: EaseInOut}]
 
   Orb hp(
     ratio: hero_hp / hero_hp_max,
@@ -457,15 +435,9 @@ template NavFace {
   }
 }
 
-template NavTab {
+template NavTab : HeadlessButton {
   prop index: i32 = 0
-  prop label: string = ""
-  prop op: i32 = 0
 
-  mut hover = false
-
-  Interactive
-  Cursor: {CursorPointer}
   Layout: {direction: Row}
   LayoutItem: {width: {mode: Fixed, value: nav_tab_width}, height: {mode: Grow}}
   Rect: {1, 1}
@@ -476,18 +448,8 @@ template NavTab {
 
   async {
     while true {
-      await on.enter(this)
-      hover = true
-      await on.leave(this)
-      hover = false
-    }
-  }
-
-  async {
-    while true {
-      await on.click(this)
-      rq_op = op
-      await ui.changed(rq)
+      await on.change(this)
+      emit Navigate(screen: index)
     }
   }
 }
@@ -596,11 +558,11 @@ template Crest {
 
 template TopBar {
   const shown = hud_go && screen != SCREEN_TITLE
-  const y = match shown { true: 0; _: 100 }
+  const y = shown ? 0 : 100
 
   LayoutItem: {h: Center, v: Top, width: {mode: Grow}, height: {mode: Grow}, y: y}
   Layout: {direction: Row, v: Middle, padding: {8, 8, 22, 22}}
-  Transition: [Position: {duration: 0.8, delay: match shown { true: 0.2; _: 0 }, timing_function: EaseInOut}]
+  Transition: [Position: {duration: 0.8, delay: shown ? 0.2 : 0, timing_function: EaseInOut}]
 
   Crest crest()
 
@@ -611,9 +573,9 @@ template TopBar {
   tabs {
     Layout: {direction: Row}
     LayoutItem: {height: {mode: Fixed, value: 46}}
-    NavTab t_atlas(index: 1, label: "Atlas", op: OP_NAV_ATLAS)
-    NavTab t_armory(index: 2, label: "Armory", op: OP_NAV_ARMORY)
-    NavTab t_rites(index: 3, label: "Rites", op: OP_NAV_RITES)
+    NavTab t_atlas(index: SCREEN_ATLAS, label: "Atlas")
+    NavTab t_armory(index: SCREEN_ARMORY, label: "Armory")
+    NavTab t_rites(index: SCREEN_RITES, label: "Rites")
     NavMarker marker()
   }
 
@@ -631,7 +593,7 @@ template TopBar {
 template SpellTip {
   const shown = spell_hover >= 0 && screen != SCREEN_TITLE
   const i = max(spell_hover, 0)
-  const a = match shown { true: 1; _: 0 }
+  const a = shown ? 1 : 0
   const x = (i - 2.5) * 80
   const hue: Rgb = {spell_r(i), spell_g(i), spell_b(i)}
 
@@ -641,6 +603,7 @@ template SpellTip {
   Image: {texture: tex_panel}
   Rgb: ui_ink
   Border: {width: 1, radius: 5, color: {hue.r, hue.g, hue.b, 255}}
+  BoxShadow: {offset_y: -6, blur: 26, spread: 2, color: {0, 0, 0, 170}}
   Opacity: {a}
   Transition: [
     Opacity: {duration: 0.14},
@@ -651,16 +614,22 @@ template SpellTip {
   Caption name(text: spell_name(i), size: 17, font: font_display, color: hue)
   Caption blurb(text: spell_desc(i), size: 14, width: 272, color: ui_text)
   meta {
-    Layout: {direction: Row, spacing: 16}
-    Caption cost(text: "{spell_cost(i):.0} aether", size: 12, color: {150, 214, 255})
-    Caption cool(text: "{spell_cooldown(i) * haste_scale(stat_haste):.1}s recharge", size: 12, color: ui_muted)
-    Caption xp(text: "+{spell_xp(i):.0} xp", size: 12, color: ui_pale)
+    const cool = round(spell_cooldown(i) * haste_scale(stat_haste) * 10) / 10
+    const cool_at = digits(spell_cost(i)) + 10
+    const xp_at = cool_at + digits(cool) + 15
+    Text: {value: "{spell_cost(i):.0} aether   {cool:.1}s recharge   +{spell_xp(i):.0} xp", size: 12, font: font_body}
+    Rgb: {150, 214, 255}
+    TextSpans: {spans: [
+      {start: cool_at, end: xp_at, color: {ui_muted.r, ui_muted.g, ui_muted.b, 255}},
+      {start: xp_at, end: 255, color: {ui_pale.r, ui_pale.g, ui_pale.b, 255}}
+    ]}
+    box.spatial.SpatialIgnore
   }
 }
 
 template Banner {
-  const a = match banner_on { true: 1; _: 0 }
-  const y = match banner_on { true: -84; _: -54 }
+  const a = banner_on ? 1 : 0
+  const y = banner_on ? -84 : -54
 
   LayoutItem: {h: Center, v: Top, width: {mode: Fixed, value: 640}, height: {mode: Fixed, value: 96}, y: y}
   Layout: {}

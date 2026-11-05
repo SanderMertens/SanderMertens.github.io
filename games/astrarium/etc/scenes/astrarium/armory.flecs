@@ -9,12 +9,13 @@ using box.picking
 using box.input
 using box.transition
 using box.movement
+using box.widgets
 
 template Sparkle : OneShot {
   prop hue: Rgb = {255, 255, 255}
 
-  const k = match go { true: 1.6; _: 0.4 }
-  const a = match go { true: 0; _: 1 }
+  const k = go ? 1.6 : 0.4
+  const a = go ? 0 : 1
 
   Position: {0, 0, 5}
   Scale: {k, k, 1}
@@ -24,7 +25,7 @@ template Sparkle : OneShot {
   Rgb: hue
   Emissive: {strength: 1.2, color: hue}
   BlendMode: Additive
-  Rotation: {0, 0, match go { true: 1; _: 0 }}
+  Rotation: {0, 0, go ? 1 : 0}
   Transition: [
     Scale: {duration: 0.6, timing_function: EaseOut},
     Opacity: {duration: 0.6, timing_function: EaseIn},
@@ -44,12 +45,12 @@ template ItemFace {
 
   const size = 88
   const hue: Rgb = {rarity_r(rarity), rarity_g(rarity), rarity_b(rarity)}
-  const equipped = eq_of(slot, eq_0, eq_1, eq_2, eq_3) == owner
+  const equipped = eq[slot] == owner
   const shown = armory_filter < 0 || armory_filter == slot
-  const k = match down { true: 0.96; _: match hover { true: 1.07; _: 1 } }
-  const a = match shown { true: 1; _: 0.16 }
+  const k = down ? 0.96 : hover ? 1.07 : 1
+  const a = shown ? 1 : 0.16
 
-  Position: {0, 0, match hover { true: 3; _: 0 }}
+  Position: {0, 0, hover ? 3 : 0}
   Scale: {k, k, 1}
   Opacity: {a}
   Transition: [
@@ -106,7 +107,7 @@ template ItemFace {
       Rect: {60, 60}
       Image: {texture: icon}
       Rgb: {255, 255, 255}
-      Emissive: {strength: match hover { true: 0.16; _: 0 }, color: hue}
+      Emissive: {strength: hover ? 0.16 : 0, color: hue}
       Transition: [Emissive: {duration: 0.15}]
       box.spatial.SpatialIgnore
     }
@@ -125,7 +126,7 @@ template ItemFace {
   }
 }
 
-template Item {
+template Item : HeadlessButton {
   prop order: i32 = 0
   prop name: string = ""
   prop slot: i32 = 0
@@ -139,11 +140,6 @@ template Item {
   prop flavor: string = ""
   prop start: bool = false
 
-  mut hover = false
-  mut down = false
-
-  Interactive
-  Cursor: {CursorPointer}
   Layout: {}
   LayoutItem: {width: {mode: Fixed, value: 88}, height: {mode: Fixed, value: 88}}
   Rect: {1, 1}
@@ -155,51 +151,29 @@ template Item {
 
   async {
     if start {
-      if slot == 0 { eq_0 = this }
-      if slot == 1 { eq_1 = this }
-      if slot == 2 { eq_2 = this }
-      if slot == 3 { eq_3 = this }
-      await ui.changed(stats_dirty)
-      await ui.changed(hover_dirty)
+      eq[slot] = this
+      emit StatsChanged()
+      emit HoverChanged()
     }
   }
 
   async {
     while true {
       await on.enter(this)
-      hover = true
       armory_hover = this
       armory_hovering = true
       armory_tip = this
       armory_tip_on = true
-      await ui.changed(hover_dirty)
-    }
-  }
-
-  async {
-    while true {
+      emit HoverChanged()
       await on.leave(this)
-      hover = false
-      armory_left = this
-      await ui.changed(hover_left)
+      emit HoverLeft(item: this)
     }
   }
 
   async {
     while true {
-      await on.press(this)
-      down = true
-      await on.release(this)
-      down = false
-    }
-  }
-
-  async {
-    while true {
-      await on.click(this)
-      rq_op = OP_EQUIP
-      rq_entity = this
-      await ui.changed(rq)
+      await on.change(this)
+      emit Equip(item: this)
     }
   }
 }
@@ -227,17 +201,12 @@ template FilterFace {
   Transition: [Rgb: {duration: 0.15}]
   box.spatial.SpatialIgnore
 
-  Caption name(text: label, size: 12, font: font_display, color: match active { true: ui_pale; _: ui_muted })
+  Caption name(text: label, size: 12, font: font_display, color: active ? ui_pale : ui_muted)
 }
 
-template FilterTab {
+template FilterTab : HeadlessButton {
   prop value: i32 = -1
-  prop label: string = ""
 
-  mut hover = false
-
-  Interactive
-  Cursor: {CursorPointer}
   Layout: {direction: Row, h: Center, v: Middle}
   LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: 30}}
   Rect: {1, 1}
@@ -248,16 +217,7 @@ template FilterTab {
 
   async {
     while true {
-      await on.enter(this)
-      hover = true
-      await on.leave(this)
-      hover = false
-    }
-  }
-
-  async {
-    while true {
-      await on.click(this)
+      await on.change(this)
       armory_filter = value
     }
   }
@@ -281,19 +241,19 @@ template ComparisonRow {
   shift {
     LayoutItem: {width: {min: 34, max: 34}}
     Text: {
-      value: match delta > 0 { true: "+{delta}"; _: match delta < 0 { true: "{delta}"; _: "=" } },
+      value: delta > 0 ? "+{delta}" : delta < 0 ? "{delta}" : "=",
       size: 13,
       font: font_display,
       align: Right
     }
-    Rgb: match delta > 0 { true: {130, 244, 170}; _: match delta < 0 { true: {255, 110, 96}; _: {110, 114, 134} } }
+    Rgb: delta > 0 ? {130, 244, 170} : delta < 0 ? {255, 110, 96} : {110, 114, 134}
   }
 }
 
 template ItemTip {
   const it = armory_tip[Item]
   const hue: Rgb = {rarity_r(it.rarity), rarity_g(it.rarity), rarity_b(it.rarity)}
-  const a = match armory_tip_on { true: 1; _: 0 }
+  const a = armory_tip_on ? 1 : 0
 
   Position: {0, 0, 30}
   LayoutFloat: {anchor: armory_tip, h: Right, v: Top, anchor_h: Left, anchor_v: Top, x: -12, y: 8, flip: true}
@@ -302,6 +262,7 @@ template ItemTip {
   Rect: {1, 1}
   Rgb: {8, 10, 24}
   Border: {width: 1, radius: 5, color: {hue.r, hue.g, hue.b, 255}}
+  BoxShadow: {offset_y: -6, blur: 26, spread: 2, color: {0, 0, 0, 170}}
   Opacity: {a}
   Transition: [
     Opacity: {duration: 0.14},
@@ -312,10 +273,10 @@ template ItemTip {
   Caption name(text: it.name, size: 20, font: font_display, color: hue)
   Caption kind(text: "{rarity_name(it.rarity)} {slot_name(it.slot)}", size: 13, font: font_italic, color: ui_muted)
   Divider rule()
-  ComparisonRow might(stat: 0, value: it.might, delta: preview_might)
-  ComparisonRow ward(stat: 1, value: it.ward, delta: preview_ward)
-  ComparisonRow haste(stat: 2, value: it.haste, delta: preview_haste)
-  ComparisonRow aether(stat: 3, value: it.aether, delta: preview_aether)
+  ComparisonRow might(stat: 0, value: it.might, delta: preview[0])
+  ComparisonRow ward(stat: 1, value: it.ward, delta: preview[1])
+  ComparisonRow haste(stat: 2, value: it.haste, delta: preview[2])
+  ComparisonRow aether(stat: 3, value: it.aether, delta: preview[3])
   Divider rule_b()
   Caption flavor(text: it.flavor, size: 14, font: font_italic, width: 238, color: ui_text)
 }
@@ -357,7 +318,7 @@ template Socket {
   prop x: f32 = 0
   prop y: f32 = 0
 
-  const e = eq_of(slot, eq_0, eq_1, eq_2, eq_3)
+  const e = eq[slot]
 
   Position: {x, y, 2}
   box.spatial.SpatialIgnore
@@ -501,10 +462,10 @@ template ArmoryLedger {
   LayoutItem: {height: {mode: Grow}}
 
   Frame frame(title: "Attributes", width: 272, gap: 12) {
-    StatBar might(stat: 0, value: stat_might, delta: preview_might)
-    StatBar ward(stat: 1, value: stat_ward, delta: preview_ward)
-    StatBar haste(stat: 2, value: stat_haste, delta: preview_haste)
-    StatBar aether(stat: 3, value: stat_aether, delta: preview_aether)
+    StatBar might(stat: 0, value: stat_might, delta: preview[0])
+    StatBar ward(stat: 1, value: stat_ward, delta: preview[1])
+    StatBar haste(stat: 2, value: stat_haste, delta: preview[2])
+    StatBar aether(stat: 3, value: stat_aether, delta: preview[3])
 
     gap_a {
       LayoutItem: {height: {mode: Fixed, value: 6}}

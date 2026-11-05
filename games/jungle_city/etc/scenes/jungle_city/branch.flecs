@@ -3,7 +3,6 @@ using box.transform
 using box.geometry
 using box.material
 
-@tree Parent
 template CanopyBranch {
   prop ax: f32 = 0
   prop ay: f32 = 0
@@ -20,5 +19,4 @@ template CanopyBranch {
   Position: {(ax + bx) / 2, (ay + by) / 2, (az + bz) / 2}
   Rotation: {math.acos(dy / length), math.atan2(dx, dz), 0}
   Frustum: {length: length, radius_bottom: radius, radius_top: radius * 0.55, segments: 7, smooth: true}
-  TextureTransform: {scale_x: 1, scale_y: length / 2}
 }

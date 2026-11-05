@@ -1,13 +1,18 @@
 // Materials of the castle: weathered stone, slate, thatch, timber and turf, each a tint over a
 // tiling texture from castle/textures (generate.py writes them), with a little clear coat on the
-// water, the slate and the gilded finials. Pieces scale the textures with TextureTransform so a
-// block of stone is about the same size on every wall; the ground (turf, moat water, meadow and
-// fields) sizes them in world units with TextureMapping instead.
+// slate and the gilded finials and see-through water. The blocks of walls, gates and towers size
+// their textures in object units with TextureMapping (the Block prefabs), so a stone is the same
+// size on every wall and moves with a piece as it rises; round and conical parts keep their UVs,
+// scaled with TextureTransform. The ground sizes its textures in world units.
 
 using flecs.script
 using box.material
+using box.geometry
 using box.text
 using box.texture
+
+export const TS: f32 = 1.3
+export const TR: f32 = 1.5
 
 castle_font_display { Font: {path: "etc/scenes/castle/fonts/Cinzel.ttf"} }
 castle_font_body { Font: {path: "etc/scenes/castle/fonts/Spectral-Regular.ttf"} }
@@ -54,7 +59,7 @@ prefab CastleIron { Rgb: {58, 56, 56}; PbrMaterial: {metallic: 0.85, roughness: 
 prefab CastleGold { Rgb: {232, 184, 72}; PbrMaterial: {metallic: 1, roughness: 0.25} }
 prefab CastleBanner { Rgb: {168, 28, 36}; PbrMaterial: {roughness: 0.85}; Sheen: {color: {120, 60, 60}, roughness: 0.6} }
 prefab CastleBannerBlue { Rgb: {36, 62, 140}; PbrMaterial: {roughness: 0.85}; Sheen: {color: {60, 70, 120}, roughness: 0.6} }
-prefab CastleCloth { Rgb: {222, 212, 186}; PbrMaterial: {roughness: 0.95} }
+prefab CastleCloth { Rgb: {222, 212, 186}; PbrMaterial: {roughness: 0.95}; Sheen: {color: {120, 112, 96}, roughness: 0.7}; DiffuseTransmission: {factor: 0.45, color: {255, 230, 190}} }
 prefab CastleDark { Rgb: {28, 24, 22}; PbrMaterial: {roughness: 0.9} }
 prefab CastleWindow { Rgb: {60, 40, 20}; PbrMaterial: {roughness: 0.6}; Emissive: {strength: 1.2, color: {255, 170, 80}} }
 prefab CastleFlame { Rgb: {255, 190, 90}; Emissive: {strength: 6, color: {255, 140, 40}}; NoShadow }
@@ -76,7 +81,14 @@ prefab CastleCourt { Rgb: {196, 176, 136}; PbrMaterial: {roughness: 1}; PbrTextu
 prefab CastleSoil { Rgb: {124, 94, 66}; PbrMaterial: {roughness: 1}; PbrTextures: {albedo: castle_tex_earth, normal: castle_tex_earth_n} }
 prefab CastleDirt { Rgb: {176, 146, 104}; PbrMaterial: {roughness: 1}; PbrTextures: {albedo: castle_tex_earth, normal: castle_tex_earth_n} }
 prefab CastleCobble { Rgb: {186, 178, 164}; PbrMaterial: {roughness: 0.92}; PbrTextures: {albedo: castle_tex_cobble, normal: castle_tex_cobble_n} }
-prefab CastleWater { Rgb: {40, 86, 102}; PbrMaterial: {roughness: 0.06}; ClearCoat: {strength: 1, roughness: 0.03}; PbrTextures: {normal: castle_tex_water_n}; TextureTransform: {scale_x: 1.5, scale_y: 1.5} }
+prefab CastleWater {
+  Rgb: {56, 118, 140}
+  PbrMaterial: {roughness: 0.06}
+  ClearCoat: {strength: 1, roughness: 0.03}
+  Transmission: {transmission_factor: 0.45, ior: 1.33, thickness_factor: 1, attenuation_distance: 0.5, attenuation_color: {30, 96, 124}}
+  PbrTextures: {normal: castle_tex_water_n}
+  TextureTransform: {scale_x: 1.5, scale_y: 1.5}
+}
 prefab CastleRock { Rgb: {170, 164, 152}; PbrMaterial: {roughness: 0.95}; PbrTextures: {albedo: castle_tex_rubble, normal: castle_tex_rubble_n} }
 prefab CastleLeaf { Rgb: {84, 136, 58}; PbrMaterial: {roughness: 1}; PbrTextures: {albedo: castle_tex_leaves, normal: castle_tex_leaves_n} }
 prefab CastleLeafDark { Rgb: {50, 98, 54}; PbrMaterial: {roughness: 1}; PbrTextures: {albedo: castle_tex_leaves, normal: castle_tex_leaves_n} }
@@ -89,3 +101,35 @@ prefab CastleWheat { Rgb: {226, 188, 98}; PbrMaterial: {roughness: 1}; PbrTextur
 prefab CastleCrop { Rgb: {120, 160, 70}; PbrMaterial: {roughness: 1}; PbrTextures: {albedo: castle_tex_furrows, normal: castle_tex_furrows_n} }
 prefab CastlePlowed { Rgb: {128, 94, 64}; PbrMaterial: {roughness: 1}; PbrTextures: {albedo: castle_tex_furrows, normal: castle_tex_furrows_n} }
 prefab CastleFlax { Rgb: {150, 168, 150}; PbrMaterial: {roughness: 1}; PbrTextures: {albedo: castle_tex_furrows, normal: castle_tex_furrows_n} }
+
+prefab CastleStoneBlock : CastleStone { TextureMapping: {mode: MappingObject, size: TS}; TextureTransform: {scale_x: 1, scale_y: 1} }
+prefab CastleDarkStoneBlock : CastleDarkStone { TextureMapping: {mode: MappingObject, size: TR}; TextureTransform: {scale_x: 1, scale_y: 1} }
+
+castle_meadow_noise {
+  TextureGen: {
+    width: 512, height: 512, seed: 41
+    layers: [
+      {kind: GenNoise, frequency: 5, octaves: 4, amount: 0.8}
+      {kind: GenNoise, frequency: 23, octaves: 2, amount: 0.2, seed: 1}
+    ]
+  }
+}
+castle_meadow_mask {
+  TextureGen: {source: castle_meadow_noise, output: GenAlbedo, colors: [{0, {255, 0, 0}}, {0.45, {120, 135, 0}}, {0.7, {0, 255, 0}}, {0.88, {0, 200, 55}}, {1, {0, 60, 195}}]}
+}
+castle_meadow_lush { PbrTextures: {albedo: castle_tex_grass, normal: castle_tex_grass_n}; TextureTransform: {scale_x: 16, scale_y: 16} }
+castle_meadow_rough { PbrTextures: {albedo: castle_tex_grass, normal: castle_tex_grass_n}; TextureTransform: {scale_x: 9.3, scale_y: -9.3, offset_x: 0.37} }
+castle_meadow_bare { PbrTextures: {albedo: castle_tex_earth, normal: castle_tex_earth_n}; TextureTransform: {scale_x: 14, scale_y: 14} }
+
+prefab CastleMeadowBlend {
+  Rgb: {112, 148, 70}
+  PbrMaterial: {roughness: 1}
+  TextureMapping: {mode: MappingWorld, size: 64}
+  TextureBlend: {mask: castle_meadow_mask, layers: [castle_meadow_lush, castle_meadow_rough, castle_meadow_bare]}
+}
+
+prefab CastleFlatShape {
+  Path2D: {start: {-0.5, -1}, segments: [{kind: Line, end: {0.5, -1}}, {kind: Line, end: {0.56, 0.4}}, {kind: Line, end: {-0.56, 0.4}}], closed: true}
+}
+prefab CastleFlatProfile { Profile2D: {outer: CastleFlatShape} }
+prefab CastleRockBlock : CastleRock { TextureMapping: {mode: MappingObject, size: TR}; TextureTransform: {scale_x: 1, scale_y: 1} }

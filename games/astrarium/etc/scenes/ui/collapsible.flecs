@@ -11,6 +11,7 @@ using box.geometry
 using box.material
 using box.text
 using box.transform
+using box.transition
 
 // Behavior of a collapsible section: current is whether it is open. The section takes the focus
 // for its header, the child head, which comes before the content, the children of the instance:
@@ -144,6 +145,7 @@ template Collapsible : HeadlessCollapsible {
 
   const t = box.ui.theme[UiTheme]
   const ring = focused && FocusStatus[FocusStatus].visible
+  const edge = ring ? t.focus : t.border
 
   Layout: {direction: Column, spacing: t.spacing, padding: {0, t.padding, 0, 0}}
 
@@ -152,24 +154,14 @@ template Collapsible : HeadlessCollapsible {
     LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: header}}
     Rect: {1, 1}
 
-    if down {
-      Rgb: t.pressed
-    } else if hover {
-      Rgb: t.hover
-    } else {
-      Rgb: t.surface_alt
+    Rgb: down ? t.pressed : hover ? t.hover : t.surface_alt
+    Transition: [Rgb: WidgetFade]
+    Border: {
+      width: ring ? t.focus_width : 1, radius: t.radius,
+      color: {edge.r, edge.g, edge.b, 255}
     }
 
-    if ring {
-      Border: {
-        width: t.focus_width, radius: t.radius,
-        color: {t.focus.r, t.focus.g, t.focus.b, 255}
-      }
-    } else {
-      Border: {width: 1, radius: t.radius, color: {t.border.r, t.border.g, t.border.b, 255}}
-    }
-
-    Chevron chevron(direction: match current { true: "down"; _: "right" }, color: t.text_muted)
+    Chevron chevron(direction: current ? "down" : "right", color: t.text_muted)
 
     caption {
       Text: {value: title, size: t.font_size}

@@ -8,6 +8,7 @@
 module box.widgets
 
 using box.ui
+using box.transition
 
 // The dark theme a new UiTheme holds, in the style of the flecs script widget examples
 export const DarkTheme: UiTheme = {
@@ -64,3 +65,7 @@ export const LightTheme: UiTheme = {
   focus_width: 2,
   caret_blink: 0.5
 }
+
+export const WidgetFade: TransitionSpec = {duration: 0.12, timing_function: EaseOut}
+
+export const WidgetSlide: TransitionSpec = {duration: 0.15, timing_function: EaseInOut}

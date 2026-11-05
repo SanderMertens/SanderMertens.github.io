@@ -94,18 +94,18 @@ prefab hl_keys_two_five {
     {start: 0, duration: 1.6, pitch: 62, velocity: 0.68, pan: -0.083},
     {start: 0, duration: 1.6, pitch: 65, velocity: 0.64, pan: 0.083},
     {start: 0, duration: 1.6, pitch: 69, velocity: 0.6, pan: 0.25},
-    {start: 2.667, duration: 1, pitch: 58, velocity: 0.52, pan: -0.25},
-    {start: 2.667, duration: 1, pitch: 62, velocity: 0.49, pan: -0.083},
-    {start: 2.667, duration: 1, pitch: 65, velocity: 0.46, pan: 0.083},
-    {start: 2.667, duration: 1, pitch: 69, velocity: 0.43, pan: 0.25},
+    {start: 2.5, duration: 1, pitch: 58, velocity: 0.52, pan: -0.25},
+    {start: 2.5, duration: 1, pitch: 62, velocity: 0.49, pan: -0.083},
+    {start: 2.5, duration: 1, pitch: 65, velocity: 0.46, pan: 0.083},
+    {start: 2.5, duration: 1, pitch: 69, velocity: 0.43, pan: 0.25},
     {start: 4, duration: 1.6, pitch: 58, velocity: 0.72, pan: -0.25},
     {start: 4, duration: 1.6, pitch: 62, velocity: 0.68, pan: -0.083},
     {start: 4, duration: 1.6, pitch: 64, velocity: 0.64, pan: 0.083},
     {start: 4, duration: 1.6, pitch: 69, velocity: 0.6, pan: 0.25},
-    {start: 6.667, duration: 1, pitch: 58, velocity: 0.52, pan: -0.25},
-    {start: 6.667, duration: 1, pitch: 62, velocity: 0.49, pan: -0.083},
-    {start: 6.667, duration: 1, pitch: 64, velocity: 0.46, pan: 0.083},
-    {start: 6.667, duration: 1, pitch: 69, velocity: 0.43, pan: 0.25}
+    {start: 6.5, duration: 1, pitch: 58, velocity: 0.52, pan: -0.25},
+    {start: 6.5, duration: 1, pitch: 62, velocity: 0.49, pan: -0.083},
+    {start: 6.5, duration: 1, pitch: 64, velocity: 0.46, pan: 0.083},
+    {start: 6.5, duration: 1, pitch: 69, velocity: 0.43, pan: 0.25}
   ]}
 }
 
@@ -115,50 +115,50 @@ prefab hl_keys_turn {
     {start: 0, duration: 1.6, pitch: 60, velocity: 0.68, pan: -0.083},
     {start: 0, duration: 1.6, pitch: 64, velocity: 0.64, pan: 0.083},
     {start: 0, duration: 1.6, pitch: 67, velocity: 0.6, pan: 0.25},
-    {start: 2.667, duration: 1, pitch: 57, velocity: 0.52, pan: -0.25},
-    {start: 2.667, duration: 1, pitch: 60, velocity: 0.49, pan: -0.083},
-    {start: 2.667, duration: 1, pitch: 64, velocity: 0.46, pan: 0.083},
-    {start: 2.667, duration: 1, pitch: 67, velocity: 0.43, pan: 0.25},
+    {start: 2.5, duration: 1, pitch: 57, velocity: 0.52, pan: -0.25},
+    {start: 2.5, duration: 1, pitch: 60, velocity: 0.49, pan: -0.083},
+    {start: 2.5, duration: 1, pitch: 64, velocity: 0.46, pan: 0.083},
+    {start: 2.5, duration: 1, pitch: 67, velocity: 0.43, pan: 0.25},
     {start: 4, duration: 1.6, pitch: 60, velocity: 0.72, pan: -0.25},
     {start: 4, duration: 1.6, pitch: 64, velocity: 0.68, pan: -0.083},
     {start: 4, duration: 1.6, pitch: 65, velocity: 0.64, pan: 0.083},
     {start: 4, duration: 1.6, pitch: 69, velocity: 0.6, pan: 0.25},
-    {start: 6.667, duration: 1, pitch: 60, velocity: 0.52, pan: -0.25},
-    {start: 6.667, duration: 1, pitch: 64, velocity: 0.49, pan: -0.083},
-    {start: 6.667, duration: 1, pitch: 65, velocity: 0.46, pan: 0.083},
-    {start: 6.667, duration: 1, pitch: 69, velocity: 0.43, pan: 0.25},
+    {start: 6.5, duration: 1, pitch: 60, velocity: 0.52, pan: -0.25},
+    {start: 6.5, duration: 1, pitch: 64, velocity: 0.49, pan: -0.083},
+    {start: 6.5, duration: 1, pitch: 65, velocity: 0.46, pan: 0.083},
+    {start: 6.5, duration: 1, pitch: 69, velocity: 0.43, pan: 0.25},
     {start: 8, duration: 1.6, pitch: 62, velocity: 0.72, pan: -0.25},
     {start: 8, duration: 1.6, pitch: 65, velocity: 0.68, pan: -0.083},
     {start: 8, duration: 1.6, pitch: 69, velocity: 0.64, pan: 0.083},
     {start: 8, duration: 1.6, pitch: 72, velocity: 0.6, pan: 0.25},
-    {start: 10.667, duration: 1, pitch: 62, velocity: 0.52, pan: -0.25},
-    {start: 10.667, duration: 1, pitch: 65, velocity: 0.49, pan: -0.083},
-    {start: 10.667, duration: 1, pitch: 69, velocity: 0.46, pan: 0.083},
-    {start: 10.667, duration: 1, pitch: 72, velocity: 0.43, pan: 0.25},
+    {start: 10.5, duration: 1, pitch: 62, velocity: 0.52, pan: -0.25},
+    {start: 10.5, duration: 1, pitch: 65, velocity: 0.49, pan: -0.083},
+    {start: 10.5, duration: 1, pitch: 69, velocity: 0.46, pan: 0.083},
+    {start: 10.5, duration: 1, pitch: 72, velocity: 0.43, pan: 0.25},
     {start: 12, duration: 1.6, pitch: 55, velocity: 0.72, pan: -0.25},
     {start: 12, duration: 1.6, pitch: 58, velocity: 0.68, pan: -0.083},
     {start: 12, duration: 1.6, pitch: 61, velocity: 0.64, pan: 0.083},
     {start: 12, duration: 1.6, pitch: 65, velocity: 0.6, pan: 0.25},
-    {start: 14.667, duration: 1, pitch: 55, velocity: 0.52, pan: -0.25},
-    {start: 14.667, duration: 1, pitch: 58, velocity: 0.49, pan: -0.083},
-    {start: 14.667, duration: 1, pitch: 61, velocity: 0.46, pan: 0.083},
-    {start: 14.667, duration: 1, pitch: 65, velocity: 0.43, pan: 0.25},
+    {start: 14.5, duration: 1, pitch: 55, velocity: 0.52, pan: -0.25},
+    {start: 14.5, duration: 1, pitch: 58, velocity: 0.49, pan: -0.083},
+    {start: 14.5, duration: 1, pitch: 61, velocity: 0.46, pan: 0.083},
+    {start: 14.5, duration: 1, pitch: 65, velocity: 0.43, pan: 0.25},
     {start: 16, duration: 1.6, pitch: 60, velocity: 0.72, pan: -0.25},
     {start: 16, duration: 1.6, pitch: 64, velocity: 0.68, pan: -0.083},
     {start: 16, duration: 1.6, pitch: 65, velocity: 0.64, pan: 0.083},
     {start: 16, duration: 1.6, pitch: 69, velocity: 0.6, pan: 0.25},
-    {start: 18.667, duration: 1, pitch: 60, velocity: 0.52, pan: -0.25},
-    {start: 18.667, duration: 1, pitch: 64, velocity: 0.49, pan: -0.083},
-    {start: 18.667, duration: 1, pitch: 65, velocity: 0.46, pan: 0.083},
-    {start: 18.667, duration: 1, pitch: 69, velocity: 0.43, pan: 0.25},
+    {start: 18.5, duration: 1, pitch: 60, velocity: 0.52, pan: -0.25},
+    {start: 18.5, duration: 1, pitch: 64, velocity: 0.49, pan: -0.083},
+    {start: 18.5, duration: 1, pitch: 65, velocity: 0.46, pan: 0.083},
+    {start: 18.5, duration: 1, pitch: 69, velocity: 0.43, pan: 0.25},
     {start: 20, duration: 1.6, pitch: 53, velocity: 0.72, pan: -0.25},
     {start: 20, duration: 1.6, pitch: 59, velocity: 0.68, pan: -0.083},
     {start: 20, duration: 1.6, pitch: 64, velocity: 0.64, pan: 0.083},
     {start: 20, duration: 1.6, pitch: 69, velocity: 0.6, pan: 0.25},
-    {start: 22.667, duration: 1, pitch: 53, velocity: 0.52, pan: -0.25},
-    {start: 22.667, duration: 1, pitch: 59, velocity: 0.49, pan: -0.083},
-    {start: 22.667, duration: 1, pitch: 64, velocity: 0.46, pan: 0.083},
-    {start: 22.667, duration: 1, pitch: 69, velocity: 0.43, pan: 0.25}
+    {start: 22.5, duration: 1, pitch: 53, velocity: 0.52, pan: -0.25},
+    {start: 22.5, duration: 1, pitch: 59, velocity: 0.49, pan: -0.083},
+    {start: 22.5, duration: 1, pitch: 64, velocity: 0.46, pan: 0.083},
+    {start: 22.5, duration: 1, pitch: 69, velocity: 0.43, pan: 0.25}
   ]}
 }
 
@@ -168,18 +168,18 @@ prefab hl_keys_bridge {
     {start: 0, duration: 1.6, pitch: 64, velocity: 0.68, pan: -0.083},
     {start: 0, duration: 1.6, pitch: 67, velocity: 0.64, pan: 0.083},
     {start: 0, duration: 1.6, pitch: 71, velocity: 0.6, pan: 0.25},
-    {start: 2.667, duration: 1, pitch: 60, velocity: 0.52, pan: -0.25},
-    {start: 2.667, duration: 1, pitch: 64, velocity: 0.49, pan: -0.083},
-    {start: 2.667, duration: 1, pitch: 67, velocity: 0.46, pan: 0.083},
-    {start: 2.667, duration: 1, pitch: 71, velocity: 0.43, pan: 0.25},
+    {start: 2.5, duration: 1, pitch: 60, velocity: 0.52, pan: -0.25},
+    {start: 2.5, duration: 1, pitch: 64, velocity: 0.49, pan: -0.083},
+    {start: 2.5, duration: 1, pitch: 67, velocity: 0.46, pan: 0.083},
+    {start: 2.5, duration: 1, pitch: 71, velocity: 0.43, pan: 0.25},
     {start: 4, duration: 1.6, pitch: 60, velocity: 0.72, pan: -0.25},
     {start: 4, duration: 1.6, pitch: 63, velocity: 0.68, pan: -0.083},
     {start: 4, duration: 1.6, pitch: 66, velocity: 0.64, pan: 0.083},
     {start: 4, duration: 1.6, pitch: 69, velocity: 0.6, pan: 0.25},
-    {start: 6.667, duration: 1, pitch: 60, velocity: 0.52, pan: -0.25},
-    {start: 6.667, duration: 1, pitch: 63, velocity: 0.49, pan: -0.083},
-    {start: 6.667, duration: 1, pitch: 66, velocity: 0.46, pan: 0.083},
-    {start: 6.667, duration: 1, pitch: 69, velocity: 0.43, pan: 0.25}
+    {start: 6.5, duration: 1, pitch: 60, velocity: 0.52, pan: -0.25},
+    {start: 6.5, duration: 1, pitch: 63, velocity: 0.49, pan: -0.083},
+    {start: 6.5, duration: 1, pitch: 66, velocity: 0.46, pan: 0.083},
+    {start: 6.5, duration: 1, pitch: 69, velocity: 0.43, pan: 0.25}
   ]}
 }
 
@@ -218,7 +218,7 @@ prefab hl_walk {
     {start: 13, duration: 0.9, pitch: 48, velocity: 0.66},
     {start: 14, duration: 0.9, pitch: 45, velocity: 0.72},
     {start: 15, duration: 0.9, pitch: 47, velocity: 0.66},
-    {start: 15.667, duration: 0.3, pitch: 48, velocity: 0.45},
+    {start: 15.5, duration: 0.3, pitch: 48, velocity: 0.45},
     {start: 16, duration: 0.9, pitch: 46, velocity: 0.85},
     {start: 17, duration: 0.9, pitch: 50, velocity: 0.66},
     {start: 18, duration: 0.9, pitch: 53, velocity: 0.72},
@@ -235,7 +235,7 @@ prefab hl_walk {
     {start: 29, duration: 0.9, pitch: 47, velocity: 0.66},
     {start: 30, duration: 0.9, pitch: 50, velocity: 0.72},
     {start: 31, duration: 0.9, pitch: 44, velocity: 0.66},
-    {start: 31.667, duration: 0.3, pitch: 45, velocity: 0.45},
+    {start: 31.5, duration: 0.3, pitch: 45, velocity: 0.45},
     {start: 32, duration: 0.9, pitch: 43, velocity: 0.85},
     {start: 33, duration: 0.9, pitch: 46, velocity: 0.66},
     {start: 34, duration: 0.9, pitch: 50, velocity: 0.72},
@@ -252,7 +252,7 @@ prefab hl_walk {
     {start: 45, duration: 0.9, pitch: 45, velocity: 0.66},
     {start: 46, duration: 0.9, pitch: 42, velocity: 0.72},
     {start: 47, duration: 0.9, pitch: 44, velocity: 0.66},
-    {start: 47.667, duration: 0.3, pitch: 43, velocity: 0.45},
+    {start: 47.5, duration: 0.3, pitch: 43, velocity: 0.45},
     {start: 48, duration: 0.9, pitch: 43, velocity: 0.85},
     {start: 49, duration: 0.9, pitch: 46, velocity: 0.66},
     {start: 50, duration: 0.9, pitch: 50, velocity: 0.72},
@@ -275,63 +275,63 @@ prefab hl_walk {
 prefab hl_tune {
   NoteClip: {length: 64, notes: [
     {start: 1, duration: 0.667, pitch: 74, velocity: 0.78},
-    {start: 1.667, duration: 0.333, pitch: 72, velocity: 0.55},
+    {start: 1.5, duration: 0.333, pitch: 72, velocity: 0.55},
     {start: 2, duration: 1, pitch: 70, velocity: 0.78},
     {start: 3, duration: 1, pitch: 69, velocity: 0.78},
     {start: 4, duration: 1.667, pitch: 64, velocity: 0.78},
-    {start: 5.667, duration: 0.333, pitch: 67, velocity: 0.55},
+    {start: 5.5, duration: 0.333, pitch: 67, velocity: 0.55},
     {start: 6, duration: 1.5, pitch: 69, velocity: 0.78},
     {start: 8, duration: 0.667, pitch: 72, velocity: 0.78},
-    {start: 8.667, duration: 0.333, pitch: 69, velocity: 0.55},
+    {start: 8.5, duration: 0.333, pitch: 69, velocity: 0.55},
     {start: 9, duration: 2.5, pitch: 67, velocity: 0.78},
     {start: 12, duration: 0.667, pitch: 65, velocity: 0.78},
-    {start: 12.667, duration: 0.333, pitch: 67, velocity: 0.55},
+    {start: 12.5, duration: 0.333, pitch: 67, velocity: 0.55},
     {start: 13, duration: 0.667, pitch: 69, velocity: 0.78},
-    {start: 13.667, duration: 0.333, pitch: 72, velocity: 0.55},
+    {start: 13.5, duration: 0.333, pitch: 72, velocity: 0.55},
     {start: 14, duration: 2, pitch: 76, velocity: 0.78},
     {start: 16, duration: 1.667, pitch: 74, velocity: 0.78},
-    {start: 17.667, duration: 0.333, pitch: 72, velocity: 0.55},
+    {start: 17.5, duration: 0.333, pitch: 72, velocity: 0.55},
     {start: 18, duration: 2, pitch: 69, velocity: 0.78},
     {start: 20, duration: 0.667, pitch: 73, velocity: 0.78},
-    {start: 20.667, duration: 0.333, pitch: 74, velocity: 0.55},
+    {start: 20.5, duration: 0.333, pitch: 74, velocity: 0.55},
     {start: 21, duration: 1, pitch: 77, velocity: 0.78},
     {start: 22, duration: 1.667, pitch: 76, velocity: 0.78},
-    {start: 23.667, duration: 0.333, pitch: 74, velocity: 0.55},
+    {start: 23.5, duration: 0.333, pitch: 74, velocity: 0.55},
     {start: 24, duration: 2, pitch: 69, velocity: 0.78},
-    {start: 26.667, duration: 0.333, pitch: 65, velocity: 0.55},
+    {start: 26.5, duration: 0.333, pitch: 65, velocity: 0.55},
     {start: 27, duration: 1, pitch: 67, velocity: 0.78},
     {start: 28, duration: 2, pitch: 64, velocity: 0.78},
-    {start: 30.667, duration: 0.333, pitch: 62, velocity: 0.55},
+    {start: 30.5, duration: 0.333, pitch: 62, velocity: 0.55},
     {start: 31, duration: 1, pitch: 65, velocity: 0.78},
     {start: 32, duration: 0.667, pitch: 67, velocity: 0.78},
-    {start: 32.667, duration: 0.333, pitch: 70, velocity: 0.55},
+    {start: 32.5, duration: 0.333, pitch: 70, velocity: 0.55},
     {start: 33, duration: 0.667, pitch: 74, velocity: 0.78},
-    {start: 33.667, duration: 0.333, pitch: 77, velocity: 0.55},
+    {start: 33.5, duration: 0.333, pitch: 77, velocity: 0.55},
     {start: 34, duration: 2, pitch: 81, velocity: 0.78},
     {start: 36, duration: 1, pitch: 79, velocity: 0.78},
     {start: 37, duration: 0.667, pitch: 76, velocity: 0.78},
-    {start: 37.667, duration: 0.333, pitch: 74, velocity: 0.55},
+    {start: 37.5, duration: 0.333, pitch: 74, velocity: 0.55},
     {start: 38, duration: 2, pitch: 70, velocity: 0.78},
     {start: 40, duration: 1.667, pitch: 72, velocity: 0.78},
-    {start: 41.667, duration: 0.333, pitch: 71, velocity: 0.55},
+    {start: 41.5, duration: 0.333, pitch: 71, velocity: 0.55},
     {start: 42, duration: 2, pitch: 67, velocity: 0.78},
     {start: 44, duration: 0.667, pitch: 66, velocity: 0.78},
-    {start: 44.667, duration: 0.333, pitch: 69, velocity: 0.55},
+    {start: 44.5, duration: 0.333, pitch: 69, velocity: 0.55},
     {start: 45, duration: 0.667, pitch: 72, velocity: 0.78},
-    {start: 45.667, duration: 0.333, pitch: 75, velocity: 0.55},
+    {start: 45.5, duration: 0.333, pitch: 75, velocity: 0.55},
     {start: 46, duration: 2, pitch: 74, velocity: 0.78},
     {start: 48, duration: 1, pitch: 70, velocity: 0.78},
     {start: 49, duration: 0.667, pitch: 69, velocity: 0.78},
-    {start: 49.667, duration: 0.333, pitch: 70, velocity: 0.55},
+    {start: 49.5, duration: 0.333, pitch: 70, velocity: 0.55},
     {start: 50, duration: 2, pitch: 74, velocity: 0.78},
     {start: 52, duration: 0.667, pitch: 72, velocity: 0.78},
-    {start: 52.667, duration: 0.333, pitch: 70, velocity: 0.55},
+    {start: 52.5, duration: 0.333, pitch: 70, velocity: 0.55},
     {start: 53, duration: 1, pitch: 69, velocity: 0.78},
     {start: 54, duration: 2, pitch: 64, velocity: 0.78},
     {start: 56, duration: 3, pitch: 65, velocity: 0.78},
-    {start: 59.667, duration: 0.333, pitch: 64, velocity: 0.55},
+    {start: 59.5, duration: 0.333, pitch: 64, velocity: 0.55},
     {start: 60, duration: 1.667, pitch: 62, velocity: 0.78},
-    {start: 61.667, duration: 0.333, pitch: 65, velocity: 0.55},
+    {start: 61.5, duration: 0.333, pitch: 65, velocity: 0.55},
     {start: 62, duration: 1, pitch: 66, velocity: 0.78},
     {start: 63, duration: 1, pitch: 69, velocity: 0.78}
   ]}
@@ -340,10 +340,10 @@ prefab hl_tune {
 prefab hl_kick_beat {
   NoteClip: {length: 8, notes: [
     {start: 0, duration: 0.5, pitch: 69, velocity: 0.9},
-    {start: 2.667, duration: 0.5, pitch: 69, velocity: 0.7},
+    {start: 2.5, duration: 0.5, pitch: 69, velocity: 0.7},
     {start: 4, duration: 0.5, pitch: 69, velocity: 0.9},
-    {start: 5.667, duration: 0.5, pitch: 69, velocity: 0.55},
-    {start: 6.667, duration: 0.5, pitch: 69, velocity: 0.75}
+    {start: 5.5, duration: 0.5, pitch: 69, velocity: 0.55},
+    {start: 6.5, duration: 0.5, pitch: 69, velocity: 0.75}
   ]}
 }
 
@@ -351,20 +351,20 @@ prefab hl_snare_beat {
   NoteClip: {length: 4, notes: [
     {start: 1, duration: 0.5, pitch: 69, velocity: 0.75},
     {start: 3, duration: 0.5, pitch: 69, velocity: 0.8},
-    {start: 3.667, duration: 0.5, pitch: 69, velocity: 0.22}
+    {start: 3.5, duration: 0.5, pitch: 69, velocity: 0.22}
   ]}
 }
 
 prefab hl_hat_beat {
   NoteClip: {length: 4, notes: [
     {start: 0, duration: 0.25, pitch: 69, velocity: 0.55, pan: 0.3},
-    {start: 0.667, duration: 0.25, pitch: 69, velocity: 0.3, pan: 0.3},
+    {start: 0.5, duration: 0.25, pitch: 69, velocity: 0.3, pan: 0.3},
     {start: 1, duration: 0.25, pitch: 69, velocity: 0.48, pan: 0.3},
-    {start: 1.667, duration: 0.25, pitch: 69, velocity: 0.3, pan: 0.3},
+    {start: 1.5, duration: 0.25, pitch: 69, velocity: 0.3, pan: 0.3},
     {start: 2, duration: 0.25, pitch: 69, velocity: 0.55, pan: 0.3},
-    {start: 2.667, duration: 0.25, pitch: 69, velocity: 0.3, pan: 0.3},
+    {start: 2.5, duration: 0.25, pitch: 69, velocity: 0.3, pan: 0.3},
     {start: 3, duration: 0.25, pitch: 69, velocity: 0.48, pan: 0.3},
-    {start: 3.667, duration: 0.25, pitch: 69, velocity: 0.3, pan: 0.3}
+    {start: 3.5, duration: 0.25, pitch: 69, velocity: 0.3, pan: 0.3}
   ]}
 }
 
@@ -378,7 +378,7 @@ harbor_kit {
 }
 
 hl_keys {
-  Track: {instrument: hl_keys_inst}
+  Track: {instrument: hl_keys_inst, swing: 0.334, humanize: {timing: 6, velocity: 0.08}}
   AudioBus: {output: harbor, volume: 1.1, effects: [hl_phaser], sends: [{bus: room, level: 0.25}]}
   AudioMeter: {}
   open { ClipPlacement: {clip: hl_keys_two_five, start: 0} }
@@ -390,33 +390,33 @@ hl_keys {
 }
 
 hl_bass {
-  Track: {instrument: hl_bass_inst}
+  Track: {instrument: hl_bass_inst, swing: 0.334}
   AudioBus: {output: harbor, volume: 0.9, sends: [{bus: room, level: 0.1}]}
   AudioMeter: {}
   walk { ClipPlacement: {clip: hl_walk, start: 0} }
 }
 
 hl_vibes {
-  Track: {instrument: hl_vibes_inst}
+  Track: {instrument: hl_vibes_inst, swing: 0.334, humanize: {timing: 6, velocity: 0.08}}
   AudioBus: {output: harbor, volume: 0.7, pan: 0.15, sends: [{bus: room, level: 0.3}, {bus: echo, level: 0.22}]}
   AudioMeter: {}
   tune { ClipPlacement: {clip: hl_tune, start: 0} }
 }
 
 hl_kick {
-  Track: {instrument: hl_kick_inst}
+  Track: {instrument: hl_kick_inst, swing: 0.334}
   AudioBus: {output: harbor_kit}
   beat { ClipPlacement: {clip: hl_kick_beat, start: 0, duration: 64, loop: true} }
 }
 
 hl_brushes {
-  Track: {instrument: hl_brush_inst}
+  Track: {instrument: hl_brush_inst, swing: 0.334, humanize: {timing: 6, velocity: 0.08}}
   AudioBus: {output: harbor_kit, volume: 0.6, pan: -0.1}
   beat { ClipPlacement: {clip: hl_snare_beat, start: 0, duration: 64, loop: true} }
 }
 
 hl_hats {
-  Track: {instrument: hl_hat_inst}
+  Track: {instrument: hl_hat_inst, swing: 0.334, humanize: {timing: 6, velocity: 0.08}}
   AudioBus: {output: harbor_kit, volume: 0.5}
   beat { ClipPlacement: {clip: hl_hat_beat, start: 0, duration: 64, loop: true} }
 }

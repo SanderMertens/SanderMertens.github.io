@@ -232,21 +232,6 @@ template StationPlanet {
   }
 }
 
-fn st_hash(x: f32) -> f32 {
-  const v = sin(x) * 43758.5453
-  v - floor(v)
-}
-
-template StationStarfield {
-  for i in 0..900 {
-    const y = st_hash(i * 12.9898) * 2 - 1
-    const a = st_hash(i * 78.233) * 2 * PI
-    const m = st_hash(i * 37.719)
-    const r = sqrt(max(1 - y * y, 0))
-    { (IsA, StationStar); Position: {cos(a) * r * 1320, y * 1320, sin(a) * r * 1320}; IcoSphere: {radius: 0.55 + m * m * 1.1, segments: 0}; NoShadow }
-  }
-}
-
 template StationDrone {
   prop radius: f32 = 26
   prop speed: f32 = 0.12

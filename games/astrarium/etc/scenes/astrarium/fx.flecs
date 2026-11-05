@@ -89,7 +89,7 @@ template FallingStar {
 template ScreenFlash : OneShot {
   prop hue: Rgb = {255, 240, 200}
 
-  const a = match go { true: 0; _: 0.16 }
+  const a = go ? 0 : 0.16
 
   Position: {0, 0, -5}
   Rect: {4000, 4000}

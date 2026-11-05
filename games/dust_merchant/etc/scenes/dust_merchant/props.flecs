@@ -9,6 +9,8 @@ using box.light
 using box.spatial
 using box.particle
 using box.transition
+using box.movement
+using box.animation
 
 template Stamp {
   prop text: string = ""
@@ -119,6 +121,15 @@ template AssayBalance {
   }
 }
 
+DustJarPulse {
+  AnimationClip: {duration: 8.976}
+  glow {
+    AnimationTrack: {component: Emissive, member: "strength", curve: {kind: CurveBezier, keys: [
+      {0, 0.55, 0.28, 0.28}, {2.244, 0.95, 0, 0}, {4.488, 0.55, -0.28, -0.28}, {6.732, 0.15, 0, 0}, {8.976, 0.55, 0.28, 0.28}
+    ]}}
+  }
+}
+
 template DustJar {
   prop x: f32 = 0
   prop hue: Rgb = {150, 88, 40}
@@ -129,7 +140,7 @@ template DustJar {
   prop pulse: f32 = 0
 
   const here_now = dest == here && bus
-  const lit = bool_f(here_now) * 0.5 + pulse * (0.55 + sin(clock * 0.7) * 0.4)
+  const lit = bool_f(here_now) * 0.5 + pulse * 0.55
 
   Position: {x, 0, 0}
   SpatialIgnore
@@ -140,6 +151,9 @@ template DustJar {
     PbrMaterial: {metallic: 0, roughness: 1}
     Emissive: {strength: lit, color: glow}
     Transition: [Emissive: {duration: 0.8}]
+    if pulse > 0 {
+      Animator: {clip: DustJarPulse}
+    }
   }
   shell : GlassWare { Position: {0, 0.041, 0}; Cylinder: {radius: 0.022, length: 0.072, segments: 18, smooth: true} }
   neck : GlassWare { Position: {0, 0.083, 0}; Cylinder: {radius: 0.015, length: 0.012, segments: 14, smooth: true} }
@@ -199,7 +213,7 @@ template Steam {
   prop seed: i32 = 3
 
   ParticleEmitter: {
-    max: 64, rate: match on { true: rate; _: 0 }, shape: EmitterSphere, radius: 0.008, direction: {0, 1, 0}, spread: 12,
+    max: 64, rate: on ? rate : 0, shape: EmitterSphere, radius: 0.008, direction: {0, 1, 0}, spread: 12,
     speed: {0.03, 0.09}, lifetime: {1.1, 2.4}, size: {0.012, 0.03}, color: {224, 220, 212}, opacity: {0.08, 0.2}, seed: seed
   }
   ParticleForces: {gravity: {0, 0.025, 0}, turbulence: 0.05, drag: 0.4}
@@ -238,12 +252,12 @@ template CoffeeMachine {
     Position: {-0.084, 0.13, 0.037}
     Sphere: {radius: 0.0065, segments: 10, smooth: true}
     Rgb: {60, 8, 4}
-    Emissive: {strength: match brewing { true: 6; _: 0.02 }, color: {255, 70, 30}}
+    Emissive: {strength: brewing ? 6 : 0.02, color: {255, 70, 30}}
     Transition: [Emissive: {duration: 0.3}]
   }
   dial : BlackAnod { Position: {0.044, 0.18, 0.038}; Rotation: {PI / 2, 0, 0}; Cylinder: {radius: 0.024, length: 0.004, segments: 20, smooth: true}; Rgb: {14, 14, 14} }
   dial_face { Position: {0.044, 0.18, 0.0404}; Circle: {0.02}; Rgb: {168, 160, 136} }
-  dial_needle { Position: {0.044, 0.18, 0.041}; Rotation: {0, 0, match brewing { true: -0.4; _: 2.5 }}; Transition: [Rotation: {duration: 2.2, timing_function: EaseOut}]; Rect: {0.03, 0.0016}; Rgb: {120, 8, 4} }
+  dial_needle { Position: {0.044, 0.18, 0.041}; Rotation: {0, 0, brewing ? -0.4 : 2.5}; Transition: [Rotation: {duration: 2.2, timing_function: EaseOut}]; Rect: {0.03, 0.0016}; Rgb: {120, 8, 4} }
   asset_tag : Paper { Position: {-0.014, 0.142, 0.0375}; Box: {0.15, 0.05, 0.0012}; Rgb: {190, 186, 160} }
   Stamp tag_a(text: "PROPERTY OF", size: 10) { Position = {-0.014, 0.153, 0.04} }
   Stamp tag_b(text: "TOLL STN ORO", size: 15, ink: {90, 6, 4}, font: font_stencil) { Position = {-0.014, 0.135, 0.04} }
@@ -320,21 +334,21 @@ template Underdash {
       Position: {0, 0, 0.6}
       Rect: {520, 130}
       Rgb: {4, 2, 1}
-      Emissive: {strength: match warm { true: 0.42; _: 0 }, color: {255, 66, 16}}
+      Emissive: {strength: warm ? 0.42 : 0, color: {255, 66, 16}}
       Transition: [Emissive: {duration: 2.6, timing_function: EaseOut}]
     }
     Louver grille(w: 520, h: 130, slats: 8, tone: {28, 28, 28})
   }
   heater_light {
     Position: {-0.38, 0.22, -0.82}
-    PointLight: {intensity: match warm { true: 0.11; _: 0 }, range: 1.3}
+    PointLight: {intensity: warm ? 0.11 : 0, range: 1.3}
     Rgb: {255, 110, 44}
     Transition: [PointLight: {duration: 2.6}]
   }
 
-  kick_a : Faceplate { Position: {0.28, 0.27, -0.99}; Box: {0.54, 0.2, 0.02}; Rgb: {58, 96, 92}; TextureTransform: {scale_x: 0.8, scale_y: 0.3} }
+  kick_a : Faceplate { Position: {0.28, 0.27, -0.99}; Box: {0.54, 0.2, 0.02}; Rgb: {58, 96, 92}; TextureMapping: {mode: MappingObject, size: 0.62} }
   for i in 0..4 {
-    "kick_dzus_{i}" : BareSteel { Position: {match i % 2 { 0: 0.04; _: 0.52 }, match i < 2 { true: 0.34; _: 0.2 }, -0.978}; Rotation: {PI / 2, 0, 0}; Cylinder: {radius: 0.009, length: 0.004, segments: 10, smooth: true}; Rgb: {120, 116, 106} }
+    "kick_dzus_{i}" : BareSteel { Position: {i % 2 == 0 ? 0.04 : 0.52, i < 2 ? 0.34 : 0.2, -0.978}; Rotation: {PI / 2, 0, 0}; Cylinder: {radius: 0.009, length: 0.004, segments: 10, smooth: true}; Rgb: {120, 116, 106} }
   }
 
   pipe_a : Copper { Tube3: {a: {-0.86, 0.13, -0.97}, b: {0.58, 0.13, -0.97}, r: 0.014, tone: {184, 104, 62}, rough: 0.42} }
@@ -365,8 +379,8 @@ template Underdash {
     Position: {0.82, 0.075, -0.3}
     Rotation: {0, 0.5, 0}
     SpatialIgnore
-    body : Mustard { Position: {0, 0, 0}; RoundedBox: {0.28, 0.13, 0.16, 0.012, segments: 2}; TextureTransform: {scale_x: 0.4, scale_y: 0.3} }
-    lid : Mustard { Position: {0, 0.085, 0}; RoundedBox: {0.285, 0.03, 0.165, 0.012, segments: 2}; Rgb: {160, 112, 36}; TextureTransform: {scale_x: 0.4, scale_y: 0.1} }
+    body : Mustard { Position: {0, 0, 0}; RoundedBox: {0.28, 0.13, 0.16, 0.012, segments: 2}; TextureMapping: {mode: MappingObject, size: 0.62} }
+    lid : Mustard { Position: {0, 0.085, 0}; RoundedBox: {0.285, 0.03, 0.165, 0.012, segments: 2}; Rgb: {160, 112, 36}; TextureMapping: {mode: MappingObject, size: 0.62} }
     latch : BareSteel { Position: {0, 0.065, 0.084}; Box: {0.03, 0.03, 0.004} }
     grip : BareSteel { Position: {0, 0.112, 0}; Rotation: {PI / 2, 0, 0}; TorusShell: {radius: 0.05, tube: 0.005, ring_start: -1.4, ring_end: 1.4, tube_start: 0, tube_end: 6.283, segments: 12, rings: 8} }
     Stamp words(text: "lunch. not cargo.", size: 22, font: font_hand) { Position = {0, 0, 0.0815} }
@@ -385,12 +399,12 @@ template MapLamp {
     Rotation: {pitch_of(at, aim), yaw_of(at, aim), 0}
     SpatialIgnore
     shade : Mustard { Rotation: {PI / 2, 0, 0}; Frustum: {radius_bottom: 0.016, radius_top: 0.036, length: 0.06, segments: 16, smooth: true}; Rgb: {150, 110, 40} }
-    bulb { Position: {0, 0, 0.018}; Sphere: {radius: 0.012, segments: 10, smooth: true}; Rgb: {60, 50, 30}; Emissive: {strength: match lit { true: 4; _: 0 }, color: {255, 196, 120}}; Transition: [Emissive: {duration: 0.4}] }
+    bulb { Position: {0, 0, 0.018}; Sphere: {radius: 0.012, segments: 10, smooth: true}; Rgb: {60, 50, 30}; Emissive: {strength: lit ? 4 : 0, color: {255, 196, 120}}; Transition: [Emissive: {duration: 0.4}] }
   }
   beam_light {
     Position: {at.x, at.y, at.z}
     Rotation: {pitch_of(at, aim), yaw_of(at, aim), 0}
-    SpotLight: {intensity: match lit { true: 1.0; _: 0 }, range: 1.6, inner_angle: 26, outer_angle: 54}
+    SpotLight: {intensity: lit ? 1.0 : 0, range: 1.6, inner_angle: 26, outer_angle: 54}
     Rgb: {255, 206, 140}
   }
 }

@@ -63,19 +63,19 @@ template VoidDust {
   Position: {0, 1.4, -70}
   Rotation: {PI / 2, 0, 0}
   ParticleEmitter: {
-    max: 1600, rate: match in_tunnel { true: 0; _: 36 + kn[KN_THROTTLE] * 260 + bool_f(jumping) * 1400 }, shape: EmitterMesh, source: VoidRing,
+    max: 1600, rate: in_tunnel ? 0 : 36 + kn[KN_THROTTLE] * 260 + bool_f(jumping) * 1400, shape: EmitterMesh, source: VoidRing,
     direction: {0, 1, 0}, spread: 0, speed: {push, push * 1.3},
     lifetime: {110 / push, 150 / push}, size: {0.03, 0.08}, color: {214, 228, 255}, opacity: {0.2, 0.7}, seed: 12
   }
   ParticleForces: {gravity: {0, 0, 0}}
-  ParticleAppearance: {shape: ParticleCircle, blend: ParticleAdditive, stretch: match jumping { true: 0.16; _: 0.018 }}
+  ParticleAppearance: {shape: ParticleCircle, blend: ParticleAdditive, stretch: jumping ? 0.16 : 0.018}
   SpatialIgnore
 }
 
 template VentSmoke {
   Position: {0.36, 2.2, -0.1}
   ParticleEmitter: {
-    max: 180, rate: match smoke { true: 46; _: 0 }, shape: EmitterSphere, radius: 0.03, direction: {0, -1, 0}, spread: 30,
+    max: 180, rate: smoke ? 46 : 0, shape: EmitterSphere, radius: 0.03, direction: {0, -1, 0}, spread: 30,
     speed: {0.05, 0.22}, lifetime: {1.4, 3.2}, size: {0.05, 0.13}, color: {150, 146, 140}, opacity: {0.12, 0.3}, seed: 9
   }
   ParticleForces: {gravity: {0, -0.03, 0}, turbulence: 0.18, drag: 0.5}
@@ -92,7 +92,7 @@ template CargoLeak {
 
   Position: {side * pod_x(0.62), pod_top(0.62, side, 0, 0.32).y, pod_z(0.62)}
   ParticleEmitter: {
-    max: 240, rate: match in_tunnel { true: 0; _: 16 }, shape: EmitterSphere, radius: 0.03, direction: {side * 0.3, 0.35, 1}, spread: 13,
+    max: 240, rate: in_tunnel ? 0 : 16, shape: EmitterSphere, radius: 0.03, direction: {side * 0.3, 0.35, 1}, spread: 13,
     speed: {0.24, 0.62}, lifetime: {3, 6.5}, size: {0.03, 0.09}, color: {196, 128, 66}, color_variance: {20, 20, 12}, opacity: {0.16, 0.34}, seed: 41
   }
   ParticleForces: {gravity: {0, 0, 0}, turbulence: 0.08, drag: 0.05}
@@ -125,7 +125,7 @@ template ShutterPlate {
   prop lag: f32 = 0
 
   const shut = sw[SW_SHUTTER] && bus
-  const size = match shut { true: 1; _: 0.001 }
+  const size = shut ? 1 : 0.001
   const hub = hull_pt((s0 + s1) / 2, (t0 + t1) / 2)
 
   Position: {hub.x, hub.y, hub.z}

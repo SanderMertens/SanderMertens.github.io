@@ -3,7 +3,6 @@ using box.transform
 using box.geometry
 using box.material
 
-@tree Parent
 template CanopyUnderstory {
   prop seed: i32 = 0
   prop gate: f32 = 0
@@ -13,8 +12,8 @@ template CanopyUnderstory {
     const side = g.u(4)
     const along = g.f(13.6) - 6.8
     const dist = inset + g.f(7 - inset)
-    const x = match side { 0: along; 1: along; 2: dist; _: -dist }
-    const z = match side { 0: dist; 1: -dist; 2: along; _: along }
+    const x = match side { 0, 1: along; 2: dist; _: -dist }
+    const z = match side { 0: dist; 1: -dist; _: along }
     const kind = g.u(12)
     const size = 0.8 + g.f(0.7)
     const clear = !(z > 1.5 && ((x > -1.9 && x < 1.9) || (x > gate - 3.2 && x < gate + 2)))
@@ -36,7 +35,6 @@ template CanopyUnderstory {
   }
 }
 
-@tree Parent
 template CanopyDistricts {
   prop columns: i32 = 10
   prop rows: i32 = 9
@@ -82,7 +80,7 @@ template CanopyDistricts {
       {
         if px < -7 { Position: {px - 5, 0, pz} } else { Position: {px + 5, 0, pz} }
         if px < -7 || px > 7 {
-          const s = match px < 0 { true: -1.0; _: 1.0 }
+          const s = px < 0 ? -1.0 : 1.0
           const lot_x = px + s * 5
           const lot_abs = lot_x * s
           const inner = px * s < spacing * 1.01
@@ -92,11 +90,11 @@ template CanopyDistricts {
           const bank_end = (lot_abs - 7.5 + node / 2) * -s
           const plaza_end = (lot_abs - plaza_radius + 0.02) * -s
           const main_a = s * (hs - node / 2)
-          const inner_end = match cleared { true: plaza_end; _: bank_end }
-          const main_b = match inner { true: inner_end; _: -main_a }
+          const inner_end = cleared ? plaza_end : bank_end
+          const main_b = inner ? inner_end : -main_a
           const main_len = (main_a - main_b) * s
           const main_x = (main_a + main_b) / 2
-          const ground_b = match inner { true: (lot_abs - 8.6) * -s; _: -main_a }
+          const ground_b = inner ? (lot_abs - 8.6) * -s : -main_a
           const ground_len = (main_a - ground_b) * s
           const ground_x = (main_a + ground_b) / 2
 
@@ -105,10 +103,7 @@ template CanopyDistricts {
           const downtown = math.max(0, 1 - px * px / (downtown_x * downtown_x)) * math.max(0, 1 - pz * pz / (downtown_z * downtown_z))
           const centrality = math.max(downtown, midrise * (1 - nx * nx) * (1 - nz * nz))
           const floors: i32 = base_floors + rng.u(floor_variation) + math.floor(center_floors * centrality)
-          const families = match centrality > 0.55 {
-            true: [0, 1, 3, 3, 4, 6, 6]
-            false: [0, 1, 2, 4, 5, 5, 6]
-          }
+          const families = centrality > 0.55 ? [0, 1, 3, 3, 4, 6, 6] : [0, 1, 2, 4, 5, 5, 6]
           const kind = families[rng.u(7)]
           const wall = walls[rng.u(5)]
           const timber: Rgb = woods[rng.u(3)]
@@ -118,12 +113,12 @@ template CanopyDistricts {
           const sz = 0.72 + centrality * 0.12 + rng.f(0.24)
           const is_landmark = centrality > 0.9 && skyscraper_floors > 0
           const landmark = (x + z * 2 + seed) % 6
-          const front_at = match is_landmark { true: landmark_front[landmark]; _: family_front[kind] }
-          const gate_at = match is_landmark { true: landmark_gate[landmark]; _: 0.0 }
+          const front_at = is_landmark ? landmark_front[landmark] : family_front[kind]
+          const gate_at = is_landmark ? landmark_gate[landmark] : 0.0
           const zf = front_at * sz
           const gx = gate_at * sx * s
           const walk_end = hs - 1.2
-          const opening = match cleared { true: 1000.0; _: gx - main_x }
+          const opening = cleared ? 1000.0 : gx - main_x
 
           if !cleared {
             if is_landmark {
@@ -147,14 +142,14 @@ template CanopyDistricts {
             }
             CanopyGangway(length: walk_end - zf, variant: h) { Position: {gx, deck_y, zf} }
             CanopyLift(height: deck_y, variant: h) { Position: {gx - 1.75, 0, (zf + walk_end) / 2} }
-            forecourt : CanopyPaver { Position: {0, 0.015, 1.5 + hs / 2}; Box: {2.6, 0.05, hs + 0.6}; TextureTransform: {scale_x: 1, scale_y: 2.5} }
+            forecourt : CanopyPaver { Position: {0, 0.015, 1.5 + hs / 2}; Box: {2.6, 0.05, hs + 0.6} }
             for t in 0..trees_per_block {
               const side = plants.u(4)
               const along = plants.f(13) - 6.5
-              const reach = match is_landmark { true: 6.4; _: 5.2 }
+              const reach = is_landmark ? 6.4 : 5.2
               const dist = reach + plants.f(6.8 - reach)
-              const tx = match side { 0: along; 1: along; 2: dist; _: -dist }
-              const tz = match side { 0: dist; 1: -dist; 2: along; _: along }
+              const tx = match side { 0, 1: along; 2: dist; _: -dist }
+              const tz = match side { 0: dist; 1: -dist; _: along }
               const tree_h = 5.4 + plants.f(6.5)
               const tree_v = plants.u(100000)
               if !(tz > 1.5 && ((tx > -2.2 && tx < 2.2) || (tx > gx - 3.4 && tx < gx + 2.2))) {
@@ -183,7 +178,7 @@ template CanopyDistricts {
           }
 
           const stair_here = z > 0 && (x * 3 + z * 5 + seed) % 4 == 0
-          const stair_x = match stair_here { true: s; _: 0.0 }
+          const stair_x = stair_here ? s : 0.0
           CanopyJunction(
             size: node,
             front: z < rows - 1,
@@ -225,7 +220,6 @@ template CanopyDistricts {
   }
 }
 
-@tree Parent
 template CanopyCivicSquare {
   prop spacing: f32 = 17
   prop radius: f32 = 11
@@ -237,7 +231,7 @@ template CanopyCivicSquare {
       for row in 0..2 {
         CanopyParterre(w: reach - radius + 2.2, d: spacing * 0.56, seed: side * 3 + row) { Position: {0, 0, (row - 0.5) * spacing * 0.86} }
       }
-      axis : CanopyPaver { Position: {0, 0.03, 0}; Box: {reach - radius + 2.2, 0.05, 3.4}; TextureTransform: {scale_x: 3, scale_y: 1.3} }
+      axis : CanopyPaver { Position: {0, 0.03, 0}; Box: {reach - radius + 2.2, 0.05, 3.4} }
       for i in 0..4 {
         const x = (i - 1.5) * (reach - radius) / 3.4
         for row in 0..2 {

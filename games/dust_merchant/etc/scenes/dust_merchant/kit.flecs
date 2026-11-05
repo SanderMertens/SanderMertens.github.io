@@ -50,9 +50,7 @@ prefab CableShape {
   Path2D: {
     start: {0.5, 0},
     segments: [
-      {kind: Line, end: {0.35, 0.35}}, {kind: Line, end: {0, 0.5}}, {kind: Line, end: {-0.35, 0.35}},
-      {kind: Line, end: {-0.5, 0}}, {kind: Line, end: {-0.35, -0.35}}, {kind: Line, end: {0, -0.5}},
-      {kind: Line, end: {0.35, -0.35}}
+      {kind: CatmullRom, end: {0, 0.5}}, {kind: CatmullRom, end: {-0.5, 0}}, {kind: CatmullRom, end: {0, -0.5}}
     ],
     closed: true
   }

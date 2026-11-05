@@ -9,6 +9,8 @@ using box.spatial
 using box.picking
 using box.input
 using box.transition
+using box.movement
+using box.animation
 
 actions {
   ignite { box.input.Action: {description: "Crank the reactor"} }
@@ -277,7 +279,7 @@ template Overhead {
   hanger_b : BareSteel { Beam: {a: {0.5, 0.26, -0.02}, b: {0.5, 0.42, -0.5}, w: 0.03, h: 0.03}; Rgb: {92, 90, 82} }
   hanger_c : BareSteel { Beam: {a: {-0.5, -0.26, -0.02}, b: {-0.5, -0.2, -0.56}, w: 0.03, h: 0.03}; Rgb: {92, 90, 82} }
   hanger_d : BareSteel { Beam: {a: {0.5, -0.26, -0.02}, b: {0.5, -0.2, -0.56}, w: 0.03, h: 0.03}; Rgb: {92, 90, 82} }
-  shroud : Soot { Position: {0, 0, -0.05}; RoundedBox: {1.15, 0.67, 0.08, 0.012, segments: 2}; TextureTransform: {scale_x: 1.4, scale_y: 0.8}; Rgb: {38, 38, 36} }
+  shroud : Soot { Position: {0, 0, -0.05}; RoundedBox: {1.15, 0.67, 0.08, 0.012, segments: 2}; TextureMapping: {mode: MappingObject, size: 0.82}; Rgb: {38, 38, 36} }
   Cable feed_a(a: {-0.36, 0.2, -0.09}, b: {-0.44, 0.34, -0.5}, sag: 0.02, thick: 0.018) { Position: {0, 0, 0} }
   Cable feed_b(a: {-0.32, 0.2, -0.09}, b: {-0.38, 0.34, -0.5}, sag: 0.02, thick: 0.012, tone: {120, 24, 16}) { Position: {0, 0, 0} }
   Cable feed_c(a: {0.32, 0.2, -0.09}, b: {0.42, 0.36, -0.5}, sag: 0.02, thick: 0.014, tone: {150, 118, 28}) { Position: {0, 0, 0} }
@@ -316,7 +318,8 @@ template Overhead {
           LayoutItem: {width: {mode: Fixed, value: 96}, height: {mode: Fixed, value: 96}}
           rim : Soot { Rotation: {PI / 2, 0, 0}; Tube: {radius: 46, thickness: 5, length: 6, segments: 32, smooth: true} }
           blades {
-            Rotation: {0, 0, clock * match sw[SW_FANS] && bus { true: 9; _: 0 }}
+            Rotation: {0, 0, 0}
+            AngularVelocity: {0, 0, sw[SW_FANS] && bus ? 9 : 0}
             for i in 0..5 {
               "blade_{i}" : BareSteel { Rotation: {0.4, 0, i * 2 * PI / 5}; Position: {cos(i * 2 * PI / 5) * 22, sin(i * 2 * PI / 5) * 22, 1}; Box: {38, 16, 1}; Rgb: {120, 118, 110} }
             }

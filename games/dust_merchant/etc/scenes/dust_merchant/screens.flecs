@@ -75,7 +75,7 @@ template NavNode {
   mark {
     Position: {0, 16, 1}
     Rotation: {0, 0, PI / 4}
-    Rect: {match picked { true: 20; _: 13 }, match picked { true: 20; _: 13 }}
+    Rect: {picked ? 20 : 13, picked ? 20 : 13}
     Rgb: {0, 0, 0}
     BlendMode: Additive
     Border: {width: 2, color: {110, 255, 160, 255}}
@@ -84,8 +84,8 @@ template NavNode {
   if home {
     core { Position: {0, 16, 1}; Circle: {5}; Rgb: NAV_INK; SpatialIgnore }
   }
-  Ink words(text: dest_name(dest), size: 30, align: Center, hue: match picked || hover { true: NAV_INK; _: NAV_DIM }) { Position: {0, -8, 1} }
-  Ink code(text: match home { true: "CURRENT"; _: dest_code(dest) }, size: 24, align: Center, hue: NAV_DIM) { Position: {0, -30, 1} }
+  Ink words(text: dest_name(dest), size: 30, align: Center, hue: picked || hover ? NAV_INK : NAV_DIM) { Position: {0, -8, 1} }
+  Ink code(text: home ? "CURRENT" : dest_code(dest), size: 24, align: Center, hue: NAV_DIM) { Position: {0, -30, 1} }
 
   async {
     while true {
@@ -172,7 +172,7 @@ template NavPage {
       text: match stage {
         0: "NO POWER"
         1: "STANDBY  -  REACTOR COLD  -  IGNITE ON CENTER STACK"
-        2: match course >= 0 { true: "COMPUTING JUMP  {plot * 100:.0}%"; _: "SELECT DESTINATION" }
+        2: course >= 0 ? "COMPUTING JUMP  {plot * 100:.0}%" : "SELECT DESTINATION"
         3: "COURSE LOCKED  -  PULL JUMP HANDLE"
         4: "CHARGING"
         _: "IN TRANSIT"
@@ -194,7 +194,7 @@ template SysLine {
   if show {
     Ink a(text: name, size: 30, hue: NAV_DIM)
     grow { LayoutItem: {width: {mode: Grow}} }
-    Ink b(text: match ok { true: "OK"; _: "FAIL" }, size: 30, hue: match ok { true: NAV_INK; _: {255, 120, 90} })
+    Ink b(text: ok ? "OK" : "FAIL", size: 30, hue: match ok { true: NAV_INK; _: {255, 120, 90} })
   }
 }
 
@@ -215,7 +215,7 @@ template SysPage {
   SysLine l6(name: "JUMP COMPUTER", show: lines > 6, ok: reactor > 0.4)
   grow { LayoutItem: {height: {mode: Grow}} }
   if lines > 6 {
-    Ink hdr(text: "REACTOR OUTPUT {reactor * 100:.0}%", size: 30, hue: match reactor > 0.9 { true: NAV_INK; _: NAV_DIM })
+    Ink hdr(text: "REACTOR OUTPUT {reactor * 100:.0}%", size: 30, hue: reactor > 0.9 ? NAV_INK : NAV_DIM)
     track {
       Layout: {}
       LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: 26}}
@@ -299,7 +299,7 @@ template ComPage {
     Position: {0, 208, 20}
     bar { Position: {0, 0, 0}; Rect: {640, 56}; Rgb: {30, 16, 4} }
     Ink title(text: "VOX-LINK  {freq:.1} MHZ", size: 36, hue: AMB_INK) { Position: {-100, 0, 1} }
-    Ink rx(text: match locked { true: "RX LOCK"; _: "SCAN" }, size: 32, hue: match locked { true: {255, 230, 170}; _: AMB_DIM }) { Position: {240, 0, 1} }
+    Ink rx(text: locked ? "RX LOCK" : "SCAN", size: 32, hue: match locked { true: {255, 230, 170}; _: AMB_DIM }) { Position: {240, 0, 1} }
   }
 
   scope {

@@ -182,13 +182,13 @@ template Area {
       floor_ : MvDirt { Position: {0, 0, 0}; Cylinder: {length: 0.02, radius: a.r, segments: 40}; TextureTransform: {a.w / TILE_DIRT, a.w / TILE_DIRT, 0, 0} }
     }
   } else if k == AR_MEADOW {
-    floor_ : MvMeadow { Position: {0, 0, 0}; Box: {a.w, 0.02, a.d}; TextureTransform: {a.w / TILE_GRASS, a.d / TILE_GRASS, 0, 0} }
+    floor_ : MvMeadowGround { Position: {0, 0, 0}; Box: {a.w, 0.02, a.d}; TextureTransform: {a.d / GROUND_SPAN, a.w / GROUND_SPAN, (a.z - a.d / 2 + GROUND_SPAN / 2) / GROUND_SPAN, (GROUND_SPAN / 2 - a.x - a.w / 2) / GROUND_SPAN} }
   } else if k == AR_FOREST {
-    floor_ : MvForestFloor { Position: {0, 0, 0}; Box: {a.w, 0.02, a.d}; TextureTransform: {a.w / TILE_FOREST, a.d / TILE_FOREST, 0, 0} }
+    floor_ : MvForestGround { Position: {0, 0, 0}; Box: {a.w, 0.02, a.d}; TextureTransform: {a.d / GROUND_SPAN, a.w / GROUND_SPAN, (a.z - a.d / 2 + GROUND_SPAN / 2) / GROUND_SPAN, (GROUND_SPAN / 2 - a.x - a.w / 2) / GROUND_SPAN} }
   } else if k == AR_HILLS {
-    floor_ : MvHillGrass { Position: {0, 0, 0}; Box: {a.w, 0.02, a.d}; TextureTransform: {a.w / TILE_GRASS, a.d / TILE_GRASS, 0, 0} }
+    floor_ : MvHillGround { Position: {0, 0, 0}; Box: {a.w, 0.02, a.d}; TextureTransform: {a.d / GROUND_SPAN, a.w / GROUND_SPAN, (a.z - a.d / 2 + GROUND_SPAN / 2) / GROUND_SPAN, (GROUND_SPAN / 2 - a.x - a.w / 2) / GROUND_SPAN} }
   } else if k == AR_FARM {
-    floor_ : MvMeadow { Position: {0, 0, 0}; Box: {a.w, 0.02, a.d}; TextureTransform: {a.w / TILE_GRASS, a.d / TILE_GRASS, 0, 0} }
+    floor_ : MvMeadowGround { Position: {0, 0, 0}; Box: {a.w, 0.02, a.d}; TextureTransform: {a.d / GROUND_SPAN, a.w / GROUND_SPAN, (a.z - a.d / 2 + GROUND_SPAN / 2) / GROUND_SPAN, (GROUND_SPAN / 2 - a.x - a.w / 2) / GROUND_SPAN} }
   } else if k == AR_YARD {
     floor_ : MvYard { Position: {0, 0, 0}; Box: {a.w, 0.02, a.d}; Bevel: {front_left: a.r, front_right: a.r, back_left: a.r, back_right: a.r, segments: 4}; TextureTransform: {a.w / TILE_DIRT, a.d / TILE_DIRT, 0, 0} }
   } else {

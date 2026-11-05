@@ -11,6 +11,11 @@ using box.layout
 using box.geometry
 using box.material
 using box.text
+using box.transition
+
+fn stepper_part(x: f64, w: f64, button: f64) -> i32 {
+  x < button - w / 2 ? -1 : x > w / 2 - button ? 1 : 0
+}
 
 // Behavior of a stepper, a spin button. A click on the left button part (button points wide)
 // steps down, on the right one up; the arrow keys step (Up and Right up), PageUp and PageDown by
@@ -50,18 +55,7 @@ template HeadlessStepper {
   async {
     while true {
       const e = await on.move(this)
-      const w = this[LayoutBounds].width
-      const at = match e.local_x < button - w / 2 {
-        true: -1
-        _: match e.local_x > w / 2 - button {
-          true: 1
-          _: 0
-        }
-      }
-      part = match disabled {
-        true: 0
-        _: at
-      }
+      part = disabled ? 0 : stepper_part(e.local_x, this[LayoutBounds].width, button)
     }
   }
 
@@ -75,18 +69,7 @@ template HeadlessStepper {
   async {
     while true {
       const e = await on.press(this)
-      const w = this[LayoutBounds].width
-      const at = match e.local_x < button - w / 2 {
-        true: -1
-        _: match e.local_x > w / 2 - button {
-          true: 1
-          _: 0
-        }
-      }
-      pressed = match disabled {
-        true: 0
-        _: at
-      }
+      pressed = disabled ? 0 : stepper_part(e.local_x, this[LayoutBounds].width, button)
       await on.release(this)
       pressed = 0
     }
@@ -113,15 +96,8 @@ template HeadlessStepper {
   async {
     while true {
       const e = await on.activate(this)
-      const w = this[LayoutBounds].width
       if ui.activation(e) == this && !e.keyboard && !disabled {
-        const dir = match e.local_x < button - w / 2 {
-          true: -1
-          _: match e.local_x > w / 2 - button {
-            true: 1
-            _: 0
-          }
-        }
+        const dir = stepper_part(e.local_x, this[LayoutBounds].width, button)
         const v = clamp(current + dir * step, min, max)
         if v != current {
           current = v
@@ -136,10 +112,8 @@ template HeadlessStepper {
       const e = await on.key_down(this)
       if !disabled {
         const target = match e.key {
-          "ArrowLeft": current - step
-          "ArrowDown": current - step
-          "ArrowRight": current + step
-          "ArrowUp": current + step
+          "ArrowLeft", "ArrowDown": current - step
+          "ArrowRight", "ArrowUp": current + step
           "PageDown": current - step * 10
           "PageUp": current + step * 10
           "Home": min
@@ -165,14 +139,9 @@ template Stepper : HeadlessStepper {
 
   const t = box.ui.theme[UiTheme]
   const ring = focused && FocusStatus[FocusStatus].visible
-  const w = match width {
-    0.0: 112
-    _: width
-  }
-  const edge = match ring {
-    true: t.focus_width
-    _: 1
-  }
+  const w = width == 0 ? 112 : width
+  const edge = ring ? t.focus_width : 1
+  const outline = ring ? t.focus : t.border
 
   Layout: {direction: Row, v: Middle, padding: {edge, edge, edge, edge}}
   LayoutItem: {
@@ -182,14 +151,7 @@ template Stepper : HeadlessStepper {
   Rect: {1, 1}
   Rgb: t.surface_alt
 
-  if ring {
-    Border: {
-      width: t.focus_width, radius: t.radius,
-      color: {t.focus.r, t.focus.g, t.focus.b, 255}
-    }
-  } else {
-    Border: {width: 1, radius: t.radius, color: {t.border.r, t.border.g, t.border.b, 255}}
-  }
+  Border: {width: edge, radius: t.radius, color: {outline.r, outline.g, outline.b, 255}}
 
   minus {
     Layout: {direction: Row, h: Center, v: Middle}
@@ -197,21 +159,12 @@ template Stepper : HeadlessStepper {
     Rect: {1, 1}
     Border: {radius: t.radius - edge}
 
-    if pressed == -1 {
-      Rgb: t.pressed
-    } else if part == -1 {
-      Rgb: t.hover
-    } else {
-      Rgb: t.surface
-    }
+    Rgb: pressed == -1 ? t.pressed : part == -1 ? t.hover : t.surface
+    Transition: [Rgb: WidgetFade]
 
     sign {
       Text: {value: "-", size: t.font_size + 2}
-      if current <= min {
-        Rgb: t.text_muted
-      } else {
-        Rgb: t.text
-      }
+      Rgb: current <= min ? t.text_muted : t.text
     }
   }
 
@@ -231,21 +184,12 @@ template Stepper : HeadlessStepper {
     Rect: {1, 1}
     Border: {radius: t.radius - edge}
 
-    if pressed == 1 {
-      Rgb: t.pressed
-    } else if part == 1 {
-      Rgb: t.hover
-    } else {
-      Rgb: t.surface
-    }
+    Rgb: pressed == 1 ? t.pressed : part == 1 ? t.hover : t.surface
+    Transition: [Rgb: WidgetFade]
 
     sign {
       Text: {value: "+", size: t.font_size + 2}
-      if current >= max {
-        Rgb: t.text_muted
-      } else {
-        Rgb: t.text
-      }
+      Rgb: current >= max ? t.text_muted : t.text
     }
   }
 

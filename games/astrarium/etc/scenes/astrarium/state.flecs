@@ -1,6 +1,7 @@
 using flecs.script
 using flecs.script.math
 using box.material
+using box.app
 
 export const HUD_TOP: f32 = 74
 export const HUD_BOTTOM: f32 = 150
@@ -26,34 +27,25 @@ export mut rite_aura: f32 = 1
 export mut rite_dust: f32 = 1
 export mut rite_clock: f32 = 1
 
-export const OP_BEGIN: i32 = 1
-export const OP_ARMORY: i32 = 2
-export const OP_RITES: i32 = 3
-export const OP_TITLE: i32 = 4
-
-export mut rq_op: i32 = 0
-rq {}
-
-ui_tick_a {}
-ui_tick_b {}
-
-export const OP_NAV_ATLAS: i32 = 10
-export const OP_NAV_ARMORY: i32 = 11
-export const OP_NAV_RITES: i32 = 12
-export const OP_CAST: i32 = 20
-export const OP_SELECT_STAR: i32 = 30
-export const OP_AWAKEN: i32 = 31
-export const OP_REALIGN: i32 = 32
-export const OP_EQUIP: i32 = 40
-export const OP_METAL: i32 = 50
+event Navigate(screen: i32)
+event Cast(spell: i32)
+event Cooldown(spell: i32, seconds: f32)
+event SelectStar(star: entity)
+event HoldStarted(serial: i32, until: f64)
+event Awaken()
+event Realign()
+event Equip(item: entity)
+event Metal(index: i32)
+event StatsChanged()
+event HoverChanged()
+event HoverLeft(item: entity)
+event BannerShown(serial: i32, until: f64)
+event AegisRaised(serial: i32, until: f64)
 
 export const STAT_MIGHT: i32 = 0
 export const STAT_WARD: i32 = 1
 export const STAT_HASTE: i32 = 2
 export const STAT_AETHER: i32 = 3
-
-export mut rq_arg: i32 = 0
-export mut rq_entity: entity = 0
 
 export mut hero_hp: f32 = 148
 export mut hero_hp_max: f32 = 240
@@ -69,26 +61,15 @@ export mut stat_ward: i32 = 31
 export mut stat_haste: i32 = 24
 export mut stat_aether: i32 = 37
 
-export mut spell_cooling: i32 = 0
-export mut spell_ready_0: f64 = 0
-export mut spell_ready_1: f64 = 0
-export mut spell_ready_2: f64 = 0
-export mut spell_ready_3: f64 = 0
-export mut spell_ready_4: f64 = 0
-export mut spell_ready_5: f64 = 0
-export mut spell_flash: i32 = 0
+export mut spell_cooling: bool[6] = {}
 export mut spell_hover: i32 = -1
-export mut aegis_until: f64 = 0
 export mut aegis_on = false
+export mut aegis_serial: i32 = 0
 
 export mut banner_text: string = ""
 export mut banner_sub: string = ""
 export mut banner_on = false
-export mut banner_until: f64 = 0
-
-fn has_bit(mask: i32, i: i32) -> bool {
-  (mask >> i) % 2 == 1
-}
+export mut banner_serial: i32 = 0
 
 fn xp_needed(level: i32) -> f32 {
   320 + level * 12
@@ -133,21 +114,21 @@ fn haste_scale(haste: i32) -> f32 {
   1 / (1 + haste * 0.006)
 }
 
-export mut atlas_awake: i32 = 16779
+export mut atlas_awake: bool[28] = [
+  true, true, false, true, false, false, false,
+  true, true, false, false, false, false, false,
+  true, false, false, false, false, false, false,
+  false, false, false, false, false, false, false
+]
 export mut atlas_sel: entity = 0
 export mut atlas_fresh: i32 = -1
 export mut atlas_holding = false
-export mut atlas_press = false
-export mut atlas_hold_spent = false
-export mut atlas_hold_since: f64 = 0
-export mut atlas_count_0: i32 = 3
-export mut atlas_count_1: i32 = 2
-export mut atlas_count_2: i32 = 1
-export mut atlas_count_3: i32 = 0
+export mut atlas_hold_serial: i32 = 0
+export mut atlas_count: i32[4] = [3, 2, 1, 0]
 
 export const HOLD_SECONDS: f32 = 0.75
 
-export mut spell_afford: i32 = 63
+export mut spell_afford: bool[6] = [true, true, true, true, true, true]
 export mut fx_cast: i32 = 0
 export mut fx_cast_serial: i32 = 0
 export mut fx_level_serial: i32 = 0
@@ -178,20 +159,13 @@ export const RARE_RARE: i32 = 1
 export const RARE_EPIC: i32 = 2
 export const RARE_LEGEND: i32 = 3
 
-export mut eq_0: entity = 0
-export mut eq_1: entity = 0
-export mut eq_2: entity = 0
-export mut eq_3: entity = 0
+export mut eq: entity[4] = {}
 export mut armory_filter: i32 = -1
 export mut armory_hover: entity = 0
 export mut armory_hovering = false
-export mut armory_left: entity = 0
 export mut armory_tip: entity = 0
 export mut armory_tip_on = false
-export mut preview_might: i32 = 0
-export mut preview_ward: i32 = 0
-export mut preview_haste: i32 = 0
-export mut preview_aether: i32 = 0
+export mut preview: i32[4] = {}
 export mut relic_model: i32 = 0
 export mut relic_r: i32 = 200
 export mut relic_g: i32 = 200
@@ -199,17 +173,10 @@ export mut relic_b: i32 = 210
 export mut relic_serial: i32 = 0
 export mut relic_name: string = ""
 export mut relic_line: string = ""
-export mut star_might: i32 = 7
-export mut star_ward: i32 = 6
-export mut star_haste: i32 = 0
-export mut star_aether: i32 = 7
+export mut star_bonus: i32[4] = [7, 6, 0, 7]
 export mut rite_metal: i32 = 0
 export mut rite_names = true
 export mut rite_drift = true
-
-stats_dirty {}
-hover_dirty {}
-hover_left {}
 
 fn rarity_name(r: i32) -> string {
   match r { 0: "Common"; 1: "Rare"; 2: "Epic"; _: "Legendary" }
@@ -231,6 +198,29 @@ fn slot_name(s: i32) -> string {
   match s { 0: "Blade"; 1: "Relic"; 2: "Crown"; _: "Band" }
 }
 
-fn eq_of(s: i32, a: entity, b: entity, c: entity, d: entity) -> entity {
-  match s { 0: a; 1: b; 2: c; _: d }
+proc show_banner(title: string, sub: string) {
+  banner_text = title
+  banner_sub = sub
+  banner_on = true
+  banner_serial += 1
+  emit BannerShown(serial: banner_serial, until: AppStatus[AppStatus].elapsed + 2.8)
+}
+
+proc check_afford() {
+  for i in 0..6 {
+    const can = hero_mp >= spell_cost(i) && hero_hp > spell_blood(i)
+    if spell_afford[i] != can {
+      spell_afford[i] = can
+    }
+  }
+}
+
+proc check_level() {
+  while hero_xp >= xp_needed(hero_level) {
+    hero_xp -= xp_needed(hero_level)
+    hero_level += 1
+    hero_points += 1
+    show_banner("Level {hero_level}", "A new star point turns in your palm")
+    fx_level_serial += 1
+  }
 }

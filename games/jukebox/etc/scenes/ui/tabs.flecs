@@ -12,6 +12,7 @@ using box.geometry
 using box.material
 using box.text
 using box.transform
+using box.transition
 
 // The label a tab shows in the bar of its tab view
 struct TabLabel(value: string)
@@ -20,73 +21,15 @@ struct TabLabel(value: string)
 // header of the selected tab is Focusable, the others only Interactive. The tab view acts on its
 // clicks and keys. A change of tab changes selected, which restarts the async blocks, so they
 // keep no state across events. The pointer shows a hand over it.
-template HeadlessTabHeader {
+template HeadlessTabHeader : HeadlessPressable {
   prop index: i32 = 0
   prop label: string = ""
   prop selected: bool = false
-
-  mut hover = false
-  mut down = false
 
   Interactive
   Cursor: {CursorPointer}
   if selected {
     Focusable
-  }
-
-  async {
-    while true {
-      await on.enter(this)
-      hover = true
-    }
-  }
-
-  async {
-    while true {
-      await on.leave(this)
-      hover = false
-    }
-  }
-
-  async {
-    while true {
-      await on.press(this)
-      down = true
-    }
-  }
-
-  async {
-    while true {
-      await on.release(this)
-      down = false
-    }
-  }
-
-  async {
-    while true {
-      const e = await on.blur(this)
-      if e.target == this {
-        down = false
-      }
-    }
-  }
-
-  async {
-    while true {
-      const e = await on.key_down(this)
-      if e.key == " " && !e.repeat {
-        down = true
-      }
-    }
-  }
-
-  async {
-    while true {
-      const e = await on.key_up(this)
-      if e.key == " " {
-        down = false
-      }
-    }
   }
 }
 
@@ -102,23 +45,11 @@ template TabHeader : HeadlessTabHeader {
   LayoutItem: {height: {mode: Fixed, value: t.control_height + 4}}
   Rect: {1, 1}
 
-  if selected {
-    Rgb: t.surface
-  } else if down {
-    Rgb: t.pressed
-  } else if hover {
-    Rgb: t.hover
-  } else {
-    Rgb: t.surface_alt
-  }
-
-  if ring {
-    Border: {
-      width: t.focus_width, radius: t.radius - 1,
-      color: {t.focus.r, t.focus.g, t.focus.b, 255}
-    }
-  } else {
-    Border: {width: 0, radius: t.radius - 1}
+  Rgb: selected ? t.surface : down ? t.pressed : hover ? t.hover : t.surface_alt
+  Transition: [Rgb: WidgetFade]
+  Border: {
+    width: ring ? t.focus_width : 0, radius: t.radius - 1,
+    color: {t.focus.r, t.focus.g, t.focus.b, 255}
   }
 
   above {
@@ -127,11 +58,8 @@ template TabHeader : HeadlessTabHeader {
 
   caption {
     Text: {value: label, size: t.font_size}
-    if selected {
-      Rgb: t.text
-    } else {
-      Rgb: t.text_muted
-    }
+    Rgb: selected ? t.text : t.text_muted
+    Transition: [Rgb: WidgetFade]
   }
 
   below {
@@ -168,7 +96,6 @@ template TabView {
   mut count: i32 = 0
   mut first: entity = 0
   mut header: entity = 0
-  mut probe: i32 = 0
 
   const none: entity = 0
   const t = box.ui.theme[UiTheme]
@@ -211,11 +138,7 @@ template TabView {
   async {
     while true {
       const e = await on.focus(this)
-      if e.target.parent() == bar {
-        header = e.target
-      } else {
-        header = none
-      }
+      header = e.target.parent() == bar ? e.target : none
     }
   }
 
@@ -235,9 +158,9 @@ template TabView {
       const tab = ui.activation(e)
       if tab != 0 {
         if tab.parent() == bar {
-          probe = 0
+          mut probe: i32 = 0
           while probe < count && tab.name() != "tab_{probe}" {
-            probe = probe + 1
+            probe += 1
           }
           if probe < count && probe != current {
             current = probe
@@ -291,7 +214,7 @@ template HeadlessTab : parent TabView {
   async {
     if index < 0 {
       index = count
-      count = count + 1
+      count += 1
       if index == 0 {
         first = this
       }

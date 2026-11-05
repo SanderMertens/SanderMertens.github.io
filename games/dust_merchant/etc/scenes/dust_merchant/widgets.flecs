@@ -126,7 +126,7 @@ template Panel {
     Position: {0, 0, -6}
     RoundedBox: {w, h, 12, 2.4, segments: 2}
     Rgb: tone
-    TextureTransform: {scale_x: w / 860, scale_y: h / 860}
+    TextureMapping: {mode: MappingObject, size: 0.86}
   }
 
   if edge {
@@ -234,7 +234,7 @@ template SubPlate {
   Rotation: {0, 0, tilt}
   SpatialIgnore
   gap { Position: {0, 0, -0.08}; Box: {w + 4, h + 4, 0.14}; Rgb: {6, 6, 6}; PbrMaterial: {metallic: 0, roughness: 0.9} }
-  sheet : PaintedSteel { Position: {0, 0, 0.02}; Box: {w, h, 0.26}; Rgb: tone; TextureTransform: {scale_x: w / 520, scale_y: h / 520} }
+  sheet : PaintedSteel { Position: {0, 0, 0.02}; Box: {w, h, 0.26}; Rgb: tone; TextureMapping: {mode: MappingObject, size: 0.52} }
 }
 
 template Dzus {
@@ -269,7 +269,7 @@ template Louver {
       Rotation: {0.7, 0, 0}
       Box: {w, pitch * 0.72, 0.9}
       Rgb: tone
-      TextureTransform: {scale_x: w / 520, scale_y: 0.03}
+      TextureMapping: {mode: MappingObject, size: 0.52}
     }
   }
 }
@@ -297,7 +297,7 @@ template Breaker {
     }
     collar : BareSteel { Position: {0, 0, 0.8}; Rotation: {PI / 2, 0, 0}; Cylinder: {radius: 10, length: 1.6, segments: 6}; Rgb: {112, 110, 104} }
     stem {
-      Position: {0, 0, match out { true: 7; _: 1.4 }}
+      Position: {0, 0, out ? 7 : 1.4}
       Transition: [Position: {duration: 0.07, timing_function: EaseOut}]
       if out {
         band { Position: {0, 0, 2.6}; Rotation: {PI / 2, 0, 0}; Cylinder: {radius: 9.4, length: 2.4, segments: 16, smooth: true}; Rgb: {226, 222, 206}; PbrMaterial: {metallic: 0, roughness: 0.5} }
@@ -444,7 +444,7 @@ template ToggleSwitch {
     collar : Chrome { Position: {0, 0, 8}; Rotation: {PI / 2, 0, 0}; Cylinder: {radius: 7, length: 6, segments: 16, smooth: true} }
     arm {
       Position: {0, 0, 10}
-      Rotation: {match on { true: -0.58; _: 0.58 }, 0, 0}
+      Rotation: {on ? -0.58 : 0.58, 0, 0}
       Transition: [Rotation: {duration: 0.075, timing_function: EaseIn}]
       bat : Chrome { Position: {0, 0, 15}; Rotation: {PI / 2, 0, 0}; Frustum: {radius_bottom: 3.2, radius_top: 5.8, length: 30, segments: 14, smooth: true}; Rgb: cap }
       tip : Chrome { Position: {0, 0, 30}; Sphere: {radius: 5.8, segments: 14, smooth: true}; Rgb: cap }
@@ -501,7 +501,7 @@ template GuardSwitch {
     nut : Chrome { Position: {0, 0, 3}; Rotation: {PI / 2, 0, 0}; Cylinder: {radius: 11, length: 4, segments: 6}; Rgb: {150, 150, 152} }
     arm {
       Position: {0, 0, 6}
-      Rotation: {match on { true: -0.55; _: 0.55 }, 0, 0}
+      Rotation: {on ? -0.55 : 0.55, 0, 0}
       Transition: [Rotation: {duration: 0.08, timing_function: EaseIn}]
       bat : Chrome { Position: {0, 0, 12}; Rotation: {PI / 2, 0, 0}; Frustum: {radius_bottom: 3.4, radius_top: 6, length: 24, segments: 14, smooth: true} }
       tip : Chrome { Position: {0, 0, 24}; Sphere: {radius: 6, segments: 14, smooth: true} }
@@ -510,7 +510,7 @@ template GuardSwitch {
 
   guard {
     Position: {0, 34, 3}
-    Rotation: {match open { true: -1.95; _: 0 }, 0, 0}
+    Rotation: {open ? -1.95 : 0, 0, 0}
     Transition: [Rotation: {duration: 0.18, timing_function: EaseOut}]
     SpatialIgnore
 
@@ -578,7 +578,7 @@ template CapButton {
 
   housing : BlackAnod { Position: {0, 0, 2.5}; Box: {w + 10, h + 10, 5}; SpatialIgnore }
   cap {
-    Position: {0, 0, match down { true: 5; _: 8 }}
+    Position: {0, 0, down ? 5 : 8}
     Transition: [Position: {duration: 0.05}]
     SpatialIgnore
     body {
@@ -597,7 +597,7 @@ template CapButton {
     }
     if lit {
       words_lit {
-        Position: {0, match sub == "" { true: 0; _: 7 }, 4.3}
+        Position: {0, sub == "" ? 0 : 7, 4.3}
         Text: {value: legend, size: size, font: font_stencil, align: Center}
         Rgb: {1, 1, 1}
         SpatialIgnore
@@ -612,7 +612,7 @@ template CapButton {
       }
     } else {
       words {
-        Position: {0, match sub == "" { true: 0; _: 7 }, 4.3}
+        Position: {0, sub == "" ? 0 : 7, 4.3}
         Text: {value: legend, size: size, font: font_stencil, align: Center}
         if bus {
           Rgb: {hue.r * 0.8, hue.g * 0.8, hue.b * 0.8}
@@ -691,7 +691,7 @@ template Knob {
       "tick_{i}" {
         Position: {cos(a) * r * 1.34, sin(a) * r * 1.34, 0}
         Rotation: {0, 0, a}
-        Rect: {match i % 5 == 0 { true: r * 0.32; _: r * 0.18 }, 1.5}
+        Rect: {i % 5 == 0 ? r * 0.32 : r * 0.18, 1.5}
         if bus {
           Rgb: {200, 192, 170}
         } else {
@@ -714,7 +714,7 @@ template Knob {
     skirt : BlackAnod { Position: {0, 0, 2}; Rotation: {PI / 2, 0, 0}; Cylinder: {radius: r, length: 4, segments: 32, smooth: true} }
     grip : Bakelite { Position: {0, 0, 12}; Rotation: {PI / 2, 0, 0}; Frustum: {radius_bottom: r * 0.8, radius_top: r * 0.68, length: 18, segments: 16} }
     crown : BareSteel { Position: {0, 0, 21.3}; Rotation: {PI / 2, 0, 0}; Cylinder: {radius: r * 0.62, length: 0.6, segments: 24, smooth: true}; Rgb: {150, 144, 130} }
-    mark { Position: {0, r * 0.82, 4.2}; Box: {r * 0.1, r * 0.34, 0.5}; Rgb: {240, 236, 224}; Emissive: {strength: match bus { true: 0.6; _: 0.02 }, color: {255, 236, 200}} }
+    mark { Position: {0, r * 0.82, 4.2}; Box: {r * 0.1, r * 0.34, 0.5}; Rgb: {240, 236, 224}; Emissive: {strength: bus ? 0.6 : 0.02, color: {255, 236, 200}} }
     line { Position: {0, r * 0.32, 21.8}; Box: {1.8, r * 0.6, 0.5}; Rgb: {30, 28, 24} }
   }
 
@@ -766,7 +766,7 @@ template Lever {
   mut hover = false
   mut dragging = false
   const v = kn[sig]
-  const swing = match pull { true: v - 0.5; _: 0.5 - v }
+  const swing = pull ? v - 0.5 : 0.5 - v
 
   Interactive
   Cursor: {CursorPointer}
@@ -782,7 +782,7 @@ template Lever {
   for i in 0..11 {
     "mark_{i}" {
       Position: {-28, (i - 5) * travel / 11.5, 0.5}
-      Rect: {match i % 5 == 0 { true: 18; _: 10 }, 1.8}
+      Rect: {i % 5 == 0 ? 18 : 10, 1.8}
       if bus {
         Rgb: {204, 196, 172}
       } else {
@@ -835,7 +835,7 @@ template Lever {
       const e = await on.drag(this)
       if !locked {
         const was = kn[sig]
-        kn[sig] = clamp(kn[sig] + (match pull { true: e.delta_y; _: 0 - e.delta_y }) * speed, 0, 1)
+        kn[sig] = clamp(kn[sig] + (pull ? e.delta_y : 0 - e.delta_y) * speed, 0, 1)
         if floor(kn[sig] * DETENTS) != floor(was * DETENTS) {
           const tick = box.audio.play(SfxDetent, 0.5)
         }
@@ -881,7 +881,7 @@ template Gauge {
       "t_{i}" {
         Position: {cos(a) * r * 0.84, sin(a) * r * 0.84, 0.3}
         Rotation: {0, 0, a}
-        Rect: {match major { true: r * 0.2; _: r * 0.1 }, match major { true: r * 0.04; _: r * 0.024 }}
+        Rect: {major ? r * 0.2 : r * 0.1, major ? r * 0.04 : r * 0.024}
         if frac >= red_from && ink_lit {
           Rgb: {255, 70, 40}
         } else {
@@ -910,7 +910,7 @@ template Gauge {
     Rotation: {0, 0, dial}
     Transition: [Rotation: {duration: 0.35, timing_function: EaseOut}]
     SpatialIgnore
-    blade { Position: {r * 0.37, 0, 0}; Box: {r * 1.05, r * 0.035, 0.6}; Rgb: {255, 96, 40}; Emissive: {strength: match ink_lit { true: 2.2; _: 0.02 }, color: {255, 100, 40}}; Transition: [Emissive: {duration: 0.8}] }
+    blade { Position: {r * 0.37, 0, 0}; Box: {r * 1.05, r * 0.035, 0.6}; Rgb: {255, 96, 40}; Emissive: {strength: ink_lit ? 2.2 : 0.02, color: {255, 100, 40}}; Transition: [Emissive: {duration: 0.8}] }
     tail { Position: {0 - r * 0.16, 0, 0}; Box: {r * 0.32, r * 0.07, 0.6}; Rgb: {20, 20, 22} }
     hub : BlackAnod { Position: {0, 0, 0.8}; Rotation: {PI / 2, 0, 0}; Cylinder: {radius: r * 0.09, length: 1.6, segments: 16, smooth: true} }
   }
@@ -942,14 +942,14 @@ template LedBar {
 
   Layout: {}
   LayoutItem: {
-    width: {mode: Fixed, value: match vertical { true: thick + 18; _: len + 12 }},
-    height: {mode: Fixed, value: match vertical { true: len + 28; _: thick + 28 }}
+    width: {mode: Fixed, value: vertical ? thick + 18 : len + 12},
+    height: {mode: Fixed, value: vertical ? len + 28 : thick + 28}
   }
 
-  back : BlackAnod { Position: {0, match vertical { true: -6; _: -6 }, 0.6}; Box: {match vertical { true: thick + 8; _: len + 8 }, match vertical { true: len + 8; _: thick + 8 }, 1.2}; Rgb: {12, 12, 13}; SpatialIgnore }
+  back : BlackAnod { Position: {0, -6, 0.6}; Box: {vertical ? thick + 8 : len + 8, vertical ? len + 8 : thick + 8, 1.2}; Rgb: {12, 12, 13}; SpatialIgnore }
 
   if label != "" {
-    Label words(text: label, size: 13) { Position: {0, match vertical { true: len / 2 + 7; _: thick / 2 + 9 }, 0.8} }
+    Label words(text: label, size: 13) { Position: {0, vertical ? len / 2 + 7 : thick / 2 + 9, 0.8} }
   }
 
   for i in 0..count {
@@ -957,10 +957,10 @@ template LedBar {
     const lit = value > 0.004 && f <= value && bus
     const pos = (f - 0.5) * len
     const seg = len / count * 0.74
-    const tint: Rgb = match f >= crit { true: RED; _: match f >= warn { true: AMBER; _: hue } }
+    const tint: Rgb = match f >= crit { true: RED; _: f >= warn ? AMBER : hue }
     "seg_{i}" {
-      Position: {match vertical { true: 0; _: pos }, match vertical { true: pos - 6; _: -6 }, 1.5}
-      Box: {match vertical { true: thick; _: seg }, match vertical { true: seg; _: thick }, 0.6}
+      Position: {vertical ? 0 : pos, vertical ? pos - 6 : -6, 1.5}
+      Box: {vertical ? thick : seg, vertical ? seg : thick, 0.6}
       Rgb: {tint.r * 0.13, tint.g * 0.13, tint.b * 0.13}
       PbrMaterial: {metallic: 0, roughness: 0.4}
       if lit {
@@ -1004,13 +1004,13 @@ template Annunciator {
   }
   if shown {
     words_lit {
-      Position: {-0.2, match sub == "" { true: 0; _: size * 0.5 }, 2.9}
+      Position: {-0.2, sub == "" ? 0 : size * 0.5, 2.9}
       Text: {value: legend, size: size, font: font_stencil, align: Center}
       Rgb: {1, 1, 1}
       SpatialIgnore
     }
     words_lit_b {
-      Position: {0.2, match sub == "" { true: 0; _: size * 0.5 }, 2.92}
+      Position: {0.2, sub == "" ? 0 : size * 0.5, 2.92}
       Text: {value: legend, size: size, font: font_stencil, align: Center}
       Rgb: {1, 1, 1}
       SpatialIgnore
@@ -1031,7 +1031,7 @@ template Annunciator {
     }
   } else {
     words {
-      Position: {0, match sub == "" { true: 0; _: size * 0.5 }, 2.9}
+      Position: {0, sub == "" ? 0 : size * 0.5, 2.9}
       Text: {value: legend, size: size, font: font_stencil, align: Center}
       if bus {
         Rgb: {hue.r * 0.62, hue.g * 0.62, hue.b * 0.62}
@@ -1078,7 +1078,7 @@ template SegDigit {
   prop s: f32 = 26
   prop blank: bool = false
 
-  const mask = match blank { true: 0; _: digit_mask(digit) }
+  const mask = blank ? 0 : digit_mask(digit)
   const k = s * 0.14
 
   Layout: {}
@@ -1087,11 +1087,11 @@ template SegDigit {
   for i in 0..7 {
     const on = has_bit(mask, i)
     const horizontal = i == 0 || i == 3 || i == 6
-    const px = match i { 1: s * 0.32; 2: s * 0.32; 4: 0 - s * 0.32; 5: 0 - s * 0.32; _: 0 }
+    const px = match i { 1, 2: s * 0.32; 4, 5: 0 - s * 0.32; _: 0 }
     const py = match i { 0: s * 0.62; 1: s * 0.31; 2: 0 - s * 0.31; 3: 0 - s * 0.62; 4: 0 - s * 0.31; 5: s * 0.31; _: 0 }
     "bar_{i}" {
       Position: {px, py, 0.6}
-      Box: {match horizontal { true: s * 0.5; _: k }, match horizontal { true: k; _: s * 0.5 }, 0.4}
+      Box: {horizontal ? s * 0.5 : k, horizontal ? k : s * 0.5, 0.4}
       Rgb: {hue.r * 0.07, hue.g * 0.07, hue.b * 0.07}
       if on {
         Emissive: {strength: 3.6, color: hue}

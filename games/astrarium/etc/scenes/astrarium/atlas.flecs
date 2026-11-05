@@ -11,9 +11,11 @@ using box.transition
 using box.movement
 using box.particle
 using box.types
+using box.widgets
+using box.app
 
 fn star_rank(band: i32, keystone: bool) -> string {
-  match keystone { true: "{band_name(band)}, keystone"; _: "{band_name(band)}, minor star" }
+  keystone ? "{band_name(band)}, keystone" : "{band_name(band)}, minor star"
 }
 
 template StarSparks {
@@ -50,9 +52,9 @@ template Comet : OneShot {
   prop dy: f32 = 0
   prop hue: Rgb = {255, 255, 255}
 
-  const px = match go { true: 0; _: dx }
-  const py = match go { true: 0; _: dy }
-  const a = match go { true: 0; _: 1 }
+  const px = go ? 0 : dx
+  const py = go ? 0 : dy
+  const a = go ? 0 : 1
 
   Position: {px, py, 5}
   Opacity: {a}
@@ -86,14 +88,14 @@ template StarFace {
   prop name: string = ""
 
   const hue: Rgb = {band_r(band), band_g(band), band_b(band)}
-  const awake = has_bit(atlas_awake, id)
-  const open = from < 0 || has_bit(atlas_awake, from)
+  const awake = atlas_awake[id]
+  const open = from < 0 ? true : atlas_awake[from]
   const reach = open && !awake
   const selected = atlas_sel == owner
-  const core = match keystone { true: 8.5; _: 5.5 }
+  const core = keystone ? 8.5 : 5.5
   const dx = fx - x
   const dy = fy - y
-  const hk = match hover { true: 1.3; _: 1 }
+  const hk = hover ? 1.3 : 1
 
   Position: {0, 0, 0}
   box.spatial.SpatialIgnore
@@ -101,7 +103,7 @@ template StarFace {
   if from >= 0 {
     link {
       Position: {0, 0, -3}
-      Line: {dx, dy, 0, 0, width: match awake { true: 2; _: 1 }}
+      Line: {dx, dy, 0, 0, width: awake ? 2 : 1}
       if awake {
         Rgb: {min(255, hue.r + 40), min(255, hue.g + 40), min(255, hue.b + 40)}
         Emissive: {strength: 0.55, color: hue}
@@ -113,18 +115,18 @@ template StarFace {
         Emissive: {strength: 0, color: hue}
       }
       Transition: [
-        Rgb: {duration: 0.4, delay: match awake { true: 0.32; _: 0 }},
-        Emissive: {duration: 0.4, delay: match awake { true: 0.32; _: 0 }}
+        Rgb: {duration: 0.4, delay: awake ? 0.32 : 0},
+        Emissive: {duration: 0.4, delay: awake ? 0.32 : 0}
       ]
       box.spatial.SpatialIgnore
     }
   }
 
-  Halo aura(size: match keystone { true: 118; _: 76 }, color: {hue.r * 0.5, hue.g * 0.5, hue.b * 0.5}, z: -2) {
+  Halo aura(size: keystone ? 118 : 76, color: {hue.r * 0.5, hue.g * 0.5, hue.b * 0.5}, z: -2) {
     Scale: {hk, hk, 1}
-    Opacity: {match awake { true: 1; _: match reach { true: 0.42; _: 0 } }}
+    Opacity: {awake ? 1 : reach ? 0.42 : 0}
     Transition: [
-      Opacity: {duration: 0.45, delay: match awake { true: 0.4; _: 0 }},
+      Opacity: {duration: 0.45, delay: awake ? 0.4 : 0},
       Scale: {duration: 0.2, timing_function: EaseOut}
     ]
   }
@@ -169,8 +171,8 @@ template StarFace {
     }
     Border: {width: 1, color: {ui_gold.r * 0.65, ui_gold.g * 0.65, ui_gold.b * 0.65, 255}}
     Transition: [
-      Rgb: {duration: 0.35, delay: match awake { true: 0.42; _: 0 }},
-      Emissive: {duration: 0.6, delay: match awake { true: 0.42; _: 0 }},
+      Rgb: {duration: 0.35, delay: awake ? 0.42 : 0},
+      Emissive: {duration: 0.6, delay: awake ? 0.42 : 0},
       Scale: {duration: 0.2, timing_function: EaseOut}
     ]
     box.spatial.SpatialIgnore
@@ -199,8 +201,8 @@ template StarFace {
   if hover || selected || (keystone && rite_names) {
     label {
       Position: {0, 0 - core - 19, 7}
-      Text: {value: name, size: match keystone { true: 14; _: 13 }, font: font_display}
-      Rgb: match hover || selected { true: {255, 246, 224}; _: {ui_gold.r * 0.82, ui_gold.g * 0.82, ui_gold.b * 0.82} }
+      Text: {value: name, size: keystone ? 14 : 13, font: font_display}
+      Rgb: hover || selected ? {255, 246, 224} : {ui_gold.r * 0.82, ui_gold.g * 0.82, ui_gold.b * 0.82}
       box.spatial.SpatialIgnore
     }
   }
@@ -215,7 +217,7 @@ template StarFace {
   }
 }
 
-template Star {
+template Star : HeadlessButton {
   prop id: i32 = 0
   prop from: i32 = -1
   prop x: f32 = 0
@@ -229,11 +231,7 @@ template Star {
   prop stat: i32 = 0
   prop amount: i32 = 1
 
-  mut hover = false
-
   Position: {x, y, 1}
-  Interactive
-  Cursor: {CursorPointer}
   Circle: {20}
   Rgb: {0, 0, 0}
   BlendMode: Additive
@@ -244,19 +242,8 @@ template Star {
 
   async {
     while true {
-      await on.enter(this)
-      hover = true
-      await on.leave(this)
-      hover = false
-    }
-  }
-
-  async {
-    while true {
-      await on.click(this)
-      rq_op = OP_SELECT_STAR
-      rq_entity = this
-      await ui.changed(rq)
+      await on.change(this)
+      emit SelectStar(star: this)
     }
   }
 }
@@ -408,8 +395,8 @@ template StatBar {
     }
     if delta != 0 {
       change {
-        Text: {value: match delta > 0 { true: "+{delta}"; _: "{delta}" }, size: 14, font: font_display}
-        Rgb: match delta > 0 { true: {130, 244, 170}; _: {255, 110, 96} }
+        Text: {value: delta > 0 ? "+{delta}" : "{delta}", size: 14, font: font_display}
+        Rgb: delta > 0 ? {130, 244, 170} : {255, 110, 96}
       }
     }
     Caption amount(text: "{value}", size: 15, font: font_display, color: ui_pale)
@@ -431,8 +418,8 @@ template StatBar {
       Position: {(high - 1) * w / 2, 0, 1}
       Scale: {high, 1, 1}
       Rect: {w - 2, 5}
-      Rgb: match after >= f { true: {126, 240, 164}; _: {255, 96, 84} }
-      Emissive: {strength: 0.35, color: match after >= f { true: {90, 255, 150}; _: {255, 70, 60} }}
+      Rgb: after >= f ? {126, 240, 164} : {255, 96, 84}
+      Emissive: {strength: 0.35, color: after >= f ? {90, 255, 150} : {255, 70, 60}}
       Transition: [
         Position: {duration: 0.35, timing_function: EaseOut},
         Scale: {duration: 0.35, timing_function: EaseOut}
@@ -498,7 +485,7 @@ template GildedButtonFace {
   prop primary: bool = true
 
   const lit = enabled && hover
-  const k = match down && enabled { true: 0.985; _: 1 }
+  const k = down && enabled ? 0.985 : 1
 
   Layout: {}
   LayoutItem: {width: {mode: Fixed, value: width}, height: {mode: Fixed, value: height}}
@@ -534,11 +521,7 @@ template GildedButtonFace {
   caption {
     Position: {0, 1, 3}
     Text: {value: label, size: 15, font: font_display}
-    if enabled {
-      Rgb: match holding { true: {255, 255, 255}; _: ui_pale }
-    } else {
-      Rgb: {98, 100, 118}
-    }
+    Rgb: !enabled ? {98, 100, 118} : holding ? {255, 255, 255} : ui_pale
     box.spatial.SpatialIgnore
   }
 }
@@ -548,32 +531,21 @@ template AwakenFace {
   prop down: bool = false
 
   const s = atlas_sel[Star]
-  const awake = has_bit(atlas_awake, s.id)
-  const open = s.from < 0 || has_bit(atlas_awake, s.from)
+  const awake = atlas_awake[s.id]
+  const open = s.from < 0 ? true : atlas_awake[s.from]
   const can = !awake && open && hero_points > 0
   Layout: {}
   LayoutItem: {width: {mode: Fixed, value: 236}, height: {mode: Fixed, value: 44}}
   box.spatial.SpatialIgnore
 
-  const label = match awake {
-    true: "Awakened"
-    _: match open {
-      true: match hero_points > 0 { true: "Hold to Awaken"; _: "No Star Points" }
-      _: "Beyond Reach"
-    }
-  }
+  const label = awake ? "Awakened" : !open ? "Beyond Reach" : hero_points > 0 ? "Hold to Awaken" : "No Star Points"
 
   GildedButtonFace art(
     label: label, enabled: can, hover: hover, down: down,
     holding: atlas_holding && can, seconds: HOLD_SECONDS)
 }
 
-template AwakenButton {
-  mut hover = false
-  mut down = false
-
-  Interactive
-  Cursor: {CursorPointer}
+template AwakenButton : HeadlessButton {
   Layout: {}
   LayoutItem: {width: {mode: Fixed, value: 236}, height: {mode: Fixed, value: 44}}
   Rect: {1, 1}
@@ -584,21 +556,12 @@ template AwakenButton {
 
   async {
     while true {
-      await on.enter(this)
-      hover = true
-      await on.leave(this)
-      hover = false
-    }
-  }
-
-  async {
-    while true {
       await on.press(this)
-      down = true
-      atlas_press = true
+      atlas_holding = true
+      atlas_hold_serial += 1
+      emit HoldStarted(serial: atlas_hold_serial, until: AppStatus[AppStatus].elapsed + HOLD_SECONDS)
       await on.release(this)
-      down = false
-      atlas_press = false
+      atlas_holding = false
     }
   }
 }
@@ -609,8 +572,8 @@ template StarInspector {
 
   const s = atlas_sel[Star]
   const hue: Rgb = {band_r(s.band), band_g(s.band), band_b(s.band)}
-  const awake = has_bit(atlas_awake, s.id)
-  const open = s.from < 0 || has_bit(atlas_awake, s.from)
+  const awake = atlas_awake[s.id]
+  const open = s.from < 0 ? true : atlas_awake[s.from]
 
   Frame frame(title: "Star Reading", width: 272, gap: 12) {
     medal {
@@ -675,7 +638,7 @@ template StarInspector {
       Layout: {direction: Row, h: Center}
       LayoutItem: {width: {mode: Grow}}
       Caption line(
-        text: match awake { true: "This star burns for you."; _: match open { true: "One star point, and a steady hand."; _: "Awaken the star before it." } },
+        text: awake ? "This star burns for you." : open ? "One star point, and a steady hand." : "Awaken the star before it.",
         size: 13, font: font_italic, color: ui_muted)
     }
 
@@ -683,16 +646,7 @@ template StarInspector {
   }
 }
 
-template PlainButton {
-  prop label: string = ""
-  prop op: i32 = 0
-  prop width: f32 = 236
-
-  mut hover = false
-  mut down = false
-
-  Interactive
-  Cursor: {CursorPointer}
+template PlainButton : HeadlessButton {
   Layout: {}
   LayoutItem: {width: {mode: Fixed, value: width}, height: {mode: Fixed, value: 36}}
   Rect: {1, 1}
@@ -700,32 +654,6 @@ template PlainButton {
   BlendMode: Additive
 
   GildedButtonFace art(label: label, hover: hover, down: down, primary: false, height: 36, width: width)
-
-  async {
-    while true {
-      await on.enter(this)
-      hover = true
-      await on.leave(this)
-      hover = false
-    }
-  }
-
-  async {
-    while true {
-      await on.press(this)
-      down = true
-      await on.release(this)
-      down = false
-    }
-  }
-
-  async {
-    while true {
-      await on.click(this)
-      rq_op = op
-      await ui.changed(rq)
-    }
-  }
 }
 
 template HeroLedger {
@@ -745,10 +673,10 @@ template HeroLedger {
     Heading sub(text: "Constellations", size: 14)
     Divider rule_b()
 
-    BandRow pyre(band: 0, count: atlas_count_0)
-    BandRow tide(band: 1, count: atlas_count_1)
-    BandRow thorn(band: 2, count: atlas_count_2)
-    BandRow veil(band: 3, count: atlas_count_3)
+    BandRow pyre(band: 0, count: atlas_count[0])
+    BandRow tide(band: 1, count: atlas_count[1])
+    BandRow thorn(band: 2, count: atlas_count[2])
+    BandRow veil(band: 3, count: atlas_count[3])
 
     gap_b {
       LayoutItem: {height: {mode: Grow}}
@@ -761,7 +689,14 @@ template HeroLedger {
       Caption line(text: "{hero_points} star points unspent", size: 14, font: font_italic, color: ui_text)
     }
 
-    PlainButton realign(label: "Realign the Stars", op: OP_REALIGN)
+    PlainButton realign(label: "Realign the Stars", width: 236) {
+      async {
+        while true {
+          await on.change(this)
+          emit Realign()
+        }
+      }
+    }
   }
 }
 
@@ -769,15 +704,15 @@ template Page {
   prop index: i32 = 0
 
   const here = screen == index
-  const a = match here { true: 1; _: 0 }
-  const k = match here { true: 1; _: 0.975 }
+  const a = here ? 1 : 0
+  const k = here ? 1 : 0.975
 
   LayoutItem: {width: {mode: Grow}, height: {mode: Grow}}
   Opacity: {a}
   Scale: {k, k, 1}
   Transition: [
-    Opacity: {duration: 0.45, delay: match here { true: 0.2; _: 0 }, timing_function: EaseInOut},
-    Scale: {duration: 0.6, delay: match here { true: 0.2; _: 0 }, timing_function: EaseOut}
+    Opacity: {duration: 0.45, delay: here ? 0.2 : 0, timing_function: EaseInOut},
+    Scale: {duration: 0.6, delay: here ? 0.2 : 0, timing_function: EaseOut}
   ]
   if !here {
     box.spatial.SpatialIgnore

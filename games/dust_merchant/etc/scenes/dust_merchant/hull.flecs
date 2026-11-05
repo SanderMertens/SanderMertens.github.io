@@ -109,32 +109,14 @@ fn normal_v(s: f32, t: f32) -> box.types.vec3 {
   {n.x, n.y, n.z}
 }
 
-fn ring_seg(s: f32, t0: f32, t1: f32) -> box.geometry.PathSegment3D {
-  const a = hull_pt(s, t0)
-  const b = hull_pt(s, t1)
-  const da = hull_d_t(s, t0)
-  const db = hull_d_t(s, t1)
-  const h = (t1 - t0) / 3
-  {
-    kind: CubicBezier,
-    end: {b.x, b.y, b.z},
-    control1: {a.x + da.x * h, a.y + da.y * h, a.z + da.z * h},
-    control2: {b.x - db.x * h, b.y - db.y * h, b.z - db.z * h}
-  }
+fn ring_seg(s: f32, t: f32) -> box.geometry.PathSegment3D {
+  const b = hull_pt(s, t)
+  {kind: CatmullRom, end: {b.x, b.y, b.z}}
 }
 
-fn long_seg(t: f32, s0: f32, s1: f32) -> box.geometry.PathSegment3D {
-  const a = hull_pt(s0, t)
+fn long_seg(t: f32, s1: f32) -> box.geometry.PathSegment3D {
   const b = hull_pt(s1, t)
-  const da = hull_d_s(s0, t)
-  const db = hull_d_s(s1, t)
-  const h = (s1 - s0) / 3
-  {
-    kind: CubicBezier,
-    end: {b.x, b.y, b.z},
-    control1: {a.x + da.x * h, a.y + da.y * h, a.z + da.z * h},
-    control2: {b.x - db.x * h, b.y - db.y * h, b.z - db.z * h}
-  }
+  {kind: CatmullRom, end: {b.x, b.y, b.z}}
 }
 
 fn wall_x(s: f32, side: f32, q: f32) -> f32 {
@@ -287,7 +269,7 @@ template RingFrame {
   const across = t0 < 0 && t1 > 0
   const e0 = t0
   const e6 = t1
-  const e3 = match across { true: 0; _: lerp(t0, t1, 0.5) }
+  const e3 = across ? 0 : lerp(t0, t1, 0.5)
   const e1 = lerp(e0, e3, 0.3333)
   const e2 = lerp(e0, e3, 0.6667)
   const e4 = lerp(e3, e6, 0.3333)
@@ -296,7 +278,7 @@ template RingFrame {
   run {
     Path3D: {
       start: {hull_pt(s, e0).x, hull_pt(s, e0).y, hull_pt(s, e0).z},
-      segments: [ring_seg(s, e0, e1), ring_seg(s, e1, e2), ring_seg(s, e2, e3), ring_seg(s, e3, e4), ring_seg(s, e4, e5), ring_seg(s, e5, e6)]
+      segments: [ring_seg(s, e1), ring_seg(s, e2), ring_seg(s, e3), ring_seg(s, e4), ring_seg(s, e5), ring_seg(s, e6)]
     }
   }
 
@@ -320,8 +302,8 @@ template LongFrame {
     Path3D: {
       start: {hull_pt(s0, t).x, hull_pt(s0, t).y, hull_pt(s0, t).z},
       segments: [
-        long_seg(t, s0, s0 + d), long_seg(t, s0 + d, s0 + 2 * d), long_seg(t, s0 + 2 * d, s0 + 3 * d),
-        long_seg(t, s0 + 3 * d, s0 + 4 * d), long_seg(t, s0 + 4 * d, s0 + 5 * d), long_seg(t, s0 + 5 * d, 1)
+        long_seg(t, s0 + d), long_seg(t, s0 + 2 * d), long_seg(t, s0 + 3 * d),
+        long_seg(t, s0 + 4 * d), long_seg(t, s0 + 5 * d), long_seg(t, 1)
       ]
     }
   }
@@ -457,7 +439,7 @@ template Ribs {
 
   sealer {
     for j in 0..2 {
-      const side = match j { 0: -1; _: 1 }
+      const side = j == 0 ? -1 : 1
       "bar_{j}" : Rubber { Beam: {a: {side * 0.012, hull_pt(ring_s(0), 0).y - 0.02, hull_z(ring_s(0))}, b: {side * 0.012, hull_pt(ring_s(2), 0).y - 0.02, hull_z(ring_s(2))}, w: 0.006, h: 0.012}; NoShadow; SpatialIgnore }
     }
   }
@@ -577,16 +559,16 @@ template Lower {
     TextureTransform: {scale_x: 1.4, scale_y: 18}
   }
 
-  dash_face : Soot { Position: {-0.14, 0.47, -1.02}; Box: {1.5, 0.94, 0.05}; TextureTransform: {scale_x: 2.4, scale_y: 1.5} }
-  knee_l : Soot { Position: {-1.18, 0.47, -0.77}; Rotation: {0, 0.72, 0}; Box: {0.86, 0.94, 0.05}; TextureTransform: {scale_x: 1.4, scale_y: 1.5} }
-  knee_r : Soot { Position: {1.02, 0.47, -0.76}; Rotation: {0, -0.55, 0}; Box: {1.04, 0.94, 0.05}; TextureTransform: {scale_x: 1.6, scale_y: 1.5} }
+  dash_face : Soot { Position: {-0.14, 0.47, -1.02}; Box: {1.5, 0.94, 0.05}; TextureMapping: {mode: MappingObject, size: 0.62} }
+  knee_l : Soot { Position: {-1.18, 0.47, -0.77}; Rotation: {0, 0.72, 0}; Box: {0.86, 0.94, 0.05}; TextureMapping: {mode: MappingObject, size: 0.62} }
+  knee_r : Soot { Position: {1.02, 0.47, -0.76}; Rotation: {0, -0.55, 0}; Box: {1.04, 0.94, 0.05}; TextureMapping: {mode: MappingObject, size: 0.62} }
 
-  ledge_l : Soot { Position: {-1.72, 0.7, 0.32}; Rotation: {0.0, 0, -0.12}; RoundedBox: {0.34, 0.05, 1.44, 0.018, segments: 2}; TextureTransform: {scale_x: 0.6, scale_y: 2.4} }
-  ledge_r : Soot { Position: {1.72, 0.7, 0.32}; Rotation: {0.0, 0, 0.12}; RoundedBox: {0.34, 0.05, 1.44, 0.018, segments: 2}; TextureTransform: {scale_x: 0.6, scale_y: 2.4} }
+  ledge_l : Soot { Position: {-1.72, 0.7, 0.32}; Rotation: {0.0, 0, -0.12}; RoundedBox: {0.34, 0.05, 1.44, 0.018, segments: 2}; TextureMapping: {mode: MappingObject, size: 0.62} }
+  ledge_r : Soot { Position: {1.72, 0.7, 0.32}; Rotation: {0.0, 0, 0.12}; RoundedBox: {0.34, 0.05, 1.44, 0.018, segments: 2}; TextureMapping: {mode: MappingObject, size: 0.62} }
   rail_l { Tube3: {a: {-1.76, 1.04, -0.22}, b: {-1.92, 1.04, 0.92}, r: 0.014, tone: {120, 118, 112}} }
   rail_r { Tube3: {a: {1.76, 1.04, -0.22}, b: {1.92, 1.04, 0.92}, r: 0.014, tone: {120, 118, 112}} }
 
-  pedestal : BoneWhite { Position: {0.24, 0.26, -0.3}; RoundedBox: {0.34, 0.52, 0.96, 0.02, segments: 2}; TextureTransform: {scale_x: 0.6, scale_y: 1}; Rgb: {120, 114, 100} }
+  pedestal : BoneWhite { Position: {0.24, 0.26, -0.3}; RoundedBox: {0.34, 0.52, 0.96, 0.02, segments: 2}; TextureMapping: {mode: MappingObject, size: 0.62}; Rgb: {120, 114, 100} }
 }
 
 template Seat {
@@ -595,9 +577,9 @@ template Seat {
   rail_a : Soot { Position: {-0.2, 0.03, 0}; Box: {0.05, 0.05, 0.8} }
   rail_b : Soot { Position: {0.2, 0.03, 0}; Box: {0.05, 0.05, 0.8} }
   post : BareSteel { Position: {0, 0.24, 0.02}; Rotation: {0, 0, 0}; Cylinder: {radius: 0.05, length: 0.42, segments: 14, smooth: true} }
-  pan : Quilt { Position: {0, 0.52, 0}; Rotation: {0.05, 0, 0}; RoundedBox: {0.5, 0.11, 0.52, 0.05, segments: 4}; TextureTransform: {scale_x: 0.5, scale_y: 0.5}; Rgb: {78, 40, 26} }
-  back : Quilt { Position: {0, 0.92, 0.28}; Rotation: {0.14, 0, 0}; RoundedBox: {0.48, 0.74, 0.12, 0.05, segments: 4}; TextureTransform: {scale_x: 0.5, scale_y: 0.7}; Rgb: {78, 40, 26} }
-  head : Quilt { Position: {0, 1.36, 0.34}; Rotation: {0.08, 0, 0}; RoundedBox: {0.28, 0.17, 0.1, 0.04, segments: 4}; TextureTransform: {scale_x: 0.3, scale_y: 0.2}; Rgb: {66, 36, 24} }
+  pan : Quilt { Position: {0, 0.52, 0}; Rotation: {0.05, 0, 0}; RoundedBox: {0.5, 0.11, 0.52, 0.05, segments: 4}; TextureMapping: {mode: MappingObject, size: 1}; Rgb: {78, 40, 26} }
+  back : Quilt { Position: {0, 0.92, 0.28}; Rotation: {0.14, 0, 0}; RoundedBox: {0.48, 0.74, 0.12, 0.05, segments: 4}; TextureMapping: {mode: MappingObject, size: 1}; Rgb: {78, 40, 26} }
+  head : Quilt { Position: {0, 1.36, 0.34}; Rotation: {0.08, 0, 0}; RoundedBox: {0.28, 0.17, 0.1, 0.04, segments: 4}; TextureMapping: {mode: MappingObject, size: 1}; Rgb: {66, 36, 24} }
   shell : Soot { Position: {0, 0.92, 0.36}; Rotation: {0.14, 0, 0}; Box: {0.42, 0.68, 0.03} }
   strap_a { Position: {-0.12, 1.02, 0.2}; Rotation: {0.14, 0, 0.05}; Box: {0.045, 0.56, 0.008}; Rgb: {100, 88, 54}; PbrMaterial: {metallic: 0, roughness: 0.9} }
   strap_b { Position: {0.12, 1.02, 0.2}; Rotation: {0.14, 0, -0.05}; Box: {0.045, 0.56, 0.008}; Rgb: {100, 88, 54}; PbrMaterial: {metallic: 0, roughness: 0.9} }
@@ -715,7 +697,7 @@ template Sponson {
     Position: {side * 2.36, 0.88, -10.9}
     Sphere: {radius: 0.05, segments: 10, smooth: true}
     Rgb: {30, 6, 4}
-    Emissive: {strength: match slow_blink && bus { true: 7; _: 0.2 }, color: match side > 0 { true: {80, 255, 130}; _: {255, 60, 40} }}
+    Emissive: {strength: slow_blink && bus ? 7 : 0.2, color: match side > 0 { true: {80, 255, 130}; _: {255, 60, 40} }}
     NoShadow
     SpatialIgnore
   }

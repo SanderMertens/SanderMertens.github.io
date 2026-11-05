@@ -20,10 +20,7 @@ template ProgressBar {
   mut current: f32 = value
 
   const t = box.ui.theme[UiTheme]
-  const bar_w = match width {
-    0.0: 200
-    _: width
-  }
+  const bar_w = width == 0 ? 200 : width
   const ratio = clamp(current, 0, 1)
   const bar_h = 6
 

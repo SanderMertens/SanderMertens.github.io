@@ -4,45 +4,20 @@ using box.app
 
 async {
   while true {
-    await on.change(stats_dirty)
-    var_might = 0
-    var_ward = 0
-    var_haste = 0
-    var_aether = 0
-    if eq_0 != 0 {
-      const a = eq_0[Item]
-      var_might = var_might + a.might
-      var_ward = var_ward + a.ward
-      var_haste = var_haste + a.haste
-      var_aether = var_aether + a.aether
+    await StatsChanged
+    mut gear: i32[4] = {}
+    for s in 0..4 {
+      const e = eq[s]
+      if e != 0 {
+        const a = e[Item]
+        gear = [gear[0] + a.might, gear[1] + a.ward, gear[2] + a.haste, gear[3] + a.aether]
+      }
     }
-    if eq_1 != 0 {
-      const a = eq_1[Item]
-      var_might = var_might + a.might
-      var_ward = var_ward + a.ward
-      var_haste = var_haste + a.haste
-      var_aether = var_aether + a.aether
-    }
-    if eq_2 != 0 {
-      const a = eq_2[Item]
-      var_might = var_might + a.might
-      var_ward = var_ward + a.ward
-      var_haste = var_haste + a.haste
-      var_aether = var_aether + a.aether
-    }
-    if eq_3 != 0 {
-      const a = eq_3[Item]
-      var_might = var_might + a.might
-      var_ward = var_ward + a.ward
-      var_haste = var_haste + a.haste
-      var_aether = var_aether + a.aether
-    }
-    stat_might = 30 + star_might + var_might
-    stat_ward = 24 + star_ward + var_ward
-    stat_haste = 18 + star_haste + var_haste
-    stat_aether = 26 + star_aether + var_aether
+    stat_might = 30 + star_bonus[0] + gear[0]
+    stat_ward = 24 + star_bonus[1] + gear[1]
+    stat_haste = 18 + star_bonus[2] + gear[2]
+    stat_aether = 26 + star_bonus[3] + gear[3]
     hero_hp_max = 200 + stat_ward * 1.3
     hero_mp_max = 210 + stat_aether * 1.4
   }
 }
-

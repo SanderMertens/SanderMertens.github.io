@@ -98,7 +98,7 @@ template Label {
   prop display: bool = false
   prop width: f32 = 0
   prop align: Align = Left
-  Text: {value: text, size: size, width: width, align: align, font: match display { true: mv_font_display; _: mv_font_body }}
+  Text: {value: text, size: size, width: width, align: align, font: display ? mv_font_display : mv_font_body}
   Rgb: color
 }
 
@@ -110,11 +110,11 @@ template Engraved {
   prop depth: f32 = 2
   prop width: f32 = 0
   prop align: Align = Left
-  Text: {value: text, size: size, width: width, align: align, font: match display { true: mv_font_display; _: mv_font_body }}
+  Text: {value: text, size: size, width: width, align: align, font: display ? mv_font_display : mv_font_body}
   Rgb: C_SHADE
   face {
     Position: {0 - depth * 0.5, depth, 0.02}
-    Text: {value: text, size: size, width: width, align: align, font: match display { true: mv_font_display; _: mv_font_body }}
+    Text: {value: text, size: size, width: width, align: align, font: display ? mv_font_display : mv_font_body}
     Rgb: color
   }
 }
@@ -154,8 +154,8 @@ template Panel {
   prop row: bool = false
   prop alpha: f32 = 1
   prop corners: bool = true
-  Layout: {direction: match row { true: Row; _: Column }, padding: {pad, pad, match padx < 0 { true: pad + 6; _: padx }, match padx < 0 { true: pad + 6; _: padx }}, spacing: gap, h: h, v: Middle}
-  LayoutItem: {width: {mode: match w > 0 { true: Fixed; _: Fit }, value: w}, height: {mode: match ht > 0 { true: Fixed; _: Fit }, value: ht}}
+  Layout: {direction: row ? Row : Column, padding: {pad, pad, padx < 0 ? pad + 6 : padx, padx < 0 ? pad + 6 : padx}, spacing: gap, h: h, v: Middle}
+  LayoutItem: {width: {mode: w > 0 ? Fixed : Fit, value: w}, height: {mode: ht > 0 ? Fixed : Fit, value: ht}}
   Rect: {1, 1}
   Image: {texture: mv_ui_parchment}
   Rgb: {255, 252, 244}
@@ -222,16 +222,16 @@ template SpellSocket {
     Border: {width: 2.5, color: {40, 26, 12, 255}}
     BoxShadow: {blur: 12, spread: 2, color: {255, 230, 170, 120}}
   } else {
-    Rgb: match have { true: {184, 140, 66}; _: {120, 98, 64} }
+    Rgb: have ? {184, 140, 66} : {120, 98, 64}
     Border: {width: 2.5, color: {40, 26, 12, 255}}
     BoxShadow: {offset_y: -2, blur: 6, color: {0, 0, 0, 160}}
   }
   rim { Position: {0, 0, 0.05}; Circle: {25.5}; Rgb: {58, 38, 18} }
   if have {
-    gem { Position: {0, 0, 0.1}; Circle: {24}; Rgb: match active { true: c; _: {c.r * 0.55, c.g * 0.55, c.b * 0.55} } }
-    gem_core { Position: {0, -3, 0.12}; Circle: {16}; Rgb: match active { true: {min(255, c.r * 1.15 + 30), min(255, c.g * 1.15 + 30), min(255, c.b * 1.15 + 30)}; _: {c.r * 0.7, c.g * 0.7, c.b * 0.7} }; Opacity: {0.7} }
-    icon { Position: {0, 0, 0.2}; Rect: {32, 32}; Image: {texture: spell_icon(s)}; Rgb: match active { true: {255, 255, 255}; _: {214, 204, 186} } }
-    glint { Position: {-10, 11, 0.25}; Circle: {4}; Rgb: {255, 255, 255}; Opacity: {match active { true: 0.9; _: 0.45 }} }
+    gem { Position: {0, 0, 0.1}; Circle: {24}; Rgb: active ? c : {c.r * 0.55, c.g * 0.55, c.b * 0.55} }
+    gem_core { Position: {0, -3, 0.12}; Circle: {16}; Rgb: active ? {min(255, c.r * 1.15 + 30), min(255, c.g * 1.15 + 30), min(255, c.b * 1.15 + 30)} : {c.r * 0.7, c.g * 0.7, c.b * 0.7}; Opacity: {0.7} }
+    icon { Position: {0, 0, 0.2}; Rect: {32, 32}; Image: {texture: spell_icon(s)}; Rgb: active ? {255, 255, 255} : {214, 204, 186} }
+    glint { Position: {-10, 11, 0.25}; Circle: {4}; Rgb: {255, 255, 255}; Opacity: {active ? 0.9 : 0.45} }
   } else {
     well { Position: {0, 0, 0.1}; Circle: {24}; Rgb: {30, 24, 20} }
     rune { Position: {0, 1, 0.2}; Text: {value: "?", size: 22, font: mv_font_display}; Rgb: {110, 92, 70} }
@@ -248,12 +248,12 @@ template SpellSlot {
   Interactive
   Cursor: {CursorPointer}
   socket_slot { Layout: {direction: Row}; SpellSocket socket(s: s, have: have, active: active, over: over && have) }
-  name_slot { Layout: {direction: Row}; Label name(text: match have { true: spell_name(s); _: "Unknown" }, size: 12, color: match active { true: C_GOLD; _: match have { true: C_MUTED; _: {130, 120, 100} } }, display: true) }
+  name_slot { Layout: {direction: Row}; Label name(text: have ? spell_name(s) : "Unknown", size: 12, color: active ? C_GOLD : have ? C_MUTED : {130, 120, 100}, display: true) }
   key {
     LayoutFloat: {h: Center, v: Middle, anchor_h: Left, anchor_v: Top, x: 13, y: -13}
     LayoutItem: {width: {mode: Fixed, value: 22}, height: {mode: Fixed, value: 22}}
     Circle: {11}
-    Rgb: match active { true: {255, 222, 130}; _: {232, 214, 172} }
+    Rgb: active ? {255, 222, 130} : {232, 214, 172}
     Border: {width: 1.8, color: {50, 30, 12, 255}}
     BoxShadow: {offset_y: -1.5, blur: 3, color: {0, 0, 0, 160}}
     label { Position: {0, 0.5, 0.1}; Text: {value: "{s}", size: 12, font: mv_font_display}; Rgb: C_INK }
@@ -289,7 +289,7 @@ template ManaVial {
   neck {
     Position: {0, 88 * u, 0}
     Rect: {48 * u, 60 * u}
-    Rgb: match level > 0.98 { true: {64, 104, 236}; _: {14, 20, 46} }
+    Rgb: level > 0.98 ? {64, 104, 236} : {14, 20, 46}
   }
   glass {
     Position: {0, cy, 0}
@@ -327,7 +327,7 @@ template ManaVial {
       for m in 0..5 {
         const mx = (m - 2) * inner * 0.16
         const my = inner * (0.12 * (m % 3) - 0.38)
-        "m_{m}" { Position: {mx, min(my, surface - 8), 0}; Circle: {2 + (m % 2) * 1.5}; Rgb: {190, 214, 255}; Opacity: {match my < surface - 8 { true: 0.55; _: 0 }} }
+        "m_{m}" { Position: {mx, min(my, surface - 8), 0}; Circle: {2 + (m % 2) * 1.5}; Rgb: {190, 214, 255}; Opacity: {my < surface - 8 ? 0.55 : 0} }
       }
     }
   }
@@ -491,7 +491,7 @@ template MiniMap {
   compass { Position: {80, 80, 0.7}; Rect: {54, 54}; Image: {texture: mv_ui_compass}; Rgb: {255, 255, 255} }
   for c in 0..4 {
     const sx = match c % 2 { 0: -1; _: 1 }
-    const sy = match c < 2 { true: 1; _: -1 }
+    const sy = c < 2 ? 1 : -1
     "corner_{c}" {
       Position: {sx * 106, sy * 106, 0.65}
       Rotation: {0, 0, match c { 0: 0; 1: 0 - HALF_PI; 2: HALF_PI; _: PI }}
@@ -638,7 +638,7 @@ template Dialog {
             Layout: {direction: Row, h: Right, v: Middle, spacing: 7}
             LayoutItem: {width: {mode: Fixed, value: 660}}
             Keycap key(key: "E", size: 11)
-            Label hint(text: match last { true: "farewell"; _: "continue" }, size: 14, color: C_INK_SOFT, display: true)
+            Label hint(text: last ? "farewell" : "continue", size: 14, color: C_INK_SOFT, display: true)
           }
         }
       }
@@ -678,7 +678,7 @@ template Pulse {
   face {
     Position: {-1, 2, 0.02}
     Text: {value: text, size: size, font: mv_font_display}
-    Rgb: match glow { true: {255, 246, 222}; _: C_GOLD }
+    Rgb: glow ? {255, 246, 222} : C_GOLD
     Transition: [Rgb: {duration: 0.8, timing_function: EaseInOut}]
   }
   async {
@@ -692,7 +692,7 @@ template Pulse {
 template TitleCard {
   mut shown = false
   Layout: {}
-  Opacity: {match shown { true: 1; _: 0 }}
+  Opacity: {shown ? 1 : 0}
   Transition: [Opacity: {duration: 1.4, timing_function: EaseOut}]
   shade_ {
     LayoutItem: {width: {mode: Grow}, height: {mode: Grow}}

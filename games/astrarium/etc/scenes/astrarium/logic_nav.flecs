@@ -1,23 +1,14 @@
 using flecs.script
 using flecs.script.math
 using box.app
+using box.ui
 
 async {
   while true {
-    await on.change(rq)
-    const op = rq_op
-    const now = AppStatus[AppStatus].elapsed
-    if op == OP_BEGIN || op == OP_NAV_ATLAS {
-      screen = SCREEN_ATLAS
+    const e = await Navigate
+    screen = e.screen
+    if e.screen != SCREEN_TITLE {
       hud_go = true
-    } else if op == OP_ARMORY || op == OP_NAV_ARMORY {
-      screen = SCREEN_ARMORY
-      hud_go = true
-    } else if op == OP_RITES || op == OP_NAV_RITES {
-      screen = SCREEN_RITES
-      hud_go = true
-    } else if op == OP_TITLE {
-      screen = SCREEN_TITLE
     }
   }
 }
@@ -63,9 +54,9 @@ async {
 async {
   while true {
     await on.pressed(actions.Enter)
-    if screen == SCREEN_TITLE {
-      rq_op = OP_BEGIN
-      await ui.changed(rq)
+    const focused = FocusStatus[FocusStatus].focused
+    if screen == SCREEN_TITLE && (focused == 0 || !focused?[TitleEntry]) {
+      emit Navigate(screen: SCREEN_ATLAS)
     }
   }
 }
@@ -78,9 +69,7 @@ template CastKey {
     while true {
       await on.pressed(action)
       if screen != SCREEN_TITLE {
-        rq_op = OP_CAST
-        rq_arg = index
-        await ui.changed(rq)
+        emit Cast(spell: index)
       }
     }
   }

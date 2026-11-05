@@ -117,7 +117,7 @@ export mut attitude_roll: f32 = 0
 export mut attitude_yaw: f32 = 0
 
 fn bool_f(b: bool) -> f32 {
-  match b { true: 1; _: 0 }
+  b ? 1 : 0
 }
 
 fn has_bit(mask: i32, i: i32) -> bool {

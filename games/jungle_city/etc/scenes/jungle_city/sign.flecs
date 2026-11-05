@@ -4,7 +4,6 @@ using box.geometry
 using box.material
 using box.text
 
-@tree Parent
 template CanopySign {
   prop label: string = "GARDENS"
   prop color: Rgb = {112, 235, 196}

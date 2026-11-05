@@ -11,13 +11,15 @@ using box.layout
 using box.geometry
 using box.material
 using box.text
+using box.transition
 
 // Snap a value to the steps from min, 0 for a continuous value, and clamp it to min..max
 fn slider_snap(v: f64, min: f64, max: f64, step: f64) -> f64 {
-  match step > 0 {
-    true: clamp(min + round((v - min) / step) * step, min, max)
-    _: clamp(v, min, max)
-  }
+  step > 0 ? clamp(min + round((v - min) / step) * step, min, max) : clamp(v, min, max)
+}
+
+fn slider_ratio(x: f64, w: f64, thumb: f64) -> f64 {
+  clamp((x + w / 2 - thumb / 2) / (w - thumb + 0.001), 0, 1)
 }
 
 // Behavior of a slider. A press on the track jumps to the value under the pointer and a drag
@@ -42,10 +44,7 @@ template HeadlessSlider {
   mut focused = false
 
   const range = max - min
-  const key_step = match step > 0 {
-    true: step
-    _: range / 100
-  }
+  const key_step = step > 0 ? step : range / 100
 
   if !disabled {
     Focusable
@@ -77,8 +76,7 @@ template HeadlessSlider {
       const b = this[LayoutBounds]
       down = !disabled && e.local_y < thumb - b.height / 2
       if down {
-        const ratio = clamp((e.local_x + b.width / 2 - thumb / 2) / (b.width - thumb + 0.001), 0, 1)
-        const v = slider_snap(min + ratio * range, min, max, step)
+        const v = slider_snap(min + slider_ratio(e.local_x, b.width, thumb) * range, min, max, step)
         if v != current {
           current = v
           await ui.changed(this)
@@ -92,8 +90,7 @@ template HeadlessSlider {
       const e = await on.drag(this)
       if down && !disabled {
         const w = this[LayoutBounds].width
-        const ratio = clamp((e.local_x + w / 2 - thumb / 2) / (w - thumb + 0.001), 0, 1)
-        const v = slider_snap(min + ratio * range, min, max, step)
+        const v = slider_snap(min + slider_ratio(e.local_x, w, thumb) * range, min, max, step)
         if v != current {
           current = v
           await ui.changed(this)
@@ -132,10 +129,8 @@ template HeadlessSlider {
       const e = await on.key_down(this)
       if !disabled {
         const target = match e.key {
-          "ArrowLeft": current - key_step
-          "ArrowDown": current - key_step
-          "ArrowRight": current + key_step
-          "ArrowUp": current + key_step
+          "ArrowLeft", "ArrowDown": current - key_step
+          "ArrowRight", "ArrowUp": current + key_step
           "PageDown": current - range / 10
           "PageUp": current + range / 10
           "Home": min
@@ -162,15 +157,10 @@ template Slider : HeadlessSlider {
 
   const t = box.ui.theme[UiTheme]
   const ring = focused && FocusStatus[FocusStatus].visible
-  const track_w = match width {
-    0.0: 200
-    _: width
-  }
+  const track_w = width == 0 ? 200 : width
   const range = max - min
-  const ratio = match range > 0 {
-    true: clamp((current - min) / range, 0, 1)
-    _: 0
-  }
+  const ratio = range > 0 ? clamp((current - min) / range, 0, 1) : 0
+  const edge = ring ? t.focus : t.accent
   const rail = 4
 
   Layout: {direction: Column, spacing: 2}
@@ -229,21 +219,11 @@ template Slider : HeadlessSlider {
 
       // Held, the knob takes the accent: the pressed color of the theme is close to the surface
       // and hid the knob while it was dragged
-      if down {
-        Rgb: t.accent
-      } else if hover {
-        Rgb: t.text
-      } else {
-        Rgb: t.text_muted
-      }
-
-      if ring {
-        Border: {
-          width: t.focus_width, radius: thumb / 2,
-          color: {t.focus.r, t.focus.g, t.focus.b, 255}
-        }
-      } else {
-        Border: {width: 2, radius: thumb / 2, color: {t.accent.r, t.accent.g, t.accent.b, 255}}
+      Rgb: down ? t.accent : hover ? t.text : t.text_muted
+      Transition: [Rgb: WidgetFade]
+      Border: {
+        width: ring ? t.focus_width : 2, radius: thumb / 2,
+        color: {edge.r, edge.g, edge.b, 255}
       }
     }
   }

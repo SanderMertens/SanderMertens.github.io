@@ -2,7 +2,6 @@ include state
 
 using flecs.script
 using flecs.script.math
-using box.app
 
 export const SHIP_AWAY: i32 = 0
 export const SHIP_ARRIVING: i32 = 1
@@ -13,146 +12,134 @@ export const SHIP_DOCKED: i32 = 5
 export const SHIP_LIFTING: i32 = 6
 export const SHIP_LEAVING: i32 = 7
 export const st_ship_count: i32 = 10
-export mut st_scan: i32 = -1
+
+proc st_ship_go(s: i32, state: i32, timer: i32) {
+  st_ships[s].state = state
+  st_ships[s].timer = timer
+}
 
 async {
   const rng: flecs.script.math.Rng = {seed: 1137}
 
   while true {
-    await on.change(st_tick)
-    const now = AppStatus[AppStatus].elapsed
+    await Tick
 
     for s in 0..st_ship_count {
       const cargo = s >= 5
-      const state = st_bits_get(st_ship_state, s, 4)
-      const timer = st_bits_get(st_ship_timer, s, 6)
-      const dock = st_bits_get(st_ship_dock, s, 6) - 1
+      const ship = st_ships[s]
+      const state = ship.state
+      const timer = ship.timer
 
       if timer > 0 {
-        st_ship_timer = st_bits_set(st_ship_timer, s, 6, timer - 1)
+        st_ships[s].timer -= 1
       }
 
       if state == SHIP_AWAY {
         if cargo && st_cargo_docks > 0 && st_beat >= st_next_cargo {
           st_next_cargo = st_beat + max(12, 34 - st_reputation / 8 - st_cargo_docks * 3)
-          st_ship_state = st_bits_set(st_ship_state, s, 4, SHIP_ARRIVING)
-          st_ship_timer = st_bits_set(st_ship_timer, s, 6, 6)
+          st_ship_go(s, SHIP_ARRIVING, 6)
         } else if !cargo && st_pax_docks > 0 && st_beat >= st_next_pax {
           st_next_pax = st_beat + max(9, 30 - st_reputation / 6 - st_pax_docks * 3 - st_residents / 10)
-          st_ship_state = st_bits_set(st_ship_state, s, 4, SHIP_ARRIVING)
-          st_ship_timer = st_bits_set(st_ship_timer, s, 6, 6)
+          st_ship_go(s, SHIP_ARRIVING, 6)
         }
       } else if state == SHIP_ARRIVING {
         if timer <= 1 {
-          st_ship_state = st_bits_set(st_ship_state, s, 4, SHIP_HOLDING)
-          st_ship_patience = st_bits_set(st_ship_patience, s, 6, 22)
+          st_ships[s].state = SHIP_HOLDING
+          st_ships[s].patience = 22
           if cargo {
-            st_cargo_holding = st_cargo_holding + 1
+            st_cargo_holding += 1
           } else {
-            st_pax_holding = st_pax_holding + 1
+            st_pax_holding += 1
           }
         }
       } else if state == SHIP_HOLDING {
-        const patience = st_bits_get(st_ship_patience, s, 6)
-        const free = match cargo { true: st_free_cargo; _: st_free_pax }
-        st_scan = -1
+        const pad_kind = cargo ? K_CARGO : K_PAX
+        mut pad: i32 = -1
         for i in 0..st_slots {
-          if st_scan < 0 && st_has(free, i) {
-            st_scan = i
+          if st_grid[i] == pad_kind && !st_pad_busy[i] {
+            pad = i
+            break
           }
         }
-        if st_scan >= 0 {
+        if pad >= 0 {
+          st_pad_busy[pad] = true
           if cargo {
-            st_free_cargo = st_free_cargo - st_bit(st_scan)
-            st_cargo_holding = st_cargo_holding - 1
+            st_cargo_holding -= 1
           } else {
-            st_free_pax = st_free_pax - st_bit(st_scan)
-            st_pax_holding = st_pax_holding - 1
+            st_pax_holding -= 1
           }
-          st_ship_dock = st_bits_set(st_ship_dock, s, 6, st_scan + 1)
-          st_ship_state = st_bits_set(st_ship_state, s, 4, SHIP_APPROACH)
-          st_ship_timer = st_bits_set(st_ship_timer, s, 6, 4)
-        } else if patience <= 1 {
-          st_ship_state = st_bits_set(st_ship_state, s, 4, SHIP_LEAVING)
-          st_ship_timer = st_bits_set(st_ship_timer, s, 6, 7)
+          st_ships[s].dock = pad
+          st_ship_go(s, SHIP_APPROACH, 4)
+        } else if ship.patience <= 1 {
+          st_ship_go(s, SHIP_LEAVING, 7)
           st_reputation = max(st_reputation - 4, 0)
-          st_ships_lost = st_ships_lost + 1
+          st_ships_lost += 1
           if cargo {
-            st_cargo_holding = st_cargo_holding - 1
-            st_alert = "A freighter gave up waiting for a free Cargo Dock. Reputation fell."
+            st_cargo_holding -= 1
+            st_notify("A freighter gave up waiting for a free Cargo Dock. Reputation fell.", 7)
           } else {
-            st_pax_holding = st_pax_holding - 1
-            st_alert = "A visitor ship gave up waiting for a free Passenger Dock. Reputation fell."
+            st_pax_holding -= 1
+            st_notify("A visitor ship gave up waiting for a free Passenger Dock. Reputation fell.", 7)
           }
-          st_alert_until = now + 7
         } else {
-          st_ship_patience = st_bits_set(st_ship_patience, s, 6, patience - 1)
+          st_ships[s].patience -= 1
         }
       } else if state == SHIP_APPROACH {
         if timer <= 1 {
-          st_ship_state = st_bits_set(st_ship_state, s, 4, SHIP_LANDING)
-          st_ship_timer = st_bits_set(st_ship_timer, s, 6, 3)
+          st_ship_go(s, SHIP_LANDING, 3)
         }
       } else if state == SHIP_LANDING {
         if timer <= 1 {
-          st_ship_state = st_bits_set(st_ship_state, s, 4, SHIP_DOCKED)
+          st_ships[s].state = SHIP_DOCKED
           st_reputation = min(st_reputation + 0.5, 100)
-          st_ships_served = st_ships_served + 1
+          st_ships_served += 1
           if cargo {
-            st_ship_timer = st_bits_set(st_ship_timer, s, 6, 26)
-            st_cargo_docked = st_cargo_docked + 1
-            st_credits = st_credits + 25
+            st_ships[s].timer = 26
+            st_cargo_docked += 1
+            st_credits += 25
             st_price_food = 7 + rng.f(7)
             st_price_goods_buy = 8 + rng.f(10)
             st_price_goods_sell = 12 + rng.f(16)
             st_stock_food = min(st_stock_food + 40, 80)
             st_stock_goods = min(st_stock_goods + 40, 80)
             st_demand_goods = min(st_demand_goods + 40, 80)
-            st_alert = "A freighter docked: the cargo market is open."
-            st_alert_until = now + 4
+            st_notify("A freighter docked: the cargo market is open.", 4)
           } else {
             const came = 6 + floor(st_reputation / 10) + floor(rng.f(6))
-            st_ship_timer = st_bits_set(st_ship_timer, s, 6, 20)
-            st_ship_visitors = st_bits_set(st_ship_visitors, s, 6, came)
-            st_pax_docked = st_pax_docked + 1
-            st_visitors = st_visitors + came
-            st_visitor_spend = st_visitor_spend + came * 0.6
-            st_credits = st_credits + 30 + came * 5
+            st_ships[s].timer = 20
+            st_ships[s].visitors = came
+            st_pax_docked += 1
+            st_visitors += came
+            st_visitor_spend += came * 0.6
+            st_credits += 30 + came * 5
           }
         }
       } else if state == SHIP_DOCKED {
         if timer <= 1 {
-          st_ship_state = st_bits_set(st_ship_state, s, 4, SHIP_LIFTING)
-          st_ship_timer = st_bits_set(st_ship_timer, s, 6, 3)
+          st_ship_go(s, SHIP_LIFTING, 3)
           if cargo {
-            st_cargo_docked = st_cargo_docked - 1
+            st_cargo_docked -= 1
             if st_cargo_docked == 0 {
               st_stock_food = 0
               st_stock_goods = 0
               st_demand_goods = 0
             }
           } else {
-            const came = st_bits_get(st_ship_visitors, s, 6)
-            st_ship_visitors = st_bits_set(st_ship_visitors, s, 6, 0)
-            st_pax_docked = st_pax_docked - 1
-            st_visitors = st_visitors - came
-            st_visitor_spend = st_visitor_spend - came * 0.6
+            const came = ship.visitors
+            st_ships[s].visitors = 0
+            st_pax_docked -= 1
+            st_visitors -= came
+            st_visitor_spend -= came * 0.6
           }
         }
       } else if state == SHIP_LIFTING {
         if timer <= 1 {
-          if cargo {
-            st_free_cargo = st_free_cargo + st_bit(dock)
-          } else {
-            st_free_pax = st_free_pax + st_bit(dock)
-          }
-          st_ship_dock = st_bits_set(st_ship_dock, s, 6, 0)
-          st_ship_state = st_bits_set(st_ship_state, s, 4, SHIP_LEAVING)
-          st_ship_timer = st_bits_set(st_ship_timer, s, 6, 7)
+          st_pad_busy[ship.dock] = false
+          st_ship_go(s, SHIP_LEAVING, 7)
         }
       } else if state == SHIP_LEAVING {
         if timer <= 1 {
-          st_ship_state = st_bits_set(st_ship_state, s, 4, SHIP_AWAY)
+          st_ships[s].state = SHIP_AWAY
         }
       }
     }

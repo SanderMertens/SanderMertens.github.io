@@ -3,57 +3,42 @@ using flecs.script.math
 using box.app
 
 async {
+  mut last_focus: entity = 0
   while true {
-    await on.change(hover_dirty)
-    const hovering = armory_hovering
+    await HoverChanged
     const shown = armory_hover
-    if hovering {
-      var_focus = shown
-    } else {
-      var_focus = eq_0
-    }
-    if hovering {
+    const focus = armory_hovering ? shown : eq[0]
+    mut delta: i32[4] = {}
+    if armory_hovering {
       const h = shown[Item]
-      const held = eq_of(h.slot, eq_0, eq_1, eq_2, eq_3)
+      const held = eq[h.slot]
       if held != 0 && held != shown {
         const w = held[Item]
-        preview_might = h.might - w.might
-        preview_ward = h.ward - w.ward
-        preview_haste = h.haste - w.haste
-        preview_aether = h.aether - w.aether
-      } else {
-        preview_might = 0
-        preview_ward = 0
-        preview_haste = 0
-        preview_aether = 0
+        delta = [h.might - w.might, h.ward - w.ward, h.haste - w.haste, h.aether - w.aether]
       }
-    } else {
-      preview_might = 0
-      preview_ward = 0
-      preview_haste = 0
-      preview_aether = 0
     }
-    if var_focus != 0 && var_focus != last_focus {
-      const f = var_focus[Item]
-      last_focus = var_focus
+    preview = delta
+    if focus != 0 && focus != last_focus {
+      const f = focus[Item]
+      last_focus = focus
       relic_model = f.slot
       relic_r = f.model_hue.r
       relic_g = f.model_hue.g
       relic_b = f.model_hue.b
       relic_name = f.name
       relic_line = "{rarity_name(f.rarity)} {slot_name(f.slot)}"
-      relic_serial = relic_serial + 1
+      relic_serial += 1
     }
   }
 }
 
 async {
   while true {
-    await on.change(hover_left)
-    if armory_left == armory_hover {
+    const e = await HoverLeft
+    if e.item == armory_hover {
       armory_hovering = false
       armory_tip_on = false
-      await ui.changed(hover_dirty)
+      emit HoverChanged()
     }
   }
 }

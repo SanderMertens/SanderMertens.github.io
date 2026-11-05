@@ -1,3 +1,4 @@
+using flecs.script
 using flecs.script.math
 using box.transform
 using box.geometry
@@ -6,6 +7,7 @@ using box.light
 using box.text
 using box.input
 using box.picking
+using box.transition
 
 prefab JBOutline {
   Path2D: {
@@ -75,6 +77,12 @@ template JBSongKey {
     Rgb: {r, g, b}
     Emissive: {strength: 0.15 + 1.5 * (song == index), color: {r, g, b}}
   }
+  async {
+    while true {
+      await on.pressed(action)
+      pick(index)
+    }
+  }
 }
 
 template Jukebox {
@@ -101,12 +109,9 @@ template Jukebox {
   JBArch light_channel(radius: 0.632, tube: 0.048) { Position: {0, 0, 0.402}; (IsA, JBBrass) }
   JBArch neon(radius: 0.632, tube: 0.033) {
     Position: {0, 0, 0.439}
-    if playing {
-      Rgb: {R, G, B}
-      Emissive: {strength: 0.7 + 1.15 * glow, color: {R, G, B}}
-    } else {
-      Rgb: {58, 60, 68}
-    }
+    Rgb: playing ? {R, G, B} : {58, 60, 68}
+    Emissive: {strength: playing ? 0.7 + 1.15 * glow : 0, color: {R, G, B}}
+    Transition: [Rgb: {duration: 0.4, timing_function: EaseOut}, Emissive: {duration: 0.12, timing_function: EaseOut}]
     PbrMaterial: {roughness: 0.25}
     ClearCoat: {strength: 1, roughness: 0.12}
   }
@@ -187,12 +192,8 @@ template Jukebox {
 
   console : JBChrome { Position: {0, 1.035, 0.425}; RoundedBox: {1.075, 0.25, 0.16, 0.045} }
   console_inset : JBDark { Position: {0, 1.041, 0.51}; RoundedBox: {0.975, 0.17, 0.018, 0.022} }
-  JBSongKey orbit_key(index: 0, action: jukebox_actions.pick_orbit) { Position: {-0.38, 1.015, 0.538} }
-  JBSongKey neon_key(index: 1, action: jukebox_actions.pick_neon) { Position: {-0.19, 1.015, 0.538} }
-  JBSongKey harbor_key(index: 2, action: jukebox_actions.pick_harbor) { Position: {0, 1.015, 0.538} }
-  JBSongKey lantern_key(index: 3, action: jukebox_actions.pick_lantern) { Position: {0.19, 1.015, 0.538} }
-  JBSongKey lane_key(index: 4, action: jukebox_actions.pick_lane) { Position: {0.38, 1.015, 0.538} }
   for i in 0..5 {
+    "{SONG_KEY[i]}_key" { JBSongKey: {index: i, action: SONG_ACTION[i]}; Position: {(i - 2) * 0.19, 1.015, 0.538} }
     "song_plate_{i}" : JBIvory { Position: {(i - 2) * 0.19, 1.092, 0.525}; RoundedBox: {0.17, 0.033, 0.006, 0.006} }
     "title_{i}" {
       Position: {(i - 2) * 0.19, 1.093, 0.531}
@@ -203,7 +204,7 @@ template Jukebox {
   }
 
   grille_frame : JBBrass { Position: {0, 0.609, 0.412}; RoundedBox: {1.036, 0.61, 0.06, 0.1} }
-  speaker_cloth : JBDark { Position: {0, 0.609, 0.447}; RoundedBox: {0.975, 0.55, 0.024, 0.07} }
+  speaker_cloth : JBDark { Position: {0, 0.609, 0.447}; RoundedBox: {0.975, 0.55, 0.024, 0.07}; Sheen: {color: {96, 84, 66}, roughness: 0.55} }
   for i in 0..31 {
     "warp_{i}" : JBBrass { Position: {-0.449 + i * 0.03, 0.605, 0.464}; Cylinder: {radius: 0.0028, length: 0.46, segments: 6, smooth: true} }
   }
@@ -226,7 +227,7 @@ template Jukebox {
     }
     "spill_{side}" {
       Position: {(side * 2 - 1) * 0.72, 0.75, 0.66}
-      PointLight: {intensity: (0.12 + 0.5 * match side {0: master_l; _: master_r}) * PI, range: 1.8}
+      PointLight: {intensity: (0.12 + 0.5 * master_level[side]) * PI, range: 1.8}
       Rgb: {R, G, B}
     }
   }

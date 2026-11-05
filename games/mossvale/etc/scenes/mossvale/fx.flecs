@@ -528,7 +528,7 @@ async {
       const k = floor(walk_phase / PI)
       if k != last_step {
         last_step = k
-        const a = box.audio.play(SfxStep, match sprinting { true: 0.55; _: 0.4 })
+        const a = box.audio.play(SfxStep, sprinting ? 0.55 : 0.4)
       }
     }
   }

@@ -3,7 +3,6 @@ using box.transform
 using box.geometry
 using box.material
 
-@tree Parent
 template CanopySpire {
   prop floors: i32 = 5
   prop variant: i32 = 0

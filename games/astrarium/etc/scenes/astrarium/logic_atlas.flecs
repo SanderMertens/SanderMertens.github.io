@@ -4,48 +4,49 @@ using box.app
 
 async {
   while true {
-    await on.change(rq)
-    const op = rq_op
-    const now = AppStatus[AppStatus].elapsed
-    if op == OP_SELECT_STAR {
-      atlas_sel = rq_entity
-    } else if op == OP_AWAKEN {
-      const s = atlas_sel[Star]
-      const open = s.from < 0 || has_bit(atlas_awake, s.from)
-      if !has_bit(atlas_awake, s.id) && open && hero_points > 0 {
-        hero_points = hero_points - 1
-        atlas_awake = atlas_awake + (1 << s.id)
-        atlas_fresh = s.id
-        if s.stat == 0 { star_might = star_might + s.amount }
-        if s.stat == 1 { star_ward = star_ward + s.amount }
-        if s.stat == 2 { star_haste = star_haste + s.amount }
-        if s.stat == 3 { star_aether = star_aether + s.amount }
-        if s.band == 0 { atlas_count_0 = atlas_count_0 + 1 }
-        if s.band == 1 { atlas_count_1 = atlas_count_1 + 1 }
-        if s.band == 2 { atlas_count_2 = atlas_count_2 + 1 }
-        if s.band == 3 { atlas_count_3 = atlas_count_3 + 1 }
-        await ui.changed(stats_dirty)
-        if s.keystone {
-          banner_text = s.name
-          banner_sub = "{band_name(s.band)} answers"
-          banner_on = true
-          banner_until = now + 2.8
-        }
-      }
-    } else if op == OP_REALIGN {
-      const count = atlas_count_0 + atlas_count_1 + atlas_count_2 + atlas_count_3
-      hero_points = hero_points + count
-      atlas_awake = 0
-      atlas_fresh = -1
-      atlas_count_0 = 0
-      atlas_count_1 = 0
-      atlas_count_2 = 0
-      atlas_count_3 = 0
-      star_might = 0
-      star_ward = 0
-      star_haste = 0
-      star_aether = 0
-      await ui.changed(stats_dirty)
+    const e = await SelectStar
+    atlas_sel = e.star
+  }
+}
+
+async {
+  while true {
+    const e = await HoldStarted
+    await delay(e.until - AppStatus[AppStatus].elapsed)
+    if atlas_holding && e.serial == atlas_hold_serial {
+      atlas_holding = false
+      emit Awaken()
     }
+  }
+}
+
+async {
+  while true {
+    await Awaken
+    const s = atlas_sel[Star]
+    const open = s.from < 0 ? true : atlas_awake[s.from]
+    if !atlas_awake[s.id] && open && hero_points > 0 {
+      hero_points -= 1
+      atlas_awake[s.id] = true
+      atlas_fresh = s.id
+      star_bonus[s.stat] += s.amount
+      atlas_count[s.band] += 1
+      emit StatsChanged()
+      if s.keystone {
+        show_banner(s.name, "{band_name(s.band)} answers")
+      }
+    }
+  }
+}
+
+async {
+  while true {
+    await Realign
+    hero_points += atlas_count[0] + atlas_count[1] + atlas_count[2] + atlas_count[3]
+    atlas_awake = {}
+    atlas_fresh = -1
+    atlas_count = {}
+    star_bonus = {}
+    emit StatsChanged()
   }
 }

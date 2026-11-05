@@ -31,14 +31,12 @@ async {
   hud_fog = 0.002
 }
 
-const water_hour = hud.screen.options.body.hour[Slider.mut].current - 12
-const water_light = 1 - 0.82 * math.max(0, math.min(1, (math.sqrt(water_hour * water_hour) - 4.6) / 1.6))
-
 jungle_city {
   Scene: {}
   sun {
     DirectionalLight: {intensity: 2.6 * math.PI}
     Rgb: {255, 244, 222}
+    LightCookie: {texture: canopy_tex_clouds, size: 360, height: 140, threshold: 0.3, softness: 0.15, strength: 0.45, velocity: {2.4, 0.9}}
   }
   sky {
     Atmosphere: {
@@ -67,9 +65,9 @@ jungle_city {
     }
   }
   ReflectionBake: {resolution: 128, budget_ms: 2, scene_probe: true, scene_probe_height: 28, environment: sky}
-  LightBake: {environment: sky, probe_spacing: 6, bounds_padding: 0.3, bounces: 0, capture_size: 32, budget_ms: 8}
+  LightBake: {environment: sky, probe_spacing: 12, bounds_padding: 0.3, bounces: 0, capture_size: 32, budget_ms: 8}
   assets.JungleCity city(rows: 15, columns: 15, spacing: 17, seed: 17) { camera {} }
-  CanopyWaterFx water(depth: 9 * 17 + 20, seed: 17, civic_z: (9 - 2 - (9 - 1) / 2.0) * 17 + 17 / 2.0, radius: 11, height: 4.52, light: water_light)
+  CanopyWaterFx water(depth: 15 * 17 + 20, seed: 17, civic_z: (15 - 2 - (15 - 1) / 2.0) * 17 + 17 / 2.0, radius: 11, height: 4.52)
 }
 
 main_view {
@@ -83,7 +81,7 @@ main_view {
       atmosphere: true,
       environment: {source: jungle_city.sky, intensity: 0.95, yaw: 0, background: false}
     },
-    shadows: {enabled: hud.screen.options.body.shadows[Checkbox.mut].current, cascades: 4, resolution: 4096, max_distance: 620, split_lambda: 0.72},
+    shadows: {enabled: hud.screen.options.body.shadows[Checkbox.mut].current, cascades: 3, resolution: 2048, max_distance: 620, split_lambda: 0.72},
     culling: {enabled: true, occlusion: true, min_dimension_px: 3},
     effects: [
       {enabled: hud.screen.options.body.gtao[Checkbox.mut].current, effect: canopy_ao},

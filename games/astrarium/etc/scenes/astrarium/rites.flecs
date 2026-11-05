@@ -60,7 +60,7 @@ template RuneSliderFace {
         const f = i / 20.0
         const big = i % 5 == 0
         Position: {(f - 0.5) * room, 0, 1}
-        Rect: {1, match big { true: 14; _: 8 }}
+        Rect: {1, big ? 14 : 8}
         if f <= t {
           Rgb: ui_pale
           Emissive: {strength: 0.5, color: {255, 196, 110}}
@@ -82,12 +82,12 @@ template RuneSliderFace {
     thumb {
       Position: {(t - 0.5) * room, 0, 3}
 
-      Halo aura(size: match hot { true: 58; _: 36 }, color: {ui_gold.r * 0.5, ui_gold.g * 0.42, ui_gold.b * 0.28}, z: 0)
+      Halo aura(size: hot ? 58 : 36, color: {ui_gold.r * 0.5, ui_gold.g * 0.42, ui_gold.b * 0.28}, z: 0)
 
       gem {
         Position: {0, 0, 1}
         Rotation: {0, 0, PI / 4}
-        Scale: {match hot { true: 1.2; _: 1 }, match hot { true: 1.2; _: 1 }, 1}
+        Scale: {hot ? 1.2 : 1, hot ? 1.2 : 1, 1}
         Rect: {13, 13}
         Rgb: {255, 248, 226}
         Emissive: {strength: 1, color: {255, 196, 110}}
@@ -134,18 +134,14 @@ template RuneToggleFace {
     Layout: {}
     LayoutItem: {width: {mode: Fixed, value: 58}, height: {mode: Fixed, value: 26}}
     Rect: {1, 1}
-    if on_ {
-      Rgb: {ui_gold.r * 0.34, ui_gold.g * 0.28, ui_gold.b * 0.2}
-    } else {
-      Rgb: {6, 8, 18}
-    }
+    Rgb: on_ ? {ui_gold.r * 0.34, ui_gold.g * 0.28, ui_gold.b * 0.2} : {6, 8, 18}
     Border: {width: 1, radius: 13, color: {ui_gold.r * 0.7, ui_gold.g * 0.7, ui_gold.b * 0.7, 255}}
     Transition: [Rgb: {duration: 0.2}]
     box.spatial.SpatialIgnore
 
     gem {
-      Position: {match on_ { true: 16; _: -16 }, 0, 1}
-      Rotation: {0, 0, match on_ { true: PI / 4; _: 0 - PI / 4 }}
+      Position: {on_ ? 16 : -16, 0, 1}
+      Rotation: {0, 0, on_ ? PI / 4 : 0 - PI / 4}
       Rect: {14, 14}
       if on_ {
         Rgb: {255, 248, 226}
@@ -180,7 +176,7 @@ template MetalFace {
   prop hover: bool = false
 
   const active = rite_metal == index
-  const k = match hover { true: 1.08; _: 1 }
+  const k = hover ? 1.08 : 1
 
   Layout: {direction: Column, h: Center, spacing: 6}
   LayoutItem: {width: {mode: Grow}}
@@ -194,7 +190,7 @@ template MetalFace {
     box.spatial.SpatialIgnore
 
     Halo aura(size: 130, color: {tone.r * 0.32, tone.g * 0.32, tone.b * 0.32}, z: -1) {
-      Opacity: {match active { true: 1; _: 0.15 }}
+      Opacity: {active ? 1 : 0.15}
       Transition: [Opacity: {duration: 0.3}]
     }
 
@@ -210,8 +206,8 @@ template MetalFace {
       Rect: {46, 46}
       Image: {texture: tex_sigil}
       Rgb: tone
-      Emissive: {strength: match active { true: 0.6; _: 0 }, color: tone}
-      AngularVelocity: {0, 0, match active { true: 0.6; _: 0.08 }}
+      Emissive: {strength: active ? 0.6 : 0, color: tone}
+      AngularVelocity: {0, 0, active ? 0.6 : 0.08}
     }
 
     if active {
@@ -226,18 +222,13 @@ template MetalFace {
     }
   }
 
-  Caption name(text: label, size: 14, font: font_display, color: match active { true: ui_pale; _: ui_muted })
+  Caption name(text: label, size: 14, font: font_display, color: active ? ui_pale : ui_muted)
 }
 
-template MetalChoice {
+template MetalChoice : HeadlessButton {
   prop index: i32 = 0
-  prop label: string = ""
   prop tone: Rgb = {255, 255, 255}
 
-  mut hover = false
-
-  Interactive
-  Cursor: {CursorPointer}
   Layout: {direction: Column}
   LayoutItem: {width: {mode: Grow}}
   Rect: {1, 1}
@@ -248,19 +239,8 @@ template MetalChoice {
 
   async {
     while true {
-      await on.enter(this)
-      hover = true
-      await on.leave(this)
-      hover = false
-    }
-  }
-
-  async {
-    while true {
-      await on.click(this)
-      rq_op = OP_METAL
-      rq_arg = index
-      await ui.changed(rq)
+      await on.change(this)
+      emit Metal(index: index)
     }
   }
 }
@@ -323,7 +303,14 @@ template RitesForm {
       LayoutItem: {height: {mode: Grow}}
     }
 
-    PlainButton leave(label: "Return to the Title", op: OP_TITLE, width: 430)
+    PlainButton leave(label: "Return to the Title", width: 430) {
+      async {
+        while true {
+          await on.change(this)
+          emit Navigate(screen: SCREEN_TITLE)
+        }
+      }
+    }
   }
 }
 

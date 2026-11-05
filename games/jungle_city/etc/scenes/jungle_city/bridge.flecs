@@ -3,7 +3,6 @@ using box.transform
 using box.geometry
 using box.material
 
-@tree Parent
 template CanopyWalk {
   prop length: f32 = 12
   prop width: f32 = 2.4
@@ -15,10 +14,10 @@ template CanopyWalk {
   const half = length / 2
   const edge = width / 2
   const has_opening = opening < 999
-  deck : CanopyDeck { Position: {0, -0.05, 0}; Box: {length, 0.1, width}; TextureTransform: {scale_x: length / 2.4, scale_y: 1} }
+  deck : CanopyDeck { Position: {0, -0.05, 0}; Box: {length, 0.1, width} }
   for side in 0..2 {
     const z = (side - 0.5) * (width - 0.1)
-    { (IsA, CanopyTimberDark); Position: {0, -0.21, z}; Box: {length, 0.24, 0.12}; TextureTransform: {scale_x: length / 3, scale_y: 0.2} }
+    { (IsA, CanopyTimberDark); Position: {0, -0.21, z}; Box: {length, 0.24, 0.12} }
     { (IsA, CanopyGlow); Position: {0, -0.1, (side - 0.5) * (width + 0.03)}; Box: {length, 0.025, 0.015} }
   }
   for i in 0..math.floor(length / 2.4) + 1 {
@@ -38,14 +37,14 @@ template CanopyWalk {
     CanopyRail(length: length) { Position: {0, 0, -edge + 0.04} }
   }
   if piers && length > 5 {
-    const posts = match length > 11 { true: 2; _: 1 }
+    const posts = length > 11 ? 2 : 1
     for p in 0..posts {
       const x = (p + 0.5) / posts * length - half
       cross_beam : CanopyTimberDark { Position: {x, -0.42, 0}; Box: {0.24, 0.2, width + 0.5} }
       for side in 0..2 {
         const z = (side - 0.5) * (width + 0.34)
-        { (IsA, CanopyConcrete); Position: {x, -(clearance + 0.3) / 2, z}; Box: {0.2, clearance - 0.3, 0.2}; TextureTransform: {scale_x: 0.3, scale_y: 0.9} }
-        { (IsA, CanopyConcrete); Position: {x, -clearance + 0.12, z}; Box: {0.42, 0.24, 0.42}; TextureTransform: {scale_x: 0.3, scale_y: 0.1} }
+        { (IsA, CanopyConcrete); Position: {x, -(clearance + 0.3) / 2, z}; Box: {0.2, clearance - 0.3, 0.2} }
+        { (IsA, CanopyConcrete); Position: {x, -clearance + 0.12, z}; Box: {0.42, 0.24, 0.42} }
       }
       if (seed + p) % 2 == 0 {
         CanopyVine(length: clearance * 0.8, phase: seed + p) { Position: {x + 0.14, -0.4, (seed % 2 - 0.5) * (width + 0.34)} }
@@ -82,7 +81,15 @@ template CanopyWalk {
   }
 }
 
-@tree Parent
+prefab CanopyRibShape {
+  Path2D: {
+    start: {0.5, 0.5},
+    segments: [{kind: Line, end: {-0.5, 0.5}}, {kind: Line, end: {-0.5, -0.5}}, {kind: Line, end: {0.5, -0.5}}],
+    closed: true
+  }
+}
+prefab CanopyRibProfile { Profile2D: {outer: CanopyRibShape} }
+
 template CanopyCanalSpan {
   prop length: f32 = 10
   prop width: f32 = 2.4
@@ -90,25 +97,25 @@ template CanopyCanalSpan {
   CanopyWalk(length: length, width: width, seed: seed, piers: false) {}
   for side in 0..2 {
     const z = (side - 0.5) * (width - 0.1)
-    for i in 0..8 {
-      const t0 = i / 8.0
-      const t1 = (i + 1) / 8.0
-      const x0 = (t0 - 0.5) * length
-      const x1 = (t1 - 0.5) * length
-      const y0 = -1.5 * (1 - 4 * (t0 - 0.5) * (t0 - 0.5)) * -1 - 1.9
-      const y1 = -1.5 * (1 - 4 * (t1 - 0.5) * (t1 - 0.5)) * -1 - 1.9
-      const dx = x1 - x0
-      const dy = y1 - y0
-      const seg = math.sqrt(dx * dx + dy * dy)
-      { (IsA, CanopyIron); Position: {(x0 + x1) / 2, (y0 + y1) / 2, z}; Rotation: {0, 0, math.atan2(dy, dx)}; Box: {seg + 0.04, 0.16, 0.14} }
-      if i > 0 {
-        { (IsA, CanopyIron); Position: {x0, (y0 - 0.24) / 2, z}; Box: {0.06, -y0 - 0.24, 0.06} }
+    { (IsA, CanopyIron)
+      Position: {0, 0, z}
+      rib {
+        Path3D: {
+          start: {-length / 2 - 0.02, -1.9, 0},
+          segments: [{kind: CubicBezier, end: {length / 2 + 0.02, -1.9, 0}, control1: {-length / 6, 0.1, 0}, control2: {length / 6, 0.1, 0}}]
+        }
       }
+      Sweep: {path: rib, profile: CanopyRibProfile, scale: {0.14, 0.16}, rings: 32}
+    }
+    for i in 1..8 {
+      const t0 = i / 8.0
+      const x0 = (t0 - 0.5) * length
+      const y0 = 1.5 * (1 - 4 * (t0 - 0.5) * (t0 - 0.5)) - 1.9
+      { (IsA, CanopyIron); Position: {x0, (y0 - 0.24) / 2, z}; Box: {0.06, -y0 - 0.24, 0.06} }
     }
   }
 }
 
-@tree Parent
 template CanopyStair {
   prop rise: f32 = 4.52
   prop width: f32 = 1.2
@@ -118,21 +125,20 @@ template CanopyStair {
   const slope = math.atan2(rise, total)
   const stringer = math.sqrt(rise * rise + total * total)
   for i in 0..steps {
-    { (IsA, CanopyDeck); Position: {0, -(i + 0.5) * rise / steps, -(i + 0.5) * run}; Box: {width, 0.05, run + 0.04}; TextureTransform: {scale_x: 0.5, scale_y: 0.14} }
+    { (IsA, CanopyDeck); Position: {0, -(i + 0.5) * rise / steps, -(i + 0.5) * run}; Box: {width, 0.05, run + 0.04} }
   }
   for side in 0..2 {
     const x = (side - 0.5) * width
-    { (IsA, CanopyTimberDark); Position: {x, -rise / 2 - 0.06, -total / 2}; Rotation: {-slope, 0, 0}; Box: {0.08, 0.2, stringer}; TextureTransform: {scale_x: 3, scale_y: 0.2} }
+    { (IsA, CanopyTimberDark); Position: {x, -rise / 2 - 0.06, -total / 2}; Rotation: {-slope, 0, 0}; Box: {0.08, 0.2, stringer} }
     { (IsA, CanopyIron); Position: {x, -rise / 2 + 0.95, -total / 2}; Rotation: {-slope, 0, 0}; Box: {0.05, 0.05, stringer} }
     for p in 0..4 {
       const t = (p + 0.5) / 4.0
       { (IsA, CanopyMetal); Position: {x, -rise * t + 0.48, -total * t}; Box: {0.04, 0.95, 0.04} }
     }
   }
-  foot : CanopyConcrete { Position: {0, -rise + 0.05, -total - 0.3}; Box: {width + 0.3, 0.12, 0.7}; TextureTransform: {scale_x: 0.5, scale_y: 0.1} }
+  foot : CanopyConcrete { Position: {0, -rise + 0.05, -total - 0.3}; Box: {width + 0.3, 0.12, 0.7} }
 }
 
-@tree Parent
 template CanopyJunction {
   prop size: f32 = 5
   prop width: f32 = 2.4
@@ -147,15 +153,15 @@ template CanopyJunction {
   const half = size / 2
   const stub = (size - width) / 2
   const stuff: math.Rng = {seed: seed + 4099}
-  plate : CanopyPaver { Position: {0, -0.06, 0}; RoundedBox: {size, 0.12, size, 0.05, segments: 1}; TextureTransform: {scale_x: size / 2.4, scale_y: size / 2.4} }
-  fascia : CanopyTimberDark { Position: {0, -0.22, 0}; Box: {size - 0.1, 0.24, size - 0.1}; TextureTransform: {scale_x: 2, scale_y: 0.2} }
+  plate : CanopyPaver { Position: {0, -0.06, 0}; RoundedBox: {size, 0.12, size, 0.05, segments: 1} }
+  fascia : CanopyTimberDark { Position: {0, -0.22, 0}; Box: {size - 0.1, 0.24, size - 0.1} }
   for i in 0..2 {
     { (IsA, CanopyTimberDark); Position: {0, -0.42, 0}; Rotation: {0, i * math.PI / 2 + 0.78, 0}; Box: {size * 1.1, 0.24, 0.22} }
   }
   if column {
-    shaft : CanopyConcrete { Position: {0, -clearance / 2, 0}; Cylinder: {radius: 0.26, length: clearance, segments: 12, smooth: true}; TextureTransform: {scale_x: 1, scale_y: 1.2} }
+    shaft : CanopyConcrete { Position: {0, -clearance / 2, 0}; Cylinder: {radius: 0.26, length: clearance, segments: 12, smooth: true} }
     capital : CanopyConcrete { Position: {0, -0.72, 0}; Frustum: {radius_bottom: 0.26, radius_top: 0.72, length: 0.5, segments: 12} }
-    footing : CanopyAshlar { Position: {0, -clearance + 0.2, 0}; Cylinder: {radius: 0.62, length: 0.4, segments: 12}; TextureTransform: {scale_x: 1.4, scale_y: 0.14} }
+    footing : CanopyAshlar { Position: {0, -clearance + 0.2, 0}; Cylinder: {radius: 0.62, length: 0.4, segments: 12} }
     CanopyVine(length: clearance * 0.72, phase: seed) { Position: {0.28, -0.8, 0.1} }
   }
   for i in 0..4 {
@@ -179,7 +185,7 @@ template CanopyJunction {
     }
   }
   const feature = stuff.u(4)
-  ring : CanopyAshlar { Position: {0, 0.24, 0}; Cylinder: {radius: 0.86, length: 0.48, segments: 18}; TextureTransform: {scale_x: 2, scale_y: 0.2} }
+  ring : CanopyAshlar { Position: {0, 0.24, 0}; Cylinder: {radius: 0.86, length: 0.48, segments: 18} }
   rim : CanopyTrim { Position: {0, 0.5, 0}; Torus: {radius: 0.84, tube: 0.05, segments: 18, rings: 5} }
   if feature == 0 {
     { (IsA, CanopyWater); Position: {0, 0.49, 0}; Cylinder: {radius: 0.8, length: 0.02, segments: 18} }
@@ -205,16 +211,15 @@ template CanopyJunction {
   }
 }
 
-@tree Parent
 template CanopyGangway {
   prop length: f32 = 2.5
   prop width: f32 = 2.2
   prop variant: i32 = 0
   const lift_at = length / 2
-  deck : CanopyDeck { Position: {0, -0.05, length / 2}; Box: {width, 0.1, length + 0.2}; TextureTransform: {scale_x: 1, scale_y: length / 2.4} }
+  deck : CanopyDeck { Position: {0, -0.05, length / 2}; Box: {width, 0.1, length + 0.2} }
   for side in 0..2 {
     const x = (side - 0.5) * (width - 0.1)
-    { (IsA, CanopyTimberDark); Position: {x, -0.21, length / 2}; Box: {0.12, 0.24, length + 0.2}; TextureTransform: {scale_x: length / 3, scale_y: 0.2} }
+    { (IsA, CanopyTimberDark); Position: {x, -0.21, length / 2}; Box: {0.12, 0.24, length + 0.2} }
   }
   { Position: {width / 2 - 0.04, 0, length / 2}; Rotation: {0, math.PI / 2, 0}; CanopyRail(length: length) {} }
   if lift_at > 0.95 {
@@ -233,12 +238,11 @@ template CanopyGangway {
   CanopyHangingLantern() { Position: {0, 2.5, 0.5} }
 }
 
-@tree Parent
 template CanopyLift {
   prop height: f32 = 4.52
   prop variant: i32 = 0
   const tall = height + 2.7
-  foot : CanopyConcrete { Position: {0, 0.1, 0}; Box: {1.5, 0.24, 1.5}; TextureTransform: {scale_x: 0.5, scale_y: 0.1} }
+  foot : CanopyConcrete { Position: {0, 0.1, 0}; Box: {1.5, 0.24, 1.5} }
   shaft : CanopyPalmGlass { Position: {0, tall / 2, 0}; Box: {1.16, tall, 1.16} }
   for x in 0..2 {
     for z in 0..2 {
@@ -254,20 +258,18 @@ template CanopyLift {
   cab_glow : CanopyLampGlow { Position: {0, 2.42 + variant % 3 * 1.6, 0}; Box: {0.8, 0.04, 0.8} }
 }
 
-@tree Parent
 template CanopyPath {
   prop length: f32 = 12
   prop width: f32 = 2.4
-  slab : CanopyPaver { Position: {0, 0.015, 0}; Box: {length, 0.05, width}; TextureTransform: {scale_x: length / 2.6, scale_y: width / 2.6} }
+  slab : CanopyMossPaver { Position: {0, 0.015, 0}; Box: {length, 0.05, width} }
   for side in 0..2 {
-    { (IsA, CanopyConcrete); Position: {0, 0.035, (side - 0.5) * (width + 0.14)}; Box: {length, 0.11, 0.14}; TextureTransform: {scale_x: length / 3, scale_y: 0.1} }
+    { (IsA, CanopyConcrete); Position: {0, 0.035, (side - 0.5) * (width + 0.14)}; Box: {length, 0.11, 0.14} }
   }
 }
 
-@tree Parent
 template CanopyPathNode {
   prop size: f32 = 5
-  slab : CanopyPaver { Position: {0, 0.015, 0}; Box: {size, 0.05, size}; TextureTransform: {scale_x: size / 2.6, scale_y: size / 2.6} }
+  slab : CanopyMossPaver { Position: {0, 0.015, 0}; Box: {size, 0.05, size} }
   for i in 0..4 {
     const a = i * math.PI / 2 + 0.78
     CanopyBollard() { Position: {math.sin(a) * size * 0.62, 0, math.cos(a) * size * 0.62} }

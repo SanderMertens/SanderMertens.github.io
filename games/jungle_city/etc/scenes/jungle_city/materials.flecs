@@ -34,16 +34,16 @@ canopy_tex_tuft { TexturePath: {path: "etc/scenes/jungle_city/textures/tuft.png"
 canopy_tex_mosaic { TexturePath: {path: "etc/scenes/jungle_city/textures/mosaic.png"} }
 canopy_tex_mosaic_normal { TexturePath: {path: "etc/scenes/jungle_city/textures/mosaic_normal.jpg"} }
 
-prefab CanopyIvory { Rgb: {226, 235, 211}; PbrMaterial: {roughness: 0.82}; PbrTextures: {albedo: canopy_tex_plaster, normal: canopy_tex_plaster_normal} }
+prefab CanopyIvory { Rgb: {226, 235, 211}; PbrMaterial: {roughness: 0.82}; PbrTextures: {albedo: canopy_tex_plaster, normal: canopy_tex_plaster_normal}; TextureMapping: {mode: MappingObject, size: 3.5, blend: 0.2} }
 prefab CanopyTrim { Rgb: {232, 232, 214}; PbrMaterial: {roughness: 0.55} }
-prefab CanopyWood { Rgb: {168, 112, 66}; PbrMaterial: {roughness: 0.72}; PbrTextures: {albedo: canopy_tex_wood, normal: canopy_tex_wood_normal} }
-prefab CanopyTimberDark { Rgb: {84, 60, 42}; PbrMaterial: {roughness: 0.8}; PbrTextures: {albedo: canopy_tex_wood, normal: canopy_tex_wood_normal} }
-prefab CanopyDeck { Rgb: {176, 132, 92}; PbrMaterial: {roughness: 0.84}; PbrTextures: {albedo: canopy_tex_deck, normal: canopy_tex_deck_normal} }
-prefab CanopyPaver { Rgb: {196, 188, 164}; PbrMaterial: {roughness: 0.9}; PbrTextures: {albedo: canopy_tex_pavers, normal: canopy_tex_pavers_normal} }
-prefab CanopyAshlar { Rgb: {198, 194, 172}; PbrMaterial: {roughness: 0.9}; PbrTextures: {albedo: canopy_tex_ashlar, normal: canopy_tex_ashlar_normal} }
-prefab CanopyConcrete { Rgb: {190, 190, 176}; PbrMaterial: {roughness: 0.88}; PbrTextures: {albedo: canopy_tex_concrete, normal: canopy_tex_concrete_normal} }
-prefab CanopyBark { Rgb: {112, 92, 66}; PbrMaterial: {roughness: 0.95}; PbrTextures: {albedo: canopy_tex_bark, normal: canopy_tex_bark_normal} }
-prefab CanopyGround { Rgb: {255, 255, 255}; PbrMaterial: {roughness: 1}; PbrTextures: {albedo: canopy_tex_ground, normal: canopy_tex_ground_normal} }
+prefab CanopyWood { Rgb: {168, 112, 66}; PbrMaterial: {roughness: 0.72}; PbrTextures: {albedo: canopy_tex_wood, normal: canopy_tex_wood_normal}; TextureMapping: {mode: MappingObject, size: 2, blend: 0.2} }
+prefab CanopyTimberDark { Rgb: {84, 60, 42}; PbrMaterial: {roughness: 0.8}; PbrTextures: {albedo: canopy_tex_wood, normal: canopy_tex_wood_normal}; TextureMapping: {mode: MappingObject, size: 3, blend: 0.2} }
+prefab CanopyDeck { Rgb: {176, 132, 92}; PbrMaterial: {roughness: 0.84}; PbrTextures: {albedo: canopy_tex_deck, normal: canopy_tex_deck_normal}; TextureMapping: {mode: MappingObject, size: 2.4} }
+prefab CanopyPaver { Rgb: {196, 188, 164}; PbrMaterial: {roughness: 0.9}; PbrTextures: {albedo: canopy_tex_pavers, normal: canopy_tex_pavers_normal}; TextureMapping: {mode: MappingObject, size: 2.6} }
+prefab CanopyAshlar { Rgb: {198, 194, 172}; PbrMaterial: {roughness: 0.9}; PbrTextures: {albedo: canopy_tex_ashlar, normal: canopy_tex_ashlar_normal}; TextureMapping: {mode: MappingObject, size: 3, blend: 0.25} }
+prefab CanopyConcrete { Rgb: {190, 190, 176}; PbrMaterial: {roughness: 0.88}; PbrTextures: {albedo: canopy_tex_concrete, normal: canopy_tex_concrete_normal}; TextureMapping: {mode: MappingObject, size: 3, blend: 0.25} }
+prefab CanopyBark { Rgb: {112, 92, 66}; PbrMaterial: {roughness: 0.95}; PbrTextures: {albedo: canopy_tex_bark, normal: canopy_tex_bark_normal}; TextureMapping: {mode: MappingObject, size: 1.5, blend: 0.3} }
+prefab CanopyGround { Rgb: {255, 255, 255}; PbrMaterial: {roughness: 1}; PbrTextures: {albedo: canopy_tex_ground, normal: canopy_tex_ground_normal}; TextureMapping: {mode: MappingObject, size: 14, blend: 0.2} }
 prefab CanopyStrata { Rgb: {255, 255, 255}; PbrMaterial: {roughness: 1}; PbrTextures: {albedo: canopy_tex_strata, normal: canopy_tex_strata_normal} }
 prefab CanopyMosaic { Rgb: {255, 255, 255}; PbrMaterial: {roughness: 0.42}; ClearCoat: {strength: 0.25, roughness: 0.3}; AlphaCutoff: {0.5}; PbrTextures: {albedo: canopy_tex_mosaic, normal: canopy_tex_mosaic_normal} }
 prefab CanopyFacade {
@@ -53,13 +53,13 @@ prefab CanopyFacade {
   PbrTextures: {albedo: canopy_tex_facade, emissive: canopy_tex_facade_emissive, orm: canopy_tex_facade_orm}
 }
 prefab CanopyGlass { Rgb: {24, 83, 78}; PbrMaterial: {metallic: 0.35, roughness: 0.23}; ClearCoat: {strength: 0.7, roughness: 0.12} }
-prefab CanopyPalmGlass { Rgb: {196, 232, 226}; PbrMaterial: {metallic: 0.1, roughness: 0.06}; ClearCoat: {strength: 1, roughness: 0.03}; Opacity: {0.2}; NoShadow }
+prefab CanopyPalmGlass { Rgb: {196, 232, 226}; PbrMaterial: {metallic: 0.1, roughness: 0.06}; ClearCoat: {strength: 1, roughness: 0.03}; Transmission: {transmission_factor: 0.92, ior: 1.45, thickness_factor: 0.03}; NoShadow }
 prefab CanopyLeaf { Rgb: {74, 122, 62}; PbrMaterial: {roughness: 0.87}; PbrTextures: {albedo: canopy_tex_broadleaf}; TextureTransform: {scale_x: 5, scale_y: 1} }
 prefab CanopyCrownCore { Rgb: {30, 66, 36}; PbrMaterial: {roughness: 0.95}; PbrTextures: {albedo: canopy_tex_broadleaf}; TextureTransform: {scale_x: 2, scale_y: 2} }
 prefab CanopyLime { Rgb: {113, 153, 65}; PbrMaterial: {roughness: 0.85} }
 prefab CanopyJade { Rgb: {31, 78, 55}; PbrMaterial: {roughness: 0.9} }
 prefab CanopySoil { Rgb: {54, 46, 34}; PbrMaterial: {roughness: 1} }
-prefab CanopyWater { Rgb: {14, 60, 54}; PbrMaterial: {metallic: 0, roughness: 0.2}; ClearCoat: {strength: 0.32, roughness: 0.08}; PbrTextures: {normal: canopy_tex_water_normal} }
+prefab CanopyWater { Rgb: {128, 196, 180}; PbrMaterial: {metallic: 0, roughness: 0.12}; ClearCoat: {strength: 0.32, roughness: 0.08}; Transmission: {transmission_factor: 0.9, ior: 1.33, thickness_factor: 0.5, attenuation_distance: 0.4, attenuation_color: {20, 84, 72}}; PbrTextures: {normal: canopy_tex_water_normal} }
 prefab CanopyFoam { Rgb: {120, 176, 164}; PbrMaterial: {roughness: 0.3}; PbrTextures: {normal: canopy_tex_water_normal} }
 prefab CanopyGlow { Rgb: {153, 242, 202}; Emissive: {strength: 0.8, color: {110, 234, 181}} }
 prefab CanopySolar { Rgb: {29, 59, 70}; PbrMaterial: {metallic: 0.6, roughness: 0.24} }
@@ -78,7 +78,33 @@ prefab CanopyCanvasC { Rgb: {38, 110, 104}; PbrMaterial: {roughness: 0.92} }
 prefab CanopySkin { Rgb: {176, 128, 96}; PbrMaterial: {roughness: 0.7} }
 prefab CanopyTerracotta { Rgb: {176, 96, 64}; PbrMaterial: {roughness: 0.88} }
 
-prefab CanopyLeafCard { Rgb: {64, 118, 54}; PbrMaterial: {roughness: 0.72}; AlphaCutoff: {0.45}; BackFaceMode: BackFacePlain; PbrTextures: {albedo: canopy_tex_broadleaf} }
-prefab CanopyBlossomCard { Rgb: {232, 62, 118}; PbrMaterial: {roughness: 0.8}; AlphaCutoff: {0.45}; BackFaceMode: BackFacePlain; PbrTextures: {albedo: canopy_tex_blossom} }
-prefab CanopyVineCard { Rgb: {74, 124, 58}; PbrMaterial: {roughness: 0.8}; AlphaCutoff: {0.45}; BackFaceMode: BackFacePlain; PbrTextures: {albedo: canopy_tex_vine} }
-prefab CanopyTuftCard { Rgb: {108, 150, 62}; PbrMaterial: {roughness: 0.9}; AlphaCutoff: {0.4}; BackFaceMode: BackFacePlain; NoShadow; PbrTextures: {albedo: canopy_tex_tuft} }
+canopy_tex_moss_mask {
+  TextureGen: {
+    width: 256, height: 256, seed: 23,
+    layers: [
+      {kind: GenNoise, frequency: 3, octaves: 4, amount: 1},
+      {kind: GenNoise, op: GenMultiply, frequency: 2, octaves: 3, amount: 1, seed: 5}
+    ]
+  }
+}
+canopy_tex_clouds {
+  TextureGen: {
+    width: 256, height: 256, seed: 41,
+    layers: [
+      {kind: GenNoise, frequency: 3, octaves: 5, gain: 0.55, amount: 1}
+    ]
+  }
+}
+canopy_layer_pavers { PbrTextures: {albedo: canopy_tex_pavers, normal: canopy_tex_pavers_normal}; TextureTransform: {scale_x: 4, scale_y: 4} }
+canopy_layer_moss { PbrTextures: {albedo: canopy_tex_ground, normal: canopy_tex_ground_normal}; TextureTransform: {scale_x: 3, scale_y: 3} }
+prefab CanopyMossPaver {
+  Rgb: {196, 188, 164}
+  PbrMaterial: {roughness: 0.92}
+  TextureMapping: {mode: MappingObject, size: 10.4}
+  TextureBlend: {mask: canopy_tex_moss_mask, layers: [canopy_layer_pavers, canopy_layer_moss], heights: [canopy_tex_pavers, 0], contrast: 10}
+}
+
+prefab CanopyLeafCard { DiffuseTransmission: {factor: 0.45, color: {214, 255, 160}}; Rgb: {64, 118, 54}; PbrMaterial: {roughness: 0.72}; AlphaCutoff: {0.45}; BackFaceMode: BackFacePlain; PbrTextures: {albedo: canopy_tex_broadleaf} }
+prefab CanopyBlossomCard { DiffuseTransmission: {factor: 0.45, color: {255, 214, 224}}; Rgb: {232, 62, 118}; PbrMaterial: {roughness: 0.8}; AlphaCutoff: {0.45}; BackFaceMode: BackFacePlain; PbrTextures: {albedo: canopy_tex_blossom} }
+prefab CanopyVineCard { DiffuseTransmission: {factor: 0.45, color: {214, 255, 160}}; Rgb: {74, 124, 58}; PbrMaterial: {roughness: 0.8}; AlphaCutoff: {0.45}; BackFaceMode: BackFacePlain; PbrTextures: {albedo: canopy_tex_vine} }
+prefab CanopyTuftCard { DiffuseTransmission: {factor: 0.45, color: {214, 255, 160}}; Rgb: {108, 150, 62}; PbrMaterial: {roughness: 0.9}; AlphaCutoff: {0.4}; BackFaceMode: BackFacePlain; NoShadow; PbrTextures: {albedo: canopy_tex_tuft} }

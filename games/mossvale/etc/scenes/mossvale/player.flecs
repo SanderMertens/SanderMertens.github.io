@@ -99,9 +99,9 @@ proc pick_target() {
 }
 
 template Mage {
-  const legs = sin(walk_phase) * match moving { true: 0.6; _: 0 }
-  const bob = match moving { true: abs(sin(walk_phase)) * 0.08; _: sin(clock * 2.2) * 0.025 }
-  const sway = match moving { true: sin(walk_phase) * 0.06; _: sin(clock * 1.3) * 0.03 }
+  const legs = sin(walk_phase) * (moving ? 0.6 : 0)
+  const bob = moving ? abs(sin(walk_phase)) * 0.08 : sin(clock * 2.2) * 0.025
+  const sway = moving ? sin(walk_phase) * 0.06 : sin(clock * 1.3) * 0.03
   const gem: Rgb = {spell_r(spell), spell_g(spell), spell_b(spell)}
 
   Position: {px, 0, pz}
@@ -154,7 +154,7 @@ template Mage {
     }
     arm_r {
       Position: {0.36, 1.66, 0}
-      Rotation: {match cast_anim > 0 { true: -2.2; _: -0.4 + legs * 0.4 }, 0, -0.15}
+      Rotation: {cast_anim > 0 ? -2.2 : -0.4 + legs * 0.4, 0, -0.15}
       Transition: [Rotation: {duration: 0.12}]
       sleeve : MvCloth { Position: {0, -0.3, 0}; Frustum: {length: 0.6, radius_bottom: 0.15, radius_top: 0.08, segments: 10}; Rgb: {98, 66, 160} }
       cuff : MvGold { Position: {0, -0.59, 0}; Torus: {radius: 0.14, tube: 0.02, segments: 12, rings: 3} }
@@ -287,7 +287,7 @@ objective_beam {
   if obj_on && game_state == 1 {
     Position: {obj_x, 0, obj_z}
     gem {
-      Position: {0, match obj_npc { true: -6; _: 3.6 }, 0}
+      Position: {0, obj_npc ? -6 : 3.6, 0}
       Rotation: {0, clock * 1.5, 0}
       top_ { Position: {0, 0.3, 0}; Cone: {length: 0.6, radius: 0.35, segments: 4}; Rgb: {255, 220, 140}; Emissive: {strength: 2, color: {255, 210, 120}}; NoShadow }
       bot_ { Position: {0, -0.3, 0}; Rotation: {PI, 0, 0}; Cone: {length: 0.6, radius: 0.35, segments: 4}; Rgb: {255, 220, 140}; Emissive: {strength: 2, color: {255, 210, 120}}; NoShadow }
@@ -314,7 +314,7 @@ async {
     await next_frame()
     const now = AppStatus[AppStatus].elapsed
     const fixed = App[App].delta_time
-    const d = match fixed > 0 { true: fixed; _: clamp(now - last, 0.001, 0.1) }
+    const d = fixed > 0 ? fixed : clamp(now - last, 0.001, 0.1)
     last = now
     dt = d
     clock += d
@@ -326,7 +326,7 @@ async {
 
     if can_move && len > 0 {
       const run = mv_actions.Sprint[ActionState].down
-      const speed = match run { true: 9.5; _: 6 }
+      const speed = run ? 9.5 : 6
       const vx = mx / len * speed * d
       const vz = mz / len * speed * d
       const r: f64 = 0.38
@@ -354,10 +354,10 @@ async {
       walk_phase = 0
     }
 
-    const ease = match game_state == 0 { true: min(1, d * 0.8); _: min(1, d * 5) }
+    const ease = game_state == 0 ? min(1, d * 0.8) : min(1, d * 5)
     const title = game_state == 0
-    const tx = match title { true: -4 + sin(clock * 0.07) * 14; _: px + sin(pyaw) * 1.5 * bool_f(moving) }
-    const tz = match title { true: 2 + cos(clock * 0.07) * 9; _: pz + cos(pyaw) * 1.0 * bool_f(moving) }
+    const tx = title ? -4 + sin(clock * 0.07) * 14 : px + sin(pyaw) * 1.5 * bool_f(moving)
+    const tz = title ? 2 + cos(clock * 0.07) * 9 : pz + cos(pyaw) * 1.0 * bool_f(moving)
     if abs(cam_x - tx) > 0.002 || abs(cam_z - tz) > 0.002 {
       cam_x += (tx - cam_x) * ease
       cam_z += (tz - cam_z) * ease
@@ -379,7 +379,7 @@ async {
       const ddx = gx - px
       const ddz = gz - pz
       const dl = sqrt(ddx * ddx + ddz * ddz)
-      const k = match dl > CAST_RANGE { true: CAST_RANGE / dl; _: 1 }
+      const k = dl > CAST_RANGE ? CAST_RANGE / dl : 1
       aim_x = px + ddx * k
       aim_z = pz + ddz * k
       if !aim_on {
@@ -460,17 +460,12 @@ async {
     await on.pressed(mv_actions.NextSpell)
     if game_state == 1 {
       mut s: i32 = spell
-      mut found = false
       for i in 0..SPELLS {
-        if !found {
-          s = s % SPELLS + 1
-          if known[s] {
-            found = true
-          }
+        s = s % SPELLS + 1
+        if known[s] {
+          emit PickSpell(s: s)
+          break
         }
-      }
-      if found {
-        emit PickSpell(s: s)
       }
     }
   }
@@ -507,7 +502,7 @@ async {
         const ddx = e.x - px
         const ddz = e.z - pz
         const dl = max(sqrt(ddx * ddx + ddz * ddz), 0.01)
-        const k = match dl > CAST_RANGE { true: CAST_RANGE / dl; _: 1 }
+        const k = dl > CAST_RANGE ? CAST_RANGE / dl : 1
         const tx = px + ddx * k
         const tz = pz + ddz * k
         pyaw = atan2(ddx, ddz)

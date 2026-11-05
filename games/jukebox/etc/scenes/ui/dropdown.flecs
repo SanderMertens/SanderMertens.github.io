@@ -12,6 +12,7 @@ using box.geometry
 using box.material
 using box.text
 using box.transform
+using box.transition
 
 // A chevron of two strokes in a box of size points that points down, up, right or left
 template Chevron {
@@ -21,51 +22,26 @@ template Chevron {
 
   const a = size / 3
   const b = size / 6
-  const sx = match direction {
-    "right": -b
-    "left": b
-    _: -a
-  }
-  const sy = match direction {
-    "down": b
-    "up": -b
-    "right": a
-    _: a
-  }
-  const tx = match direction {
-    "right": b
-    "left": -b
-    _: 0
-  }
-  const ty = match direction {
-    "down": -b
-    "up": b
-    _: 0
-  }
-  const ex = match direction {
-    "right": -b
-    "left": b
-    _: a
-  }
-  const ey = match direction {
-    "down": b
-    "up": -b
-    "right": -a
-    _: -a
-  }
 
   Layout: {}
   LayoutItem: {width: {mode: Fixed, value: size}, height: {mode: Fixed, value: size}}
+  Rotation: {0, 0, match direction {
+    "up": PI
+    "right": PI / 2
+    "left": -PI / 2
+    _: 0
+  }}
+  Transition: [Rotation: WidgetSlide]
 
   first {
     Position: {0, 0, 0}
-    Line: {sx, sy, tx, ty, 1.5}
+    Line: {-a, b, 0, -b, 1.5}
     Rgb: color
   }
 
   second {
     Position: {0, 0, 0}
-    Line: {tx, ty, ex, ey, 1.5}
+    Line: {0, -b, a, b, 1.5}
     Rgb: color
   }
 }
@@ -277,10 +253,8 @@ template Dropdown : HeadlessDropdown {
   const t = box.ui.theme[UiTheme]
   const ring = focused && FocusStatus[FocusStatus].visible
   const count = options.count()
-  const w = match width {
-    0.0: 160
-    _: width
-  }
+  const w = width == 0 ? 160 : width
+  const edge = ring ? t.focus : t.border
 
   Layout: {direction: Row, padding: {0, 0, t.padding * 1.5, t.padding}, v: Middle}
   LayoutItem: {
@@ -289,21 +263,11 @@ template Dropdown : HeadlessDropdown {
   }
   Rect: {1, 1}
 
-  if down && !open {
-    Rgb: t.pressed
-  } else if hover && !open {
-    Rgb: t.hover
-  } else {
-    Rgb: t.surface
-  }
-
-  if ring {
-    Border: {
-      width: t.focus_width, radius: t.radius,
-      color: {t.focus.r, t.focus.g, t.focus.b, 255}
-    }
-  } else {
-    Border: {width: 1, radius: t.radius, color: {t.border.r, t.border.g, t.border.b, 255}}
+  Rgb: open ? t.surface : down ? t.pressed : hover ? t.hover : t.surface
+  Transition: [Rgb: WidgetFade]
+  Border: {
+    width: ring ? t.focus_width : 1, radius: t.radius,
+    color: {edge.r, edge.g, edge.b, 255}
   }
 
   caption {
@@ -315,7 +279,7 @@ template Dropdown : HeadlessDropdown {
     LayoutItem: {width: {mode: Grow}}
   }
 
-  Chevron chevron(direction: match open { true: "up"; _: "down" }, color: t.text_muted)
+  Chevron chevron(direction: open ? "up" : "down", color: t.text_muted)
 
   list {
     if open {
@@ -324,6 +288,7 @@ template Dropdown : HeadlessDropdown {
       Rect: {1, 1}
       Rgb: t.surface
       Border: {width: 1, radius: t.radius, color: {t.border.r, t.border.g, t.border.b, 255}}
+      BoxShadow: {offset_y: -6, blur: 18, color: {0, 0, 0, 150}}
 
       for i in 0..count {
         "option_{i}" {
@@ -332,19 +297,12 @@ template Dropdown : HeadlessDropdown {
           Rect: {1, 1}
           Border: {radius: t.radius - 1}
 
-          if i == highlight {
-            Rgb: t.hover
-          } else {
-            Rgb: t.surface
-          }
+          Rgb: i == highlight ? t.hover : t.surface
+          Transition: [Rgb: WidgetFade]
 
           caption {
             Text: {value: options[i], size: t.font_size}
-            if i == current {
-              Rgb: t.accent
-            } else {
-              Rgb: t.text
-            }
+            Rgb: i == current ? t.accent : t.text
           }
         }
       }

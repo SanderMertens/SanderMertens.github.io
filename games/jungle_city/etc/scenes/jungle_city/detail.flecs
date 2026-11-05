@@ -3,7 +3,6 @@ using box.transform
 using box.geometry
 using box.material
 
-@tree Parent
 template CanopyRail {
   prop length: f32 = 4
   const posts: i32 = math.floor(length / 1.3) + 1
@@ -16,12 +15,11 @@ template CanopyRail {
   }
 }
 
-@tree Parent
 template CanopyPlanter {
   prop length: f32 = 1.6
   prop seed: i32 = 0
   prop bloom: bool = false
-  box : CanopyWood { Position: {0, 0.15, 0}; Box: {length, 0.3, 0.42}; TextureTransform: {scale_x: length / 2, scale_y: 0.4} }
+  box : CanopyWood { Position: {0, 0.15, 0}; Box: {length, 0.3, 0.42} }
   soil : CanopySoil { Position: {0, 0.3, 0}; Box: {length - 0.08, 0.04, 0.34} }
   for i in 0..3 {
     const x = (i - 1) * length * 0.3
@@ -33,19 +31,17 @@ template CanopyPlanter {
   }
 }
 
-@tree Parent
 template CanopyBench {
   prop length: f32 = 1.5
   for i in 0..3 {
-    { (IsA, CanopyWood); Position: {0, 0.44, -0.14 + i * 0.14}; Box: {length, 0.04, 0.11}; TextureTransform: {scale_x: length / 2, scale_y: 0.2} }
+    { (IsA, CanopyWood); Position: {0, 0.44, -0.14 + i * 0.14}; Box: {length, 0.04, 0.11} }
   }
   for side in 0..2 {
     { (IsA, CanopyMetal); Position: {(side - 0.5) * (length - 0.2), 0.21, 0}; Box: {0.05, 0.42, 0.4} }
   }
-  back : CanopyWood { Position: {0, 0.72, -0.2}; Rotation: {-0.15, 0, 0}; Box: {length, 0.28, 0.035}; TextureTransform: {scale_x: length / 2, scale_y: 0.4} }
+  back : CanopyWood { Position: {0, 0.72, -0.2}; Rotation: {-0.15, 0, 0}; Box: {length, 0.28, 0.035} }
 }
 
-@tree Parent
 template CanopyPotted {
   prop size: f32 = 0.6
   prop seed: f32 = 0
@@ -56,7 +52,6 @@ template CanopyPotted {
   { (IsA, CanopyLeafCard); Rgb: {66, 122, 56}; Position: {0, size * 0.92, 0}; Rotation: {0, seed + 1.57, 0}; Quad: {size * 1.1, size * 1.1} }
 }
 
-@tree Parent
 template CanopyPerson {
   prop seed: i32 = 0
   const hue = seed % 6
@@ -85,7 +80,6 @@ template CanopyPerson {
   hair { Position: {0, 1.57, -0.02}; Scale: {1.02, 0.8, 1}; Sphere: {radius: 0.11, segments: 8, smooth: true}; Rgb: {38 + seed % 4 * 26, 28 + seed % 4 * 18, 24}; PbrMaterial: {roughness: 0.8} }
 }
 
-@tree Parent
 template CanopyAwning {
   prop width: f32 = 2.4
   prop depth: f32 = 1
@@ -111,7 +105,6 @@ template CanopyAwning {
   }
 }
 
-@tree Parent
 template CanopyCondenser {
   prop size: f32 = 0.7
   body : CanopyTrim { Position: {0, size * 0.42, 0}; RoundedBox: {size * 1.3, size * 0.84, size * 0.5, 0.03, segments: 1}; Rgb: {186, 188, 178} }
@@ -120,7 +113,6 @@ template CanopyCondenser {
   pipe : CanopyCopper { Position: {-size * 0.55, size * 0.08, 0.12}; Box: {0.03, size * 0.5, 0.03} }
 }
 
-@tree Parent
 template CanopyLaundry {
   prop length: f32 = 2.2
   prop seed: i32 = 0
@@ -140,7 +132,6 @@ template CanopyLaundry {
   }
 }
 
-@tree Parent
 template CanopyBalconySet {
   table : CanopyMetal { Position: {0, 0.62, 0}; Cylinder: {radius: 0.26, length: 0.03, segments: 10} }
   stem : CanopyMetal { Position: {0, 0.3, 0}; Cylinder: {radius: 0.02, length: 0.6, segments: 6} }
@@ -151,7 +142,6 @@ template CanopyBalconySet {
   }
 }
 
-@tree Parent
 template CanopyBalconyProp {
   prop kind: i32 = 0
   prop seed: i32 = 0
@@ -169,17 +159,15 @@ template CanopyBalconyProp {
   }
 }
 
-@tree Parent
 template CanopyDownpipe {
   prop length: f32 = 8
   pipe : CanopyCopper { Position: {0, -length / 2, 0}; Cylinder: {radius: 0.04, length: length, segments: 6} }
   hopper : CanopyCopper { Position: {0, -0.1, 0}; Frustum: {radius_bottom: 0.05, radius_top: 0.12, length: 0.2, segments: 6} }
 }
 
-@tree Parent
 template CanopyTank {
   prop size: f32 = 1
-  barrel : CanopyWood { Position: {0, size * 1.1, 0}; Cylinder: {radius: size * 0.55, length: size * 1.05, segments: 14}; TextureTransform: {scale_x: 2, scale_y: 0.8} }
+  barrel : CanopyWood { Position: {0, size * 1.1, 0}; Cylinder: {radius: size * 0.55, length: size * 1.05, segments: 14} }
   lid : CanopyVerdigris { Position: {0, size * 1.78, 0}; Cone: {radius: size * 0.62, length: size * 0.3, segments: 14} }
   for i in 0..2 {
     { (IsA, CanopyMetal); Position: {0, size * (0.86 + i * 0.5), 0}; Torus: {radius: size * 0.56, tube: 0.018, segments: 14, rings: 4} }
@@ -191,7 +179,6 @@ template CanopyTank {
   pipe : CanopyCopper { Position: {size * 0.6, size * 0.4, 0}; Cylinder: {radius: 0.035, length: size * 0.8, segments: 6} }
 }
 
-@tree Parent
 template CanopyVentStack {
   prop tall: f32 = 0.9
   pipe : CanopyMetal { Position: {0, tall / 2, 0}; Cylinder: {radius: 0.1, length: tall, segments: 8} }
@@ -199,7 +186,6 @@ template CanopyVentStack {
   collar : CanopyTrim { Position: {0, 0.04, 0}; Cylinder: {radius: 0.16, length: 0.08, segments: 8} }
 }
 
-@tree Parent
 template CanopyMast {
   prop tall: f32 = 2.4
   foot : CanopyMetal { Position: {0, 0.05, 0}; Box: {0.3, 0.1, 0.3} }
@@ -209,7 +195,6 @@ template CanopyMast {
   tip { Position: {0, tall + 0.03, 0}; Sphere: {radius: 0.045, segments: 6}; Rgb: {255, 80, 60}; Emissive: {strength: 3, color: {255, 60, 40}} }
 }
 
-@tree Parent
 template CanopySkylight {
   prop w: f32 = 1.2
   prop d: f32 = 0.9
@@ -217,7 +202,6 @@ template CanopySkylight {
   pane : CanopyGlass { Position: {0, 0.18, 0}; Rotation: {0, 0, 0.14}; Box: {w - 0.1, 0.04, d - 0.1} }
 }
 
-@tree Parent
 template CanopyRoofKit {
   prop variant: i32 = 0
   const kit: math.Rng = {seed: variant + 55711}
@@ -248,7 +232,6 @@ template CanopyRoofKit {
   }
 }
 
-@tree Parent
 template CanopyPlinth {
   prop width: f32 = 8
   prop depth: f32 = 8
@@ -256,14 +239,14 @@ template CanopyPlinth {
   prop round: bool = false
   prop radius: f32 = 4
   prop variant: i32 = 0
-  const front = match round { true: radius; _: depth / 2 }
-  const span = match round { true: radius * 2; _: width }
+  const front = round ? radius : depth / 2
+  const span = round ? radius * 2 : width
   if round {
-    { (IsA, CanopyAshlar); Position: {0, (height - 0.2) / 2, 0}; Cylinder: {radius: radius, length: height + 0.2, segments: 28}; TextureTransform: {scale_x: radius * 1.6, scale_y: 0.8} }
+    { (IsA, CanopyAshlar); Position: {0, (height - 0.2) / 2, 0}; Cylinder: {radius: radius, length: height + 0.2, segments: 28} }
     { (IsA, CanopyTrim); Position: {0, height, 0}; Cylinder: {radius: radius + 0.09, length: 0.1, segments: 28} }
-    { (IsA, CanopyConcrete); Position: {0, 0.08, 0}; Cylinder: {radius: radius + 0.12, length: 0.3, segments: 28}; TextureTransform: {scale_x: radius * 1.2, scale_y: 0.2} }
+    { (IsA, CanopyConcrete); Position: {0, 0.08, 0}; Cylinder: {radius: radius + 0.12, length: 0.3, segments: 28} }
   } else {
-    { (IsA, CanopyAshlar); Position: {0, (height - 0.2) / 2, 0}; Box: {width, height + 0.2, depth}; TextureTransform: {scale_x: math.max(width, depth) / 2.2, scale_y: 0.8} }
+    { (IsA, CanopyAshlar); Position: {0, (height - 0.2) / 2, 0}; Box: {width, height + 0.2, depth} }
     for side in 0..2 {
       { (IsA, CanopyMetal); Position: {(side - 0.5) * span * 0.7, 0.62, front + 0.012}; Box: {0.6, 0.34, 0.03} }
       for slat in 0..3 {
@@ -271,14 +254,14 @@ template CanopyPlinth {
       }
     }
     { (IsA, CanopyTrim); Position: {0, height, 0}; Box: {width + 0.18, 0.1, depth + 0.18} }
-    { (IsA, CanopyConcrete); Position: {0, 0.08, 0}; Box: {width + 0.24, 0.3, depth + 0.24}; TextureTransform: {scale_x: math.max(width, depth) / 3, scale_y: 0.2} }
+    { (IsA, CanopyConcrete); Position: {0, 0.08, 0}; Box: {width + 0.24, 0.3, depth + 0.24} }
   }
   for i in 0..4 {
-    { (IsA, CanopyPaver); Position: {0, (i + 0.5) * height / 4 - 0.02, front + 0.2 + (3 - i) * 0.34}; Box: {2.2, height / 4 + 0.02, 0.36 + 0.02}; TextureTransform: {scale_x: 0.8, scale_y: 0.2} }
+    { (IsA, CanopyPaver); Position: {0, (i + 0.5) * height / 4 - 0.02, front + 0.2 + (3 - i) * 0.34}; Box: {2.2, height / 4 + 0.02, 0.36 + 0.02} }
   }
   for side in 0..2 {
     const x = (side - 0.5) * 2.5
-    { (IsA, CanopyAshlar); Position: {x, height * 0.42, front + 0.68}; Box: {0.28, height * 0.84, 1.4}; TextureTransform: {scale_x: 0.3, scale_y: 0.3} }
+    { (IsA, CanopyAshlar); Position: {x, height * 0.42, front + 0.68}; Box: {0.28, height * 0.84, 1.4} }
     CanopyPotted(size: 0.62, seed: variant + side) { Position: {x, height * 0.84, front + 1.18} }
   }
   door : CanopyTimberDark { Position: {0, height + 1.05, front + 0.03}; Box: {1.3, 2, 0.05} }
@@ -287,7 +270,6 @@ template CanopyPlinth {
   CanopyAwning(width: 2.2, depth: 0.8, stripes: 6, style: variant) { Position: {0, height + 2.5, front + 0.05} }
 }
 
-@tree Parent
 template CanopyStreetlight {
   foot : CanopyMetal { Position: {0, 0.06, 0}; Cylinder: {radius: 0.14, length: 0.12, segments: 8} }
   mast : CanopyMetal { Position: {0, 1.65, 0}; Frustum: {radius_bottom: 0.055, radius_top: 0.03, length: 3.3, segments: 8} }
@@ -297,19 +279,16 @@ template CanopyStreetlight {
   cap : CanopySolar { Position: {0, 3.44, 0}; Rotation: {0, 0, -0.18}; Box: {0.5, 0.03, 0.44} }
 }
 
-@tree Parent
 template CanopyBollard {
   post : CanopyMetal { Position: {0, 0.32, 0}; Cylinder: {radius: 0.05, length: 0.64, segments: 8} }
   glow : CanopyLampGlow { Position: {0, 0.6, 0}; Cylinder: {radius: 0.052, length: 0.05, segments: 8} }
 }
 
-@tree Parent
 template CanopyHangingLantern {
   cord : CanopyMetal { Position: {0, -0.2, 0}; Box: {0.012, 0.4, 0.012} }
   shade : CanopyLanternGlow { Position: {0, -0.52, 0}; Scale: {1, 1.25, 1}; Sphere: {radius: 0.17, segments: 8, smooth: true} }
 }
 
-@tree Parent
 template CanopyRocks {
   prop seed: f32 = 0
   prop count: i32 = 3
@@ -320,14 +299,13 @@ template CanopyRocks {
   }
 }
 
-@tree Parent
 template CanopyKiosk {
   prop style: i32 = 0
   for i in 0..4 {
     const a = i * math.PI / 2 + 0.78
     { (IsA, CanopyTimberDark); Position: {math.sin(a) * 1.1, 1.05, math.cos(a) * 1.1}; Box: {0.07, 2.1, 0.07} }
   }
-  counter : CanopyWood { Position: {0, 0.5, 0.56}; Box: {1.56, 1, 0.36}; TextureTransform: {scale_x: 1, scale_y: 0.6} }
+  counter : CanopyWood { Position: {0, 0.5, 0.56}; Box: {1.56, 1, 0.36} }
   CanopyAwning(width: 1.9, depth: 1.8, stripes: 6, style: style) { Position: {0, 2.34, -0.86} }
   for i in 0..5 {
     { (IsA, CanopyTerracotta); Position: {-0.56 + i * 0.28, 1.08, 0.56}; IcoSphere: {radius: 0.09, segments: 1}; Rgb: {222 - i * 12, 120 + i * 22, 50 + i * 8} }

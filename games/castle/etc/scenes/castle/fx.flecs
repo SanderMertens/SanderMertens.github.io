@@ -15,6 +15,7 @@ $ {
 // Stone set on stone: a thud with a gritty top
 prefab SfxBuild {
   AudioOutput: {bus: sfx}
+  AudioSpatial: {min_distance: 30, max_distance: 260, rolloff: 0.5}
   SynthSound: {seed: 3, pitch_variance: 0.12, level_variance: 0.1}
   SynthEnvelope: {attack: 0.002, decay: 0.28}
   SynthFilter: {kind: SynthLowPass, cutoff: 300, resonance: 0.1}
@@ -29,6 +30,7 @@ prefab SfxBuild {
 // A wall coming down: a long rumble of noise
 prefab SfxRaze {
   AudioOutput: {bus: sfx}
+  AudioSpatial: {min_distance: 30, max_distance: 260, rolloff: 0.5}
   SynthSound: {seed: 9, pitch_variance: 0.1}
   SynthEnvelope: {attack: 0.01, decay: 0.2, sustain: 0.5, hold: 0.15, release: 0.45}
   SynthFilter: {kind: SynthLowPass, cutoff: 200, resonance: 0.2}
@@ -40,6 +42,7 @@ prefab SfxRaze {
 // A rustle of leaves and earth
 prefab SfxPlant {
   AudioOutput: {bus: sfx}
+  AudioSpatial: {min_distance: 30, max_distance: 260, rolloff: 0.5}
   SynthSound: {seed: 5, pitch_variance: 0.15}
   SynthEnvelope: {attack: 0.01, decay: 0.18}
   SynthFilter: {kind: SynthBandPass, cutoff: 1200, resonance: 0.4}
@@ -50,6 +53,7 @@ prefab SfxPlant {
 // Water poured into the moat
 prefab SfxSplash {
   AudioOutput: {bus: sfx}
+  AudioSpatial: {min_distance: 30, max_distance: 260, rolloff: 0.5}
   SynthSound: {seed: 11, pitch_variance: 0.1}
   SynthEnvelope: {attack: 0.005, decay: 0.4}
   SynthFilter: {kind: SynthBandPass, cutoff: 600, resonance: 0.55}
@@ -167,6 +171,7 @@ prefab RubbleBurst {
     }
     ParticleBurst: {count: 30}
     ParticleForces: {gravity: {0, -14, 0}}
+    ParticleCollision: {height: 0.03, bounce: 0.3, friction: 0.6}
   }
 }
 
@@ -184,6 +189,7 @@ prefab SplashBurst {
     }
     ParticleBurst: {count: 40}
     ParticleForces: {gravity: {0, -12, 0}}
+    ParticleCollision: {height: -0.31, die: true}
   }
 }
 

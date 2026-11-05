@@ -79,7 +79,6 @@ space_station {
   }
 
   StationPlanet planet() { Position: {560, -390, -520} }
-  StationStarfield stars()
   StationDiorama diorama()
 
   slots {

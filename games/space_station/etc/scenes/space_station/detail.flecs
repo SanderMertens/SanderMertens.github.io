@@ -6,6 +6,7 @@ using box.geometry
 using box.material
 using box.movement
 using box.particle
+using box.curve
 
 template StationPipeX {
   prop length: f32 = 2
@@ -90,6 +91,8 @@ template StationSteam {
     lifetime: {0.8, 1.8}, size: {0.05, 0.2}, opacity: {0.04, 0.16},
     color: {214, 228, 240}, seed: seed
   }
+  ParticleCurves: {size: {kind: CurveCatmullRom, keys: [{0, 0.6}, {1, 2.4}]}, opacity: {keys: [{0, 0}, {0.15, 1}, {1, 0}]}}
+  ParticleForces: {gravity: {0, 0, 0}, drag: 0.8, turbulence: 0.6, turbulence_scale: 2}
 }
 
 template StationJunction {

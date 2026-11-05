@@ -9,7 +9,7 @@ using box.material
 template QuestMark {
   prop kind: i32 = 0
   mut up = false
-  Position: {0, match up { true: 3.35; _: 3.1 }, 0}
+  Position: {0, up ? 3.35 : 3.1, 0}
   Rotation: {-0.55, 0, 0}
   Scale: {1.6, 1.6, 1.6}
   Transition: [Position: {duration: 0.7, timing_function: EaseInOut}]
@@ -40,7 +40,7 @@ template Npc {
   mut breath = false
 
   const kid = id == N_TAM
-  const sc = match kid { true: 0.68; _: 1.0 }
+  const sc = kid ? 0.68 : 1.0
   const outfit: Rgb = match id {
     0: {70, 104, 70}
     1: {176, 60, 52}
@@ -83,10 +83,10 @@ template Npc {
 
   const sk: Rgb = match skin { 0: {236, 190, 156}; 1: {200, 148, 108}; _: {144, 100, 72} }
   const trim: Rgb = {outfit.r * 0.62, outfit.g * 0.62, outfit.b * 0.62}
-  const pants: Rgb = match fract(id * 0.37) > 0.5 { true: {78, 62, 50}; _: {58, 58, 72} }
+  const pants: Rgb = fract(id * 0.37) > 0.5 ? {78, 62, 50} : {58, 58, 72}
 
   body {
-    Scale: {sc, sc * match breath { true: 1.025; _: 1 }, sc}
+    Scale: {sc, sc * (breath ? 1.025 : 1), sc}
     Transition: [Scale: {duration: 1.1, timing_function: EaseInOut}]
     leg_a : MvDark { Position: {-0.15, 0.45, 0}; Capsule: {length: 0.6, radius: 0.1, segments: 8, smooth: true}; Rgb: pants }
     leg_b : MvDark { Position: {0.15, 0.45, 0}; Capsule: {length: 0.6, radius: 0.1, segments: 8, smooth: true}; Rgb: pants }
@@ -113,7 +113,7 @@ template Npc {
     buckle : MvBrass { Position: {0, 1.02, 0.33}; Box: {0.09, 0.08, 0.03} }
     arm_a {
       Position: {-0.37, 1.55, 0}
-      Rotation: {match nod { true: -0.5; _: 0 }, 0, 0.15}
+      Rotation: {nod ? -0.5 : 0, 0, 0.15}
       Transition: [Rotation: {duration: 0.3}]
       sleeve : MvCloth { Position: {0, -0.27, 0}; Capsule: {length: 0.38, radius: 0.09, segments: 8, smooth: true}; Rgb: outfit }
       cuff { Position: {0, -0.5, 0}; Cylinder: {length: 0.06, radius: 0.095, segments: 8}; Rgb: trim; PbrMaterial: {roughness: 0.9} }
@@ -128,7 +128,7 @@ template Npc {
     }
     head {
       Position: {0, 1.98, 0}
-      Rotation: {match nod { true: 0.12; _: -0.04 }, 0, match nod { true: 0.06; _: 0 }}
+      Rotation: {nod ? 0.12 : -0.04, 0, nod ? 0.06 : 0}
       Transition: [Rotation: {duration: 0.3}]
       neck : MvSkin { Position: {0, -0.26, 0}; Cylinder: {length: 0.14, radius: 0.09, segments: 8}; Rgb: sk }
       face_ : MvSkin { Position: {0, 0, 0}; Sphere: {radius: 0.28, segments: 16, smooth: true}; Rgb: sk }
@@ -248,12 +248,12 @@ template Villager {
     _: {120, 90, 130}
   }
 
-  Position: match back { true: {x0, 0, z0}; _: {x1, 0, z1} }
-  Rotation: {0, match back { true: yaw + PI; _: yaw }, 0}
+  Position: back ? {x0, 0, z0} : {x1, 0, z1}
+  Rotation: {0, back ? yaw + PI : yaw, 0}
   Transition: [Position: {duration: period}]
 
   bob {
-    Position: {0, match step { true: 0.08; _: 0 }, 0}
+    Position: {0, step ? 0.08 : 0, 0}
     Transition: [Position: {duration: 0.25}]
     leg_a : MvDark { Position: {-0.14, 0.45, 0}; Capsule: {length: 0.6, radius: 0.09, segments: 8, smooth: true}; Rgb: {70, 60, 56} }
     leg_b : MvDark { Position: {0.14, 0.45, 0}; Capsule: {length: 0.6, radius: 0.09, segments: 8, smooth: true}; Rgb: {70, 60, 56} }
@@ -261,8 +261,8 @@ template Villager {
     shoe_b : MvLeather { Position: {0.14, 0.08, 0.05}; RoundedBox: {0.18, 0.15, 0.3, 0.06, segments: 2} }
     torso : MvCloth { Position: {0, 0.86, 0}; Scale: {0.92, 0.95, 0.85}; Lathe: {profile: MvTunicShape, segments: 14, rings: 8}; Rgb: outfit }
     belt : MvLeather { Position: {0, 1.0, 0}; Scale: {0.92, 1, 0.8}; Torus: {radius: 0.36, tube: 0.035, segments: 14, rings: 4} }
-    arm_a : MvCloth { Position: {-0.35, 1.3, 0}; Rotation: {match step { true: 0.3; _: -0.3 }, 0, 0.12}; Transition: [Rotation: {duration: 0.25}]; Capsule: {length: 0.4, radius: 0.085, segments: 8, smooth: true}; Rgb: outfit }
-    arm_b : MvCloth { Position: {0.35, 1.3, 0}; Rotation: {match step { true: -0.3; _: 0.3 }, 0, -0.12}; Transition: [Rotation: {duration: 0.25}]; Capsule: {length: 0.4, radius: 0.085, segments: 8, smooth: true}; Rgb: outfit }
+    arm_a : MvCloth { Position: {-0.35, 1.3, 0}; Rotation: {step ? 0.3 : -0.3, 0, 0.12}; Transition: [Rotation: {duration: 0.25}]; Capsule: {length: 0.4, radius: 0.085, segments: 8, smooth: true}; Rgb: outfit }
+    arm_b : MvCloth { Position: {0.35, 1.3, 0}; Rotation: {step ? -0.3 : 0.3, 0, -0.12}; Transition: [Rotation: {duration: 0.25}]; Capsule: {length: 0.4, radius: 0.085, segments: 8, smooth: true}; Rgb: outfit }
     head : MvSkin { Position: {0, 1.92, 0}; Sphere: {radius: 0.26, segments: 14, smooth: true} }
     eye_a : MvDark { Position: {-0.09, 1.95, 0.225}; Sphere: {radius: 0.035, segments: 6, smooth: true} }
     eye_b : MvDark { Position: {0.09, 1.95, 0.225}; Sphere: {radius: 0.035, segments: 6, smooth: true} }

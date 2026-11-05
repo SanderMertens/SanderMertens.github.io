@@ -7,8 +7,7 @@ export mut reverb_level: f32 = 100
 export mut sweep: f32 = 300
 export mut beat: f32 = 0
 export mut levels: f32[6] = {}
-export mut master_l: f32 = 0
-export mut master_r: f32 = 0
+export mut master_level: f32[2] = {}
 export mut glow: f32 = 0
 
 export const SONG_TITLE: string[] = ["Distant Orbit", "Neon Run", "Harbor Lights", "Lantern Waltz", "Trade Lane Dawn"]

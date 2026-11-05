@@ -10,30 +10,15 @@ using box.layout
 using box.geometry
 using box.material
 using box.text
+using box.transition
 
-// Behavior of a push button. A click, Enter or Space activates it: with an action the
-// ActionTrigger taps it, without one the button reports a change (ui.changed). Space shows the
-// pressed look while it is down. The pointer shows a hand over it, a crossed circle while it is
-// disabled.
-template HeadlessButton {
-  prop label: string = "Button"
-  prop action: entity = 0
+template HeadlessPressable {
   prop disabled: bool = false
-  prop width: f32 = 0
 
   mut hover = false
   mut down = false
   mut focused = false
 
-  if !disabled {
-    Focusable
-    ActionTrigger: {action: action}
-    Cursor: {CursorPointer}
-  } else {
-    Cursor: {CursorNotAllowed}
-  }
-
-  // A disabled button ignores the pointer, so it never shows as hovered or pressed
   async {
     while true {
       await on.enter(this)
@@ -88,6 +73,24 @@ template HeadlessButton {
       }
     }
   }
+}
+
+// Behavior of a push button. A click, Enter or Space activates it: with an action the
+// ActionTrigger taps it, without one the button reports a change (ui.changed). Space shows the
+// pressed look while it is down. The pointer shows a hand over it, a crossed circle while it is
+// disabled.
+template HeadlessButton : HeadlessPressable {
+  prop label: string = "Button"
+  prop action: entity = 0
+  prop width: f32 = 0
+
+  if !disabled {
+    Focusable
+    ActionTrigger: {action: action}
+    Cursor: {CursorPointer}
+  } else {
+    Cursor: {CursorNotAllowed}
+  }
 
   async {
     while true {
@@ -112,6 +115,7 @@ template Button : HeadlessButton {
   const ring = focused && FocusStatus[FocusStatus].visible
   const pad = t.padding * 1.5
   const filled = variant == "primary" || variant == "danger"
+  const edge = ring ? t.focus : t.border
 
   Layout: {direction: Row, padding: {0, 0, pad, pad}, h: Center, v: Middle}
   LayoutItem: {
@@ -119,35 +123,16 @@ template Button : HeadlessButton {
     height: {mode: Fixed, value: t.control_height}
   }
   Rect: {1, 1}
-
-  if variant == "danger" {
-    Rgb: t.danger
-  } else if filled {
-    Rgb: t.accent
-  } else if down {
-    Rgb: t.pressed
-  } else if hover {
-    Rgb: t.hover
-  } else {
-    Rgb: t.surface
-  }
+  Rgb: variant == "danger" ? t.danger : filled ? t.accent : down ? t.pressed : hover ? t.hover : t.surface
 
   // A filled button lightens while hovered and darkens while pressed
-  if filled && down {
-    Tint: {0, 0, 0, 60}
-  } else if filled && hover {
-    Tint: {255, 255, 255, 40}
-  }
+  Tint: filled && down ? {0, 0, 0, 60} : {255, 255, 255, filled && hover ? 40 : 0}
+  Transition: [Rgb: WidgetFade, Tint: WidgetFade]
 
-  if ring {
-    Border: {
-      width: t.focus_width, radius: t.radius,
-      color: {t.focus.r, t.focus.g, t.focus.b, 255}
-    }
-  } else if variant == "secondary" {
-    Border: {width: 1, radius: t.radius, color: {t.border.r, t.border.g, t.border.b, 255}}
-  } else {
-    Border: {width: 0, radius: t.radius}
+  Border: {
+    width: ring ? t.focus_width : variant == "secondary" ? 1 : 0,
+    radius: t.radius,
+    color: {edge.r, edge.g, edge.b, 255}
   }
 
   if disabled {
@@ -156,10 +141,6 @@ template Button : HeadlessButton {
 
   caption {
     Text: {value: label, size: t.font_size}
-    if filled {
-      Rgb: t.accent_text
-    } else {
-      Rgb: t.text
-    }
+    Rgb: filled ? t.accent_text : t.text
   }
 }

@@ -13,6 +13,9 @@ jukebox_actions {
   crash { Action: {description: "Crash on the next bar"}; Binding: {key: C} }
 }
 
+export const SONG_KEY: string[] = ["orbit", "neon", "harbor", "lantern", "lane"]
+export const SONG_ACTION = [jukebox_actions.pick_orbit, jukebox_actions.pick_neon, jukebox_actions.pick_harbor, jukebox_actions.pick_lantern, jukebox_actions.pick_lane]
+
 prefab jb_crash {
   AudioOutput: {bus: sfx}
   SynthSound: {seed: 43, level_variance: 0.05}
@@ -73,27 +76,6 @@ proc pick(n: i32) {
 
 async {
   while true {
-    await on.pressed(jukebox_actions.pick_harbor)
-    pick(2)
-  }
-}
-
-async {
-  while true {
-    await on.pressed(jukebox_actions.pick_neon)
-    pick(1)
-  }
-}
-
-async {
-  while true {
-    await on.pressed(jukebox_actions.pick_lantern)
-    pick(3)
-  }
-}
-
-async {
-  while true {
     await on.pressed(jukebox_actions.play)
     playing = !playing
   }
@@ -120,8 +102,8 @@ async {
     }
 
     const mm = box.audio.master[AudioMeter]
-    master_l = clamp((20 * log10(max(mm.rms_left, 0.00001)) + 48) / 48, 0, 1)
-    master_r = clamp((20 * log10(max(mm.rms_right, 0.00001)) + 48) / 48, 0, 1)
+    master_level[0] = clamp((20 * log10(max(mm.rms_left, 0.00001)) + 48) / 48, 0, 1)
+    master_level[1] = clamp((20 * log10(max(mm.rms_right, 0.00001)) + 48) / 48, 0, 1)
     glow = clamp((20 * log10(max(max(mm.peak_left, mm.peak_right), 0.00001)) + 30) / 30, 0, 1)
 
     const open = 300 * pow(2, 5 * clamp(b / 16, 0, 1))
@@ -130,19 +112,5 @@ async {
     }
 
     await next_frame()
-  }
-}
-
-async {
-  while true {
-    await on.pressed(jukebox_actions.pick_orbit)
-    pick(0)
-  }
-}
-
-async {
-  while true {
-    await on.pressed(jukebox_actions.pick_lane)
-    pick(4)
   }
 }

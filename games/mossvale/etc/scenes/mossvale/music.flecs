@@ -2,71 +2,72 @@ using flecs.script
 using flecs.script.math
 using box.audio
 
-export mut music_bar: i32 = 0
+export mut music_on = false
 
-template Flute {
-  prop f: f32 = 440
-  AudioOutput: {bus: mv_music}
+const music_festive = game_state == 2
+const music_forest = pz < WALL_N1 && game_state == 1
+
+prefab MvFlute {
   SynthSound: {level_variance: 0.05}
   SynthEnvelope: {attack: 0.06, decay: 0.25, sustain: 0.55, hold: 0.22, release: 0.5, curve: 2.5, attack_curve: 1.5}
   SynthFilter: {kind: SynthLowPass, cutoff: 2600, resonance: 0.1}
   SynthLfo: {rate: 5.2, delay: 0.2, fade: 0.3, random_phase: true, pitch: 14, amplitude: 0.08}
-  tone { SynthOscillator: {wave: SynthSine, frequency: f, level: 0.42} }
-  reed { SynthOscillator: {wave: SynthTriangle, frequency: f * 1.002, level: 0.14} }
+  tone { SynthOscillator: {wave: SynthSine, frequency: 440, level: 0.42} }
+  reed { SynthOscillator: {wave: SynthTriangle, frequency: 440 * 1.002, level: 0.14} }
   breath { SynthOscillator: {wave: SynthNoise, level: 0.025}; SynthEnvelope: {attack: 0.02, decay: 0.12} }
-  octave { SynthOscillator: {wave: SynthSine, frequency: f * 2, level: 0.05} }
+  octave { SynthOscillator: {wave: SynthSine, frequency: 880, level: 0.05} }
 }
 
 // A harp: a gut string plucked with a finger, which rings out on its own, over a soft sine
 // for the body of the soundboard
-template Harp {
-  prop f: f32 = 220
-  AudioOutput: {bus: mv_music}
+prefab MvHarp {
   SynthSound: {level_variance: 0.1}
   SynthFilter: {kind: SynthLowPass, cutoff: 3500, resonance: 0.05}
-  pluck { SynthOscillator: {wave: SynthPluck, frequency: f, level: 0.45}; SynthString: {decay: 2.2, brightness: 0.35, hardness: 0.45} }
-  body { SynthOscillator: {wave: SynthSine, frequency: f, level: 0.12}; SynthEnvelope: {attack: 0.004, decay: 1.2, curve: 4.5} }
+  pluck { SynthOscillator: {wave: SynthPluck, frequency: 440, level: 0.45}; SynthString: {decay: 2.2, brightness: 0.35, hardness: 0.45} }
+  body { SynthOscillator: {wave: SynthSine, frequency: 440, level: 0.12}; SynthEnvelope: {attack: 0.004, decay: 1.2, curve: 4.5} }
 }
 
-template Strings {
-  prop a: f32 = 196
-  prop b: f32 = 246.94
-  prop c: f32 = 293.66
-  AudioOutput: {bus: mv_music}
+template MvStrings {
+  prop layer: i32 = 0
   SynthSound: {seed: 5}
   SynthEnvelope: {attack: 0.9, decay: 0.6, sustain: 0.7, hold: 1.2, release: 1.4}
   SynthFilter: {kind: SynthLowPass, cutoff: 900, resonance: 0.12}
   SynthFilterEnvelope: {attack: 1.8, sustain: 1, hold: 2.3, amount: 0.637}
   SynthLfo: {rate: 0.23, fade: 1.2, random_phase: true, cutoff: 0.3, amplitude: 0.12}
-  low {
-    SynthOscillator: {wave: SynthSaw, frequency: a, level: 0.09}
-    SynthUnison: {voices: 3, detune: 12, width: 0.6}
-  }
-  mid {
-    SynthOscillator: {wave: SynthSaw, frequency: b, level: 0.08}
-    SynthUnison: {voices: 3, detune: 12, width: 0.8}
-    SynthLfo: {wave: SynthLfoTriangle, rate: 0.37, fade: 0.8, phase: 0.5, pitch: 7}
-  }
-  high { SynthOscillator: {wave: SynthTriangle, frequency: c, level: 0.14} }
-  shimmer {
-    SynthOscillator: {wave: SynthSine, frequency: a * 2, level: 0.05}
-    SynthUnison: {voices: 2, detune: 7, width: 1}
+  if layer == 0 {
+    low {
+      SynthOscillator: {wave: SynthSaw, frequency: 440, level: 0.09}
+      SynthUnison: {voices: 3, detune: 12, width: 0.6}
+    }
+    shimmer {
+      SynthOscillator: {wave: SynthSine, frequency: 880, level: 0.05}
+      SynthUnison: {voices: 2, detune: 7, width: 1}
+    }
+  } else if layer == 1 {
+    mid {
+      SynthOscillator: {wave: SynthSaw, frequency: 440, level: 0.08}
+      SynthUnison: {voices: 3, detune: 12, width: 0.8}
+      SynthLfo: {wave: SynthLfoTriangle, rate: 0.37, fade: 0.8, phase: 0.5, pitch: 7}
+    }
+  } else {
+    high { SynthOscillator: {wave: SynthTriangle, frequency: 440, level: 0.14} }
   }
 }
 
-template Bass {
-  prop f: f32 = 98
-  AudioOutput: {bus: mv_music}
+MvStrings mv_strings_low(layer: 0)
+MvStrings mv_strings_mid(layer: 1)
+MvStrings mv_strings_high(layer: 2)
+
+prefab MvBass {
   SynthSound: {level_variance: 0.05}
   SynthEnvelope: {attack: 0.01, decay: 1.0, curve: 3}
   SynthFilter: {kind: SynthLowPass, cutoff: 200, resonance: 0.2}
   SynthFilterEnvelope: {decay: 0.5, amount: 1.322}
-  body { SynthOscillator: {wave: SynthTriangle, frequency: f, level: 0.45} }
-  sub { SynthOscillator: {wave: SynthSine, frequency: f, level: 0.4} }
+  body { SynthOscillator: {wave: SynthTriangle, frequency: 440, level: 0.45} }
+  sub { SynthOscillator: {wave: SynthSine, frequency: 440, level: 0.4} }
 }
 
 prefab MvKick {
-  AudioOutput: {bus: mv_music}
   SynthSound: {}
   SynthEnvelope: {attack: 0.002, decay: 0.25}
   SynthFilter: {kind: SynthLowPass, cutoff: 2000}
@@ -74,122 +75,413 @@ prefab MvKick {
 }
 
 prefab MvTamb {
-  AudioOutput: {bus: mv_music}
   SynthSound: {seed: 9, level_variance: 0.25}
   SynthEnvelope: {attack: 0.001, decay: 0.07}
   SynthFilter: {kind: SynthHighPass, cutoff: 6000, resonance: 0.2}
   SynthOscillator: {wave: SynthNoise, level: 0.35}
 }
 
-mv_score {
-  Flute fl_g4(f: 392)
-  Flute fl_a4(f: 440)
-  Flute fl_b4(f: 493.88)
-  Flute fl_c5(f: 523.25)
-  Flute fl_d5(f: 587.33)
-  Flute fl_e5(f: 659.25)
-  Flute fl_fs5(f: 739.99)
-  Flute fl_g5(f: 783.99)
-  Flute fl_a5(f: 880)
-  Flute fl_fs4(f: 369.99)
-
-  Harp hp_c3(f: 130.81)
-  Harp hp_d3(f: 146.83)
-  Harp hp_e3(f: 164.81)
-  Harp hp_g3(f: 196)
-  Harp hp_a3(f: 220)
-  Harp hp_b3(f: 246.94)
-  Harp hp_c4(f: 261.63)
-  Harp hp_d4(f: 293.66)
-  Harp hp_e4(f: 329.63)
-  Harp hp_fs4(f: 369.99)
-  Harp hp_g4(f: 392)
-  Harp hp_a4(f: 440)
-
-  Strings st_g(a: 196, b: 246.94, c: 293.66)
-  Strings st_em(a: 164.81, b: 246.94, c: 329.63)
-  Strings st_c(a: 130.81, b: 196, c: 329.63)
-  Strings st_d(a: 146.83, b: 220, c: 369.99)
-  Strings st_am(a: 220, b: 261.63, c: 329.63)
-
-  Bass bs_g(f: 98)
-  Bass bs_e(f: 82.41)
-  Bass bs_c(f: 65.41)
-  Bass bs_d(f: 73.42)
-  Bass bs_a(f: 110)
+mv_band {
+  flute { Instrument: {sound: MvFlute, velocity_curve: 1, gate: false} }
+  harp { Instrument: {sound: MvHarp, velocity_curve: 1, gate: false} }
+  strings_low { Instrument: {sound: mv_strings_low, velocity_curve: 1, gate: false} }
+  strings_mid { Instrument: {sound: mv_strings_mid, velocity_curve: 1, gate: false} }
+  strings_high { Instrument: {sound: mv_strings_high, velocity_curve: 1, gate: false} }
+  bass { Instrument: {sound: MvBass, velocity_curve: 1, gate: false} }
+  kick { Instrument: {sound: MvKick, velocity_curve: 1, gate: false} }
+  tamb { Instrument: {sound: MvTamb, velocity_curve: 1, gate: false} }
 }
 
-const MV_FLUTE = [mv_score.fl_g4, mv_score.fl_a4, mv_score.fl_b4, mv_score.fl_c5, mv_score.fl_d5, mv_score.fl_e5, mv_score.fl_fs5, mv_score.fl_g5, mv_score.fl_a5, mv_score.fl_fs4]
-const MV_STRINGS = [mv_score.st_g, mv_score.st_em, mv_score.st_c, mv_score.st_d, mv_score.st_am]
-const MV_BASS = [mv_score.bs_g, mv_score.bs_e, mv_score.bs_c, mv_score.bs_d, mv_score.bs_a]
-const MV_ARP = [
-  mv_score.hp_g3, mv_score.hp_b3, mv_score.hp_d4, mv_score.hp_g4,
-  mv_score.hp_e3, mv_score.hp_b3, mv_score.hp_e4, mv_score.hp_g4,
-  mv_score.hp_c3, mv_score.hp_g3, mv_score.hp_c4, mv_score.hp_e4,
-  mv_score.hp_d3, mv_score.hp_a3, mv_score.hp_d4, mv_score.hp_fs4,
-  mv_score.hp_a3, mv_score.hp_c4, mv_score.hp_e4, mv_score.hp_a4
-]
-const MV_PATTERN = [0, 1, 2, 3, 2, 1, 2, 1]
-const MV_CHORDS = [0, 1, 2, 3, 0, 1, 4, 3, 2, 0, 4, 1, 2, 0, 3, 3]
-const MV_MELODY = [
-  4, -1, 2, -1, 0, -1, 2, -1,
-  5, -1, -1, 4, 2, -1, -1, -1,
-  3, -1, 5, -1, 7, -1, 5, -1,
-  4, -1, -1, -1, 1, -1, -1, -1,
-  2, -1, 4, -1, 7, -1, 6, -1,
-  5, -1, 4, -1, 2, -1, 0, -1,
-  1, -1, 3, -1, 5, -1, 4, 3,
-  4, -1, -1, -1, -1, -1, -1, -1,
-  5, -1, 7, -1, 5, -1, 3, -1,
-  4, -1, 2, -1, 0, -1, -1, -1,
-  3, -1, 5, -1, 8, -1, 7, -1,
-  7, -1, -1, 5, -1, -1, 2, -1,
-  5, -1, -1, 7, 6, -1, 5, -1,
-  4, -1, 2, -1, 4, -1, 7, -1,
-  6, -1, 5, -1, 4, -1, 1, -1,
-  9, -1, -1, -1, -1, -1, -1, -1
-]
+prefab mv_strings_low_part {
+  NoteClip: {length: 64, notes: [
+    {start: 0, duration: 4, pitch: 55},
+    {start: 4, duration: 4, pitch: 52},
+    {start: 8, duration: 4, pitch: 48},
+    {start: 12, duration: 4, pitch: 50},
+    {start: 16, duration: 4, pitch: 55},
+    {start: 20, duration: 4, pitch: 52},
+    {start: 24, duration: 4, pitch: 57},
+    {start: 28, duration: 4, pitch: 50},
+    {start: 32, duration: 4, pitch: 48},
+    {start: 36, duration: 4, pitch: 55},
+    {start: 40, duration: 4, pitch: 57},
+    {start: 44, duration: 4, pitch: 52},
+    {start: 48, duration: 4, pitch: 48},
+    {start: 52, duration: 4, pitch: 55},
+    {start: 56, duration: 4, pitch: 50},
+    {start: 60, duration: 4, pitch: 50}
+  ]}
+}
+
+prefab mv_strings_mid_part {
+  NoteClip: {length: 64, notes: [
+    {start: 0, duration: 4, pitch: 59},
+    {start: 4, duration: 4, pitch: 59},
+    {start: 8, duration: 4, pitch: 55},
+    {start: 12, duration: 4, pitch: 57},
+    {start: 16, duration: 4, pitch: 59},
+    {start: 20, duration: 4, pitch: 59},
+    {start: 24, duration: 4, pitch: 60},
+    {start: 28, duration: 4, pitch: 57},
+    {start: 32, duration: 4, pitch: 55},
+    {start: 36, duration: 4, pitch: 59},
+    {start: 40, duration: 4, pitch: 60},
+    {start: 44, duration: 4, pitch: 59},
+    {start: 48, duration: 4, pitch: 55},
+    {start: 52, duration: 4, pitch: 59},
+    {start: 56, duration: 4, pitch: 57},
+    {start: 60, duration: 4, pitch: 57}
+  ]}
+}
+
+prefab mv_strings_high_part {
+  NoteClip: {length: 64, notes: [
+    {start: 0, duration: 4, pitch: 62},
+    {start: 4, duration: 4, pitch: 64},
+    {start: 8, duration: 4, pitch: 64},
+    {start: 12, duration: 4, pitch: 66},
+    {start: 16, duration: 4, pitch: 62},
+    {start: 20, duration: 4, pitch: 64},
+    {start: 24, duration: 4, pitch: 64},
+    {start: 28, duration: 4, pitch: 66},
+    {start: 32, duration: 4, pitch: 64},
+    {start: 36, duration: 4, pitch: 62},
+    {start: 40, duration: 4, pitch: 64},
+    {start: 44, duration: 4, pitch: 64},
+    {start: 48, duration: 4, pitch: 64},
+    {start: 52, duration: 4, pitch: 62},
+    {start: 56, duration: 4, pitch: 66},
+    {start: 60, duration: 4, pitch: 66}
+  ]}
+}
+
+prefab mv_bass_part {
+  NoteClip: {length: 64, notes: [
+    {start: 0, duration: 2, pitch: 43},
+    {start: 4, duration: 2, pitch: 40},
+    {start: 8, duration: 2, pitch: 36},
+    {start: 12, duration: 2, pitch: 38},
+    {start: 16, duration: 2, pitch: 43},
+    {start: 20, duration: 2, pitch: 40},
+    {start: 24, duration: 2, pitch: 45},
+    {start: 28, duration: 2, pitch: 38},
+    {start: 32, duration: 2, pitch: 36},
+    {start: 36, duration: 2, pitch: 43},
+    {start: 40, duration: 2, pitch: 45},
+    {start: 44, duration: 2, pitch: 40},
+    {start: 48, duration: 2, pitch: 36},
+    {start: 52, duration: 2, pitch: 43},
+    {start: 56, duration: 2, pitch: 38},
+    {start: 60, duration: 2, pitch: 38}
+  ]}
+}
+
+prefab mv_bass_push_part {
+  NoteClip: {length: 64, notes: [
+    {start: 2, duration: 2, pitch: 43},
+    {start: 6, duration: 2, pitch: 40},
+    {start: 10, duration: 2, pitch: 36},
+    {start: 14, duration: 2, pitch: 38},
+    {start: 18, duration: 2, pitch: 43},
+    {start: 22, duration: 2, pitch: 40},
+    {start: 26, duration: 2, pitch: 45},
+    {start: 30, duration: 2, pitch: 38},
+    {start: 34, duration: 2, pitch: 36},
+    {start: 38, duration: 2, pitch: 43},
+    {start: 42, duration: 2, pitch: 45},
+    {start: 46, duration: 2, pitch: 40},
+    {start: 50, duration: 2, pitch: 36},
+    {start: 54, duration: 2, pitch: 43},
+    {start: 58, duration: 2, pitch: 38},
+    {start: 62, duration: 2, pitch: 38}
+  ]}
+}
+
+prefab mv_harp_down_part {
+  NoteClip: {length: 64, notes: [
+    {start: 0, duration: 0.5, pitch: 55, velocity: 0.55},
+    {start: 1, duration: 0.5, pitch: 62, velocity: 0.55},
+    {start: 2, duration: 0.5, pitch: 62, velocity: 0.55},
+    {start: 3, duration: 0.5, pitch: 62, velocity: 0.55},
+    {start: 4, duration: 0.5, pitch: 52, velocity: 0.55},
+    {start: 5, duration: 0.5, pitch: 64, velocity: 0.55},
+    {start: 6, duration: 0.5, pitch: 64, velocity: 0.55},
+    {start: 7, duration: 0.5, pitch: 64, velocity: 0.55},
+    {start: 8, duration: 0.5, pitch: 48, velocity: 0.55},
+    {start: 9, duration: 0.5, pitch: 60, velocity: 0.55},
+    {start: 10, duration: 0.5, pitch: 60, velocity: 0.55},
+    {start: 11, duration: 0.5, pitch: 60, velocity: 0.55},
+    {start: 12, duration: 0.5, pitch: 50, velocity: 0.55},
+    {start: 13, duration: 0.5, pitch: 62, velocity: 0.55},
+    {start: 14, duration: 0.5, pitch: 62, velocity: 0.55},
+    {start: 15, duration: 0.5, pitch: 62, velocity: 0.55},
+    {start: 16, duration: 0.5, pitch: 55, velocity: 0.55},
+    {start: 17, duration: 0.5, pitch: 62, velocity: 0.55},
+    {start: 18, duration: 0.5, pitch: 62, velocity: 0.55},
+    {start: 19, duration: 0.5, pitch: 62, velocity: 0.55},
+    {start: 20, duration: 0.5, pitch: 52, velocity: 0.55},
+    {start: 21, duration: 0.5, pitch: 64, velocity: 0.55},
+    {start: 22, duration: 0.5, pitch: 64, velocity: 0.55},
+    {start: 23, duration: 0.5, pitch: 64, velocity: 0.55},
+    {start: 24, duration: 0.5, pitch: 57, velocity: 0.55},
+    {start: 25, duration: 0.5, pitch: 64, velocity: 0.55},
+    {start: 26, duration: 0.5, pitch: 64, velocity: 0.55},
+    {start: 27, duration: 0.5, pitch: 64, velocity: 0.55},
+    {start: 28, duration: 0.5, pitch: 50, velocity: 0.55},
+    {start: 29, duration: 0.5, pitch: 62, velocity: 0.55},
+    {start: 30, duration: 0.5, pitch: 62, velocity: 0.55},
+    {start: 31, duration: 0.5, pitch: 62, velocity: 0.55},
+    {start: 32, duration: 0.5, pitch: 48, velocity: 0.55},
+    {start: 33, duration: 0.5, pitch: 60, velocity: 0.55},
+    {start: 34, duration: 0.5, pitch: 60, velocity: 0.55},
+    {start: 35, duration: 0.5, pitch: 60, velocity: 0.55},
+    {start: 36, duration: 0.5, pitch: 55, velocity: 0.55},
+    {start: 37, duration: 0.5, pitch: 62, velocity: 0.55},
+    {start: 38, duration: 0.5, pitch: 62, velocity: 0.55},
+    {start: 39, duration: 0.5, pitch: 62, velocity: 0.55},
+    {start: 40, duration: 0.5, pitch: 57, velocity: 0.55},
+    {start: 41, duration: 0.5, pitch: 64, velocity: 0.55},
+    {start: 42, duration: 0.5, pitch: 64, velocity: 0.55},
+    {start: 43, duration: 0.5, pitch: 64, velocity: 0.55},
+    {start: 44, duration: 0.5, pitch: 52, velocity: 0.55},
+    {start: 45, duration: 0.5, pitch: 64, velocity: 0.55},
+    {start: 46, duration: 0.5, pitch: 64, velocity: 0.55},
+    {start: 47, duration: 0.5, pitch: 64, velocity: 0.55},
+    {start: 48, duration: 0.5, pitch: 48, velocity: 0.55},
+    {start: 49, duration: 0.5, pitch: 60, velocity: 0.55},
+    {start: 50, duration: 0.5, pitch: 60, velocity: 0.55},
+    {start: 51, duration: 0.5, pitch: 60, velocity: 0.55},
+    {start: 52, duration: 0.5, pitch: 55, velocity: 0.55},
+    {start: 53, duration: 0.5, pitch: 62, velocity: 0.55},
+    {start: 54, duration: 0.5, pitch: 62, velocity: 0.55},
+    {start: 55, duration: 0.5, pitch: 62, velocity: 0.55},
+    {start: 56, duration: 0.5, pitch: 50, velocity: 0.55},
+    {start: 57, duration: 0.5, pitch: 62, velocity: 0.55},
+    {start: 58, duration: 0.5, pitch: 62, velocity: 0.55},
+    {start: 59, duration: 0.5, pitch: 62, velocity: 0.55},
+    {start: 60, duration: 0.5, pitch: 50, velocity: 0.55},
+    {start: 61, duration: 0.5, pitch: 62, velocity: 0.55},
+    {start: 62, duration: 0.5, pitch: 62, velocity: 0.55},
+    {start: 63, duration: 0.5, pitch: 62, velocity: 0.55}
+  ]}
+}
+
+prefab mv_harp_off_part {
+  NoteClip: {length: 64, notes: [
+    {start: 0.5, duration: 0.5, pitch: 59, velocity: 0.38},
+    {start: 1.5, duration: 0.5, pitch: 67, velocity: 0.38},
+    {start: 2.5, duration: 0.5, pitch: 59, velocity: 0.38},
+    {start: 3.5, duration: 0.5, pitch: 59, velocity: 0.38},
+    {start: 4.5, duration: 0.5, pitch: 59, velocity: 0.38},
+    {start: 5.5, duration: 0.5, pitch: 67, velocity: 0.38},
+    {start: 6.5, duration: 0.5, pitch: 59, velocity: 0.38},
+    {start: 7.5, duration: 0.5, pitch: 59, velocity: 0.38},
+    {start: 8.5, duration: 0.5, pitch: 55, velocity: 0.38},
+    {start: 9.5, duration: 0.5, pitch: 64, velocity: 0.38},
+    {start: 10.5, duration: 0.5, pitch: 55, velocity: 0.38},
+    {start: 11.5, duration: 0.5, pitch: 55, velocity: 0.38},
+    {start: 12.5, duration: 0.5, pitch: 57, velocity: 0.38},
+    {start: 13.5, duration: 0.5, pitch: 66, velocity: 0.38},
+    {start: 14.5, duration: 0.5, pitch: 57, velocity: 0.38},
+    {start: 15.5, duration: 0.5, pitch: 57, velocity: 0.38},
+    {start: 16.5, duration: 0.5, pitch: 59, velocity: 0.38},
+    {start: 17.5, duration: 0.5, pitch: 67, velocity: 0.38},
+    {start: 18.5, duration: 0.5, pitch: 59, velocity: 0.38},
+    {start: 19.5, duration: 0.5, pitch: 59, velocity: 0.38},
+    {start: 20.5, duration: 0.5, pitch: 59, velocity: 0.38},
+    {start: 21.5, duration: 0.5, pitch: 67, velocity: 0.38},
+    {start: 22.5, duration: 0.5, pitch: 59, velocity: 0.38},
+    {start: 23.5, duration: 0.5, pitch: 59, velocity: 0.38},
+    {start: 24.5, duration: 0.5, pitch: 60, velocity: 0.38},
+    {start: 25.5, duration: 0.5, pitch: 69, velocity: 0.38},
+    {start: 26.5, duration: 0.5, pitch: 60, velocity: 0.38},
+    {start: 27.5, duration: 0.5, pitch: 60, velocity: 0.38},
+    {start: 28.5, duration: 0.5, pitch: 57, velocity: 0.38},
+    {start: 29.5, duration: 0.5, pitch: 66, velocity: 0.38},
+    {start: 30.5, duration: 0.5, pitch: 57, velocity: 0.38},
+    {start: 31.5, duration: 0.5, pitch: 57, velocity: 0.38},
+    {start: 32.5, duration: 0.5, pitch: 55, velocity: 0.38},
+    {start: 33.5, duration: 0.5, pitch: 64, velocity: 0.38},
+    {start: 34.5, duration: 0.5, pitch: 55, velocity: 0.38},
+    {start: 35.5, duration: 0.5, pitch: 55, velocity: 0.38},
+    {start: 36.5, duration: 0.5, pitch: 59, velocity: 0.38},
+    {start: 37.5, duration: 0.5, pitch: 67, velocity: 0.38},
+    {start: 38.5, duration: 0.5, pitch: 59, velocity: 0.38},
+    {start: 39.5, duration: 0.5, pitch: 59, velocity: 0.38},
+    {start: 40.5, duration: 0.5, pitch: 60, velocity: 0.38},
+    {start: 41.5, duration: 0.5, pitch: 69, velocity: 0.38},
+    {start: 42.5, duration: 0.5, pitch: 60, velocity: 0.38},
+    {start: 43.5, duration: 0.5, pitch: 60, velocity: 0.38},
+    {start: 44.5, duration: 0.5, pitch: 59, velocity: 0.38},
+    {start: 45.5, duration: 0.5, pitch: 67, velocity: 0.38},
+    {start: 46.5, duration: 0.5, pitch: 59, velocity: 0.38},
+    {start: 47.5, duration: 0.5, pitch: 59, velocity: 0.38},
+    {start: 48.5, duration: 0.5, pitch: 55, velocity: 0.38},
+    {start: 49.5, duration: 0.5, pitch: 64, velocity: 0.38},
+    {start: 50.5, duration: 0.5, pitch: 55, velocity: 0.38},
+    {start: 51.5, duration: 0.5, pitch: 55, velocity: 0.38},
+    {start: 52.5, duration: 0.5, pitch: 59, velocity: 0.38},
+    {start: 53.5, duration: 0.5, pitch: 67, velocity: 0.38},
+    {start: 54.5, duration: 0.5, pitch: 59, velocity: 0.38},
+    {start: 55.5, duration: 0.5, pitch: 59, velocity: 0.38},
+    {start: 56.5, duration: 0.5, pitch: 57, velocity: 0.38},
+    {start: 57.5, duration: 0.5, pitch: 66, velocity: 0.38},
+    {start: 58.5, duration: 0.5, pitch: 57, velocity: 0.38},
+    {start: 59.5, duration: 0.5, pitch: 57, velocity: 0.38},
+    {start: 60.5, duration: 0.5, pitch: 57, velocity: 0.38},
+    {start: 61.5, duration: 0.5, pitch: 66, velocity: 0.38},
+    {start: 62.5, duration: 0.5, pitch: 57, velocity: 0.38},
+    {start: 63.5, duration: 0.5, pitch: 57, velocity: 0.38}
+  ]}
+}
+
+prefab mv_melody_part {
+  NoteClip: {length: 64, notes: [
+    {start: 0, duration: 0.5, pitch: 74, velocity: 0.62},
+    {start: 1, duration: 0.5, pitch: 71, velocity: 0.62},
+    {start: 2, duration: 0.5, pitch: 67, velocity: 0.62},
+    {start: 3, duration: 0.5, pitch: 71, velocity: 0.62},
+    {start: 4, duration: 0.5, pitch: 76, velocity: 0.62},
+    {start: 5.5, duration: 0.5, pitch: 74, velocity: 0.62},
+    {start: 6, duration: 0.5, pitch: 71, velocity: 0.62},
+    {start: 8, duration: 0.5, pitch: 72, velocity: 0.62},
+    {start: 9, duration: 0.5, pitch: 76, velocity: 0.62},
+    {start: 10, duration: 0.5, pitch: 79, velocity: 0.62},
+    {start: 11, duration: 0.5, pitch: 76, velocity: 0.62},
+    {start: 12, duration: 0.5, pitch: 74, velocity: 0.62},
+    {start: 14, duration: 0.5, pitch: 69, velocity: 0.62},
+    {start: 16, duration: 0.5, pitch: 71, velocity: 0.62},
+    {start: 17, duration: 0.5, pitch: 74, velocity: 0.62},
+    {start: 18, duration: 0.5, pitch: 79, velocity: 0.62},
+    {start: 19, duration: 0.5, pitch: 78, velocity: 0.62},
+    {start: 20, duration: 0.5, pitch: 76, velocity: 0.62},
+    {start: 21, duration: 0.5, pitch: 74, velocity: 0.62},
+    {start: 22, duration: 0.5, pitch: 71, velocity: 0.62},
+    {start: 23, duration: 0.5, pitch: 67, velocity: 0.62},
+    {start: 24, duration: 0.5, pitch: 69, velocity: 0.62},
+    {start: 25, duration: 0.5, pitch: 72, velocity: 0.62},
+    {start: 26, duration: 0.5, pitch: 76, velocity: 0.62},
+    {start: 27, duration: 0.5, pitch: 74, velocity: 0.62},
+    {start: 27.5, duration: 0.5, pitch: 72, velocity: 0.62},
+    {start: 28, duration: 0.5, pitch: 74, velocity: 0.62},
+    {start: 32, duration: 0.5, pitch: 76, velocity: 0.62},
+    {start: 33, duration: 0.5, pitch: 79, velocity: 0.62},
+    {start: 34, duration: 0.5, pitch: 76, velocity: 0.62},
+    {start: 35, duration: 0.5, pitch: 72, velocity: 0.62},
+    {start: 36, duration: 0.5, pitch: 74, velocity: 0.62},
+    {start: 37, duration: 0.5, pitch: 71, velocity: 0.62},
+    {start: 38, duration: 0.5, pitch: 67, velocity: 0.62},
+    {start: 40, duration: 0.5, pitch: 72, velocity: 0.62},
+    {start: 41, duration: 0.5, pitch: 76, velocity: 0.62},
+    {start: 42, duration: 0.5, pitch: 81, velocity: 0.62},
+    {start: 43, duration: 0.5, pitch: 79, velocity: 0.62},
+    {start: 44, duration: 0.5, pitch: 79, velocity: 0.62},
+    {start: 45.5, duration: 0.5, pitch: 76, velocity: 0.62},
+    {start: 47, duration: 0.5, pitch: 71, velocity: 0.62},
+    {start: 48, duration: 0.5, pitch: 76, velocity: 0.62},
+    {start: 49.5, duration: 0.5, pitch: 79, velocity: 0.62},
+    {start: 50, duration: 0.5, pitch: 78, velocity: 0.62},
+    {start: 51, duration: 0.5, pitch: 76, velocity: 0.62},
+    {start: 52, duration: 0.5, pitch: 74, velocity: 0.62},
+    {start: 53, duration: 0.5, pitch: 71, velocity: 0.62},
+    {start: 54, duration: 0.5, pitch: 74, velocity: 0.62},
+    {start: 55, duration: 0.5, pitch: 79, velocity: 0.62},
+    {start: 56, duration: 0.5, pitch: 78, velocity: 0.62},
+    {start: 57, duration: 0.5, pitch: 76, velocity: 0.62},
+    {start: 58, duration: 0.5, pitch: 74, velocity: 0.62},
+    {start: 59, duration: 0.5, pitch: 69, velocity: 0.62},
+    {start: 60, duration: 0.5, pitch: 66, velocity: 0.62}
+  ]}
+}
+
+prefab mv_kick_part {
+  NoteClip: {length: 4, notes: [
+    {start: 0, duration: 0.5, pitch: 69, velocity: 0.6},
+    {start: 2, duration: 0.5, pitch: 69, velocity: 0.6}
+  ]}
+}
+
+prefab mv_tamb_part {
+  NoteClip: {length: 4, notes: [
+    {start: 0, duration: 0.25, pitch: 69, velocity: 0.25},
+    {start: 0.5, duration: 0.25, pitch: 69, velocity: 0.45},
+    {start: 1, duration: 0.25, pitch: 69, velocity: 0.25},
+    {start: 1.5, duration: 0.25, pitch: 69, velocity: 0.45},
+    {start: 2, duration: 0.25, pitch: 69, velocity: 0.25},
+    {start: 2.5, duration: 0.25, pitch: 69, velocity: 0.45},
+    {start: 3, duration: 0.25, pitch: 69, velocity: 0.25},
+    {start: 3.5, duration: 0.25, pitch: 69, velocity: 0.45}
+  ]}
+}
+
+const MV_LAYER: string[] = ["low", "mid", "high"]
+const MV_STRING_INST = [mv_band.strings_low, mv_band.strings_mid, mv_band.strings_high]
+const MV_STRING_PARTS = [mv_strings_low_part, mv_strings_mid_part, mv_strings_high_part]
+
+$ {
+  Transport: {beats_per_bar: 4, beat_unit: 4, loop: true, loop_start: 0, loop_end: 192}
+  Transport = {tempo: music_festive ? 120 : 90}
+  Transport = {playing: music_on}
+}
+
+mv_tracks {
+  for i in 0..3 {
+    "strings_{MV_LAYER[i]}" {
+      Track: {instrument: MV_STRING_INST[i]}
+      AudioBus: {output: mv_music}
+      bars { ClipPlacement: {clip: MV_STRING_PARTS[i], start: 0, duration: 192, loop: true, gain: music_forest ? 0.9 : 0.7} }
+    }
+  }
+
+  bass {
+    Track: {instrument: mv_band.bass}
+    AudioBus: {output: mv_music}
+    down { ClipPlacement: {clip: mv_bass_part, start: 0, duration: 192, loop: true, gain: 0.75} }
+    if !music_forest {
+      push { ClipPlacement: {clip: mv_bass_push_part, start: 0, duration: 192, loop: true, gain: 0.45} }
+    }
+  }
+
+  harp {
+    Track: {instrument: mv_band.harp}
+    AudioBus: {output: mv_music}
+    down { ClipPlacement: {clip: mv_harp_down_part, start: 0, duration: 192, loop: true} }
+    if !music_forest {
+      off { ClipPlacement: {clip: mv_harp_off_part, start: 0, duration: 192, loop: true} }
+    }
+  }
+
+  flute {
+    Track: {instrument: mv_band.flute}
+    AudioBus: {output: mv_music}
+    if !music_forest {
+      first { ClipPlacement: {clip: mv_melody_part, start: 0} }
+      third { ClipPlacement: {clip: mv_melody_part, start: 128} }
+    }
+    if music_festive {
+      second { ClipPlacement: {clip: mv_melody_part, start: 64} }
+    }
+  }
+
+  kick {
+    Track: {instrument: mv_band.kick}
+    AudioBus: {output: mv_music}
+    if music_festive {
+      beat { ClipPlacement: {clip: mv_kick_part, start: 0, duration: 192, loop: true} }
+    }
+  }
+
+  tamb {
+    Track: {instrument: mv_band.tamb}
+    AudioBus: {output: mv_music}
+    if music_festive {
+      beat { ClipPlacement: {clip: mv_tamb_part, start: 0, duration: 192, loop: true} }
+    }
+  }
+}
 
 async {
-  while game_state == 0 {
-    await delay(0.2)
-  }
+  await StartGame
   await delay(1.5)
-  mut loop_n: i32 = 0
-  while true {
-    for bar in 0..16 {
-      music_bar = bar
-      const festive = game_state == 2
-      const forest = pz < WALL_N1 && game_state == 1
-      const step = match festive { true: 0.25; _: 0.33 }
-      const chord = MV_CHORDS[bar]
-      const melody_on = loop_n % 3 != 1 || festive
-      for beat in 0..8 {
-        if beat == 0 {
-          const s = box.audio.play(MV_STRINGS[chord], match forest { true: 0.9; _: 0.7 })
-          const b = box.audio.play(MV_BASS[chord], 0.75)
-        }
-        if beat == 4 && !forest {
-          const b2 = box.audio.play(MV_BASS[chord], 0.45)
-        }
-        if !forest || beat % 2 == 0 {
-          const h = box.audio.play(MV_ARP[chord * 4 + MV_PATTERN[beat]], match beat % 2 { 0: 0.55; _: 0.38 })
-        }
-        if melody_on && !forest {
-          const n = MV_MELODY[bar * 8 + beat]
-          if n >= 0 {
-            const m = box.audio.play(MV_FLUTE[n], 0.62)
-          }
-        }
-        if festive {
-          if beat % 4 == 0 {
-            const k = box.audio.play(MvKick, 0.6)
-          }
-          const t = box.audio.play(MvTamb, match beat % 2 { 0: 0.25; _: 0.45 })
-        }
-        await delay(step)
-      }
-    }
-    loop_n += 1
-  }
+  music_on = true
 }

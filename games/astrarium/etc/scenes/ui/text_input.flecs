@@ -103,17 +103,9 @@ template HeadlessTextInput {
 // keyboard, as text fields show it). A width fixes it, 0 makes it 200 points.
 template TextInput : HeadlessTextInput {
   const t = box.ui.theme[UiTheme]
-  const w = match width {
-    0.0: 200
-    _: width
-  }
-  const shown_text = match current {
-    "": placeholder
-    _: match password {
-      true: "••••••••"
-      _: current
-    }
-  }
+  const w = width == 0 ? 200 : width
+  const shown_text = current == "" ? placeholder : password ? "••••••••" : current
+  const edge = focused ? t.focus : hover && !disabled && !read_only ? t.text_muted : t.border
 
   Layout: {direction: Column, spacing: 4}
   LayoutItem: {width: {mode: Fixed, value: w}}
@@ -131,18 +123,9 @@ template TextInput : HeadlessTextInput {
     Rect: {1, 1}
     Rgb: t.surface_alt
 
-    if focused {
-      Border: {
-        width: t.focus_width, radius: t.radius,
-        color: {t.focus.r, t.focus.g, t.focus.b, 255}
-      }
-    } else if hover && !disabled && !read_only {
-      Border: {
-        width: 1, radius: t.radius,
-        color: {t.text_muted.r, t.text_muted.g, t.text_muted.b, 255}
-      }
-    } else {
-      Border: {width: 1, radius: t.radius, color: {t.border.r, t.border.g, t.border.b, 255}}
+    Border: {
+      width: focused ? t.focus_width : 1, radius: t.radius,
+      color: {edge.r, edge.g, edge.b, 255}
     }
 
     if disabled {

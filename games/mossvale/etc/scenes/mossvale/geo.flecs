@@ -111,7 +111,7 @@ fn tree_here(i: i32, j: i32) -> bool {
   const z = tree_z(i, j)
   const wall = z > WALL_N0 - 1
   const h = hash2(i * 0.73 + 5, j * 1.31 + 2)
-  x < 94 && !forest_clear(x, z) && match wall { true: h > 0.04; _: h > 0.42 }
+  x < 94 && !forest_clear(x, z) && (wall ? h > 0.04 : h > 0.42)
 }
 
 fn rock_x(i: i32, j: i32) -> f64 {
@@ -127,5 +127,5 @@ fn rock_here(i: i32, j: i32) -> bool {
   const z = rock_z(i, j)
   const h = hash2(i * 1.9 + 1, j * 0.77 + 9)
   const wall = z < WALL_S1 + 1
-  x < 94 && z < 94 && !hills_clear(x, z) && match wall { true: h > 0.0; _: h > 0.72 }
+  x < 94 && z < 94 && !hills_clear(x, z) && (wall ? h > 0.0 : h > 0.72)
 }

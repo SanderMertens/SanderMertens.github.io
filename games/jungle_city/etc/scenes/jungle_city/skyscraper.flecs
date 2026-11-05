@@ -3,7 +3,6 @@ using box.transform
 using box.geometry
 using box.material
 
-@tree Parent
 template CanopySkyDeck {
   prop width: f32 = 10
   prop depth: f32 = 8
@@ -28,7 +27,6 @@ template CanopySkyDeck {
   }
 }
 
-@tree Parent
 template CanopySkyBlock {
   prop floors: i32 = 4
   prop width: f32 = 6
@@ -42,8 +40,8 @@ template CanopySkyBlock {
     { (IsA, CanopyFacade); Position: {0, y + 1.6, 0}; Box: {width - 0.45, 3.2, depth - 0.45}; TextureTransform: {scale_x: (width - 0.45) / 12.8, scale_y: 0.125, offset_x: windows.f(1), offset_y: windows.u(8) / 8.0} }
     { (IsA, CanopyIvory); Rgb: wall; Position: {0, y, 0}; RoundedBox: {width, 0.35, depth, 0.35} }
     for side in 0..4 {
-      const horizontal = match side % 2 { 0: width; _: depth }
-      const reach = match side % 2 { 0: depth; _: width }
+      const horizontal = side % 2 == 0 ? width : depth
+      const reach = side % 2 == 0 ? depth : width
       {
         Rotation: {0, side * math.PI / 2, 0}
         for i in 0..3 {
@@ -60,7 +58,6 @@ template CanopySkyBlock {
   }
 }
 
-@tree Parent
 template CanopySkyscraper {
   prop floors: i32 = 20
   prop variant: i32 = 0
@@ -105,7 +102,7 @@ template CanopySkyscraper {
     CanopyRoof(style: 3, variant: variant) { Position: {0, 2 + height, -1.8}; Scale: {0.75, 1.4, 0.75} }
   } else if floorplan == 2 {
     CanopyPlinth(width: 10.8, depth: 6.6, variant: variant) { Position: {0, 0, 1.2} }
-    core : CanopyIvory { Rgb: wall; Position: {0, height / 2 + 1.2, 0}; RoundedBox: {2.4, height, 2.4, 0.3}; TextureTransform: {scale_x: 1, scale_y: floors / 4.0} }
+    core : CanopyIvory { Rgb: wall; Position: {0, height / 2 + 1.2, 0}; RoundedBox: {2.4, height, 2.4, 0.3} }
     for tier in 0..5 {
       const start: i32 = math.floor(floors * tier / 5.0)
       const levels: i32 = math.floor(floors * (tier + 1) / 5.0) - start

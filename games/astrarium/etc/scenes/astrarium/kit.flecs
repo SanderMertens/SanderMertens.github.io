@@ -36,8 +36,8 @@ template OneShot {
   mut go = false
 
   async {
-    await on.change(ui_tick_a)
-    await on.change(ui_tick_a)
+    await next_frame()
+    await next_frame()
     go = true
   }
 }
@@ -156,8 +156,8 @@ template Frame {
   InputBlocker
   Layout: {direction: Column, padding: {pad, pad, pad, pad}, spacing: gap}
   LayoutItem: {
-    width: {mode: match width > 0 { true: Fixed; _: Grow }, value: match width > 0 { true: width; _: 1 }},
-    height: {mode: match height > 0 { true: Fixed; _: Grow }, value: match height > 0 { true: height; _: 1 }}
+    width: {mode: width > 0 ? Fixed : Grow, value: width > 0 ? width : 1},
+    height: {mode: height > 0 ? Fixed : Grow, value: height > 0 ? height : 1}
   }
   Rect: {1, 1}
   Image: {texture: tex_panel}
@@ -201,8 +201,8 @@ template Shock : OneShot {
   prop size: f32 = 150
   prop delay: f32 = 0
 
-  const k = match go { true: 1; _: 0.04 }
-  const a = match go { true: 0; _: 1 }
+  const k = go ? 1 : 0.04
+  const a = go ? 0 : 1
 
   Position: {0, 0, 4}
   Scale: {k, k, 1}
@@ -223,8 +223,8 @@ template Pop : OneShot {
   prop size: f32 = 150
   prop delay: f32 = 0
 
-  const k = match go { true: 1.2; _: 0.2 }
-  const a = match go { true: 0; _: 1 }
+  const k = go ? 1.2 : 0.2
+  const a = go ? 0 : 1
 
   Position: {0, 0, 3}
   Scale: {k, k, 1}
@@ -246,9 +246,9 @@ template HoldBar {
   prop holding: bool = false
   prop seconds: f32 = 0.75
 
-  const f = match holding { true: 1; _: 0.0001 }
-  const px = match holding { true: 0; _: 0 - width / 2 }
-  const dur = match holding { true: seconds; _: 0.2 }
+  const f = holding ? 1 : 0.0001
+  const px = holding ? 0 : 0 - width / 2
+  const dur = holding ? seconds : 0.2
 
   Position: {px, 0, 1}
   Scale: {f, 1, 1}

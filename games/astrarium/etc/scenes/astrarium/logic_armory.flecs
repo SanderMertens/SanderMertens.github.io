@@ -4,33 +4,29 @@ using box.app
 
 async {
   while true {
-    await on.change(rq)
-    const op = rq_op
-    const now = AppStatus[AppStatus].elapsed
-    if op == OP_EQUIP {
-      const e = rq_entity
-      const it = e[Item]
-      if it.slot == 0 { eq_0 = e }
-      if it.slot == 1 { eq_1 = e }
-      if it.slot == 2 { eq_2 = e }
-      if it.slot == 3 { eq_3 = e }
-      await ui.changed(stats_dirty)
-      await ui.changed(hover_dirty)
-    } else if op == OP_METAL {
-      rite_metal = rq_arg
-      if rq_arg == 0 {
-        ui_gold = {232, 199, 122}
-        ui_pale = {255, 238, 196}
-        ui_dim = {122, 104, 68}
-      } else if rq_arg == 1 {
-        ui_gold = {158, 210, 240}
-        ui_pale = {226, 244, 255}
-        ui_dim = {74, 110, 140}
-      } else {
-        ui_gold = {240, 148, 162}
-        ui_pale = {255, 222, 226}
-        ui_dim = {130, 72, 86}
-      }
+    const e = await Equip
+    eq[e.item[Item].slot] = e.item
+    emit StatsChanged()
+    emit HoverChanged()
+  }
+}
+
+async {
+  while true {
+    const e = await Metal
+    rite_metal = e.index
+    if e.index == 0 {
+      ui_gold = {232, 199, 122}
+      ui_pale = {255, 238, 196}
+      ui_dim = {122, 104, 68}
+    } else if e.index == 1 {
+      ui_gold = {158, 210, 240}
+      ui_pale = {226, 244, 255}
+      ui_dim = {74, 110, 140}
+    } else {
+      ui_gold = {240, 148, 162}
+      ui_pale = {255, 222, 226}
+      ui_dim = {130, 72, 86}
     }
   }
 }

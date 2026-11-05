@@ -9,6 +9,7 @@ using box.picking
 using box.input
 using box.transition
 using box.movement
+using box.widgets
 
 const title_letters = ["A", "S", "T", "R", "A", "R", "I", "U", "M"]
 
@@ -22,7 +23,7 @@ template TitleGlyph {
   Layout: {}
 
   glow {
-    const t = match shown { true: 0.26; _: 0.0 }
+    const t = shown ? 0.26 : 0.0
     Position: {0, 0, -1}
     Rect: {190, 220}
     Image: {texture: tex_halo}
@@ -34,10 +35,10 @@ template TitleGlyph {
   }
 
   glyph {
-    const y = match shown { true: 0; _: 26 }
-    const k = match shown { true: 1; _: 1.32 }
-    const a = match shown { true: 1; _: 0 }
-    const e = match shown { true: 0.34; _: 3.2 }
+    const y = shown ? 0 : 26
+    const k = shown ? 1 : 1.32
+    const a = shown ? 1 : 0
+    const e = shown ? 0.34 : 3.2
     Position: {0, y, 1}
     Scale: {k, k, 1}
     Opacity: {a}
@@ -55,8 +56,8 @@ template TitleGlyph {
 }
 
 template TitleRule {
-  const w = match title_go { true: 1; _: 0.02 }
-  const a = match title_go { true: 1; _: 0 }
+  const w = title_go ? 1 : 0.02
+  const a = title_go ? 1 : 0
 
   LayoutItem: {width: {mode: Fixed, value: 560}, height: {mode: Fixed, value: 34}}
   Layout: {}
@@ -80,8 +81,8 @@ template TitleFade {
   prop delay: f32 = 1.4
   prop rise: f32 = 14
 
-  const a = match title_go { true: 1; _: 0 }
-  const y = match title_go { true: 0; _: 0 - rise }
+  const a = title_go ? 1 : 0
+  const y = title_go ? 0 : 0 - rise
 
   LayoutItem: {y: y}
   Opacity: {a}
@@ -96,8 +97,8 @@ template TitleEntryFace {
   prop hover: bool = false
   prop down: bool = false
 
-  const lit = match hover { true: 1; _: 0 }
-  const k = match down { true: 0.97; _: 1 }
+  const lit = hover ? 1 : 0
+  const k = down ? 0.97 : 1
 
   Layout: {}
   LayoutItem: {width: {mode: Fixed, value: 340}, height: {mode: Fixed, value: 50}}
@@ -111,7 +112,7 @@ template TitleEntryFace {
     Image: {texture: tex_halo}
     Rgb: {ui_gold.r * 0.45, ui_gold.g * 0.36, ui_gold.b * 0.2}
     BlendMode: Additive
-    Scale: {match hover { true: 1; _: 0.6 }, 1, 1}
+    Scale: {hover ? 1 : 0.6, 1, 1}
     Opacity: {lit}
     Transition: [
       Opacity: {duration: 0.22, timing_function: EaseOut},
@@ -121,7 +122,7 @@ template TitleEntryFace {
   }
 
   left {
-    Position: {match hover { true: -122; _: -96 }, 0, 1}
+    Position: {hover ? -122 : -96, 0, 1}
     Rotation: {0, 0, PI / 4}
     Rect: {7, 7}
     Rgb: ui_pale
@@ -135,7 +136,7 @@ template TitleEntryFace {
   }
 
   right {
-    Position: {match hover { true: 122; _: 96 }, 0, 1}
+    Position: {hover ? 122 : 96, 0, 1}
     Rotation: {0, 0, PI / 4}
     Rect: {7, 7}
     Rgb: ui_pale
@@ -163,15 +164,9 @@ template TitleEntryFace {
   }
 }
 
-template TitleEntry {
-  prop label: string = ""
-  prop op: i32 = 0
+template TitleEntry : HeadlessButton {
+  prop screen: i32 = 0
 
-  mut hover = false
-  mut down = false
-
-  Interactive
-  Cursor: {CursorPointer}
   Layout: {}
   LayoutItem: {width: {mode: Fixed, value: 340}, height: {mode: Fixed, value: 50}}
   Rect: {1, 1}
@@ -182,27 +177,8 @@ template TitleEntry {
 
   async {
     while true {
-      await on.enter(this)
-      hover = true
-      await on.leave(this)
-      hover = false
-    }
-  }
-
-  async {
-    while true {
-      await on.press(this)
-      down = true
-      await on.release(this)
-      down = false
-    }
-  }
-
-  async {
-    while true {
-      await on.click(this)
-      rq_op = op
-      await ui.changed(rq)
+      await on.change(this)
+      emit Navigate(screen: screen)
     }
   }
 }
@@ -224,8 +200,8 @@ template TitleShade {
 
 template Title {
   const on_screen = screen == SCREEN_TITLE
-  const a = match on_screen { true: 1; _: 0 }
-  const k = match on_screen { true: 1; _: 1.12 }
+  const a = on_screen ? 1 : 0
+  const k = on_screen ? 1 : 1.12
 
   LayoutItem: {width: {mode: Grow}, height: {mode: Grow}}
   Layout: {}
@@ -273,9 +249,9 @@ template Title {
     menu {
       TitleFade: {delay: 1.5}
       Layout: {direction: Column, h: Center, spacing: 2}
-      TitleEntry begin(label: "Open the Atlas", op: OP_BEGIN)
-      TitleEntry armory(label: "The Armory", op: OP_ARMORY)
-      TitleEntry rites(label: "Rites", op: OP_RITES)
+      TitleEntry begin(label: "Open the Atlas", screen: SCREEN_ATLAS)
+      TitleEntry armory(label: "The Armory", screen: SCREEN_ARMORY)
+      TitleEntry rites(label: "Rites", screen: SCREEN_RITES)
     }
 
     footer {

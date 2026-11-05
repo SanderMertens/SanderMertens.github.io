@@ -3,7 +3,6 @@ using box.transform
 using box.geometry
 using box.material
 
-@tree Parent
 template CanopyPods {
   prop floors: i32 = 5
   prop variant: i32 = 0
@@ -19,7 +18,7 @@ template CanopyPods {
     for side in 0..2 {
       const x = (side - 0.5) * 4.2
       const z = (f % 2 - 0.5) * 1.8
-      { (IsA, CanopyIvory); Position: {x, 2.6 + f * 3.2, z}; RoundedBox: {3.8, 2.7, 5.8, 0.4, segments: 3}; Rgb: wall; TextureTransform: {scale_x: 1.4, scale_y: 0.8} }
+      { (IsA, CanopyIvory); Position: {x, 2.6 + f * 3.2, z}; RoundedBox: {3.8, 2.7, 5.8, 0.4, segments: 3}; Rgb: wall }
       { (IsA, CanopyFacade); Position: {x, 2.6 + f * 3.2, z + 2.91}; RoundedBox: {3.1, 2.1, 0.07, 0.03, segments: 1}; TextureTransform: {scale_x: 0.25, scale_y: 0.125 * 0.75, offset_x: windows.f(1), offset_y: windows.u(8) / 8.0 + 0.01} }
       { (IsA, CanopyTrim); Position: {x, 1.47 + f * 3.2, z + 3.2}; Box: {3.3, 0.06, 0.62} }
       { (IsA, CanopyMetal); Position: {x, 2.3 + f * 3.2, z + 3.48}; Box: {3.3, 0.04, 0.04} }

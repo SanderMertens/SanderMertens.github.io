@@ -43,13 +43,13 @@ $ {
 key_light {
   Position: {-1.7, 3.6, 2.7}
   Rotation: {-0.72, -0.55, 0}
-  SpotLight: {intensity: 48 * PI, range: 9, inner_angle: 25, outer_angle: 46}
+  SpotLight: {intensity: 48 * PI, range: 9, inner_angle: 25, outer_angle: 46, shadows: true}
   Rgb: {255, 222, 182}
 }
 fill_light {
   Position: {2.7, 2.6, 1.6}
   Rotation: {-0.4, 0.98, 0}
-  SpotLight: {intensity: 28 * PI, range: 7, inner_angle: 30, outer_angle: 52}
+  SpotLight: {intensity: 28 * PI, range: 7, inner_angle: 30, outer_angle: 52, shadows: true}
   Rgb: {152, 214, 235}
 }
 rim_light {
@@ -105,6 +105,22 @@ for side in 0..2 {
     Position: {x, 2, -0.91}
     PointLight: {intensity: 0.9 * PI, range: 2.2}
     Rgb: {255, 197, 130}
+  }
+}
+
+lounge_haze {
+  Position: {0, 3.2, 0.6}
+  FogVolume: {
+    extent: {6, 1.9, 2.4},
+    density: 0.012,
+    color: {255, 238, 222},
+    asymmetry: 0.55,
+    edge_fade: 0.9,
+    ambient_inscatter: 0.2,
+    light_inscatter: 0.8,
+    noise_strength: 0.45,
+    noise_scale: 2.5,
+    wind: {0.04, 0.012, 0.02}
   }
 }
 

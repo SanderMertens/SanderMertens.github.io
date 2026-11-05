@@ -97,7 +97,7 @@ fn st_ui_b(s: i32) -> i32 {
 }
 
 fn st_ui_state(warn: bool, bad: bool) -> i32 {
-  match bad { true: 2; _: match warn { true: 1; _: 0 } }
+  bad ? 2 : warn ? 1 : 0
 }
 
 template StationIcon {
@@ -194,8 +194,7 @@ template StationCardAway : StationCard {
   async {
     while true {
       await on.click(this)
-      st_req_op = OP_CANCEL
-      await ui.changed(st_req)
+      emit Request(op: OP_CANCEL)
     }
   }
 }
@@ -223,8 +222,7 @@ template StationHoverZone {
   async {
     while true {
       await on.click(this)
-      st_req_op = OP_CANCEL
-      await ui.changed(st_req)
+      emit Request(op: OP_CANCEL)
     }
   }
 }
@@ -240,7 +238,7 @@ template StationSegBar {
   for i in 0..cells {
     "cell_{i}" {
       const lit = (i + 0.5) / cells < ratio
-      const s = match lit { true: state; _: UI_DIM }
+      const s = lit ? state : UI_DIM
       LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: height}}
       Rect: {1, 1}
       Rgb: {st_ui_r(s), st_ui_g(s), st_ui_b(s)}
@@ -272,7 +270,7 @@ template StationDial {
         const f = i / (ticks - 1.0)
         const a = start - f * sweep
         const lit = f <= clamp(ratio, 0, 1) && ratio > 0.005
-        const s = match lit { true: state; _: UI_DIM }
+        const s = lit ? state : UI_DIM
         LayoutItem: {h: Center, v: Middle, width: {mode: Fixed, value: 1}, height: {mode: Fixed, value: 1}}
         Line: {cos(a) * r0, sin(a) * r0, cos(a) * r1, sin(a) * r1, width: 2.4}
         Rgb: {st_ui_r(s), st_ui_g(s), st_ui_b(s)}
@@ -298,7 +296,7 @@ template StationStars {
   for i in 0..5 {
     "star_{i}" {
       const lit = value >= i * 20 + 10
-      const s = match lit { true: UI_WARN; _: UI_DIM }
+      const s = lit ? UI_WARN : UI_DIM
       LayoutItem: {width: {mode: Fixed, value: 15}, height: {mode: Fixed, value: 15}}
       Rect: {1, 1}
       Image: {texture: station_icon_star}
@@ -312,14 +310,14 @@ template StationTrend {
 
   const span = 8.0
   const f = clamp(abs(value) / span, 0, 1)
-  const s = match value >= 0 { true: UI_GOOD; _: UI_BAD }
+  const s = value >= 0 ? UI_GOOD : UI_BAD
 
   Layout: {direction: Row, spacing: 1}
   LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: 6}}
   for i in 0..8 {
     "down_{i}" {
       const lit = value < 0 && (8 - i - 0.5) / 8 < f
-      const c = match lit { true: s; _: UI_DIM }
+      const c = lit ? s : UI_DIM
       LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: 6}}
       Rect: {1, 1}
       Rgb: {st_ui_r(c), st_ui_g(c), st_ui_b(c)}
@@ -333,7 +331,7 @@ template StationTrend {
   for i in 0..8 {
     "up_{i}" {
       const lit = value > 0 && (i + 0.5) / 8 < f
-      const c = match lit { true: s; _: UI_DIM }
+      const c = lit ? s : UI_DIM
       LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: 6}}
       Rect: {1, 1}
       Rgb: {st_ui_r(c), st_ui_g(c), st_ui_b(c)}
@@ -350,7 +348,7 @@ template StationDockLights {
   LayoutItem: {width: {mode: Grow}}
   for i in 0..8 {
     "dock_{i}" {
-      const s = match i < docks { true: match i < busy { true: UI_GOOD; _: UI_OK }; _: UI_DIM }
+      const s = i < docks ? (i < busy ? UI_GOOD : UI_OK) : UI_DIM
       LayoutItem: {width: {mode: Fixed, value: 10}, height: {mode: Fixed, value: 10}}
       Rect: {1, 1}
       Rgb: {st_ui_r(s), st_ui_g(s), st_ui_b(s)}
@@ -362,7 +360,7 @@ template StationDockLights {
   }
   for i in 0..5 {
     "wait_{i}" {
-      const s = match i < waiting { true: UI_WARN; _: UI_DIM }
+      const s = i < waiting ? UI_WARN : UI_DIM
       LayoutItem: {width: {mode: Fixed, value: 4}, height: {mode: Fixed, value: 12}}
       Rect: {1, 1}
       Rgb: {st_ui_r(s), st_ui_g(s), st_ui_b(s)}
@@ -390,8 +388,7 @@ template StationAction : HeadlessButton {
     while true {
       const e = await on.activate(this)
       if ui.activation(e) == this {
-        st_req_op = op
-        await ui.changed(st_req)
+        emit Request(op: op)
       }
     }
   }
@@ -479,8 +476,8 @@ template StationTileFace {
 
   const selected = op == st_tool
   const can_pay = st_credits >= st_cost(op)
-  const state = match can_pay || selected { true: UI_OK; _: UI_BAD }
-  const glow = match selected { true: 26; _: match hover { true: 10; _: 0 } }
+  const state = can_pay || selected ? UI_OK : UI_BAD
+  const glow = selected ? 26 : hover ? 10 : 0
 
   Layout: {direction: Column, padding: {2, 2, 2, 2}}
   LayoutItem: {width: {mode: Grow}, height: {mode: Grow}}
@@ -550,8 +547,8 @@ template StationTrade {
   prop amount: f32 = 0
 
   const f = clamp((price - price_low) / (price_high - price_low), 0, 1)
-  const deal = match higher_better { true: f; _: 1 - f }
-  const deal_state = match deal > 0.66 { true: UI_GOOD; _: match deal > 0.33 { true: UI_OK; _: UI_WARN } }
+  const deal = higher_better ? f : 1 - f
+  const deal_state = deal > 0.66 ? UI_GOOD : deal > 0.33 ? UI_OK : UI_WARN
 
   Layout: {direction: Row, spacing: 8, v: Middle}
   LayoutItem: {width: {mode: Grow}}
@@ -627,7 +624,7 @@ template StationHud {
   const room = st_storage - st_food - st_goods
   const net_power = st_power_supply - st_power_demand
   const people = st_residents + st_visitors
-  const hover_kind = st_kind_of(max(st_hover_slot, 0), st_grid_0, st_grid_1, st_grid_2)
+  const hover_kind = st_grid[max(st_hover_slot, 0)]
   const stat_text = st_stat_text(st_hover_stat, st_residents, st_housing, st_visitors, st_power_supply, st_power_demand, people, st_life_cap, st_air, st_food, st_goods, st_storage, st_reputation, st_income)
 
   hud {
@@ -675,7 +672,7 @@ template StationHud {
                   Layout = {direction: Column, spacing: 5, h: Left}
                   money {
                     Layout: {direction: Row, spacing: 8, v: Middle}
-                    StationIcon coin(icon: station_icon_credit, size: 22, state: match st_credits < 0 { true: UI_BAD; _: UI_WARN })
+                    StationIcon coin(icon: station_icon_credit, size: 22, state: st_credits < 0 ? UI_BAD : UI_WARN)
                     amount {
                       Text: {value: "{st_credits:.0}", size: 24}
                       if st_credits < 0 {
@@ -783,7 +780,7 @@ template StationHud {
                 }
                 StationButton t_sell(label: "Sell module  [X]", icon: station_icon_sell, op: K_DEMOLISH)
 
-                StationSectionTitle market_title(title: "CARGO MARKET", state: match market_open { true: UI_GOOD; _: UI_MUTED })
+                StationSectionTitle market_title(title: "CARGO MARKET", state: market_open ? UI_GOOD : UI_MUTED)
                 if market_open {
                   StationTrade food_row(label: "Food in stock", icon: station_icon_food, price: st_price_food, price_low: 7, price_high: 14, amount: st_stock_food)
                   StationButton buy_food(label: "Buy 10 t food", op: OP_BUY_FOOD)
@@ -918,8 +915,7 @@ template StationHotkey {
   async {
     while true {
       await on.pressed(action)
-      st_req_op = op
-      await ui.changed(st_req)
+      emit Request(op: op)
     }
   }
 }
@@ -928,8 +924,7 @@ async {
   while true {
     await on.pressed(actions.WorldClick)
     if st_hover_slot < 0 {
-      st_req_op = OP_CANCEL
-      await ui.changed(st_req)
+      emit Request(op: OP_CANCEL)
     }
   }
 }

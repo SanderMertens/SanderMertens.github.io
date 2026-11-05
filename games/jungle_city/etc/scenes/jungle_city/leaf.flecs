@@ -37,6 +37,6 @@ prefab CanopyFrondMesh {
   }
 }
 
-prefab CanopyPalmFrond : CanopyFrondMesh { Rgb: {78, 132, 54}; PbrMaterial: {roughness: 0.68}; AlphaCutoff: {0.45}; BackFaceMode: BackFacePlain; PbrTextures: {albedo: canopy_tex_palm} }
-prefab CanopyFernFrond : CanopyFrondMesh { Rgb: {88, 140, 58}; PbrMaterial: {roughness: 0.76}; AlphaCutoff: {0.45}; BackFaceMode: BackFacePlain; PbrTextures: {albedo: canopy_tex_fern} }
-prefab CanopyBigLeaf : CanopyFrondMesh { Rgb: {66, 124, 58}; PbrMaterial: {roughness: 0.5}; AlphaCutoff: {0.45}; BackFaceMode: BackFacePlain; PbrTextures: {albedo: canopy_tex_bigleaf} }
+prefab CanopyPalmFrond : CanopyFrondMesh { Rgb: {78, 132, 54}; PbrMaterial: {roughness: 0.68}; AlphaCutoff: {0.45}; BackFaceMode: BackFacePlain; DiffuseTransmission: {factor: 0.45, color: {214, 255, 160}}; PbrTextures: {albedo: canopy_tex_palm} }
+prefab CanopyFernFrond : CanopyFrondMesh { Rgb: {88, 140, 58}; PbrMaterial: {roughness: 0.76}; AlphaCutoff: {0.45}; BackFaceMode: BackFacePlain; DiffuseTransmission: {factor: 0.45, color: {214, 255, 160}}; PbrTextures: {albedo: canopy_tex_fern} }
+prefab CanopyBigLeaf : CanopyFrondMesh { Rgb: {66, 124, 58}; PbrMaterial: {roughness: 0.5}; AlphaCutoff: {0.45}; BackFaceMode: BackFacePlain; DiffuseTransmission: {factor: 0.45, color: {214, 255, 160}}; PbrTextures: {albedo: canopy_tex_bigleaf} }

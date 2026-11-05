@@ -11,8 +11,19 @@ using box.input
 using box.particle
 using box.light
 using box.transition
+using box.movement
+using box.animation
 
 export const HOLO: Rgb = {110, 214, 255}
+
+HoloScanBob {
+  AnimationClip: {duration: 6.981}
+  lift {
+    AnimationTrack: {component: Position, member: "y", curve: {kind: CurveBezier, keys: [
+      {0, 16, 88.2, 88.2}, {1.745, 114, 0, 0}, {3.491, 16, -88.2, -88.2}, {5.236, -82, 0, 0}, {6.981, 16, 88.2, 88.2}
+    ]}}
+  }
+}
 
 template HoloRing {
   prop tilt: f32 = 0
@@ -52,7 +63,7 @@ template HoloTab {
     Emissive: {strength: 0.02, color: HOLO}
   }
 
-  Glow words(text: match home { true: "* {dest_name(dest)}"; _: dest_name(dest) }, size: 18, hue: HOLO, power: match hover || picked { true: 2.2; _: 1.1 }, font: font_mono) { Position: {0, 0, 0.2} }
+  Glow words(text: home ? "* {dest_name(dest)}" : dest_name(dest), size: 18, hue: HOLO, power: hover || picked ? 2.2 : 1.1, font: font_mono) { Position: {0, 0, 0.2} }
 
   async {
     while true {
@@ -81,15 +92,15 @@ fn holo_blurb(i: i32) -> string {
 
 template Hologram {
   const show = sw[SW_HOLO] && bus
-  const target = match course >= 0 { true: course; _: here }
+  const target = course >= 0 ? course : here
 
   Position: {0.27, 1.05, -1.14}
   SpatialIgnore
 
   puck : BlackAnod { Position: {0, -0.012, 0}; Cylinder: {radius: 0.075, length: 0.024, segments: 28, smooth: true} }
   puck_rim : Brass { Position: {0, 0.002, 0}; Tube: {radius: 0.078, thickness: 0.006, length: 0.012, segments: 28, smooth: true} }
-  lens { Position: {0, 0.002, 0}; Cylinder: {radius: 0.056, length: 0.004, segments: 24, smooth: true}; Rgb: {10, 30, 40}; Emissive: {strength: match show { true: 3.2; _: 0.02 }, color: HOLO}; Transition: [Emissive: {duration: 0.3}] }
-  fill { Position: {0, 0.16, 0}; PointLight: {intensity: match show { true: 0.1; _: 0 }, range: 1.6}; Rgb: HOLO }
+  lens { Position: {0, 0.002, 0}; Cylinder: {radius: 0.056, length: 0.004, segments: 24, smooth: true}; Rgb: {10, 30, 40}; Emissive: {strength: show ? 3.2 : 0.02, color: HOLO}; Transition: [Emissive: {duration: 0.3}] }
+  fill { Position: {0, 0.16, 0}; PointLight: {intensity: show ? 0.1 : 0, range: 1.6}; Rgb: HOLO }
 
   if show {
     beam_a { Position: {0, 0.15, 0}; Rect: {0.36, 0.3}; Image: {texture: tex_beam}; Rgb: {46, 110, 150}; BlendMode: Additive; NoShadow; SpatialIgnore }
@@ -114,7 +125,8 @@ template Hologram {
 
       globe {
         Position: {0, 16, 0}
-        Rotation: {0.2, clock * 0.45, 0.32}
+        Rotation: {0.2, 0, 0.32}
+        AngularVelocity: {0, 0.45, 0}
         HoloRing eq(tilt: 0, r: 84, power: 1.8)
         HoloRing la(tilt: 0, r: 73)
         la_p { Position: {0, 42, 0}; HoloRing r(r: 73) }
@@ -145,7 +157,8 @@ template Hologram {
       }
 
       scan {
-        Position: {0, 16 + sin(clock * 0.9) * 98, 0}
+        Position: {0, 16, 0}
+        Animator: {clip: HoloScanBob}
         Rotation: {PI / 2, 0, 0}
         Circle: {108}
         Rgb: {16, 48, 66}

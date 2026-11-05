@@ -11,10 +11,6 @@ fn fract(x: f64) -> f64 {
   x - floor(x)
 }
 
-fn igniting_shake(b: bool) -> f32 {
-  match b { true: 0.12; _: 0 }
-}
-
 event Engage()
 
 const STATION_X: f32[6] = [-0.38, -0.34, 0.08, 0.34, -0.72, -0.14]
@@ -37,9 +33,9 @@ async {
     await next_frame()
     const now = AppStatus[AppStatus].elapsed
     const fixed_step = App[App].delta_time
-    const step = match fixed_step > 0 { true: fixed_step; _: clamp(now - last, 0.001, 0.1) }
+    const step = fixed_step > 0 ? fixed_step : clamp(now - last, 0.001, 0.1)
     last = now
-    clock = clock + step
+    clock += step
     dt = step
     if fract(clock * 2.6) < 0.5 != blink {
       blink = !blink
@@ -90,11 +86,11 @@ async {
     }
 
     if in_tunnel {
-      scroll = scroll + step * 3.4
-      trip_units = trip_units + floor(step * 140 + 1)
+      scroll += step * 3.4
+      trip_units += floor(step * 140 + 1)
     } else if eng_rpm > 0.05 {
       if fract(clock * 3.5 * eng_rpm) < step * 3.5 * eng_rpm {
-        trip_units = trip_units + 1
+        trip_units += 1
       }
     }
 
@@ -102,12 +98,12 @@ async {
       const roll_in = bool_f(actions.roll_r[ActionState].down) - bool_f(actions.roll_l[ActionState].down)
       const pitch_in = bool_f(actions.nose_u[ActionState].down) - bool_f(actions.nose_d[ActionState].down)
       if roll_in != 0 {
-        attitude_roll = attitude_roll + roll_in * step * 0.42
+        attitude_roll += roll_in * step * 0.42
       }
       if pitch_in != 0 {
         attitude_pitch = clamp(attitude_pitch + pitch_in * step * 0.3, -0.72, 0.72)
       }
-      attitude_yaw = attitude_yaw + step * 0.004
+      attitude_yaw += step * 0.004
     } else {
       attitude_roll = approach(attitude_roll - round(attitude_roll / TURN) * TURN, 0, step * 2.4)
       attitude_pitch = approach(attitude_pitch, 0, step * 2.4)
@@ -137,7 +133,7 @@ async {
     cam_z = approach(cam_z, STATION_Z[v], blend)
     cam_pitch = approach(cam_pitch, STATION_PITCH[v], blend)
     cam_yaw = approach(cam_yaw, STATION_YAW[v], blend)
-    const rumble = shake + reactor * 0.004 + igniting_shake(igniting)
+    const rumble = shake + reactor * 0.004 + (igniting ? 0.12 : 0)
     eye_x = cam_x - pan_x * 0.12 + perlin2(clock * 23, 3.1) * rumble * 0.05
     eye_y = cam_y + pan_y * 0.08 + perlin2(clock * 27, 9.4) * rumble * 0.05 + sin(clock * 0.8) * 0.0022
     eye_z = cam_z
@@ -218,52 +214,46 @@ async {
   }
 }
 
+proc select_view(v: i32) {
+  view = v
+  look_yaw = 0
+  look_pitch = 0
+}
+
 async {
   while true {
     await on.pressed(actions.view_a)
-    view = 0
-    look_yaw = 0
-    look_pitch = 0
+    select_view(0)
   }
 }
 async {
   while true {
     await on.pressed(actions.view_b)
-    view = 1
-    look_yaw = 0
-    look_pitch = 0
+    select_view(1)
   }
 }
 async {
   while true {
     await on.pressed(actions.view_c)
-    view = 2
-    look_yaw = 0
-    look_pitch = 0
+    select_view(2)
   }
 }
 async {
   while true {
     await on.pressed(actions.view_d)
-    view = 3
-    look_yaw = 0
-    look_pitch = 0
+    select_view(3)
   }
 }
 async {
   while true {
     await on.pressed(actions.view_e)
-    view = 4
-    look_yaw = 0
-    look_pitch = 0
+    select_view(4)
   }
 }
 async {
   while true {
     await on.pressed(actions.view_f)
-    view = 5
-    look_yaw = 0
-    look_pitch = 0
+    select_view(5)
   }
 }
 
@@ -294,7 +284,7 @@ async {
     for i in 0..22 {
       await delay(0.1)
       shake = i * 0.017
-      flood = flood * 0.975
+      flood *= 0.975
     }
     attitude_roll = 0
     attitude_pitch = 0
@@ -339,7 +329,7 @@ async {
     fault = true
     smoke = true
     coolant = 0.22
-    spark_serial = spark_serial + 1
+    spark_serial += 1
   }
 }
 
@@ -371,7 +361,7 @@ async {
   while true {
     const e = await Flipped
     if e.sig == SW_SPARE_D && sw[SW_SPARE_D] {
-      spark_serial = spark_serial + 1
+      spark_serial += 1
     }
   }
 }
@@ -381,7 +371,7 @@ async {
     await delay(0.62)
     const live = crt_com && radio_signal(kn[KN_TUNE]) > 0.72 && !in_tunnel
     if live && com_shown < 7 {
-      com_shown = com_shown + 1
+      com_shown += 1
     } else if !live && com_shown > 0 {
       com_shown = 0
     }

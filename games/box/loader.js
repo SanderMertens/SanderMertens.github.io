@@ -1,7 +1,7 @@
 (function () {
-  var VERSION = '321d40484e53';
+  var VERSION = '6ea264e52e30';
   var ENGINE = 'boxweb';
-  var WASM_SIZE = 9461696;
+  var WASM_SIZE = 9599946;
   var script = document.currentScript;
   var base = script.src.substring(0, script.src.lastIndexOf('/') + 1);
   var game = window.BOX_GAME;

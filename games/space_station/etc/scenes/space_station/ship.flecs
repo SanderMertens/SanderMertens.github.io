@@ -5,69 +5,54 @@ using box.transform
 using box.geometry
 using box.material
 using box.particle
+using box.light
 using box.transition
 
 template StationShip {
   prop idx: i32 = 0
   prop cargo: bool = false
 
-  const ship = idx + match cargo { true: 5; _: 0 }
-  const state = st_bits_get(st_ship_state, ship, 4)
-  const dock = st_bits_get(st_ship_dock, ship, 6) - 1
+  const ship = st_ships[idx + (cargo ? 5 : 0)]
+  const state = ship.state
 
-  const side = match cargo { true: -1.0; _: 1.0 }
+  const side = cargo ? -1.0 : 1.0
   const far_x = side * 190
   const far_y = 34 + idx * 3
   const far_z = -90 + idx * 26
   const hold_x = side * (6 + idx * 6)
   const hold_y = 9 + (idx % 2) * 2.5
   const hold_z = -25 - (idx % 2) * 3
-  const dock_x = match dock { -1: hold_x; _: st_x(dock) }
-  const dock_z = match dock { -1: hold_z; _: st_z(dock) }
+  const dock_x = st_x(ship.dock)
+  const dock_z = st_z(ship.dock)
   const dock_y = 0.5
 
   const px = match state {
-    0: far_x
-    1: hold_x
-    2: hold_x
-    3: dock_x
-    4: dock_x
-    5: dock_x
-    6: dock_x
+    1, 2: hold_x
+    3, 4, 5, 6: dock_x
     _: far_x
   }
   const py = match state {
-    0: far_y
-    1: hold_y
-    2: hold_y
-    3: dock_y + 9
-    4: dock_y
-    5: dock_y
-    6: dock_y + 9
+    1, 2: hold_y
+    3, 6: dock_y + 9
+    4, 5: dock_y
     _: far_y
   }
   const pz = match state {
-    0: far_z
-    1: hold_z
-    2: hold_z
-    3: dock_z
-    4: dock_z
-    5: dock_z
-    6: dock_z
+    1, 2: hold_z
+    3, 4, 5, 6: dock_z
     _: far_z
   }
   const pace = 1.0 / max(st_speed, 1)
   const leg = match state {
     1: 6.0 * pace
     3: 3.6 * pace
-    4: 2.6 * pace
-    6: 2.6 * pace
+    4, 6: 2.6 * pace
     7: 7.0 * pace
     _: 1.0 * pace
   }
-  const facing = match cargo { true: 0.0; _: 3.14159 }
-  const yaw = match state { 7: facing + 3.14159; _: facing }
-  const burning = state == 1 || state == 3 || state == 4 || state == 6 || state == 7
+  const facing = cargo ? 0.0 : 3.14159
+  const yaw = state == SHIP_LEAVING ? facing + 3.14159 : facing
+  const burning = match state { 1, 3, 4, 6, 7: true; _: false }
 
   Position: {px, py, pz}
   Rotation: {0, yaw, 0}
@@ -86,11 +71,22 @@ template StationShip {
       Position: {0, 0.2, 0}
       ParticleEmitter: {
         max: 220,
-        rate: match burning { true: 110; _: 0 },
+        rate: burning ? 110 : 0,
         shape: EmitterDisc, radius: 0.5,
         direction: {0, -1, 0}, spread: 10, speed: {3, 6},
         lifetime: {0.15, 0.45}, size: {0.06, 0.2}, opacity: {0.3, 0.8},
         color: {150, 205, 255}, seed: 70 + idx
+      }
+      ParticleAppearance: {blend: ParticleAdditive, stretch: 0.03}
+      ParticleCurves: {
+        size: {keys: [{0, 1}, {1, 2.2}]},
+        opacity: {keys: [{0, 1}, {1, 0}]},
+        color: {keys: [{0, {235, 248, 255}}, {0.4, {150, 205, 255}}, {1, {70, 110, 255}}]}
+      }
+      if burning {
+        Rgb: {140, 200, 255}
+        PointLight: {intensity: 5, range: 6}
+        ParticleLight: {intensity: 5, curve: {keys: [{0, 1}, {0.5, 0.8}, {1, 1}]}, period: 0.12, loop: true}
       }
     }
   }
