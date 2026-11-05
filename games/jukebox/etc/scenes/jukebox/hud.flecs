@@ -125,6 +125,10 @@ hud {
         SongButton: {index: 3, action: jukebox_actions.pick_lantern}
       }
 
+      lane_button {
+        SongButton: {index: 4, action: jukebox_actions.pick_lane}
+      }
+
       now {
         Layout: {direction: Column, spacing: 4, padding: {6, 0, 0, 0}}
         LayoutItem: {width: {mode: Grow}}

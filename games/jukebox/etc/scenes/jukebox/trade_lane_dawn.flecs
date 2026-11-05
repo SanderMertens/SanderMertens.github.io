@@ -1,0 +1,483 @@
+using box.audio
+
+box { audio { master {} } }
+
+lane_space_eq {
+  Equalizer: {bands: [{kind: AudioEqLowCut, frequency: 240}, {kind: AudioEqHighCut, frequency: 6200}]}
+}
+
+lane_echo_eq {
+  Equalizer: {bands: [{kind: AudioEqLowCut, frequency: 400}]}
+}
+
+lane_space {
+  AudioBus: {output: box.audio.master, kind: AudioChannelReturn, volume: 0.8 * reverb_level / 100, effects: [lane_space, lane_space_eq]}
+  Reverb: {decay: 5.8, damping: 0.38, predelay: 0.075, size: 0.95}
+}
+
+lane_echo {
+  AudioBus: {output: box.audio.master, kind: AudioChannelReturn, volume: 0.48, effects: [lane_echo, lane_echo_eq]}
+  Delay: {sync: 1.5, feedback: 0.34, mix: 1, damping: 2400, ping_pong: true}
+}
+
+lane {
+  AudioBus: {output: box.audio.master, volume: 0.85}
+  AudioMeter: {}
+}
+
+lane_choirs { AudioBus: {output: lane, sends: [{bus: lane_space, level: 0.65}]}; AudioMeter: {} }
+lane_strings { AudioBus: {output: lane, sends: [{bus: lane_space, level: 0.4}]}; AudioMeter: {} }
+lane_horns { AudioBus: {output: lane, sends: [{bus: lane_space, level: 0.55}]}; AudioMeter: {} }
+lane_engine { AudioBus: {output: lane}; AudioMeter: {} }
+lane_signals { AudioBus: {output: lane, sends: [{bus: lane_space, level: 0.3}, {bus: lane_echo, level: 0.42}]}; AudioMeter: {} }
+lane_motion { AudioBus: {output: lane, sends: [{bus: lane_space, level: 0.22}]}; AudioMeter: {} }
+
+prefab lane_vowel {
+  SynthSound: {seed: 101, pitch_variance: 0.0015}
+  SynthEnvelope: {attack: 2.4, decay: 1.8, sustain: 0.68, release: 3.8, attack_curve: 1.5}
+  SynthFilter: {kind: SynthLowPass, cutoff: 2800, resonance: 0.08}
+  SynthLfo: {rate: 0.11, amplitude: 0.13, cutoff: 0.18, random_phase: true}
+  fundamental { SynthOscillator: {frequency: 440, level: 0.11}; SynthUnison: {voices: 3, detune: 5, width: 0.7} }
+  vowel { SynthOscillator: {frequency: 880, level: 0.09}; SynthUnison: {voices: 3, detune: 8, width: 0.9} }
+  throat { SynthOscillator: {frequency: 1320, level: 0.035} }
+  formant { SynthOscillator: {frequency: 2200, level: 0.045} }
+  breath { SynthOscillator: {wave: SynthNoise, level: 0.006} }
+}
+
+prefab lane_bow {
+  SynthSound: {seed: 103, pitch_variance: 0.002, level_variance: 0.03}
+  SynthEnvelope: {attack: 1.6, decay: 2.2, sustain: 0.62, release: 2.8, attack_curve: 2}
+  SynthFilter: {kind: SynthLowPass, cutoff: 850, resonance: 0.12, slope: SynthSlope24}
+  SynthFilterEnvelope: {attack: 3.5, decay: 3, sustain: 0.4, release: 2.5, amount: 1.2}
+  SynthLfo: {rate: 4.7, delay: 1.2, fade: 1.4, pitch: 4}
+  bow { SynthOscillator: {wave: SynthSaw, frequency: 440, level: 0.12}; SynthUnison: {voices: 5, detune: 11, width: 0.85} }
+  chest { SynthOscillator: {wave: SynthTriangle, frequency: 220, level: 0.045} }
+}
+
+prefab lane_horn {
+  SynthSound: {seed: 107, level_variance: 0.03}
+  SynthEnvelope: {attack: 0.35, decay: 0.8, sustain: 0.7, release: 1.5, attack_curve: 2}
+  SynthFilter: {kind: SynthLowPass, cutoff: 650, resonance: 0.18, slope: SynthSlope24}
+  SynthFilterEnvelope: {attack: 0.65, decay: 1.3, sustain: 0.32, release: 1, amount: 1.8}
+  SynthLfo: {rate: 4.3, delay: 1, fade: 1.1, pitch: 3}
+  brass { SynthOscillator: {wave: SynthSaw, frequency: 440, level: 0.16}; SynthUnison: {voices: 2, detune: 3, width: 0.22} }
+  bore { SynthOscillator: {wave: SynthSine, frequency: 440, level: 0.15} }
+  lip { SynthOscillator: {wave: SynthTriangle, frequency: 880, level: 0.035} }
+}
+
+prefab lane_drive {
+  SynthSound: {seed: 109}
+  SynthEnvelope: {attack: 1.1, decay: 1.2, sustain: 0.85, release: 2.4}
+  SynthFilter: {kind: SynthLowPass, cutoff: 190, slope: SynthSlope24}
+  sub { SynthOscillator: {frequency: 440, level: 0.34} }
+  turbine { SynthOscillator: {wave: SynthTriangle, frequency: 880, level: 0.08}; SynthLfo: {rate: 0.32, amplitude: 0.25} }
+}
+
+prefab lane_relay {
+  SynthSound: {seed: 113, level_variance: 0.07}
+  SynthEnvelope: {attack: 0.012, decay: 0.65, curve: 3}
+  SynthFilter: {kind: SynthLowPass, cutoff: 1700, resonance: 0.16}
+  SynthOscillator: {wave: SynthTriangle, frequency: 440, level: 0.22}
+  contact { SynthOscillator: {frequency: 880, modulation: SynthPhase, index: 0.65}; SynthEnvelope: {attack: 0.002, decay: 0.16, curve: 4} }
+}
+
+prefab lane_beacon {
+  SynthSound: {seed: 127, level_variance: 0.04}
+  SynthEnvelope: {attack: 0.025, decay: 3.8, curve: 3}
+  SynthFilter: {kind: SynthLowPass, cutoff: 4800}
+  glass {
+    SynthOscillator: {frequency: 440, level: 0.19}
+    partial { SynthOscillator: {frequency: 1188, modulation: SynthPhase, index: 1.1}; SynthEnvelope: {attack: 0.01, decay: 0.8, curve: 3} }
+  }
+  rim { SynthOscillator: {frequency: 1760, level: 0.025}; SynthEnvelope: {attack: 0.08, decay: 2.1, curve: 2} }
+}
+
+prefab lane_timpani {
+  SynthSound: {seed: 131, level_variance: 0.06}
+  SynthEnvelope: {attack: 0.008, decay: 1.6, curve: 4}
+  SynthFilter: {kind: SynthLowPass, cutoff: 900}
+  skin { SynthOscillator: {frequency: 82, frequency_end: 58, sweep: 0.18, level: 0.42} }
+  shell { SynthOscillator: {frequency: 104, frequency_end: 93, sweep: 0.1, level: 0.09}; SynthEnvelope: {attack: 0.003, decay: 0.65, curve: 4} }
+  felt { SynthOscillator: {wave: SynthNoise, level: 0.13}; SynthEnvelope: {attack: 0.004, decay: 0.08, curve: 5} }
+}
+
+prefab lane_clink {
+  SynthSound: {seed: 137, level_variance: 0.12}
+  SynthEnvelope: {attack: 0.002, decay: 0.28, curve: 5}
+  SynthFilter: {kind: SynthHighPass, cutoff: 1500}
+  SynthOscillator: {frequency: 2100, level: 0.12}
+  metal { SynthOscillator: {frequency: 3350, modulation: SynthRing, index: 0.85} }
+}
+
+prefab lane_air {
+  SynthSound: {seed: 139}
+  SynthEnvelope: {attack: 4.5, decay: 4, curve: 1, attack_curve: 2}
+  SynthFilter: {kind: SynthBandPass, cutoff: 1100, resonance: 0.25}
+  SynthFilterEnvelope: {attack: 5, decay: 4, amount: 1.5}
+  SynthOscillator: {wave: SynthNoise, level: 0.035}
+  SynthLfo: {rate: 0.09, amplitude: 0.3}
+}
+
+prefab lane_corona {
+  SynthSound: {seed: 149}
+  SynthEnvelope: {attack: 3.2, decay: 2, sustain: 0.6, release: 4.5}
+  SynthFilter: {kind: SynthLowPass, cutoff: 3800}
+  SynthOscillator: {frequency: 440, level: 0.07}
+  SynthUnison: {voices: 3, detune: 6, width: 1}
+  SynthLfo: {rate: 0.19, amplitude: 0.3, random_phase: true}
+  shine { SynthOscillator: {frequency: 880, modulation: SynthPhase, index: 0.25} }
+}
+
+lane_vowel_inst { Instrument: {sound: lane_vowel, gate: true} }
+
+prefab lane_vowel_notes {
+  NoteClip: {length: 160, notes: [
+    {start: 0, duration: 13.5, pitch: 57, velocity: 0.48, pan: -0.45},
+    {start: 0.18, duration: 13.5, pitch: 60, velocity: 0.48, pan: 0},
+    {start: 0.36, duration: 13.5, pitch: 64, velocity: 0.48, pan: 0.45},
+    {start: 16, duration: 13.5, pitch: 55, velocity: 0.48, pan: -0.45},
+    {start: 16.18, duration: 13.5, pitch: 60, velocity: 0.48, pan: 0},
+    {start: 16.36, duration: 13.5, pitch: 64, velocity: 0.48, pan: 0.45},
+    {start: 32, duration: 13.5, pitch: 53, velocity: 0.48, pan: -0.45},
+    {start: 32.18, duration: 13.5, pitch: 57, velocity: 0.48, pan: 0},
+    {start: 32.36, duration: 13.5, pitch: 60, velocity: 0.48, pan: 0.45},
+    {start: 48, duration: 13.5, pitch: 55, velocity: 0.48, pan: -0.45},
+    {start: 48.18, duration: 13.5, pitch: 60, velocity: 0.48, pan: 0},
+    {start: 48.36, duration: 13.5, pitch: 65, velocity: 0.48, pan: 0.45},
+    {start: 64, duration: 13.5, pitch: 55, velocity: 0.48, pan: -0.45},
+    {start: 64.18, duration: 13.5, pitch: 58, velocity: 0.48, pan: 0},
+    {start: 64.36, duration: 13.5, pitch: 62, velocity: 0.48, pan: 0.45},
+    {start: 80, duration: 13.5, pitch: 57, velocity: 0.48, pan: -0.45},
+    {start: 80.18, duration: 13.5, pitch: 62, velocity: 0.48, pan: 0},
+    {start: 80.36, duration: 13.5, pitch: 65, velocity: 0.48, pan: 0.45},
+    {start: 96, duration: 13.5, pitch: 57, velocity: 0.57, pan: -0.45},
+    {start: 96.18, duration: 13.5, pitch: 60, velocity: 0.57, pan: 0},
+    {start: 96.36, duration: 13.5, pitch: 65, velocity: 0.57, pan: 0.45},
+    {start: 112, duration: 13.5, pitch: 55, velocity: 0.57, pan: -0.45},
+    {start: 112.18, duration: 13.5, pitch: 60, velocity: 0.57, pan: 0},
+    {start: 112.36, duration: 13.5, pitch: 62, velocity: 0.57, pan: 0.45},
+    {start: 128, duration: 13.5, pitch: 57, velocity: 0.57, pan: -0.45},
+    {start: 128.18, duration: 13.5, pitch: 60, velocity: 0.57, pan: 0},
+    {start: 128.36, duration: 13.5, pitch: 64, velocity: 0.57, pan: 0.45},
+    {start: 144, duration: 13.5, pitch: 57, velocity: 0.57, pan: -0.45},
+    {start: 144.18, duration: 13.5, pitch: 62, velocity: 0.57, pan: 0},
+    {start: 144.36, duration: 13.5, pitch: 64, velocity: 0.57, pan: 0.45}
+  ]}
+}
+
+lane_vowel_track {
+  Track: {instrument: lane_vowel_inst}
+  AudioBus: {output: lane_choirs, volume: 0.85}
+  phrase { ClipPlacement: {clip: lane_vowel_notes, start: 4000} }
+}
+
+lane_bow_inst { Instrument: {sound: lane_bow, gate: true} }
+
+prefab lane_bow_notes {
+  NoteClip: {length: 160, notes: [
+    {start: 17, duration: 12, pitch: 43, velocity: 0.52, pan: -0.35},
+    {start: 17.12, duration: 12, pitch: 64, velocity: 0.52, pan: 0},
+    {start: 17.24, duration: 12, pitch: 67, velocity: 0.52, pan: 0.35},
+    {start: 33, duration: 12, pitch: 41, velocity: 0.52, pan: -0.35},
+    {start: 33.12, duration: 12, pitch: 60, velocity: 0.52, pan: 0},
+    {start: 33.24, duration: 12, pitch: 65, velocity: 0.52, pan: 0.35},
+    {start: 49, duration: 12, pitch: 43, velocity: 0.52, pan: -0.35},
+    {start: 49.12, duration: 12, pitch: 65, velocity: 0.52, pan: 0},
+    {start: 49.24, duration: 12, pitch: 69, velocity: 0.52, pan: 0.35},
+    {start: 97, duration: 12, pitch: 45, velocity: 0.52, pan: -0.35},
+    {start: 97.12, duration: 12, pitch: 65, velocity: 0.52, pan: 0},
+    {start: 97.24, duration: 12, pitch: 69, velocity: 0.52, pan: 0.35},
+    {start: 113, duration: 12, pitch: 43, velocity: 0.52, pan: -0.35},
+    {start: 113.12, duration: 12, pitch: 62, velocity: 0.52, pan: 0},
+    {start: 113.24, duration: 12, pitch: 67, velocity: 0.52, pan: 0.35},
+    {start: 129, duration: 12, pitch: 45, velocity: 0.52, pan: -0.35},
+    {start: 129.12, duration: 12, pitch: 64, velocity: 0.52, pan: 0},
+    {start: 129.24, duration: 12, pitch: 69, velocity: 0.52, pan: 0.35}
+  ]}
+}
+
+lane_bow_track {
+  Track: {instrument: lane_bow_inst}
+  AudioBus: {output: lane_strings, volume: 0.8}
+  phrase { ClipPlacement: {clip: lane_bow_notes, start: 4000} }
+}
+
+lane_horn_inst { Instrument: {sound: lane_horn, gate: true} }
+
+prefab lane_horn_notes {
+  NoteClip: {length: 160, notes: [
+    {start: 20, duration: 3, pitch: 62, velocity: 0.66, pan: -0.12},
+    {start: 24, duration: 5, pitch: 69, velocity: 0.6, pan: -0.12},
+    {start: 30, duration: 2, pitch: 67, velocity: 0.5, pan: -0.12},
+    {start: 35, duration: 4, pitch: 65, velocity: 0.63, pan: -0.12},
+    {start: 40, duration: 6, pitch: 64, velocity: 0.55, pan: -0.12},
+    {start: 49, duration: 3, pitch: 60, velocity: 0.55, pan: -0.12},
+    {start: 53, duration: 4, pitch: 62, velocity: 0.62, pan: -0.12},
+    {start: 59, duration: 3, pitch: 57, velocity: 0.5, pan: -0.12},
+    {start: 82, duration: 4, pitch: 62, velocity: 0.46, pan: -0.12},
+    {start: 88, duration: 5, pitch: 65, velocity: 0.5, pan: -0.12},
+    {start: 100, duration: 3, pitch: 65, velocity: 0.64, pan: -0.12},
+    {start: 104, duration: 5, pitch: 69, velocity: 0.68, pan: -0.12},
+    {start: 110, duration: 2, pitch: 72, velocity: 0.6, pan: -0.12},
+    {start: 115, duration: 4, pitch: 67, velocity: 0.6, pan: -0.12},
+    {start: 120, duration: 6, pitch: 64, velocity: 0.55, pan: -0.12},
+    {start: 132, duration: 4, pitch: 62, velocity: 0.62, pan: -0.12},
+    {start: 138, duration: 6, pitch: 69, velocity: 0.54, pan: -0.12},
+    {start: 149, duration: 5, pitch: 64, velocity: 0.42, pan: -0.12}
+  ]}
+}
+
+lane_horn_track {
+  Track: {instrument: lane_horn_inst}
+  AudioBus: {output: lane_horns, volume: 0.85}
+  phrase { ClipPlacement: {clip: lane_horn_notes, start: 4000} }
+}
+
+lane_drive_inst { Instrument: {sound: lane_drive, gate: true} }
+
+prefab lane_drive_notes {
+  NoteClip: {length: 160, notes: [
+    {start: 0, duration: 14.5, pitch: 26, velocity: 0.65, pan: 0},
+    {start: 16, duration: 14.5, pitch: 26, velocity: 0.65, pan: 0},
+    {start: 32, duration: 14.5, pitch: 22, velocity: 0.65, pan: 0},
+    {start: 48, duration: 14.5, pitch: 29, velocity: 0.65, pan: 0},
+    {start: 64, duration: 14.5, pitch: 24, velocity: 0.65, pan: 0},
+    {start: 80, duration: 14.5, pitch: 31, velocity: 0.65, pan: 0},
+    {start: 96, duration: 14.5, pitch: 22, velocity: 0.65, pan: 0},
+    {start: 112, duration: 14.5, pitch: 24, velocity: 0.65, pan: 0},
+    {start: 128, duration: 14.5, pitch: 26, velocity: 0.65, pan: 0},
+    {start: 144, duration: 14.5, pitch: 26, velocity: 0.65, pan: 0}
+  ]}
+}
+
+lane_drive_track {
+  Track: {instrument: lane_drive_inst}
+  AudioBus: {output: lane_engine, volume: 0.8}
+  phrase { ClipPlacement: {clip: lane_drive_notes, start: 4000} }
+}
+
+lane_relay_inst { Instrument: {sound: lane_relay, gate: false} }
+
+prefab lane_relay_notes {
+  NoteClip: {length: 160, notes: [
+    {start: 16, duration: 0.4, pitch: 55, velocity: 0.42, pan: -0.22},
+    {start: 17.025, duration: 0.4, pitch: 64, velocity: 0.28, pan: 0.22},
+    {start: 18, duration: 0.4, pitch: 72, velocity: 0.28, pan: -0.22},
+    {start: 19.025, duration: 0.4, pitch: 64, velocity: 0.28, pan: 0.22},
+    {start: 20, duration: 0.4, pitch: 55, velocity: 0.42, pan: -0.22},
+    {start: 21.025, duration: 0.4, pitch: 64, velocity: 0.28, pan: 0.22},
+    {start: 23.025, duration: 0.4, pitch: 64, velocity: 0.28, pan: 0.22},
+    {start: 24, duration: 0.4, pitch: 55, velocity: 0.42, pan: -0.22},
+    {start: 25.025, duration: 0.4, pitch: 64, velocity: 0.28, pan: 0.22},
+    {start: 26, duration: 0.4, pitch: 72, velocity: 0.28, pan: -0.22},
+    {start: 27.025, duration: 0.4, pitch: 64, velocity: 0.28, pan: 0.22},
+    {start: 28, duration: 0.4, pitch: 55, velocity: 0.42, pan: -0.22},
+    {start: 29.025, duration: 0.4, pitch: 64, velocity: 0.28, pan: 0.22},
+    {start: 31.025, duration: 0.4, pitch: 64, velocity: 0.28, pan: 0.22},
+    {start: 32, duration: 0.4, pitch: 53, velocity: 0.42, pan: -0.22},
+    {start: 33.025, duration: 0.4, pitch: 60, velocity: 0.28, pan: 0.22},
+    {start: 34, duration: 0.4, pitch: 69, velocity: 0.28, pan: -0.22},
+    {start: 35.025, duration: 0.4, pitch: 60, velocity: 0.28, pan: 0.22},
+    {start: 36, duration: 0.4, pitch: 53, velocity: 0.42, pan: -0.22},
+    {start: 37.025, duration: 0.4, pitch: 60, velocity: 0.28, pan: 0.22},
+    {start: 39.025, duration: 0.4, pitch: 60, velocity: 0.28, pan: 0.22},
+    {start: 40, duration: 0.4, pitch: 53, velocity: 0.42, pan: -0.22},
+    {start: 41.025, duration: 0.4, pitch: 60, velocity: 0.28, pan: 0.22},
+    {start: 42, duration: 0.4, pitch: 69, velocity: 0.28, pan: -0.22},
+    {start: 43.025, duration: 0.4, pitch: 60, velocity: 0.28, pan: 0.22},
+    {start: 44, duration: 0.4, pitch: 53, velocity: 0.42, pan: -0.22},
+    {start: 45.025, duration: 0.4, pitch: 60, velocity: 0.28, pan: 0.22},
+    {start: 47.025, duration: 0.4, pitch: 60, velocity: 0.28, pan: 0.22},
+    {start: 48, duration: 0.4, pitch: 55, velocity: 0.42, pan: -0.22},
+    {start: 49.025, duration: 0.4, pitch: 65, velocity: 0.28, pan: 0.22},
+    {start: 50, duration: 0.4, pitch: 72, velocity: 0.28, pan: -0.22},
+    {start: 51.025, duration: 0.4, pitch: 65, velocity: 0.28, pan: 0.22},
+    {start: 52, duration: 0.4, pitch: 55, velocity: 0.42, pan: -0.22},
+    {start: 53.025, duration: 0.4, pitch: 65, velocity: 0.28, pan: 0.22},
+    {start: 55.025, duration: 0.4, pitch: 65, velocity: 0.28, pan: 0.22},
+    {start: 56, duration: 0.4, pitch: 55, velocity: 0.42, pan: -0.22},
+    {start: 57.025, duration: 0.4, pitch: 65, velocity: 0.28, pan: 0.22},
+    {start: 58, duration: 0.4, pitch: 72, velocity: 0.28, pan: -0.22},
+    {start: 59.025, duration: 0.4, pitch: 65, velocity: 0.28, pan: 0.22},
+    {start: 60, duration: 0.4, pitch: 55, velocity: 0.42, pan: -0.22},
+    {start: 61.025, duration: 0.4, pitch: 65, velocity: 0.28, pan: 0.22},
+    {start: 63.025, duration: 0.4, pitch: 65, velocity: 0.28, pan: 0.22},
+    {start: 96, duration: 0.4, pitch: 57, velocity: 0.42, pan: -0.22},
+    {start: 97.025, duration: 0.4, pitch: 65, velocity: 0.28, pan: 0.22},
+    {start: 98, duration: 0.4, pitch: 72, velocity: 0.28, pan: -0.22},
+    {start: 99.025, duration: 0.4, pitch: 65, velocity: 0.28, pan: 0.22},
+    {start: 100, duration: 0.4, pitch: 57, velocity: 0.42, pan: -0.22},
+    {start: 101.025, duration: 0.4, pitch: 65, velocity: 0.28, pan: 0.22},
+    {start: 103.025, duration: 0.4, pitch: 65, velocity: 0.28, pan: 0.22},
+    {start: 104, duration: 0.4, pitch: 57, velocity: 0.42, pan: -0.22},
+    {start: 105.025, duration: 0.4, pitch: 65, velocity: 0.28, pan: 0.22},
+    {start: 106, duration: 0.4, pitch: 72, velocity: 0.28, pan: -0.22},
+    {start: 107.025, duration: 0.4, pitch: 65, velocity: 0.28, pan: 0.22},
+    {start: 108, duration: 0.4, pitch: 57, velocity: 0.42, pan: -0.22},
+    {start: 109.025, duration: 0.4, pitch: 65, velocity: 0.28, pan: 0.22},
+    {start: 111.025, duration: 0.4, pitch: 65, velocity: 0.28, pan: 0.22},
+    {start: 112, duration: 0.4, pitch: 55, velocity: 0.42, pan: -0.22},
+    {start: 113.025, duration: 0.4, pitch: 62, velocity: 0.28, pan: 0.22},
+    {start: 114, duration: 0.4, pitch: 72, velocity: 0.28, pan: -0.22},
+    {start: 115.025, duration: 0.4, pitch: 62, velocity: 0.28, pan: 0.22},
+    {start: 116, duration: 0.4, pitch: 55, velocity: 0.42, pan: -0.22},
+    {start: 117.025, duration: 0.4, pitch: 62, velocity: 0.28, pan: 0.22},
+    {start: 119.025, duration: 0.4, pitch: 62, velocity: 0.28, pan: 0.22},
+    {start: 120, duration: 0.4, pitch: 55, velocity: 0.42, pan: -0.22},
+    {start: 121.025, duration: 0.4, pitch: 62, velocity: 0.28, pan: 0.22},
+    {start: 122, duration: 0.4, pitch: 72, velocity: 0.28, pan: -0.22},
+    {start: 123.025, duration: 0.4, pitch: 62, velocity: 0.28, pan: 0.22},
+    {start: 124, duration: 0.4, pitch: 55, velocity: 0.42, pan: -0.22},
+    {start: 125.025, duration: 0.4, pitch: 62, velocity: 0.28, pan: 0.22},
+    {start: 127.025, duration: 0.4, pitch: 62, velocity: 0.28, pan: 0.22},
+    {start: 128, duration: 0.4, pitch: 57, velocity: 0.42, pan: -0.22},
+    {start: 129.025, duration: 0.4, pitch: 64, velocity: 0.28, pan: 0.22},
+    {start: 130, duration: 0.4, pitch: 72, velocity: 0.28, pan: -0.22},
+    {start: 131.025, duration: 0.4, pitch: 64, velocity: 0.28, pan: 0.22},
+    {start: 132, duration: 0.4, pitch: 57, velocity: 0.42, pan: -0.22},
+    {start: 133.025, duration: 0.4, pitch: 64, velocity: 0.28, pan: 0.22},
+    {start: 135.025, duration: 0.4, pitch: 64, velocity: 0.28, pan: 0.22},
+    {start: 136, duration: 0.4, pitch: 57, velocity: 0.42, pan: -0.22},
+    {start: 137.025, duration: 0.4, pitch: 64, velocity: 0.28, pan: 0.22},
+    {start: 138, duration: 0.4, pitch: 72, velocity: 0.28, pan: -0.22},
+    {start: 139.025, duration: 0.4, pitch: 64, velocity: 0.28, pan: 0.22},
+    {start: 140, duration: 0.4, pitch: 57, velocity: 0.42, pan: -0.22},
+    {start: 141.025, duration: 0.4, pitch: 64, velocity: 0.28, pan: 0.22},
+    {start: 143.025, duration: 0.4, pitch: 64, velocity: 0.28, pan: 0.22}
+  ]}
+}
+
+lane_relay_track {
+  Track: {instrument: lane_relay_inst}
+  AudioBus: {output: lane_signals, volume: 0.7}
+  phrase { ClipPlacement: {clip: lane_relay_notes, start: 4000} }
+}
+
+lane_beacon_inst { Instrument: {sound: lane_beacon, gate: false} }
+
+prefab lane_beacon_notes {
+  NoteClip: {length: 160, notes: [
+    {start: 6.5, duration: 1, pitch: 76, velocity: 0.37, pan: 0.4},
+    {start: 13, duration: 1, pitch: 72, velocity: 0.37, pan: -0.4},
+    {start: 22.5, duration: 1, pitch: 76, velocity: 0.37, pan: 0.4},
+    {start: 29, duration: 1, pitch: 72, velocity: 0.37, pan: -0.4},
+    {start: 38.5, duration: 1, pitch: 72, velocity: 0.37, pan: 0.4},
+    {start: 45, duration: 1, pitch: 69, velocity: 0.37, pan: -0.4},
+    {start: 54.5, duration: 1, pitch: 77, velocity: 0.37, pan: 0.4},
+    {start: 70.5, duration: 1, pitch: 74, velocity: 0.37, pan: 0.4},
+    {start: 77, duration: 1, pitch: 70, velocity: 0.37, pan: -0.4},
+    {start: 86.5, duration: 1, pitch: 77, velocity: 0.37, pan: 0.4},
+    {start: 93, duration: 1, pitch: 74, velocity: 0.37, pan: -0.4},
+    {start: 102.5, duration: 1, pitch: 77, velocity: 0.37, pan: 0.4},
+    {start: 109, duration: 1, pitch: 72, velocity: 0.37, pan: -0.4},
+    {start: 118.5, duration: 1, pitch: 74, velocity: 0.37, pan: 0.4},
+    {start: 134.5, duration: 1, pitch: 76, velocity: 0.37, pan: 0.4},
+    {start: 141, duration: 1, pitch: 72, velocity: 0.37, pan: -0.4},
+    {start: 150.5, duration: 1, pitch: 76, velocity: 0.37, pan: 0.4}
+  ]}
+}
+
+lane_beacon_track {
+  Track: {instrument: lane_beacon_inst}
+  AudioBus: {output: lane_signals, volume: 0.65}
+  phrase { ClipPlacement: {clip: lane_beacon_notes, start: 4000} }
+}
+
+lane_timpani_inst { Instrument: {sound: lane_timpani, gate: false} }
+
+prefab lane_timpani_notes {
+  NoteClip: {length: 160, notes: [
+    {start: 16, duration: 1, pitch: 69, velocity: 0.54, pan: 0},
+    {start: 22.5, duration: 1, pitch: 69, velocity: 0.3, pan: 0},
+    {start: 26, duration: 1, pitch: 69, velocity: 0.4, pan: 0},
+    {start: 32, duration: 1, pitch: 69, velocity: 0.54, pan: 0},
+    {start: 38.5, duration: 1, pitch: 69, velocity: 0.3, pan: 0},
+    {start: 42, duration: 1, pitch: 69, velocity: 0.4, pan: 0},
+    {start: 48, duration: 1, pitch: 69, velocity: 0.54, pan: 0},
+    {start: 54.5, duration: 1, pitch: 69, velocity: 0.3, pan: 0},
+    {start: 58, duration: 1, pitch: 69, velocity: 0.4, pan: 0},
+    {start: 96, duration: 1, pitch: 69, velocity: 0.54, pan: 0},
+    {start: 102.5, duration: 1, pitch: 69, velocity: 0.3, pan: 0},
+    {start: 106, duration: 1, pitch: 69, velocity: 0.4, pan: 0},
+    {start: 112, duration: 1, pitch: 69, velocity: 0.54, pan: 0},
+    {start: 118.5, duration: 1, pitch: 69, velocity: 0.3, pan: 0},
+    {start: 122, duration: 1, pitch: 69, velocity: 0.4, pan: 0},
+    {start: 128, duration: 1, pitch: 69, velocity: 0.54, pan: 0},
+    {start: 134.5, duration: 1, pitch: 69, velocity: 0.3, pan: 0},
+    {start: 138, duration: 1, pitch: 69, velocity: 0.4, pan: 0}
+  ]}
+}
+
+lane_timpani_track {
+  Track: {instrument: lane_timpani_inst}
+  AudioBus: {output: lane_motion, volume: 0.65}
+  phrase { ClipPlacement: {clip: lane_timpani_notes, start: 4000} }
+}
+
+lane_clink_inst { Instrument: {sound: lane_clink, gate: false} }
+
+prefab lane_clink_notes {
+  NoteClip: {length: 160, notes: [
+    {start: 19.5, duration: 0.2, pitch: 69, velocity: 0.26, pan: 0.4},
+    {start: 23, duration: 0.2, pitch: 69, velocity: 0.26, pan: -0.35},
+    {start: 27.5, duration: 0.2, pitch: 69, velocity: 0.26, pan: 0.4},
+    {start: 35.5, duration: 0.2, pitch: 69, velocity: 0.26, pan: 0.4},
+    {start: 39, duration: 0.2, pitch: 69, velocity: 0.26, pan: -0.35},
+    {start: 43.5, duration: 0.2, pitch: 69, velocity: 0.26, pan: 0.4},
+    {start: 51.5, duration: 0.2, pitch: 69, velocity: 0.26, pan: 0.4},
+    {start: 55, duration: 0.2, pitch: 69, velocity: 0.26, pan: -0.35},
+    {start: 59.5, duration: 0.2, pitch: 69, velocity: 0.26, pan: 0.4},
+    {start: 99.5, duration: 0.2, pitch: 69, velocity: 0.26, pan: 0.4},
+    {start: 103, duration: 0.2, pitch: 69, velocity: 0.26, pan: -0.35},
+    {start: 107.5, duration: 0.2, pitch: 69, velocity: 0.26, pan: 0.4},
+    {start: 115.5, duration: 0.2, pitch: 69, velocity: 0.26, pan: 0.4},
+    {start: 119, duration: 0.2, pitch: 69, velocity: 0.26, pan: -0.35},
+    {start: 123.5, duration: 0.2, pitch: 69, velocity: 0.26, pan: 0.4},
+    {start: 131.5, duration: 0.2, pitch: 69, velocity: 0.26, pan: 0.4},
+    {start: 135, duration: 0.2, pitch: 69, velocity: 0.26, pan: -0.35},
+    {start: 139.5, duration: 0.2, pitch: 69, velocity: 0.26, pan: 0.4}
+  ]}
+}
+
+lane_clink_track {
+  Track: {instrument: lane_clink_inst}
+  AudioBus: {output: lane_motion, volume: 0.55}
+  phrase { ClipPlacement: {clip: lane_clink_notes, start: 4000} }
+}
+
+lane_air_inst { Instrument: {sound: lane_air, gate: false} }
+
+prefab lane_air_notes {
+  NoteClip: {length: 160, notes: [
+    {start: 9, duration: 1, pitch: 69, velocity: 0.65, pan: -0.35},
+    {start: 41, duration: 1, pitch: 69, velocity: 0.65, pan: 0.35},
+    {start: 73, duration: 1, pitch: 69, velocity: 0.65, pan: 0.35},
+    {start: 89, duration: 1, pitch: 69, velocity: 0.65, pan: 0.35},
+    {start: 121, duration: 1, pitch: 69, velocity: 0.65, pan: 0.35},
+    {start: 145, duration: 1, pitch: 69, velocity: 0.65, pan: 0.35}
+  ]}
+}
+
+lane_air_track {
+  Track: {instrument: lane_air_inst}
+  AudioBus: {output: lane_motion, volume: 0.7}
+  phrase { ClipPlacement: {clip: lane_air_notes, start: 4000} }
+}
+
+lane_corona_inst { Instrument: {sound: lane_corona, gate: true} }
+
+prefab lane_corona_notes {
+  NoteClip: {length: 160, notes: [
+    {start: 4, duration: 9, pitch: 76, velocity: 0.48, pan: -0.2},
+    {start: 52, duration: 9, pitch: 77, velocity: 0.48, pan: -0.2},
+    {start: 84, duration: 9, pitch: 77, velocity: 0.48, pan: -0.2},
+    {start: 132, duration: 9, pitch: 76, velocity: 0.48, pan: -0.2},
+    {start: 148, duration: 9, pitch: 76, velocity: 0.48, pan: -0.2}
+  ]}
+}
+
+lane_corona_track {
+  Track: {instrument: lane_corona_inst}
+  AudioBus: {output: lane_choirs, volume: 0.7}
+  phrase { ClipPlacement: {clip: lane_corona_notes, start: 4000} }
+}

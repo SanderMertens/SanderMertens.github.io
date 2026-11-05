@@ -59,7 +59,7 @@ template JBSongKey {
   const g = SONG_G[index]
   const b = SONG_B[index]
   ActionTrigger: {action: action}
-  RoundedBox: {0.212, 0.09, 0.07, 0.014}
+  RoundedBox: {0.17, 0.09, 0.07, 0.014}
   Rgb: {242, 225, 186}
   PbrMaterial: {roughness: 0.28}
   ClearCoat: {strength: 0.7, roughness: 0.15}
@@ -85,13 +85,13 @@ template Jukebox {
   shell : JBWood {
     Position: {0, 0, -0.04}
     Rotation: {-PI / 2, 0, 0}
-    ProfileExtrusion: {profile: JBProfile, depth: 0.76, cap_start: true, cap_end: true}
+    ProfileExtrusion: {profile: JBProfile, depth: 0.76, cap_start: true, cap_end: true, smooth: true}
   }
   face : JBEnamel {
     Position: {0, 0, 0.35}
     Rotation: {-PI / 2, 0, 0}
     Scale: {0.96, 1, 0.985}
-    ProfileExtrusion: {profile: JBProfile, depth: 0.045, cap_start: true, cap_end: true}
+    ProfileExtrusion: {profile: JBProfile, depth: 0.045, cap_start: true, cap_end: true, smooth: true}
   }
   plinth : JBDark { Position: {0, 0.08, 0}; RoundedBox: {1.53, 0.16, 0.94, 0.06} }
   bumper : JBChrome { Position: {0, 0.165, 0.015}; RoundedBox: {1.5, 0.055, 0.91, 0.025} }
@@ -187,15 +187,16 @@ template Jukebox {
 
   console : JBChrome { Position: {0, 1.035, 0.425}; RoundedBox: {1.075, 0.25, 0.16, 0.045} }
   console_inset : JBDark { Position: {0, 1.041, 0.51}; RoundedBox: {0.975, 0.17, 0.018, 0.022} }
-  JBSongKey orbit_key(index: 0, action: jukebox_actions.pick_orbit) { Position: {-0.354, 1.015, 0.538} }
-  JBSongKey neon_key(index: 1, action: jukebox_actions.pick_neon) { Position: {-0.118, 1.015, 0.538} }
-  JBSongKey harbor_key(index: 2, action: jukebox_actions.pick_harbor) { Position: {0.118, 1.015, 0.538} }
-  JBSongKey lantern_key(index: 3, action: jukebox_actions.pick_lantern) { Position: {0.354, 1.015, 0.538} }
-  for i in 0..4 {
-    "song_plate_{i}" : JBIvory { Position: {(i - 1.5) * 0.236, 1.092, 0.525}; RoundedBox: {0.212, 0.033, 0.006, 0.006} }
+  JBSongKey orbit_key(index: 0, action: jukebox_actions.pick_orbit) { Position: {-0.38, 1.015, 0.538} }
+  JBSongKey neon_key(index: 1, action: jukebox_actions.pick_neon) { Position: {-0.19, 1.015, 0.538} }
+  JBSongKey harbor_key(index: 2, action: jukebox_actions.pick_harbor) { Position: {0, 1.015, 0.538} }
+  JBSongKey lantern_key(index: 3, action: jukebox_actions.pick_lantern) { Position: {0.19, 1.015, 0.538} }
+  JBSongKey lane_key(index: 4, action: jukebox_actions.pick_lane) { Position: {0.38, 1.015, 0.538} }
+  for i in 0..5 {
+    "song_plate_{i}" : JBIvory { Position: {(i - 2) * 0.19, 1.092, 0.525}; RoundedBox: {0.17, 0.033, 0.006, 0.006} }
     "title_{i}" {
-      Position: {(i - 1.5) * 0.236, 1.093, 0.531}
-      Scale: {0.00052, 0.00052, 0.00052}
+      Position: {(i - 2) * 0.19, 1.093, 0.531}
+      Scale: {0.00041, 0.00041, 0.00041}
       Text: {value: SONG_TITLE[i], size: 25}
       Rgb: {28, 49, 48}
     }

@@ -5,6 +5,7 @@ include jukebox/harbor_lights
 include jukebox/neon_run
 include jukebox/lantern_waltz
 include jukebox/distant_orbit
+include jukebox/trade_lane_dawn
 include jukebox/player
 include jukebox/materials
 include jukebox/cabinet
