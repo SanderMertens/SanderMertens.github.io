@@ -1,0 +1,2546 @@
+using box.audio
+using box.material
+
+// VOLTAGE TIDE
+// Original instrumental | 110 BPM | D minor / Bb / F / C, final F major | 100 bars (400 beats; 3:38)
+// Intent: keep the luminous melodic hook; use drum-kit-inspired synthesis, humanized groove, layered intro and full-band buildups.
+// Chapters: Introduction / Pulse / Hook / Reflection / Tension / Drop / Breakdown / Rebuild / Final Hook / Resolution.
+box { audio { Song { Rgb: {88, 203, 245} } } }
+vt_hall {
+  AudioBus: {output: master, kind: AudioChannelReturn, volume: 0.24, effects: [vt_hall]}
+  Reverb: {decay: 4.4, damping: 0.46, predelay: 0.06, size: 0.95, shimmer: 0.16}
+}
+vt_room {
+  AudioBus: {output: master, kind: AudioChannelReturn, volume: 0.14, effects: [vt_room]}
+  Reverb: {decay: 1.15, damping: 0.68, predelay: 0.013, size: 0.44, shimmer: 0.01}
+}
+vt_music_eq {
+  Equalizer: {bands: [
+    {kind: AudioEqLowCut, frequency: 28},
+    {kind: AudioEqPeak, frequency: 280, gain: -1.7, q: 0.85},
+    {kind: AudioEqHighShelf, frequency: 7200, gain: 1.2}
+  ]}
+}
+vt_music_glue { Compressor: {threshold: -16, ratio: 2.0, attack: 0.036, release: 0.24, knee: 7, makeup: 0.9} }
+vt_mix {
+  AudioBus: {output: master, volume: 0.88, effects: [vt_music_eq, vt_music_glue]}
+  AudioMeter: {}
+}
+vt_drum_eq {
+  Equalizer: {bands: [
+    {kind: AudioEqLowCut, frequency: 26},
+    {kind: AudioEqPeak, frequency: 380, gain: -1.6, q: 1.15},
+    {kind: AudioEqPeak, frequency: 2150, gain: 1.8, q: 0.92},
+    {kind: AudioEqHighShelf, frequency: 6800, gain: 1.35}
+  ]}
+}
+vt_drum_glue { Compressor: {threshold: -14, ratio: 2.9, attack: 0.019, release: 0.12, knee: 6, makeup: 0.95} }
+vt_drum_bus {
+  AudioBus: {output: vt_mix, volume: 0.86, effects: [vt_drum_eq, vt_drum_glue]}
+  AudioMeter: {}
+}
+
+prefab vt_harmonic_table { Wavetable: {kind: WavetableHarmonics} }
+
+prefab vt_pad_sound {
+  SynthSound: {seed: 501, drift: 6, free_phase: true}
+  SynthEnvelope: {attack: 0.8, decay: 1.6, sustain: 0.79, release: 2.9}
+  SynthFilter: {kind: SynthLowPass, cutoff: 2900, resonance: 0.085, keytrack: 0.34}
+  body {
+    SynthOscillator: {wave: SynthWavetable, frequency: 440, level: 0.21}
+    SynthTable: {table: vt_harmonic_table, position: 4, envelope: 4}
+    SynthUnison: {voices: 5, detune: 8, width: 0.94}
+  }
+  air { SynthOscillator: {wave: SynthSine, frequency: 880, level: 0.038} }
+}
+
+prefab vt_string_sound {
+  SynthSound: {seed: 502, drift: 4}
+  SynthEnvelope: {attack: 0.14, decay: 0.55, sustain: 0.69, release: 0.85}
+  SynthFilter: {kind: SynthLowPass, cutoff: 4700, keytrack: 0.43}
+  body {
+    SynthOscillator: {wave: SynthWavetable, frequency: 440, level: 0.29}
+    SynthTable: {table: vt_harmonic_table, position: 5, envelope: 4}
+    SynthUnison: {voices: 4, detune: 6, width: 0.69}
+  }
+}
+
+prefab vt_bass_sound {
+  SynthSound: {seed: 503, drift: 2}
+  SynthEnvelope: {attack: 0.008, decay: 0.24, sustain: 0.7, release: 0.17}
+  SynthDrive: {drive: 0.31}
+  SynthFilter: {kind: SynthLowPass, cutoff: 1900, resonance: 0.1, keytrack: 0.42}
+  bite { SynthOscillator: {wave: SynthTriangle, frequency: 440, level: 0.39} }
+  under { SynthOscillator: {wave: SynthSine, frequency: 220, level: 0.16} }
+}
+
+prefab vt_sub_sound {
+  SynthSound: {seed: 504}
+  SynthEnvelope: {attack: 0.028, decay: 0.32, sustain: 0.77, release: 0.27}
+  SynthFilter: {kind: SynthLowPass, cutoff: 250, keytrack: 0.35}
+  core { SynthOscillator: {wave: SynthSine, frequency: 440, level: 0.36} }
+}
+
+prefab vt_arp_sound {
+  SynthSound: {seed: 505, level_variance: 0.055}
+  SynthFilter: {kind: SynthLowPass, cutoff: 6200, velocity: 0.66}
+  tine {
+    SynthOscillator: {wave: SynthPluck, frequency: 440, level: 0.32}
+    SynthString: {decay: 1.35, brightness: 0.61, hardness: 0.46, velocity: 0.57}
+  }
+  upper {
+    SynthOscillator: {wave: SynthSine, frequency: 880, level: 0.055}
+    SynthEnvelope: {attack: 0.006, decay: 0.25, curve: 2.4}
+  }
+}
+
+// Luminous lead: mono-centered triangle + harmonically rich, gently detuned wavetable,
+// an articulate string/pluck onset, a soft octave sheen, and a slow-opening stereo body.
+// The notes remain identical to Clear Signal; only the timbre/envelope changes.
+prefab vt_lead_sound {
+  SynthSound: {seed: 506, drift: 3.1, level_variance: 0.014}
+  SynthEnvelope: {attack: 0.006, decay: 0.86, sustain: 0.64, release: 0.68}
+  SynthDrive: {drive: 0.16}
+  SynthFilter: {kind: SynthLowPass, cutoff: 7400, resonance: 0.10, keytrack: 0.36, velocity: 0.48}
+  focus {
+    SynthOscillator: {wave: SynthTriangle, frequency: 440, level: 0.19}
+  }
+  color {
+    SynthOscillator: {wave: SynthWavetable, frequency: 440, level: 0.25}
+    SynthTable: {table: vt_harmonic_table, position: 4, envelope: 4}
+    SynthUnison: {voices: 3, detune: 5, width: 0.58}
+  }
+  pick {
+    SynthOscillator: {wave: SynthPluck, frequency: 440, level: 0.26}
+    SynthString: {decay: 1.7, brightness: 0.76, hardness: 0.63, velocity: 0.67}
+  }
+  sheen {
+    SynthOscillator: {wave: SynthSine, frequency: 880, level: 0.065}
+    SynthEnvelope: {attack: 0.002, decay: 0.26, curve: 2.8}
+  }
+  bloom {
+    SynthOscillator: {wave: SynthTriangle, frequency: 440, level: 0.082}
+    SynthEnvelope: {attack: 0.065, decay: 1.1, sustain: 0.50, release: 0.92}
+    SynthUnison: {voices: 2, detune: 7, width: 0.73}
+  }
+}
+
+prefab vt_harmony_sound {
+  SynthSound: {seed: 507, drift: 5}
+  SynthEnvelope: {attack: 0.1, decay: 0.58, sustain: 0.7, release: 0.93}
+  SynthFilter: {kind: SynthLowPass, cutoff: 4900}
+  core {
+    SynthOscillator: {wave: SynthWavetable, frequency: 440, level: 0.26}
+    SynthTable: {table: vt_harmonic_table, position: 4, envelope: 4}
+    SynthUnison: {voices: 4, detune: 8, width: 0.9}
+  }
+}
+
+prefab vt_brass_sound {
+  SynthSound: {seed: 508, drift: 2}
+  SynthEnvelope: {attack: 0.045, decay: 0.23, sustain: 0.75, release: 0.34}
+  SynthDrive: {drive: 0.25}
+  SynthFilter: {kind: SynthLowPass, cutoff: 4900, resonance: 0.095, keytrack: 0.44}
+  body {
+    SynthOscillator: {wave: SynthWavetable, frequency: 440, level: 0.34}
+    SynthTable: {table: vt_harmonic_table, position: 5, envelope: 4}
+    SynthUnison: {voices: 4, detune: 8, width: 0.66}
+  }
+}
+
+prefab vt_halo_sound {
+  SynthSound: {seed: 509, drift: 8, free_phase: true}
+  SynthEnvelope: {attack: 0.58, decay: 1.1, sustain: 0.8, release: 2.1}
+  SynthFilter: {kind: SynthLowPass, cutoff: 2850, keytrack: 0.23}
+  voice {
+    SynthOscillator: {wave: SynthTriangle, frequency: 440, level: 0.28}
+    SynthUnison: {voices: 4, detune: 7, width: 0.88}
+  }
+}
+
+prefab vt_bell_sound {
+  SynthSound: {seed: 510, level_variance: 0.05}
+  SynthEnvelope: {attack: 0.009, decay: 2.5, curve: 0.82}
+  SynthFilter: {kind: SynthLowPass, cutoff: 6400}
+  bell {
+    SynthOscillator: {wave: SynthSine, frequency: 440, level: 0.26}
+    over { SynthOscillator: {frequency: 1232, modulation: SynthPhase, index: 1.1, velocity: 0.45} }
+  }
+}
+
+// Kick: fast sub thump + bright short click, with modest drive instead of excessive room.
+prefab vt_kick_sound {
+  SynthSound: {seed: 601}
+  SynthDrive: {drive: 0.4}
+  SynthFilter: {kind: SynthLowPass, cutoff: 7000}
+  body {
+    SynthOscillator: {wave: SynthSine, frequency: 50, level: 0.95}
+    SynthEnvelope: {attack: 0.001, decay: 0.5, curve: 3}
+    SynthPitchEnvelope: {amount: 30, decay: 0.06, curve: 6}
+  }
+  click {
+    SynthOscillator: {wave: SynthNoise, level: 0.3}
+    SynthEnvelope: {attack: 0.0005, decay: 0.006, curve: 3}
+  }
+}
+
+// Main snare: lower shell, independently fast FM crack, and transient for high-frequency bite.
+prefab vt_snare_sound {
+  SynthSound: {seed: 602, level_variance: 0.04}
+  SynthDrive: {drive: 0.3}
+  SynthFilter: {kind: SynthHighPass, cutoff: 150}
+  head {
+    SynthOscillator: {wave: SynthSine, frequency: 185, level: 0.6}
+    SynthEnvelope: {attack: 0.001, decay: 0.13, curve: 4}
+    SynthPitchEnvelope: {amount: 7, decay: 0.03, curve: 4}
+  }
+  ring {
+    SynthOscillator: {wave: SynthSine, frequency: 330, level: 0.25}
+    SynthEnvelope: {attack: 0.001, decay: 0.07, curve: 4}
+    SynthPitchEnvelope: {amount: 5, decay: 0.02, curve: 4}
+  }
+  wires {
+    SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, level: 0.5}
+    SynthEnvelope: {attack: 0.001, decay: 0.24, curve: 5}
+  }
+}
+
+// Snare companion: thin noise-like inharmonic FM; flammed 10-25 ms after the shell.
+prefab vt_clap_sound {
+  SynthSound: {seed: 603, level_variance: 0.05}
+  SynthFilter: {kind: SynthBandPass, cutoff: 1200, resonance: 0.3}
+  hand1 {
+    SynthOscillator: {wave: SynthNoise, level: 1.3}
+    SynthEnvelope: {attack: 0.0005, decay: 0.009, curve: 4}
+  }
+  hand2 {
+    SynthOscillator: {wave: SynthNoise, level: 1.2}
+    SynthEnvelope: {attack: 0.011, attack_curve: -16, decay: 0.009, curve: 4}
+  }
+  hand3 {
+    SynthOscillator: {wave: SynthNoise, level: 1.2}
+    SynthEnvelope: {attack: 0.021, attack_curve: -16, decay: 0.009, curve: 4}
+  }
+  tail {
+    SynthOscillator: {wave: SynthNoise, level: 1.1}
+    SynthEnvelope: {attack: 0.031, attack_curve: -16, decay: 0.2, curve: 4}
+    SynthUnison: {voices: 2, detune: 0, width: 0.5}
+  }
+}
+
+prefab vt_hat_sound {
+  SynthSound: {seed: 604, level_variance: 0.08}
+  SynthEnvelope: {attack: 0.0005, decay: 0.05, curve: 5}
+  SynthFilter: {kind: SynthHighPass, cutoff: 7000, resonance: 0.2, slope: SynthSlope24}
+  m1 { SynthOscillator: {wave: SynthSquare, frequency: 205.3, level: 0.2} }
+  m2 { SynthOscillator: {wave: SynthSquare, frequency: 304.4, level: 0.2} }
+  m3 { SynthOscillator: {wave: SynthSquare, frequency: 369.6, level: 0.2} }
+  m4 { SynthOscillator: {wave: SynthSquare, frequency: 522.7, level: 0.2} }
+  m5 { SynthOscillator: {wave: SynthSquare, frequency: 540, level: 0.2} }
+  m6 { SynthOscillator: {wave: SynthSquare, frequency: 800, level: 0.2} }
+  air { SynthOscillator: {wave: SynthNoise, level: 0.35} }
+}
+
+prefab vt_openhat_sound {
+  SynthSound: {seed: 605, level_variance: 0.05}
+  SynthEnvelope: {attack: 0.001, decay: 0.42, curve: 3}
+  SynthFilter: {kind: SynthHighPass, cutoff: 7000, resonance: 0.2, slope: SynthSlope24}
+  m1 { SynthOscillator: {wave: SynthSquare, frequency: 205.3, level: 0.2} }
+  m2 { SynthOscillator: {wave: SynthSquare, frequency: 304.4, level: 0.2} }
+  m3 { SynthOscillator: {wave: SynthSquare, frequency: 369.6, level: 0.2} }
+  m4 { SynthOscillator: {wave: SynthSquare, frequency: 522.7, level: 0.2} }
+  m5 { SynthOscillator: {wave: SynthSquare, frequency: 540, level: 0.2} }
+  m6 { SynthOscillator: {wave: SynthSquare, frequency: 800, level: 0.2} }
+  air { SynthOscillator: {wave: SynthNoise, level: 0.35} }
+}
+
+prefab vt_tom_sound {
+  SynthSound: {seed: 606, level_variance: 0.04}
+  SynthDrive: {drive: 0.3}
+  SynthFilter: {kind: SynthLowPass, cutoff: 4500}
+  head {
+    SynthOscillator: {wave: SynthSine, frequency: 110, level: 0.8}
+    SynthEnvelope: {attack: 0.001, decay: 0.55, curve: 3.5, key_scale: 0.5}
+    SynthPitchEnvelope: {amount: 5, decay: 0.12, curve: 3}
+  }
+  mode {
+    SynthOscillator: {wave: SynthSine, frequency: 175, level: 0.22}
+    SynthEnvelope: {attack: 0.001, decay: 0.18, curve: 4, key_scale: 0.5}
+    SynthPitchEnvelope: {amount: 5, decay: 0.08, curve: 3}
+  }
+  stick {
+    SynthOscillator: {wave: SynthNoise, level: 0.3}
+    SynthEnvelope: {attack: 0.0005, decay: 0.012, curve: 3}
+  }
+}
+
+prefab vt_crash_sound {
+  SynthSound: {seed: 607, level_variance: 0.04}
+  SynthEnvelope: {attack: 0.002, decay: 2.8, curve: 3}
+  SynthFilter: {kind: SynthHighPass, cutoff: 2200}
+  m1 { SynthOscillator: {wave: SynthSquare, frequency: 245, level: 0.09} }
+  m2 { SynthOscillator: {wave: SynthSquare, frequency: 367, level: 0.09} }
+  m3 { SynthOscillator: {wave: SynthSquare, frequency: 459, level: 0.09} }
+  m4 { SynthOscillator: {wave: SynthSquare, frequency: 611, level: 0.09} }
+  m5 { SynthOscillator: {wave: SynthSquare, frequency: 692, level: 0.09} }
+  wash {
+    SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, level: 0.6}
+    SynthUnison: {voices: 3, detune: 0, width: 0.9}
+  }
+  splash {
+    SynthOscillator: {wave: SynthNoise, level: 0.6}
+    SynthEnvelope: {attack: 0.001, decay: 0.18, curve: 4}
+    SynthUnison: {voices: 2, detune: 0, width: 0.7}
+  }
+}
+
+prefab vt_rise_sound {
+  SynthSound: {seed: 518, drift: 7}
+  SynthEnvelope: {attack: 0.05, decay: 1.05, sustain: 0.53, release: 0.35}
+  SynthFilter: {kind: SynthLowPass, cutoff: 8900}
+  tension {
+    SynthOscillator: {wave: SynthWavetable, frequency: 440, level: 0.23}
+    SynthTable: {table: vt_harmonic_table, position: 5, envelope: 4}
+    SynthUnison: {voices: 6, detune: 15, width: 1}
+  }
+}
+
+vt_pad_inst { Instrument: {sound: vt_pad_sound, spread: 0.75} }
+vt_strings_inst { Instrument: {sound: vt_string_sound, spread: 0.69} }
+vt_bass_inst { Instrument: {sound: vt_bass_sound} }
+vt_sub_inst { Instrument: {sound: vt_sub_sound} }
+vt_arp_inst { Instrument: {sound: vt_arp_sound, gate: false, spread: 0.79, spread_mode: InstrumentSpreadAlternate} }
+vt_lead_inst { Instrument: {sound: vt_lead_sound, spread: 0.27} }
+vt_harmony_inst { Instrument: {sound: vt_harmony_sound, spread: 0.72} }
+vt_brass_inst { Instrument: {sound: vt_brass_sound, spread: 0.61} }
+vt_halo_inst { Instrument: {sound: vt_halo_sound, spread: 0.8} }
+vt_bell_inst { Instrument: {sound: vt_bell_sound, gate: false, spread: 0.83, spread_mode: InstrumentSpreadAlternate} }
+vt_kick_inst { Instrument: {sound: vt_kick_sound, root: 36, gate: false} }
+vt_snare_inst { Instrument: {sound: vt_snare_sound, root: 50, gate: false} }
+vt_clap_inst { Instrument: {sound: vt_clap_sound, root: 78, gate: false} }
+vt_hat_inst { Instrument: {sound: vt_hat_sound, root: 92, gate: false, spread: 0.18, spread_mode: InstrumentSpreadRandom} }
+vt_openhat_inst { Instrument: {sound: vt_openhat_sound, root: 88, gate: false, spread: 0.25} }
+vt_tom_inst { Instrument: {sound: vt_tom_sound, root: 47, gate: false, spread: 0.60} }
+vt_crash_inst { Instrument: {sound: vt_crash_sound, root: 96, gate: false, spread: 0.32} }
+prefab vt_ride_sound {
+  SynthSound: {seed: 608, level_variance: 0.05}
+  SynthEnvelope: {attack: 0.001, decay: 2.4, curve: 4}
+  SynthFilter: {kind: SynthHighPass, cutoff: 2500}
+  m1 { SynthOscillator: {wave: SynthSquare, frequency: 287, level: 0.1} }
+  m2 { SynthOscillator: {wave: SynthSquare, frequency: 431, level: 0.1} }
+  m3 { SynthOscillator: {wave: SynthSquare, frequency: 513, level: 0.1} }
+  m4 { SynthOscillator: {wave: SynthSquare, frequency: 653, level: 0.1} }
+  m5 { SynthOscillator: {wave: SynthSquare, frequency: 769, level: 0.1} }
+  m6 { SynthOscillator: {wave: SynthSquare, frequency: 1021, level: 0.1} }
+  ping {
+    SynthOscillator: {wave: SynthSine, frequency: 3100, level: 0.3}
+    SynthEnvelope: {attack: 0.001, decay: 0.35, curve: 3}
+    bell { SynthOscillator: {frequency: 4371, modulation: SynthPhase, index: 2.2} }
+  }
+}
+
+vt_ride_inst { Instrument: {sound: vt_ride_sound, root: 51, gate: false, spread: 0.18} }
+vt_rise_inst { Instrument: {sound: vt_rise_sound, gate: false} }
+
+vt_pad_filter { AudioFilter: {cutoff: 1420, resonance: 0.075} }
+vt_pad_chorus { Chorus: {voices: 3, rate: 0.17, depth: 5, delay: 18, spread: 1, mix: 0.28} }
+// High-pass removes competing low mids; presence boost gets the hook in front of pads.
+vt_lead_eq {
+  Equalizer: {bands: [
+    {kind: AudioEqLowCut, frequency: 155},
+    {kind: AudioEqPeak, frequency: 360, gain: -1.7, q: 0.93},
+    {kind: AudioEqPeak, frequency: 2600, gain: 2.0, q: 0.83},
+    {kind: AudioEqHighShelf, frequency: 6700, gain: 1.05}
+  ]}
+}
+vt_lead_motion { Chorus: {voices: 3, rate: 0.18, depth: 3.3, delay: 14, spread: 0.84, mix: 0.19} }
+vt_lead_delay { Delay: {sync: 0.75, feedback: 0.24, mix: 0.17, damping: 5250, ping_pong: true} }
+vt_lead_glue { Compressor: {threshold: -18, ratio: 1.7, attack: 0.023, release: 0.19, knee: 6, makeup: 0.4} }
+vt_lead_color { AudioFilter: {cutoff: 5900, resonance: 0.035} }
+vt_arp_delay { Delay: {sync: 0.75, feedback: 0.24, mix: 0.12, damping: 5800, ping_pong: true} }
+vt_bell_delay { Delay: {sync: 1.5, feedback: 0.35, mix: 0.21, damping: 5400, ping_pong: true} }
+
+// Reusable beat-relative NoteClip patterns (all phrases are original).
+prefab vt_pad_cycle {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 3.8, pitch: 50, velocity: 0.36},
+    {start: 0, duration: 3.8, pitch: 57, velocity: 0.346},
+    {start: 0, duration: 3.8, pitch: 62, velocity: 0.332},
+    {start: 0, duration: 3.8, pitch: 65, velocity: 0.318},
+    {start: 4, duration: 3.8, pitch: 46, velocity: 0.36},
+    {start: 4, duration: 3.8, pitch: 53, velocity: 0.346},
+    {start: 4, duration: 3.8, pitch: 58, velocity: 0.332},
+    {start: 4, duration: 3.8, pitch: 62, velocity: 0.318},
+    {start: 8, duration: 3.8, pitch: 53, velocity: 0.36},
+    {start: 8, duration: 3.8, pitch: 60, velocity: 0.346},
+    {start: 8, duration: 3.8, pitch: 65, velocity: 0.332},
+    {start: 8, duration: 3.8, pitch: 69, velocity: 0.318},
+    {start: 12, duration: 3.8, pitch: 48, velocity: 0.36},
+    {start: 12, duration: 3.8, pitch: 55, velocity: 0.346},
+    {start: 12, duration: 3.8, pitch: 60, velocity: 0.332},
+    {start: 12, duration: 3.8, pitch: 64, velocity: 0.318},
+    {start: 16, duration: 3.8, pitch: 50, velocity: 0.36},
+    {start: 16, duration: 3.8, pitch: 57, velocity: 0.346},
+    {start: 16, duration: 3.8, pitch: 62, velocity: 0.332},
+    {start: 16, duration: 3.8, pitch: 65, velocity: 0.318},
+    {start: 20, duration: 3.8, pitch: 46, velocity: 0.36},
+    {start: 20, duration: 3.8, pitch: 53, velocity: 0.346},
+    {start: 20, duration: 3.8, pitch: 58, velocity: 0.332},
+    {start: 20, duration: 3.8, pitch: 62, velocity: 0.318},
+    {start: 24, duration: 3.8, pitch: 53, velocity: 0.36},
+    {start: 24, duration: 3.8, pitch: 60, velocity: 0.346},
+    {start: 24, duration: 3.8, pitch: 65, velocity: 0.332},
+    {start: 24, duration: 3.8, pitch: 69, velocity: 0.318},
+    {start: 28, duration: 3.8, pitch: 48, velocity: 0.36},
+    {start: 28, duration: 3.8, pitch: 55, velocity: 0.346},
+    {start: 28, duration: 3.8, pitch: 60, velocity: 0.332},
+    {start: 28, duration: 3.8, pitch: 64, velocity: 0.318}
+  ]}
+}
+
+prefab vt_pad_tension {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 3.7, pitch: 43, velocity: 0.33},
+    {start: 0, duration: 3.7, pitch: 50, velocity: 0.316},
+    {start: 0, duration: 3.7, pitch: 55, velocity: 0.302},
+    {start: 0, duration: 3.7, pitch: 58, velocity: 0.288},
+    {start: 4, duration: 3.7, pitch: 43, velocity: 0.33},
+    {start: 4, duration: 3.7, pitch: 50, velocity: 0.316},
+    {start: 4, duration: 3.7, pitch: 55, velocity: 0.302},
+    {start: 4, duration: 3.7, pitch: 58, velocity: 0.288},
+    {start: 8, duration: 3.7, pitch: 46, velocity: 0.33},
+    {start: 8, duration: 3.7, pitch: 53, velocity: 0.316},
+    {start: 8, duration: 3.7, pitch: 58, velocity: 0.302},
+    {start: 8, duration: 3.7, pitch: 62, velocity: 0.288},
+    {start: 12, duration: 3.7, pitch: 46, velocity: 0.33},
+    {start: 12, duration: 3.7, pitch: 53, velocity: 0.316},
+    {start: 12, duration: 3.7, pitch: 58, velocity: 0.302},
+    {start: 12, duration: 3.7, pitch: 62, velocity: 0.288},
+    {start: 16, duration: 3.7, pitch: 53, velocity: 0.33},
+    {start: 16, duration: 3.7, pitch: 60, velocity: 0.316},
+    {start: 16, duration: 3.7, pitch: 65, velocity: 0.302},
+    {start: 16, duration: 3.7, pitch: 69, velocity: 0.288},
+    {start: 20, duration: 3.7, pitch: 53, velocity: 0.33},
+    {start: 20, duration: 3.7, pitch: 60, velocity: 0.316},
+    {start: 20, duration: 3.7, pitch: 65, velocity: 0.302},
+    {start: 20, duration: 3.7, pitch: 69, velocity: 0.288},
+    {start: 24, duration: 3.7, pitch: 48, velocity: 0.33},
+    {start: 24, duration: 3.7, pitch: 55, velocity: 0.316},
+    {start: 24, duration: 3.7, pitch: 60, velocity: 0.302},
+    {start: 24, duration: 3.7, pitch: 64, velocity: 0.288},
+    {start: 28, duration: 2.95, pitch: 48, velocity: 0.33},
+    {start: 28, duration: 2.95, pitch: 55, velocity: 0.316},
+    {start: 28, duration: 2.95, pitch: 60, velocity: 0.302},
+    {start: 28, duration: 2.95, pitch: 64, velocity: 0.288}
+  ]}
+}
+
+prefab vt_pad_drop {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 3.8, pitch: 50, velocity: 0.42},
+    {start: 0, duration: 3.8, pitch: 57, velocity: 0.406},
+    {start: 0, duration: 3.8, pitch: 62, velocity: 0.392},
+    {start: 0, duration: 3.8, pitch: 65, velocity: 0.378},
+    {start: 4, duration: 3.8, pitch: 46, velocity: 0.42},
+    {start: 4, duration: 3.8, pitch: 53, velocity: 0.406},
+    {start: 4, duration: 3.8, pitch: 58, velocity: 0.392},
+    {start: 4, duration: 3.8, pitch: 62, velocity: 0.378},
+    {start: 8, duration: 3.8, pitch: 53, velocity: 0.42},
+    {start: 8, duration: 3.8, pitch: 60, velocity: 0.406},
+    {start: 8, duration: 3.8, pitch: 65, velocity: 0.392},
+    {start: 8, duration: 3.8, pitch: 69, velocity: 0.378},
+    {start: 12, duration: 3.8, pitch: 48, velocity: 0.42},
+    {start: 12, duration: 3.8, pitch: 55, velocity: 0.406},
+    {start: 12, duration: 3.8, pitch: 60, velocity: 0.392},
+    {start: 12, duration: 3.8, pitch: 64, velocity: 0.378},
+    {start: 16, duration: 3.8, pitch: 50, velocity: 0.42},
+    {start: 16, duration: 3.8, pitch: 57, velocity: 0.406},
+    {start: 16, duration: 3.8, pitch: 62, velocity: 0.392},
+    {start: 16, duration: 3.8, pitch: 65, velocity: 0.378},
+    {start: 20, duration: 3.8, pitch: 46, velocity: 0.42},
+    {start: 20, duration: 3.8, pitch: 53, velocity: 0.406},
+    {start: 20, duration: 3.8, pitch: 58, velocity: 0.392},
+    {start: 20, duration: 3.8, pitch: 62, velocity: 0.378},
+    {start: 24, duration: 3.8, pitch: 53, velocity: 0.42},
+    {start: 24, duration: 3.8, pitch: 60, velocity: 0.406},
+    {start: 24, duration: 3.8, pitch: 65, velocity: 0.392},
+    {start: 24, duration: 3.8, pitch: 69, velocity: 0.378},
+    {start: 28, duration: 3.8, pitch: 48, velocity: 0.42},
+    {start: 28, duration: 3.8, pitch: 55, velocity: 0.406},
+    {start: 28, duration: 3.8, pitch: 60, velocity: 0.392},
+    {start: 28, duration: 3.8, pitch: 64, velocity: 0.378}
+  ]}
+}
+
+prefab vt_pad_major {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 3.8, pitch: 53, velocity: 0.43},
+    {start: 0, duration: 3.8, pitch: 60, velocity: 0.416},
+    {start: 0, duration: 3.8, pitch: 65, velocity: 0.402},
+    {start: 0, duration: 3.8, pitch: 69, velocity: 0.388},
+    {start: 4, duration: 3.8, pitch: 48, velocity: 0.43},
+    {start: 4, duration: 3.8, pitch: 55, velocity: 0.416},
+    {start: 4, duration: 3.8, pitch: 60, velocity: 0.402},
+    {start: 4, duration: 3.8, pitch: 64, velocity: 0.388},
+    {start: 8, duration: 3.8, pitch: 50, velocity: 0.43},
+    {start: 8, duration: 3.8, pitch: 57, velocity: 0.416},
+    {start: 8, duration: 3.8, pitch: 62, velocity: 0.402},
+    {start: 8, duration: 3.8, pitch: 65, velocity: 0.388},
+    {start: 12, duration: 3.8, pitch: 46, velocity: 0.43},
+    {start: 12, duration: 3.8, pitch: 53, velocity: 0.416},
+    {start: 12, duration: 3.8, pitch: 58, velocity: 0.402},
+    {start: 12, duration: 3.8, pitch: 62, velocity: 0.388},
+    {start: 16, duration: 3.8, pitch: 53, velocity: 0.43},
+    {start: 16, duration: 3.8, pitch: 60, velocity: 0.416},
+    {start: 16, duration: 3.8, pitch: 65, velocity: 0.402},
+    {start: 16, duration: 3.8, pitch: 69, velocity: 0.388},
+    {start: 20, duration: 3.8, pitch: 48, velocity: 0.43},
+    {start: 20, duration: 3.8, pitch: 55, velocity: 0.416},
+    {start: 20, duration: 3.8, pitch: 60, velocity: 0.402},
+    {start: 20, duration: 3.8, pitch: 64, velocity: 0.388},
+    {start: 24, duration: 3.8, pitch: 50, velocity: 0.43},
+    {start: 24, duration: 3.8, pitch: 57, velocity: 0.416},
+    {start: 24, duration: 3.8, pitch: 62, velocity: 0.402},
+    {start: 24, duration: 3.8, pitch: 65, velocity: 0.388},
+    {start: 28, duration: 3.8, pitch: 46, velocity: 0.43},
+    {start: 28, duration: 3.8, pitch: 53, velocity: 0.416},
+    {start: 28, duration: 3.8, pitch: 58, velocity: 0.402},
+    {start: 28, duration: 3.8, pitch: 62, velocity: 0.388}
+  ]}
+}
+
+prefab vt_pad_release {
+  NoteClip: {length: 16, notes: [
+    {start: 0, duration: 15, pitch: 53, velocity: 0.38},
+    {start: 0, duration: 15, pitch: 60, velocity: 0.361},
+    {start: 0, duration: 15, pitch: 65, velocity: 0.342},
+    {start: 0, duration: 15, pitch: 69, velocity: 0.323},
+    {start: 0, duration: 15, pitch: 72, velocity: 0.304}
+  ]}
+}
+
+prefab vt_string_pulse {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 0.95, pitch: 62, velocity: 0.38},
+    {start: 0, duration: 0.95, pitch: 69, velocity: 0.38},
+    {start: 2.5, duration: 0.64, pitch: 62, velocity: 0.29},
+    {start: 2.5, duration: 0.64, pitch: 69, velocity: 0.29},
+    {start: 4, duration: 0.95, pitch: 58, velocity: 0.38},
+    {start: 4, duration: 0.95, pitch: 65, velocity: 0.38},
+    {start: 6.5, duration: 0.64, pitch: 58, velocity: 0.29},
+    {start: 6.5, duration: 0.64, pitch: 65, velocity: 0.29},
+    {start: 8, duration: 0.95, pitch: 60, velocity: 0.38},
+    {start: 8, duration: 0.95, pitch: 69, velocity: 0.38},
+    {start: 10.5, duration: 0.64, pitch: 60, velocity: 0.29},
+    {start: 10.5, duration: 0.64, pitch: 69, velocity: 0.29},
+    {start: 12, duration: 0.95, pitch: 60, velocity: 0.38},
+    {start: 12, duration: 0.95, pitch: 67, velocity: 0.38},
+    {start: 14.5, duration: 0.64, pitch: 60, velocity: 0.29},
+    {start: 14.5, duration: 0.64, pitch: 67, velocity: 0.29},
+    {start: 16, duration: 0.95, pitch: 62, velocity: 0.38},
+    {start: 16, duration: 0.95, pitch: 69, velocity: 0.38},
+    {start: 18.5, duration: 0.64, pitch: 62, velocity: 0.29},
+    {start: 18.5, duration: 0.64, pitch: 69, velocity: 0.29},
+    {start: 20, duration: 0.95, pitch: 58, velocity: 0.38},
+    {start: 20, duration: 0.95, pitch: 65, velocity: 0.38},
+    {start: 22.5, duration: 0.64, pitch: 58, velocity: 0.29},
+    {start: 22.5, duration: 0.64, pitch: 65, velocity: 0.29},
+    {start: 24, duration: 0.95, pitch: 60, velocity: 0.38},
+    {start: 24, duration: 0.95, pitch: 69, velocity: 0.38},
+    {start: 26.5, duration: 0.64, pitch: 60, velocity: 0.29},
+    {start: 26.5, duration: 0.64, pitch: 69, velocity: 0.29},
+    {start: 28, duration: 0.95, pitch: 60, velocity: 0.38},
+    {start: 28, duration: 0.95, pitch: 67, velocity: 0.38},
+    {start: 30.5, duration: 0.64, pitch: 60, velocity: 0.29},
+    {start: 30.5, duration: 0.64, pitch: 67, velocity: 0.29}
+  ]}
+}
+
+prefab vt_string_major {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 0.95, pitch: 60, velocity: 0.46},
+    {start: 0, duration: 0.95, pitch: 69, velocity: 0.46},
+    {start: 2.5, duration: 0.64, pitch: 60, velocity: 0.35},
+    {start: 2.5, duration: 0.64, pitch: 69, velocity: 0.35},
+    {start: 4, duration: 0.95, pitch: 60, velocity: 0.46},
+    {start: 4, duration: 0.95, pitch: 67, velocity: 0.46},
+    {start: 6.5, duration: 0.64, pitch: 60, velocity: 0.35},
+    {start: 6.5, duration: 0.64, pitch: 67, velocity: 0.35},
+    {start: 8, duration: 0.95, pitch: 62, velocity: 0.46},
+    {start: 8, duration: 0.95, pitch: 69, velocity: 0.46},
+    {start: 10.5, duration: 0.64, pitch: 62, velocity: 0.35},
+    {start: 10.5, duration: 0.64, pitch: 69, velocity: 0.35},
+    {start: 12, duration: 0.95, pitch: 58, velocity: 0.46},
+    {start: 12, duration: 0.95, pitch: 65, velocity: 0.46},
+    {start: 14.5, duration: 0.64, pitch: 58, velocity: 0.35},
+    {start: 14.5, duration: 0.64, pitch: 65, velocity: 0.35},
+    {start: 16, duration: 0.95, pitch: 60, velocity: 0.46},
+    {start: 16, duration: 0.95, pitch: 69, velocity: 0.46},
+    {start: 18.5, duration: 0.64, pitch: 60, velocity: 0.35},
+    {start: 18.5, duration: 0.64, pitch: 69, velocity: 0.35},
+    {start: 20, duration: 0.95, pitch: 60, velocity: 0.46},
+    {start: 20, duration: 0.95, pitch: 67, velocity: 0.46},
+    {start: 22.5, duration: 0.64, pitch: 60, velocity: 0.35},
+    {start: 22.5, duration: 0.64, pitch: 67, velocity: 0.35},
+    {start: 24, duration: 0.95, pitch: 62, velocity: 0.46},
+    {start: 24, duration: 0.95, pitch: 69, velocity: 0.46},
+    {start: 26.5, duration: 0.64, pitch: 62, velocity: 0.35},
+    {start: 26.5, duration: 0.64, pitch: 69, velocity: 0.35},
+    {start: 28, duration: 0.95, pitch: 58, velocity: 0.46},
+    {start: 28, duration: 0.95, pitch: 65, velocity: 0.46},
+    {start: 30.5, duration: 0.64, pitch: 58, velocity: 0.35},
+    {start: 30.5, duration: 0.64, pitch: 65, velocity: 0.35}
+  ]}
+}
+
+prefab vt_string_build {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 0.65, pitch: 58, velocity: 0.34},
+    {start: 0, duration: 0.65, pitch: 67, velocity: 0.34},
+    {start: 2, duration: 0.65, pitch: 58, velocity: 0.31},
+    {start: 2, duration: 0.65, pitch: 67, velocity: 0.31},
+    {start: 3, duration: 0.42, pitch: 62, velocity: 0.31},
+    {start: 4, duration: 0.65, pitch: 58, velocity: 0.372},
+    {start: 4, duration: 0.65, pitch: 67, velocity: 0.372},
+    {start: 6, duration: 0.65, pitch: 58, velocity: 0.342},
+    {start: 6, duration: 0.65, pitch: 67, velocity: 0.342},
+    {start: 7, duration: 0.42, pitch: 62, velocity: 0.342},
+    {start: 8, duration: 0.65, pitch: 58, velocity: 0.404},
+    {start: 8, duration: 0.65, pitch: 65, velocity: 0.404},
+    {start: 10, duration: 0.65, pitch: 58, velocity: 0.374},
+    {start: 10, duration: 0.65, pitch: 65, velocity: 0.374},
+    {start: 11, duration: 0.42, pitch: 62, velocity: 0.374},
+    {start: 12, duration: 0.65, pitch: 58, velocity: 0.436},
+    {start: 12, duration: 0.65, pitch: 65, velocity: 0.436},
+    {start: 14, duration: 0.65, pitch: 58, velocity: 0.406},
+    {start: 14, duration: 0.65, pitch: 65, velocity: 0.406},
+    {start: 15, duration: 0.42, pitch: 62, velocity: 0.406},
+    {start: 16, duration: 0.65, pitch: 60, velocity: 0.468},
+    {start: 16, duration: 0.65, pitch: 69, velocity: 0.468},
+    {start: 17.5, duration: 0.65, pitch: 60, velocity: 0.438},
+    {start: 17.5, duration: 0.65, pitch: 69, velocity: 0.438},
+    {start: 18.5, duration: 0.42, pitch: 65, velocity: 0.438},
+    {start: 19.25, duration: 0.42, pitch: 65, velocity: 0.438},
+    {start: 20, duration: 0.65, pitch: 60, velocity: 0.5},
+    {start: 20, duration: 0.65, pitch: 69, velocity: 0.5},
+    {start: 21.5, duration: 0.65, pitch: 60, velocity: 0.47},
+    {start: 21.5, duration: 0.65, pitch: 69, velocity: 0.47},
+    {start: 22.5, duration: 0.42, pitch: 65, velocity: 0.47},
+    {start: 23.25, duration: 0.42, pitch: 65, velocity: 0.47},
+    {start: 24, duration: 0.65, pitch: 60, velocity: 0.532},
+    {start: 24, duration: 0.65, pitch: 67, velocity: 0.532},
+    {start: 25.5, duration: 0.65, pitch: 60, velocity: 0.502},
+    {start: 25.5, duration: 0.65, pitch: 67, velocity: 0.502},
+    {start: 26.5, duration: 0.42, pitch: 64, velocity: 0.502},
+    {start: 27.25, duration: 0.42, pitch: 64, velocity: 0.502},
+    {start: 28, duration: 0.65, pitch: 60, velocity: 0.564},
+    {start: 28, duration: 0.65, pitch: 67, velocity: 0.564},
+    {start: 29.5, duration: 0.65, pitch: 60, velocity: 0.534},
+    {start: 29.5, duration: 0.65, pitch: 67, velocity: 0.534},
+    {start: 30.5, duration: 0.42, pitch: 64, velocity: 0.534}
+  ]}
+}
+
+prefab vt_bass_motor {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 0.72, pitch: 38, velocity: 0.77},
+    {start: 1.5, duration: 0.35, pitch: 38, velocity: 0.57},
+    {start: 2, duration: 0.56, pitch: 38, velocity: 0.7},
+    {start: 3.25, duration: 0.3, pitch: 45, velocity: 0.45},
+    {start: 4, duration: 0.72, pitch: 34, velocity: 0.77},
+    {start: 5.5, duration: 0.35, pitch: 34, velocity: 0.57},
+    {start: 6, duration: 0.56, pitch: 34, velocity: 0.7},
+    {start: 7.25, duration: 0.3, pitch: 41, velocity: 0.45},
+    {start: 8, duration: 0.72, pitch: 41, velocity: 0.77},
+    {start: 9.5, duration: 0.35, pitch: 41, velocity: 0.57},
+    {start: 10, duration: 0.56, pitch: 41, velocity: 0.7},
+    {start: 11.25, duration: 0.3, pitch: 48, velocity: 0.45},
+    {start: 12, duration: 0.72, pitch: 36, velocity: 0.77},
+    {start: 13.5, duration: 0.35, pitch: 36, velocity: 0.57},
+    {start: 14, duration: 0.56, pitch: 36, velocity: 0.7},
+    {start: 15.25, duration: 0.3, pitch: 43, velocity: 0.45},
+    {start: 16, duration: 0.72, pitch: 38, velocity: 0.77},
+    {start: 17.5, duration: 0.35, pitch: 38, velocity: 0.57},
+    {start: 18, duration: 0.56, pitch: 38, velocity: 0.7},
+    {start: 19.25, duration: 0.3, pitch: 45, velocity: 0.45},
+    {start: 20, duration: 0.72, pitch: 34, velocity: 0.77},
+    {start: 21.5, duration: 0.35, pitch: 34, velocity: 0.57},
+    {start: 22, duration: 0.56, pitch: 34, velocity: 0.7},
+    {start: 23.25, duration: 0.3, pitch: 41, velocity: 0.45},
+    {start: 24, duration: 0.72, pitch: 41, velocity: 0.77},
+    {start: 25.5, duration: 0.35, pitch: 41, velocity: 0.57},
+    {start: 26, duration: 0.56, pitch: 41, velocity: 0.7},
+    {start: 27.25, duration: 0.3, pitch: 48, velocity: 0.45},
+    {start: 28, duration: 0.72, pitch: 36, velocity: 0.77},
+    {start: 29.5, duration: 0.35, pitch: 36, velocity: 0.57},
+    {start: 30, duration: 0.56, pitch: 36, velocity: 0.7},
+    {start: 31.25, duration: 0.3, pitch: 43, velocity: 0.45}
+  ]}
+}
+
+prefab vt_bass_drop {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 0.56, pitch: 38, velocity: 0.87},
+    {start: 0.75, duration: 0.28, pitch: 50, velocity: 0.51},
+    {start: 1.5, duration: 0.32, pitch: 38, velocity: 0.64},
+    {start: 2, duration: 0.55, pitch: 38, velocity: 0.84},
+    {start: 3, duration: 0.3, pitch: 45, velocity: 0.57},
+    {start: 3.5, duration: 0.3, pitch: 38, velocity: 0.66},
+    {start: 4, duration: 0.56, pitch: 34, velocity: 0.87},
+    {start: 4.75, duration: 0.28, pitch: 46, velocity: 0.51},
+    {start: 5.5, duration: 0.32, pitch: 34, velocity: 0.64},
+    {start: 6, duration: 0.55, pitch: 34, velocity: 0.84},
+    {start: 7, duration: 0.3, pitch: 41, velocity: 0.57},
+    {start: 7.5, duration: 0.3, pitch: 34, velocity: 0.66},
+    {start: 8, duration: 0.56, pitch: 41, velocity: 0.87},
+    {start: 8.75, duration: 0.28, pitch: 53, velocity: 0.51},
+    {start: 9.5, duration: 0.32, pitch: 41, velocity: 0.64},
+    {start: 10, duration: 0.55, pitch: 41, velocity: 0.84},
+    {start: 11, duration: 0.3, pitch: 48, velocity: 0.57},
+    {start: 11.5, duration: 0.3, pitch: 41, velocity: 0.66},
+    {start: 12, duration: 0.56, pitch: 36, velocity: 0.87},
+    {start: 12.75, duration: 0.28, pitch: 48, velocity: 0.51},
+    {start: 13.5, duration: 0.32, pitch: 36, velocity: 0.64},
+    {start: 14, duration: 0.55, pitch: 36, velocity: 0.84},
+    {start: 15, duration: 0.3, pitch: 43, velocity: 0.57},
+    {start: 15.5, duration: 0.3, pitch: 36, velocity: 0.66},
+    {start: 16, duration: 0.56, pitch: 38, velocity: 0.87},
+    {start: 16.75, duration: 0.28, pitch: 50, velocity: 0.51},
+    {start: 17.5, duration: 0.32, pitch: 38, velocity: 0.64},
+    {start: 18, duration: 0.55, pitch: 38, velocity: 0.84},
+    {start: 19, duration: 0.3, pitch: 45, velocity: 0.57},
+    {start: 19.5, duration: 0.3, pitch: 38, velocity: 0.66},
+    {start: 20, duration: 0.56, pitch: 34, velocity: 0.87},
+    {start: 20.75, duration: 0.28, pitch: 46, velocity: 0.51},
+    {start: 21.5, duration: 0.32, pitch: 34, velocity: 0.64},
+    {start: 22, duration: 0.55, pitch: 34, velocity: 0.84},
+    {start: 23, duration: 0.3, pitch: 41, velocity: 0.57},
+    {start: 23.5, duration: 0.3, pitch: 34, velocity: 0.66},
+    {start: 24, duration: 0.56, pitch: 41, velocity: 0.87},
+    {start: 24.75, duration: 0.28, pitch: 53, velocity: 0.51},
+    {start: 25.5, duration: 0.32, pitch: 41, velocity: 0.64},
+    {start: 26, duration: 0.55, pitch: 41, velocity: 0.84},
+    {start: 27, duration: 0.3, pitch: 48, velocity: 0.57},
+    {start: 27.5, duration: 0.3, pitch: 41, velocity: 0.66},
+    {start: 28, duration: 0.56, pitch: 36, velocity: 0.87},
+    {start: 28.75, duration: 0.28, pitch: 48, velocity: 0.51},
+    {start: 29.5, duration: 0.32, pitch: 36, velocity: 0.64},
+    {start: 30, duration: 0.55, pitch: 36, velocity: 0.84},
+    {start: 31, duration: 0.3, pitch: 43, velocity: 0.57},
+    {start: 31.5, duration: 0.3, pitch: 36, velocity: 0.66}
+  ]}
+}
+
+prefab vt_bass_major {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 0.56, pitch: 41, velocity: 0.87},
+    {start: 0.75, duration: 0.28, pitch: 53, velocity: 0.51},
+    {start: 1.5, duration: 0.32, pitch: 41, velocity: 0.64},
+    {start: 2, duration: 0.55, pitch: 41, velocity: 0.84},
+    {start: 3, duration: 0.3, pitch: 48, velocity: 0.57},
+    {start: 3.5, duration: 0.3, pitch: 41, velocity: 0.66},
+    {start: 4, duration: 0.56, pitch: 36, velocity: 0.87},
+    {start: 4.75, duration: 0.28, pitch: 48, velocity: 0.51},
+    {start: 5.5, duration: 0.32, pitch: 36, velocity: 0.64},
+    {start: 6, duration: 0.55, pitch: 36, velocity: 0.84},
+    {start: 7, duration: 0.3, pitch: 43, velocity: 0.57},
+    {start: 7.5, duration: 0.3, pitch: 36, velocity: 0.66},
+    {start: 8, duration: 0.56, pitch: 38, velocity: 0.87},
+    {start: 8.75, duration: 0.28, pitch: 50, velocity: 0.51},
+    {start: 9.5, duration: 0.32, pitch: 38, velocity: 0.64},
+    {start: 10, duration: 0.55, pitch: 38, velocity: 0.84},
+    {start: 11, duration: 0.3, pitch: 45, velocity: 0.57},
+    {start: 11.5, duration: 0.3, pitch: 38, velocity: 0.66},
+    {start: 12, duration: 0.56, pitch: 34, velocity: 0.87},
+    {start: 12.75, duration: 0.28, pitch: 46, velocity: 0.51},
+    {start: 13.5, duration: 0.32, pitch: 34, velocity: 0.64},
+    {start: 14, duration: 0.55, pitch: 34, velocity: 0.84},
+    {start: 15, duration: 0.3, pitch: 41, velocity: 0.57},
+    {start: 15.5, duration: 0.3, pitch: 34, velocity: 0.66},
+    {start: 16, duration: 0.56, pitch: 41, velocity: 0.87},
+    {start: 16.75, duration: 0.28, pitch: 53, velocity: 0.51},
+    {start: 17.5, duration: 0.32, pitch: 41, velocity: 0.64},
+    {start: 18, duration: 0.55, pitch: 41, velocity: 0.84},
+    {start: 19, duration: 0.3, pitch: 48, velocity: 0.57},
+    {start: 19.5, duration: 0.3, pitch: 41, velocity: 0.66},
+    {start: 20, duration: 0.56, pitch: 36, velocity: 0.87},
+    {start: 20.75, duration: 0.28, pitch: 48, velocity: 0.51},
+    {start: 21.5, duration: 0.32, pitch: 36, velocity: 0.64},
+    {start: 22, duration: 0.55, pitch: 36, velocity: 0.84},
+    {start: 23, duration: 0.3, pitch: 43, velocity: 0.57},
+    {start: 23.5, duration: 0.3, pitch: 36, velocity: 0.66},
+    {start: 24, duration: 0.56, pitch: 38, velocity: 0.87},
+    {start: 24.75, duration: 0.28, pitch: 50, velocity: 0.51},
+    {start: 25.5, duration: 0.32, pitch: 38, velocity: 0.64},
+    {start: 26, duration: 0.55, pitch: 38, velocity: 0.84},
+    {start: 27, duration: 0.3, pitch: 45, velocity: 0.57},
+    {start: 27.5, duration: 0.3, pitch: 38, velocity: 0.66},
+    {start: 28, duration: 0.56, pitch: 34, velocity: 0.87},
+    {start: 28.75, duration: 0.28, pitch: 46, velocity: 0.51},
+    {start: 29.5, duration: 0.32, pitch: 34, velocity: 0.64},
+    {start: 30, duration: 0.55, pitch: 34, velocity: 0.84},
+    {start: 31, duration: 0.3, pitch: 41, velocity: 0.57},
+    {start: 31.5, duration: 0.3, pitch: 34, velocity: 0.66}
+  ]}
+}
+
+prefab vt_sub_drop {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 3.55, pitch: 38, velocity: 0.52},
+    {start: 4, duration: 3.55, pitch: 34, velocity: 0.52},
+    {start: 8, duration: 3.55, pitch: 41, velocity: 0.52},
+    {start: 12, duration: 3.55, pitch: 36, velocity: 0.52},
+    {start: 16, duration: 3.55, pitch: 38, velocity: 0.52},
+    {start: 20, duration: 3.55, pitch: 34, velocity: 0.52},
+    {start: 24, duration: 3.55, pitch: 41, velocity: 0.52},
+    {start: 28, duration: 3.55, pitch: 36, velocity: 0.52}
+  ]}
+}
+
+prefab vt_sub_major {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 3.55, pitch: 41, velocity: 0.52},
+    {start: 4, duration: 3.55, pitch: 36, velocity: 0.52},
+    {start: 8, duration: 3.55, pitch: 38, velocity: 0.52},
+    {start: 12, duration: 3.55, pitch: 34, velocity: 0.52},
+    {start: 16, duration: 3.55, pitch: 41, velocity: 0.52},
+    {start: 20, duration: 3.55, pitch: 36, velocity: 0.52},
+    {start: 24, duration: 3.55, pitch: 38, velocity: 0.52},
+    {start: 28, duration: 3.55, pitch: 34, velocity: 0.52}
+  ]}
+}
+
+prefab vt_arp_racing {
+  NoteClip: {length: 32, notes: [
+    {start: 0.5, duration: 0.3, pitch: 62, velocity: 0.35},
+    {start: 1.5, duration: 0.3, pitch: 69, velocity: 0.35},
+    {start: 2.5, duration: 0.3, pitch: 65, velocity: 0.29},
+    {start: 3.5, duration: 0.3, pitch: 69, velocity: 0.35},
+    {start: 4.5, duration: 0.3, pitch: 58, velocity: 0.35},
+    {start: 5.5, duration: 0.3, pitch: 65, velocity: 0.35},
+    {start: 6.5, duration: 0.3, pitch: 62, velocity: 0.29},
+    {start: 7.5, duration: 0.3, pitch: 65, velocity: 0.35},
+    {start: 8.5, duration: 0.3, pitch: 60, velocity: 0.35},
+    {start: 9.5, duration: 0.3, pitch: 67, velocity: 0.35},
+    {start: 10.5, duration: 0.3, pitch: 65, velocity: 0.29},
+    {start: 11.5, duration: 0.3, pitch: 67, velocity: 0.35},
+    {start: 12.5, duration: 0.3, pitch: 60, velocity: 0.35},
+    {start: 13.5, duration: 0.3, pitch: 67, velocity: 0.35},
+    {start: 14.5, duration: 0.3, pitch: 64, velocity: 0.29},
+    {start: 15.5, duration: 0.3, pitch: 67, velocity: 0.35},
+    {start: 16.5, duration: 0.3, pitch: 62, velocity: 0.35},
+    {start: 17.5, duration: 0.3, pitch: 69, velocity: 0.35},
+    {start: 18.5, duration: 0.3, pitch: 65, velocity: 0.29},
+    {start: 19.5, duration: 0.3, pitch: 69, velocity: 0.35},
+    {start: 20.5, duration: 0.3, pitch: 58, velocity: 0.35},
+    {start: 21.5, duration: 0.3, pitch: 65, velocity: 0.35},
+    {start: 22.5, duration: 0.3, pitch: 62, velocity: 0.29},
+    {start: 23.5, duration: 0.3, pitch: 65, velocity: 0.35},
+    {start: 24.5, duration: 0.3, pitch: 60, velocity: 0.35},
+    {start: 25.5, duration: 0.3, pitch: 67, velocity: 0.35},
+    {start: 26.5, duration: 0.3, pitch: 65, velocity: 0.29},
+    {start: 27.5, duration: 0.3, pitch: 67, velocity: 0.35},
+    {start: 28.5, duration: 0.3, pitch: 60, velocity: 0.35},
+    {start: 29.5, duration: 0.3, pitch: 67, velocity: 0.35},
+    {start: 30.5, duration: 0.3, pitch: 64, velocity: 0.29},
+    {start: 31.5, duration: 0.3, pitch: 67, velocity: 0.35}
+  ]}
+}
+
+prefab vt_arp_sunrise {
+  NoteClip: {length: 32, notes: [
+    {start: 0.5, duration: 0.3, pitch: 60, velocity: 0.35},
+    {start: 1.5, duration: 0.3, pitch: 67, velocity: 0.35},
+    {start: 2.5, duration: 0.3, pitch: 65, velocity: 0.29},
+    {start: 3.5, duration: 0.3, pitch: 67, velocity: 0.35},
+    {start: 4.5, duration: 0.3, pitch: 60, velocity: 0.35},
+    {start: 5.5, duration: 0.3, pitch: 67, velocity: 0.35},
+    {start: 6.5, duration: 0.3, pitch: 64, velocity: 0.29},
+    {start: 7.5, duration: 0.3, pitch: 67, velocity: 0.35},
+    {start: 8.5, duration: 0.3, pitch: 62, velocity: 0.35},
+    {start: 9.5, duration: 0.3, pitch: 69, velocity: 0.35},
+    {start: 10.5, duration: 0.3, pitch: 65, velocity: 0.29},
+    {start: 11.5, duration: 0.3, pitch: 69, velocity: 0.35},
+    {start: 12.5, duration: 0.3, pitch: 58, velocity: 0.35},
+    {start: 13.5, duration: 0.3, pitch: 65, velocity: 0.35},
+    {start: 14.5, duration: 0.3, pitch: 62, velocity: 0.29},
+    {start: 15.5, duration: 0.3, pitch: 65, velocity: 0.35},
+    {start: 16.5, duration: 0.3, pitch: 60, velocity: 0.35},
+    {start: 17.5, duration: 0.3, pitch: 67, velocity: 0.35},
+    {start: 18.5, duration: 0.3, pitch: 65, velocity: 0.29},
+    {start: 19.5, duration: 0.3, pitch: 67, velocity: 0.35},
+    {start: 20.5, duration: 0.3, pitch: 60, velocity: 0.35},
+    {start: 21.5, duration: 0.3, pitch: 67, velocity: 0.35},
+    {start: 22.5, duration: 0.3, pitch: 64, velocity: 0.29},
+    {start: 23.5, duration: 0.3, pitch: 67, velocity: 0.35},
+    {start: 24.5, duration: 0.3, pitch: 62, velocity: 0.35},
+    {start: 25.5, duration: 0.3, pitch: 69, velocity: 0.35},
+    {start: 26.5, duration: 0.3, pitch: 65, velocity: 0.29},
+    {start: 27.5, duration: 0.3, pitch: 69, velocity: 0.35},
+    {start: 28.5, duration: 0.3, pitch: 58, velocity: 0.35},
+    {start: 29.5, duration: 0.3, pitch: 65, velocity: 0.35},
+    {start: 30.5, duration: 0.3, pitch: 62, velocity: 0.29},
+    {start: 31.5, duration: 0.3, pitch: 65, velocity: 0.35}
+  ]}
+}
+
+prefab vt_theme {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 1.13, pitch: 69, velocity: 0.735},
+    {start: 1.5, duration: 0.34, pitch: 72, velocity: 0.645},
+    {start: 2, duration: 0.82, pitch: 74, velocity: 0.68},
+    {start: 3.25, duration: 0.42, pitch: 72, velocity: 0.68},
+    {start: 4, duration: 1.13, pitch: 70, velocity: 0.735},
+    {start: 5.5, duration: 0.34, pitch: 74, velocity: 0.645},
+    {start: 6, duration: 0.82, pitch: 77, velocity: 0.68},
+    {start: 7.25, duration: 0.42, pitch: 74, velocity: 0.68},
+    {start: 8, duration: 1.13, pitch: 69, velocity: 0.735},
+    {start: 9.5, duration: 0.34, pitch: 72, velocity: 0.645},
+    {start: 10, duration: 0.82, pitch: 77, velocity: 0.68},
+    {start: 11.25, duration: 0.42, pitch: 72, velocity: 0.68},
+    {start: 12, duration: 1.13, pitch: 67, velocity: 0.735},
+    {start: 13.5, duration: 0.34, pitch: 72, velocity: 0.645},
+    {start: 14, duration: 0.82, pitch: 76, velocity: 0.68},
+    {start: 15.25, duration: 0.42, pitch: 72, velocity: 0.68},
+    {start: 16, duration: 1.13, pitch: 69, velocity: 0.735},
+    {start: 17.5, duration: 0.34, pitch: 72, velocity: 0.645},
+    {start: 18, duration: 0.82, pitch: 74, velocity: 0.68},
+    {start: 19.25, duration: 0.42, pitch: 72, velocity: 0.68},
+    {start: 20, duration: 1.13, pitch: 70, velocity: 0.735},
+    {start: 21.5, duration: 0.34, pitch: 74, velocity: 0.645},
+    {start: 22, duration: 0.82, pitch: 77, velocity: 0.68},
+    {start: 23.25, duration: 0.42, pitch: 74, velocity: 0.68},
+    {start: 24, duration: 1.13, pitch: 69, velocity: 0.735},
+    {start: 25.5, duration: 0.34, pitch: 72, velocity: 0.645},
+    {start: 26, duration: 0.82, pitch: 77, velocity: 0.68},
+    {start: 27.25, duration: 0.42, pitch: 72, velocity: 0.68},
+    {start: 28, duration: 1.13, pitch: 67, velocity: 0.735},
+    {start: 29.5, duration: 0.34, pitch: 72, velocity: 0.645},
+    {start: 30, duration: 0.82, pitch: 76, velocity: 0.68},
+    {start: 31.25, duration: 0.42, pitch: 72, velocity: 0.68}
+  ]}
+}
+
+prefab vt_theme_major {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 1.13, pitch: 69, velocity: 0.815},
+    {start: 1.5, duration: 0.34, pitch: 72, velocity: 0.725},
+    {start: 2, duration: 0.82, pitch: 77, velocity: 0.76},
+    {start: 3.25, duration: 0.42, pitch: 72, velocity: 0.76},
+    {start: 4, duration: 1.13, pitch: 67, velocity: 0.815},
+    {start: 5.5, duration: 0.34, pitch: 72, velocity: 0.725},
+    {start: 6, duration: 0.82, pitch: 76, velocity: 0.76},
+    {start: 7.25, duration: 0.42, pitch: 72, velocity: 0.76},
+    {start: 8, duration: 1.13, pitch: 69, velocity: 0.815},
+    {start: 9.5, duration: 0.34, pitch: 72, velocity: 0.725},
+    {start: 10, duration: 0.82, pitch: 74, velocity: 0.76},
+    {start: 11.25, duration: 0.42, pitch: 72, velocity: 0.76},
+    {start: 12, duration: 1.13, pitch: 70, velocity: 0.815},
+    {start: 13.5, duration: 0.34, pitch: 74, velocity: 0.725},
+    {start: 14, duration: 0.82, pitch: 77, velocity: 0.76},
+    {start: 15.25, duration: 0.42, pitch: 74, velocity: 0.76},
+    {start: 16, duration: 1.13, pitch: 69, velocity: 0.815},
+    {start: 17.5, duration: 0.34, pitch: 72, velocity: 0.725},
+    {start: 18, duration: 0.82, pitch: 77, velocity: 0.76},
+    {start: 19.25, duration: 0.42, pitch: 72, velocity: 0.76},
+    {start: 20, duration: 1.13, pitch: 67, velocity: 0.815},
+    {start: 21.5, duration: 0.34, pitch: 72, velocity: 0.725},
+    {start: 22, duration: 0.82, pitch: 76, velocity: 0.76},
+    {start: 23.25, duration: 0.42, pitch: 72, velocity: 0.76},
+    {start: 24, duration: 1.13, pitch: 69, velocity: 0.815},
+    {start: 25.5, duration: 0.34, pitch: 72, velocity: 0.725},
+    {start: 26, duration: 0.82, pitch: 74, velocity: 0.76},
+    {start: 27.25, duration: 0.42, pitch: 72, velocity: 0.76},
+    {start: 28, duration: 1.13, pitch: 70, velocity: 0.815},
+    {start: 29.5, duration: 0.34, pitch: 74, velocity: 0.725},
+    {start: 30, duration: 0.82, pitch: 77, velocity: 0.76},
+    {start: 31.25, duration: 0.42, pitch: 74, velocity: 0.76}
+  ]}
+}
+
+prefab vt_theme_major_harmony {
+  NoteClip: {length: 32, notes: [
+    {start: 0.04, duration: 1.7, pitch: 65, velocity: 0.4},
+    {start: 4.04, duration: 1.7, pitch: 64, velocity: 0.4},
+    {start: 6.04, duration: 0.72, pitch: 67, velocity: 0.31},
+    {start: 8.04, duration: 1.7, pitch: 65, velocity: 0.4},
+    {start: 12.04, duration: 1.7, pitch: 62, velocity: 0.4},
+    {start: 14.04, duration: 0.72, pitch: 65, velocity: 0.31},
+    {start: 16.04, duration: 1.7, pitch: 65, velocity: 0.4},
+    {start: 20.04, duration: 1.7, pitch: 64, velocity: 0.4},
+    {start: 22.04, duration: 0.72, pitch: 67, velocity: 0.31},
+    {start: 24.04, duration: 1.7, pitch: 65, velocity: 0.4},
+    {start: 28.04, duration: 1.7, pitch: 62, velocity: 0.4},
+    {start: 30.04, duration: 0.72, pitch: 65, velocity: 0.31}
+  ]}
+}
+
+prefab vt_theme_answer {
+  NoteClip: {length: 16, notes: [
+    {start: 0, duration: 1.13, pitch: 69, velocity: 0.655},
+    {start: 1.5, duration: 0.34, pitch: 72, velocity: 0.565},
+    {start: 2, duration: 0.82, pitch: 74, velocity: 0.6},
+    {start: 3.25, duration: 0.42, pitch: 72, velocity: 0.6},
+    {start: 4, duration: 1.13, pitch: 70, velocity: 0.655},
+    {start: 5.5, duration: 0.34, pitch: 74, velocity: 0.565},
+    {start: 6, duration: 0.82, pitch: 77, velocity: 0.6},
+    {start: 7.25, duration: 0.42, pitch: 74, velocity: 0.6},
+    {start: 8, duration: 1.13, pitch: 69, velocity: 0.655},
+    {start: 9.5, duration: 0.34, pitch: 72, velocity: 0.565},
+    {start: 10, duration: 0.82, pitch: 77, velocity: 0.6},
+    {start: 11.25, duration: 0.42, pitch: 72, velocity: 0.6},
+    {start: 12, duration: 1.13, pitch: 67, velocity: 0.655},
+    {start: 13.5, duration: 0.34, pitch: 72, velocity: 0.565},
+    {start: 14, duration: 0.82, pitch: 76, velocity: 0.6},
+    {start: 15.25, duration: 0.42, pitch: 72, velocity: 0.6}
+  ]}
+}
+
+prefab vt_intro_signal {
+  NoteClip: {length: 16, notes: [
+    {start: 0, duration: 1.25, pitch: 69, velocity: 0.51},
+    {start: 2, duration: 1.12, pitch: 77, velocity: 0.46},
+    {start: 4, duration: 1.15, pitch: 67, velocity: 0.48},
+    {start: 6, duration: 1.3, pitch: 72, velocity: 0.47},
+    {start: 9, duration: 1.45, pitch: 69, velocity: 0.51},
+    {start: 12, duration: 1.7, pitch: 70, velocity: 0.5}
+  ]}
+}
+
+prefab vt_vacuum_melody {
+  NoteClip: {length: 32, notes: [
+    {start: 0.5, duration: 1.5, pitch: 69, velocity: 0.47},
+    {start: 2.75, duration: 0.65, pitch: 74, velocity: 0.42},
+    {start: 5.5, duration: 1.2, pitch: 74, velocity: 0.44},
+    {start: 8.5, duration: 1.5, pitch: 69, velocity: 0.47},
+    {start: 10.75, duration: 0.65, pitch: 77, velocity: 0.42},
+    {start: 13.5, duration: 1.2, pitch: 72, velocity: 0.44},
+    {start: 16.5, duration: 1.5, pitch: 69, velocity: 0.47},
+    {start: 18.75, duration: 0.65, pitch: 74, velocity: 0.42},
+    {start: 21.5, duration: 1.2, pitch: 74, velocity: 0.44},
+    {start: 24.5, duration: 1.5, pitch: 69, velocity: 0.47},
+    {start: 26.75, duration: 0.65, pitch: 77, velocity: 0.42},
+    {start: 29.5, duration: 1.2, pitch: 72, velocity: 0.44}
+  ]}
+}
+
+prefab vt_rising_call {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 1.15, pitch: 69, velocity: 0.49},
+    {start: 2, duration: 0.67, pitch: 74, velocity: 0.45},
+    {start: 4, duration: 1.15, pitch: 70, velocity: 0.522},
+    {start: 6, duration: 0.67, pitch: 77, velocity: 0.482},
+    {start: 8, duration: 1.15, pitch: 69, velocity: 0.554},
+    {start: 10, duration: 0.67, pitch: 77, velocity: 0.514},
+    {start: 12, duration: 1.15, pitch: 67, velocity: 0.586},
+    {start: 14, duration: 0.67, pitch: 76, velocity: 0.546},
+    {start: 16, duration: 1, pitch: 69, velocity: 0.618},
+    {start: 17.5, duration: 0.34, pitch: 72, velocity: 0.578},
+    {start: 18, duration: 0.78, pitch: 74, velocity: 0.578},
+    {start: 19.25, duration: 0.33, pitch: 72, velocity: 0.578},
+    {start: 20, duration: 1, pitch: 70, velocity: 0.65},
+    {start: 21.5, duration: 0.34, pitch: 74, velocity: 0.61},
+    {start: 22, duration: 0.78, pitch: 77, velocity: 0.61},
+    {start: 23.25, duration: 0.33, pitch: 74, velocity: 0.61},
+    {start: 24, duration: 1, pitch: 69, velocity: 0.682},
+    {start: 25.5, duration: 0.34, pitch: 72, velocity: 0.642},
+    {start: 26, duration: 0.78, pitch: 77, velocity: 0.642},
+    {start: 27.25, duration: 0.33, pitch: 72, velocity: 0.642},
+    {start: 28, duration: 1, pitch: 67, velocity: 0.714},
+    {start: 29.5, duration: 0.34, pitch: 72, velocity: 0.674},
+    {start: 30, duration: 0.78, pitch: 76, velocity: 0.674},
+    {start: 31.25, duration: 0.33, pitch: 72, velocity: 0.674}
+  ]}
+}
+
+prefab vt_theme_harmony {
+  NoteClip: {length: 32, notes: [
+    {start: 0.04, duration: 1.7, pitch: 65, velocity: 0.4},
+    {start: 4.04, duration: 1.7, pitch: 62, velocity: 0.4},
+    {start: 6.04, duration: 0.72, pitch: 65, velocity: 0.31},
+    {start: 8.04, duration: 1.7, pitch: 65, velocity: 0.4},
+    {start: 12.04, duration: 1.7, pitch: 64, velocity: 0.4},
+    {start: 14.04, duration: 0.72, pitch: 67, velocity: 0.31},
+    {start: 16.04, duration: 1.7, pitch: 65, velocity: 0.4},
+    {start: 20.04, duration: 1.7, pitch: 62, velocity: 0.4},
+    {start: 22.04, duration: 0.72, pitch: 65, velocity: 0.31},
+    {start: 24.04, duration: 1.7, pitch: 65, velocity: 0.4},
+    {start: 28.04, duration: 1.7, pitch: 64, velocity: 0.4},
+    {start: 30.04, duration: 0.72, pitch: 67, velocity: 0.31}
+  ]}
+}
+
+prefab vt_brass_hits {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 0.62, pitch: 62, velocity: 0.39},
+    {start: 0, duration: 0.62, pitch: 65, velocity: 0.39},
+    {start: 0, duration: 0.62, pitch: 69, velocity: 0.39},
+    {start: 4, duration: 0.62, pitch: 58, velocity: 0.39},
+    {start: 4, duration: 0.62, pitch: 62, velocity: 0.39},
+    {start: 4, duration: 0.62, pitch: 65, velocity: 0.39},
+    {start: 6.75, duration: 0.4, pitch: 58, velocity: 0.3},
+    {start: 6.75, duration: 0.4, pitch: 65, velocity: 0.3},
+    {start: 8, duration: 0.62, pitch: 60, velocity: 0.39},
+    {start: 8, duration: 0.62, pitch: 65, velocity: 0.39},
+    {start: 8, duration: 0.62, pitch: 69, velocity: 0.39},
+    {start: 12, duration: 0.62, pitch: 60, velocity: 0.39},
+    {start: 12, duration: 0.62, pitch: 64, velocity: 0.39},
+    {start: 12, duration: 0.62, pitch: 67, velocity: 0.39},
+    {start: 14.75, duration: 0.4, pitch: 60, velocity: 0.3},
+    {start: 14.75, duration: 0.4, pitch: 67, velocity: 0.3},
+    {start: 16, duration: 0.62, pitch: 62, velocity: 0.39},
+    {start: 16, duration: 0.62, pitch: 65, velocity: 0.39},
+    {start: 16, duration: 0.62, pitch: 69, velocity: 0.39},
+    {start: 20, duration: 0.62, pitch: 58, velocity: 0.39},
+    {start: 20, duration: 0.62, pitch: 62, velocity: 0.39},
+    {start: 20, duration: 0.62, pitch: 65, velocity: 0.39},
+    {start: 22.75, duration: 0.4, pitch: 58, velocity: 0.3},
+    {start: 22.75, duration: 0.4, pitch: 65, velocity: 0.3},
+    {start: 24, duration: 0.62, pitch: 60, velocity: 0.39},
+    {start: 24, duration: 0.62, pitch: 65, velocity: 0.39},
+    {start: 24, duration: 0.62, pitch: 69, velocity: 0.39},
+    {start: 28, duration: 0.62, pitch: 60, velocity: 0.39},
+    {start: 28, duration: 0.62, pitch: 64, velocity: 0.39},
+    {start: 28, duration: 0.62, pitch: 67, velocity: 0.39},
+    {start: 30.75, duration: 0.4, pitch: 60, velocity: 0.3},
+    {start: 30.75, duration: 0.4, pitch: 67, velocity: 0.3}
+  ]}
+}
+
+prefab vt_brass_major {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 0.62, pitch: 60, velocity: 0.46},
+    {start: 0, duration: 0.62, pitch: 65, velocity: 0.46},
+    {start: 0, duration: 0.62, pitch: 69, velocity: 0.46},
+    {start: 4, duration: 0.62, pitch: 60, velocity: 0.46},
+    {start: 4, duration: 0.62, pitch: 64, velocity: 0.46},
+    {start: 4, duration: 0.62, pitch: 67, velocity: 0.46},
+    {start: 6.75, duration: 0.4, pitch: 60, velocity: 0.3},
+    {start: 6.75, duration: 0.4, pitch: 67, velocity: 0.3},
+    {start: 8, duration: 0.62, pitch: 62, velocity: 0.46},
+    {start: 8, duration: 0.62, pitch: 65, velocity: 0.46},
+    {start: 8, duration: 0.62, pitch: 69, velocity: 0.46},
+    {start: 12, duration: 0.62, pitch: 58, velocity: 0.46},
+    {start: 12, duration: 0.62, pitch: 62, velocity: 0.46},
+    {start: 12, duration: 0.62, pitch: 65, velocity: 0.46},
+    {start: 14.75, duration: 0.4, pitch: 58, velocity: 0.3},
+    {start: 14.75, duration: 0.4, pitch: 65, velocity: 0.3},
+    {start: 16, duration: 0.62, pitch: 60, velocity: 0.46},
+    {start: 16, duration: 0.62, pitch: 65, velocity: 0.46},
+    {start: 16, duration: 0.62, pitch: 69, velocity: 0.46},
+    {start: 20, duration: 0.62, pitch: 60, velocity: 0.46},
+    {start: 20, duration: 0.62, pitch: 64, velocity: 0.46},
+    {start: 20, duration: 0.62, pitch: 67, velocity: 0.46},
+    {start: 22.75, duration: 0.4, pitch: 60, velocity: 0.3},
+    {start: 22.75, duration: 0.4, pitch: 67, velocity: 0.3},
+    {start: 24, duration: 0.62, pitch: 62, velocity: 0.46},
+    {start: 24, duration: 0.62, pitch: 65, velocity: 0.46},
+    {start: 24, duration: 0.62, pitch: 69, velocity: 0.46},
+    {start: 28, duration: 0.62, pitch: 58, velocity: 0.46},
+    {start: 28, duration: 0.62, pitch: 62, velocity: 0.46},
+    {start: 28, duration: 0.62, pitch: 65, velocity: 0.46},
+    {start: 30.75, duration: 0.4, pitch: 58, velocity: 0.3},
+    {start: 30.75, duration: 0.4, pitch: 65, velocity: 0.3}
+  ]}
+}
+
+prefab vt_choir {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 3.85, pitch: 62, velocity: 0.34},
+    {start: 0, duration: 3.85, pitch: 65, velocity: 0.34},
+    {start: 0, duration: 3.85, pitch: 69, velocity: 0.34},
+    {start: 4, duration: 3.85, pitch: 58, velocity: 0.34},
+    {start: 4, duration: 3.85, pitch: 62, velocity: 0.34},
+    {start: 4, duration: 3.85, pitch: 65, velocity: 0.34},
+    {start: 8, duration: 3.85, pitch: 60, velocity: 0.34},
+    {start: 8, duration: 3.85, pitch: 65, velocity: 0.34},
+    {start: 8, duration: 3.85, pitch: 69, velocity: 0.34},
+    {start: 12, duration: 3.85, pitch: 60, velocity: 0.34},
+    {start: 12, duration: 3.85, pitch: 64, velocity: 0.34},
+    {start: 12, duration: 3.85, pitch: 67, velocity: 0.34},
+    {start: 16, duration: 3.85, pitch: 62, velocity: 0.34},
+    {start: 16, duration: 3.85, pitch: 65, velocity: 0.34},
+    {start: 16, duration: 3.85, pitch: 69, velocity: 0.34},
+    {start: 20, duration: 3.85, pitch: 58, velocity: 0.34},
+    {start: 20, duration: 3.85, pitch: 62, velocity: 0.34},
+    {start: 20, duration: 3.85, pitch: 65, velocity: 0.34},
+    {start: 24, duration: 3.85, pitch: 60, velocity: 0.34},
+    {start: 24, duration: 3.85, pitch: 65, velocity: 0.34},
+    {start: 24, duration: 3.85, pitch: 69, velocity: 0.34},
+    {start: 28, duration: 3.85, pitch: 60, velocity: 0.34},
+    {start: 28, duration: 3.85, pitch: 64, velocity: 0.34},
+    {start: 28, duration: 3.85, pitch: 67, velocity: 0.34}
+  ]}
+}
+
+prefab vt_choir_major {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 3.85, pitch: 60, velocity: 0.34},
+    {start: 0, duration: 3.85, pitch: 65, velocity: 0.34},
+    {start: 0, duration: 3.85, pitch: 69, velocity: 0.34},
+    {start: 4, duration: 3.85, pitch: 60, velocity: 0.34},
+    {start: 4, duration: 3.85, pitch: 64, velocity: 0.34},
+    {start: 4, duration: 3.85, pitch: 67, velocity: 0.34},
+    {start: 8, duration: 3.85, pitch: 62, velocity: 0.34},
+    {start: 8, duration: 3.85, pitch: 65, velocity: 0.34},
+    {start: 8, duration: 3.85, pitch: 69, velocity: 0.34},
+    {start: 12, duration: 3.85, pitch: 58, velocity: 0.34},
+    {start: 12, duration: 3.85, pitch: 62, velocity: 0.34},
+    {start: 12, duration: 3.85, pitch: 65, velocity: 0.34},
+    {start: 16, duration: 3.85, pitch: 60, velocity: 0.34},
+    {start: 16, duration: 3.85, pitch: 65, velocity: 0.34},
+    {start: 16, duration: 3.85, pitch: 69, velocity: 0.34},
+    {start: 20, duration: 3.85, pitch: 60, velocity: 0.34},
+    {start: 20, duration: 3.85, pitch: 64, velocity: 0.34},
+    {start: 20, duration: 3.85, pitch: 67, velocity: 0.34},
+    {start: 24, duration: 3.85, pitch: 62, velocity: 0.34},
+    {start: 24, duration: 3.85, pitch: 65, velocity: 0.34},
+    {start: 24, duration: 3.85, pitch: 69, velocity: 0.34},
+    {start: 28, duration: 3.85, pitch: 58, velocity: 0.34},
+    {start: 28, duration: 3.85, pitch: 62, velocity: 0.34},
+    {start: 28, duration: 3.85, pitch: 65, velocity: 0.34}
+  ]}
+}
+
+prefab vt_bell_reply {
+  NoteClip: {length: 32, notes: [
+    {start: 7, duration: 0.42, pitch: 74, velocity: 0.43},
+    {start: 15, duration: 0.42, pitch: 76, velocity: 0.43},
+    {start: 23, duration: 0.42, pitch: 74, velocity: 0.43},
+    {start: 31, duration: 0.42, pitch: 76, velocity: 0.43}
+  ]}
+}
+
+prefab vt_kick_heartbeat {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 0.14, pitch: 36, velocity: 0.82},
+    {start: 2, duration: 0.14, pitch: 36, velocity: 0.73},
+    {start: 4, duration: 0.14, pitch: 36, velocity: 0.82},
+    {start: 6, duration: 0.14, pitch: 36, velocity: 0.73},
+    {start: 8, duration: 0.14, pitch: 36, velocity: 0.82},
+    {start: 10, duration: 0.14, pitch: 36, velocity: 0.73},
+    {start: 12, duration: 0.14, pitch: 36, velocity: 0.82},
+    {start: 14, duration: 0.14, pitch: 36, velocity: 0.73},
+    {start: 16, duration: 0.14, pitch: 36, velocity: 0.82},
+    {start: 18, duration: 0.14, pitch: 36, velocity: 0.73},
+    {start: 20, duration: 0.14, pitch: 36, velocity: 0.82},
+    {start: 22, duration: 0.14, pitch: 36, velocity: 0.73},
+    {start: 24, duration: 0.14, pitch: 36, velocity: 0.82},
+    {start: 26, duration: 0.14, pitch: 36, velocity: 0.73},
+    {start: 28, duration: 0.14, pitch: 36, velocity: 0.82},
+    {start: 30, duration: 0.14, pitch: 36, velocity: 0.73}
+  ]}
+}
+
+prefab vt_kick_drive {
+  NoteClip: {length: 16, notes: [
+    {start: 0, duration: 0.15, pitch: 36, velocity: 0.88},
+    {start: 1, duration: 0.15, pitch: 36, velocity: 0.72},
+    {start: 2, duration: 0.15, pitch: 36, velocity: 0.77},
+    {start: 3, duration: 0.15, pitch: 36, velocity: 0.72},
+    {start: 3.75, duration: 0.1, pitch: 36, velocity: 0.49},
+    {start: 4, duration: 0.15, pitch: 36, velocity: 0.88},
+    {start: 5, duration: 0.15, pitch: 36, velocity: 0.72},
+    {start: 6, duration: 0.15, pitch: 36, velocity: 0.77},
+    {start: 6.75, duration: 0.1, pitch: 36, velocity: 0.49},
+    {start: 7, duration: 0.15, pitch: 36, velocity: 0.72},
+    {start: 8, duration: 0.15, pitch: 36, velocity: 0.88},
+    {start: 9, duration: 0.15, pitch: 36, velocity: 0.72},
+    {start: 9.75, duration: 0.1, pitch: 36, velocity: 0.49},
+    {start: 10, duration: 0.15, pitch: 36, velocity: 0.77},
+    {start: 11, duration: 0.15, pitch: 36, velocity: 0.72},
+    {start: 11.5, duration: 0.1, pitch: 36, velocity: 0.54},
+    {start: 12, duration: 0.15, pitch: 36, velocity: 0.88},
+    {start: 13, duration: 0.15, pitch: 36, velocity: 0.72},
+    {start: 14, duration: 0.15, pitch: 36, velocity: 0.77},
+    {start: 15, duration: 0.15, pitch: 36, velocity: 0.72},
+    {start: 15.5, duration: 0.1, pitch: 36, velocity: 0.49},
+    {start: 15.75, duration: 0.1, pitch: 36, velocity: 0.54}
+  ]}
+}
+
+prefab vt_kick_drop {
+  NoteClip: {length: 16, notes: [
+    {start: 0, duration: 0.15, pitch: 36, velocity: 0.95},
+    {start: 1, duration: 0.15, pitch: 36, velocity: 0.79},
+    {start: 2, duration: 0.15, pitch: 36, velocity: 0.84},
+    {start: 3, duration: 0.15, pitch: 36, velocity: 0.79},
+    {start: 3.75, duration: 0.1, pitch: 36, velocity: 0.59},
+    {start: 4, duration: 0.15, pitch: 36, velocity: 0.95},
+    {start: 4.75, duration: 0.1, pitch: 36, velocity: 0.58},
+    {start: 5, duration: 0.15, pitch: 36, velocity: 0.79},
+    {start: 6, duration: 0.15, pitch: 36, velocity: 0.84},
+    {start: 6.75, duration: 0.1, pitch: 36, velocity: 0.59},
+    {start: 7, duration: 0.15, pitch: 36, velocity: 0.79},
+    {start: 8, duration: 0.15, pitch: 36, velocity: 0.95},
+    {start: 9, duration: 0.15, pitch: 36, velocity: 0.79},
+    {start: 9.75, duration: 0.1, pitch: 36, velocity: 0.59},
+    {start: 10, duration: 0.15, pitch: 36, velocity: 0.84},
+    {start: 11, duration: 0.15, pitch: 36, velocity: 0.79},
+    {start: 11.5, duration: 0.1, pitch: 36, velocity: 0.64},
+    {start: 12, duration: 0.15, pitch: 36, velocity: 0.95},
+    {start: 12.75, duration: 0.1, pitch: 36, velocity: 0.58},
+    {start: 13, duration: 0.15, pitch: 36, velocity: 0.79},
+    {start: 14, duration: 0.15, pitch: 36, velocity: 0.84},
+    {start: 15, duration: 0.15, pitch: 36, velocity: 0.79},
+    {start: 15.5, duration: 0.1, pitch: 36, velocity: 0.59},
+    {start: 15.75, duration: 0.1, pitch: 36, velocity: 0.64}
+  ]}
+}
+
+prefab vt_snare_backbeat {
+  NoteClip: {length: 16, notes: [
+    {start: 0.75, duration: 0.11, pitch: 50, velocity: 0.22},
+    {start: 1, duration: 0.13, pitch: 50, velocity: 0.88},
+    {start: 1.75, duration: 0.1, pitch: 50, velocity: 0.28},
+    {start: 3, duration: 0.13, pitch: 50, velocity: 0.94},
+    {start: 4.75, duration: 0.11, pitch: 50, velocity: 0.22},
+    {start: 5, duration: 0.13, pitch: 50, velocity: 0.88},
+    {start: 7, duration: 0.13, pitch: 50, velocity: 0.94},
+    {start: 7.5, duration: 0.1, pitch: 50, velocity: 0.26},
+    {start: 8.75, duration: 0.11, pitch: 50, velocity: 0.22},
+    {start: 9, duration: 0.13, pitch: 50, velocity: 0.88},
+    {start: 9.75, duration: 0.1, pitch: 50, velocity: 0.28},
+    {start: 11, duration: 0.13, pitch: 50, velocity: 0.94},
+    {start: 12.75, duration: 0.11, pitch: 50, velocity: 0.22},
+    {start: 13, duration: 0.13, pitch: 50, velocity: 0.88},
+    {start: 15, duration: 0.13, pitch: 50, velocity: 0.94},
+    {start: 15.5, duration: 0.1, pitch: 50, velocity: 0.26}
+  ]}
+}
+
+prefab vt_snare_explosive {
+  NoteClip: {length: 16, notes: [
+    {start: 0.75, duration: 0.11, pitch: 50, velocity: 0.27},
+    {start: 1, duration: 0.13, pitch: 50, velocity: 0.92},
+    {start: 1.75, duration: 0.1, pitch: 50, velocity: 0.33},
+    {start: 3, duration: 0.13, pitch: 50, velocity: 0.99},
+    {start: 4.75, duration: 0.11, pitch: 50, velocity: 0.27},
+    {start: 5, duration: 0.13, pitch: 50, velocity: 0.92},
+    {start: 7, duration: 0.13, pitch: 50, velocity: 0.99},
+    {start: 7.5, duration: 0.1, pitch: 50, velocity: 0.35},
+    {start: 8.75, duration: 0.11, pitch: 50, velocity: 0.27},
+    {start: 9, duration: 0.13, pitch: 50, velocity: 0.92},
+    {start: 9.75, duration: 0.1, pitch: 50, velocity: 0.33},
+    {start: 11, duration: 0.13, pitch: 50, velocity: 0.99},
+    {start: 12.75, duration: 0.11, pitch: 50, velocity: 0.27},
+    {start: 13, duration: 0.13, pitch: 50, velocity: 0.92},
+    {start: 15, duration: 0.13, pitch: 50, velocity: 0.99},
+    {start: 15.5, duration: 0.1, pitch: 50, velocity: 0.35},
+    {start: 15.75, duration: 0.095, pitch: 50, velocity: 0.41}
+  ]}
+}
+
+prefab vt_clap_layer {
+  NoteClip: {length: 16, notes: [
+    {start: 1.03, duration: 0.11, pitch: 78, velocity: 0.86},
+    {start: 3.028, duration: 0.11, pitch: 78, velocity: 0.95},
+    {start: 5.03, duration: 0.11, pitch: 78, velocity: 0.86},
+    {start: 7.028, duration: 0.11, pitch: 78, velocity: 0.95},
+    {start: 7.09, duration: 0.08, pitch: 78, velocity: 0.35},
+    {start: 9.03, duration: 0.11, pitch: 78, velocity: 0.86},
+    {start: 11.028, duration: 0.11, pitch: 78, velocity: 0.95},
+    {start: 13.03, duration: 0.11, pitch: 78, velocity: 0.86},
+    {start: 15.028, duration: 0.11, pitch: 78, velocity: 0.95},
+    {start: 15.09, duration: 0.08, pitch: 78, velocity: 0.35}
+  ]}
+}
+
+prefab vt_clap_drop {
+  NoteClip: {length: 16, notes: [
+    {start: 1.025, duration: 0.14, pitch: 78, velocity: 1},
+    {start: 3.025, duration: 0.14, pitch: 78, velocity: 1},
+    {start: 5.025, duration: 0.14, pitch: 78, velocity: 1},
+    {start: 7.025, duration: 0.14, pitch: 78, velocity: 1},
+    {start: 7.085, duration: 0.09, pitch: 78, velocity: 0.38},
+    {start: 9.025, duration: 0.14, pitch: 78, velocity: 1},
+    {start: 11.025, duration: 0.14, pitch: 78, velocity: 1},
+    {start: 13.025, duration: 0.14, pitch: 78, velocity: 1},
+    {start: 15.025, duration: 0.14, pitch: 78, velocity: 1},
+    {start: 15.085, duration: 0.09, pitch: 78, velocity: 0.38}
+  ]}
+}
+
+prefab vt_hat_pulse {
+  NoteClip: {length: 16, notes: [
+    {start: 0, duration: 0.075, pitch: 92, velocity: 0.49},
+    {start: 0.5, duration: 0.075, pitch: 92, velocity: 0.58},
+    {start: 1, duration: 0.075, pitch: 92, velocity: 0.4},
+    {start: 1.5, duration: 0.075, pitch: 92, velocity: 0.64},
+    {start: 2, duration: 0.075, pitch: 92, velocity: 0.49},
+    {start: 2.5, duration: 0.075, pitch: 92, velocity: 0.58},
+    {start: 3, duration: 0.075, pitch: 92, velocity: 0.4},
+    {start: 3.5, duration: 0.075, pitch: 92, velocity: 0.64},
+    {start: 4, duration: 0.075, pitch: 92, velocity: 0.49},
+    {start: 4.5, duration: 0.075, pitch: 92, velocity: 0.58},
+    {start: 5, duration: 0.075, pitch: 92, velocity: 0.4},
+    {start: 5.5, duration: 0.075, pitch: 92, velocity: 0.64},
+    {start: 6, duration: 0.075, pitch: 92, velocity: 0.49},
+    {start: 6.5, duration: 0.075, pitch: 92, velocity: 0.58},
+    {start: 7, duration: 0.075, pitch: 92, velocity: 0.4},
+    {start: 7.5, duration: 0.075, pitch: 92, velocity: 0.64},
+    {start: 7.75, duration: 0.064, pitch: 92, velocity: 0.34},
+    {start: 8, duration: 0.075, pitch: 92, velocity: 0.49},
+    {start: 8.5, duration: 0.075, pitch: 92, velocity: 0.58},
+    {start: 9, duration: 0.075, pitch: 92, velocity: 0.4},
+    {start: 9.5, duration: 0.075, pitch: 92, velocity: 0.64},
+    {start: 10, duration: 0.075, pitch: 92, velocity: 0.49},
+    {start: 10.5, duration: 0.075, pitch: 92, velocity: 0.58},
+    {start: 11, duration: 0.075, pitch: 92, velocity: 0.4},
+    {start: 11.5, duration: 0.075, pitch: 92, velocity: 0.64},
+    {start: 12, duration: 0.075, pitch: 92, velocity: 0.49},
+    {start: 12.5, duration: 0.075, pitch: 92, velocity: 0.58},
+    {start: 13, duration: 0.075, pitch: 92, velocity: 0.4},
+    {start: 13.5, duration: 0.075, pitch: 92, velocity: 0.64},
+    {start: 14, duration: 0.075, pitch: 92, velocity: 0.49},
+    {start: 14.5, duration: 0.075, pitch: 92, velocity: 0.58},
+    {start: 15, duration: 0.075, pitch: 92, velocity: 0.4},
+    {start: 15.5, duration: 0.075, pitch: 92, velocity: 0.64},
+    {start: 15.75, duration: 0.064, pitch: 92, velocity: 0.34}
+  ]}
+}
+
+prefab vt_hat_sixteenths {
+  NoteClip: {length: 16, notes: [
+    {start: 0, duration: 0.065, pitch: 92, velocity: 0.73},
+    {start: 0.25, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 0.75, duration: 0.065, pitch: 92, velocity: 0.51},
+    {start: 1, duration: 0.065, pitch: 92, velocity: 0.62},
+    {start: 1.25, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 1.75, duration: 0.065, pitch: 92, velocity: 0.51},
+    {start: 2, duration: 0.065, pitch: 92, velocity: 0.73},
+    {start: 2.25, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 2.75, duration: 0.065, pitch: 92, velocity: 0.51},
+    {start: 3, duration: 0.065, pitch: 92, velocity: 0.62},
+    {start: 3.25, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 3.75, duration: 0.065, pitch: 92, velocity: 0.51},
+    {start: 4, duration: 0.065, pitch: 92, velocity: 0.73},
+    {start: 4.25, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 4.75, duration: 0.065, pitch: 92, velocity: 0.51},
+    {start: 5, duration: 0.065, pitch: 92, velocity: 0.62},
+    {start: 5.25, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 5.75, duration: 0.065, pitch: 92, velocity: 0.51},
+    {start: 6, duration: 0.065, pitch: 92, velocity: 0.73},
+    {start: 6.25, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 6.75, duration: 0.065, pitch: 92, velocity: 0.51},
+    {start: 7, duration: 0.065, pitch: 92, velocity: 0.62},
+    {start: 7.25, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 7.5, duration: 0.062, pitch: 92, velocity: 0.48},
+    {start: 7.75, duration: 0.065, pitch: 92, velocity: 0.51},
+    {start: 8, duration: 0.065, pitch: 92, velocity: 0.73},
+    {start: 8.25, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 8.75, duration: 0.065, pitch: 92, velocity: 0.51},
+    {start: 9, duration: 0.065, pitch: 92, velocity: 0.62},
+    {start: 9.25, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 9.75, duration: 0.065, pitch: 92, velocity: 0.51},
+    {start: 10, duration: 0.065, pitch: 92, velocity: 0.73},
+    {start: 10.25, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 10.75, duration: 0.065, pitch: 92, velocity: 0.51},
+    {start: 11, duration: 0.065, pitch: 92, velocity: 0.62},
+    {start: 11.25, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 11.75, duration: 0.065, pitch: 92, velocity: 0.51},
+    {start: 12, duration: 0.065, pitch: 92, velocity: 0.73},
+    {start: 12.25, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 12.75, duration: 0.065, pitch: 92, velocity: 0.51},
+    {start: 13, duration: 0.065, pitch: 92, velocity: 0.62},
+    {start: 13.25, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 13.75, duration: 0.065, pitch: 92, velocity: 0.51},
+    {start: 14, duration: 0.065, pitch: 92, velocity: 0.73},
+    {start: 14.25, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 14.75, duration: 0.065, pitch: 92, velocity: 0.51},
+    {start: 15, duration: 0.065, pitch: 92, velocity: 0.7},
+    {start: 15.25, duration: 0.065, pitch: 92, velocity: 0.42},
+    {start: 15.5, duration: 0.062, pitch: 92, velocity: 0.48},
+    {start: 15.75, duration: 0.065, pitch: 92, velocity: 0.59}
+  ]}
+}
+
+prefab vt_openhats {
+  NoteClip: {length: 16, notes: [
+    {start: 1.5, duration: 0.2, pitch: 88, velocity: 0.46},
+    {start: 3.5, duration: 0.2, pitch: 88, velocity: 0.57},
+    {start: 4.5, duration: 0.2, pitch: 88, velocity: 0.46},
+    {start: 5.5, duration: 0.2, pitch: 88, velocity: 0.46},
+    {start: 6.5, duration: 0.2, pitch: 88, velocity: 0.46},
+    {start: 7.5, duration: 0.2, pitch: 88, velocity: 0.57},
+    {start: 9.5, duration: 0.2, pitch: 88, velocity: 0.46},
+    {start: 11.5, duration: 0.2, pitch: 88, velocity: 0.57},
+    {start: 12.5, duration: 0.2, pitch: 88, velocity: 0.46},
+    {start: 13.5, duration: 0.2, pitch: 88, velocity: 0.46},
+    {start: 14.5, duration: 0.2, pitch: 88, velocity: 0.46},
+    {start: 15.5, duration: 0.2, pitch: 88, velocity: 0.57}
+  ]}
+}
+
+prefab vt_tom_cascade {
+  NoteClip: {length: 16, notes: [
+    {start: 0, duration: 0.22, pitch: 47, velocity: 0.56},
+    {start: 6.5, duration: 0.17, pitch: 49, velocity: 0.62},
+    {start: 7, duration: 0.17, pitch: 52, velocity: 0.58},
+    {start: 7.5, duration: 0.17, pitch: 55, velocity: 0.68},
+    {start: 7.75, duration: 0.17, pitch: 59, velocity: 0.75},
+    {start: 8, duration: 0.22, pitch: 47, velocity: 0.56},
+    {start: 14.5, duration: 0.17, pitch: 49, velocity: 0.62},
+    {start: 15, duration: 0.17, pitch: 52, velocity: 0.58},
+    {start: 15.5, duration: 0.17, pitch: 55, velocity: 0.68},
+    {start: 15.75, duration: 0.17, pitch: 59, velocity: 0.75}
+  ]}
+}
+
+prefab vt_crash_entry {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 0.3, pitch: 93, velocity: 0.92},
+    {start: 16, duration: 0.26, pitch: 95, velocity: 0.6}
+  ]}
+}
+
+prefab vt_crash_giant {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 0.42, pitch: 96, velocity: 1},
+    {start: 16, duration: 0.28, pitch: 93, velocity: 0.74}
+  ]}
+}
+
+// Second half grows from eighths to sixteenths to 32nd notes; beat 31 is empty.
+prefab vt_build_roll {
+  NoteClip: {length: 32, notes: [
+    {start: 1, duration: 0.13, pitch: 50, velocity: 0.53},
+    {start: 3, duration: 0.13, pitch: 50, velocity: 0.53},
+    {start: 5, duration: 0.13, pitch: 50, velocity: 0.575},
+    {start: 7, duration: 0.13, pitch: 50, velocity: 0.575},
+    {start: 9, duration: 0.11, pitch: 50, velocity: 0.443},
+    {start: 9.5, duration: 0.11, pitch: 50, velocity: 0.4545},
+    {start: 10, duration: 0.11, pitch: 50, velocity: 0.466},
+    {start: 10.5, duration: 0.11, pitch: 50, velocity: 0.4775},
+    {start: 11, duration: 0.11, pitch: 50, velocity: 0.489},
+    {start: 11.5, duration: 0.11, pitch: 50, velocity: 0.5005},
+    {start: 13, duration: 0.11, pitch: 50, velocity: 0.523},
+    {start: 13.5, duration: 0.11, pitch: 50, velocity: 0.5345},
+    {start: 14, duration: 0.11, pitch: 50, velocity: 0.546},
+    {start: 14.5, duration: 0.11, pitch: 50, velocity: 0.5575},
+    {start: 15, duration: 0.11, pitch: 50, velocity: 0.569},
+    {start: 15.5, duration: 0.11, pitch: 50, velocity: 0.5805},
+    {start: 16, duration: 0.095, pitch: 50, velocity: 0.5},
+    {start: 16.5, duration: 0.095, pitch: 50, velocity: 0.536},
+    {start: 17, duration: 0.095, pitch: 50, velocity: 0.572},
+    {start: 17.5, duration: 0.095, pitch: 50, velocity: 0.608},
+    {start: 17.75, duration: 0.095, pitch: 50, velocity: 0.626},
+    {start: 18, duration: 0.095, pitch: 50, velocity: 0.644},
+    {start: 18.25, duration: 0.095, pitch: 50, velocity: 0.662},
+    {start: 18.5, duration: 0.095, pitch: 50, velocity: 0.68},
+    {start: 18.75, duration: 0.095, pitch: 50, velocity: 0.698},
+    {start: 19, duration: 0.095, pitch: 50, velocity: 0.716},
+    {start: 19.25, duration: 0.095, pitch: 50, velocity: 0.734},
+    {start: 19.5, duration: 0.095, pitch: 50, velocity: 0.752},
+    {start: 19.75, duration: 0.095, pitch: 50, velocity: 0.77},
+    {start: 20, duration: 0.095, pitch: 50, velocity: 0.6},
+    {start: 20.5, duration: 0.095, pitch: 50, velocity: 0.636},
+    {start: 21, duration: 0.095, pitch: 50, velocity: 0.672},
+    {start: 21.5, duration: 0.095, pitch: 50, velocity: 0.708},
+    {start: 21.75, duration: 0.095, pitch: 50, velocity: 0.726},
+    {start: 22, duration: 0.095, pitch: 50, velocity: 0.744},
+    {start: 22.25, duration: 0.095, pitch: 50, velocity: 0.762},
+    {start: 22.5, duration: 0.095, pitch: 50, velocity: 0.78},
+    {start: 22.75, duration: 0.095, pitch: 50, velocity: 0.798},
+    {start: 23, duration: 0.095, pitch: 50, velocity: 0.816},
+    {start: 23.25, duration: 0.095, pitch: 50, velocity: 0.834},
+    {start: 23.5, duration: 0.095, pitch: 50, velocity: 0.852},
+    {start: 23.75, duration: 0.095, pitch: 50, velocity: 0.87},
+    {start: 24, duration: 0.07, pitch: 50, velocity: 0.85},
+    {start: 24.25, duration: 0.07, pitch: 50, velocity: 0.864},
+    {start: 24.5, duration: 0.07, pitch: 50, velocity: 0.878},
+    {start: 24.75, duration: 0.07, pitch: 50, velocity: 0.892},
+    {start: 25, duration: 0.07, pitch: 50, velocity: 0.906},
+    {start: 25.25, duration: 0.07, pitch: 50, velocity: 0.92},
+    {start: 25.5, duration: 0.07, pitch: 50, velocity: 0.934},
+    {start: 25.75, duration: 0.07, pitch: 50, velocity: 0.948},
+    {start: 26, duration: 0.07, pitch: 50, velocity: 0.962},
+    {start: 26.25, duration: 0.07, pitch: 50, velocity: 0.976},
+    {start: 26.5, duration: 0.07, pitch: 50, velocity: 0.99},
+    {start: 26.75, duration: 0.07, pitch: 50, velocity: 1},
+    {start: 27, duration: 0.07, pitch: 50, velocity: 1},
+    {start: 27.25, duration: 0.07, pitch: 50, velocity: 1},
+    {start: 27.5, duration: 0.07, pitch: 50, velocity: 1},
+    {start: 27.75, duration: 0.07, pitch: 50, velocity: 1},
+    {start: 28, duration: 0.07, pitch: 50, velocity: 0.895},
+    {start: 28.125, duration: 0.07, pitch: 50, velocity: 0.909},
+    {start: 28.25, duration: 0.07, pitch: 50, velocity: 0.923},
+    {start: 28.375, duration: 0.07, pitch: 50, velocity: 0.937},
+    {start: 28.5, duration: 0.07, pitch: 50, velocity: 0.951},
+    {start: 28.625, duration: 0.07, pitch: 50, velocity: 0.965},
+    {start: 28.75, duration: 0.07, pitch: 50, velocity: 0.979},
+    {start: 28.875, duration: 0.07, pitch: 50, velocity: 0.993},
+    {start: 29, duration: 0.07, pitch: 50, velocity: 1},
+    {start: 29.125, duration: 0.07, pitch: 50, velocity: 1},
+    {start: 29.25, duration: 0.07, pitch: 50, velocity: 1},
+    {start: 29.375, duration: 0.07, pitch: 50, velocity: 1},
+    {start: 29.5, duration: 0.07, pitch: 50, velocity: 1},
+    {start: 29.625, duration: 0.07, pitch: 50, velocity: 1},
+    {start: 29.75, duration: 0.07, pitch: 50, velocity: 1},
+    {start: 29.875, duration: 0.07, pitch: 50, velocity: 1},
+    {start: 30, duration: 0.07, pitch: 50, velocity: 1},
+    {start: 30.125, duration: 0.07, pitch: 50, velocity: 1},
+    {start: 30.25, duration: 0.07, pitch: 50, velocity: 1},
+    {start: 30.375, duration: 0.07, pitch: 50, velocity: 1},
+    {start: 30.5, duration: 0.07, pitch: 50, velocity: 1},
+    {start: 30.625, duration: 0.07, pitch: 50, velocity: 1},
+    {start: 30.75, duration: 0.07, pitch: 50, velocity: 1},
+    {start: 30.875, duration: 0.07, pitch: 50, velocity: 1}
+  ]}
+}
+
+prefab vt_build_kick {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 0.15, pitch: 36, velocity: 0.76},
+    {start: 2, duration: 0.15, pitch: 36, velocity: 0.76},
+    {start: 4, duration: 0.15, pitch: 36, velocity: 0.785},
+    {start: 6, duration: 0.15, pitch: 36, velocity: 0.785},
+    {start: 8, duration: 0.15, pitch: 36, velocity: 0.81},
+    {start: 10, duration: 0.15, pitch: 36, velocity: 0.81},
+    {start: 12, duration: 0.15, pitch: 36, velocity: 0.835},
+    {start: 14, duration: 0.15, pitch: 36, velocity: 0.835},
+    {start: 16, duration: 0.15, pitch: 36, velocity: 0.86},
+    {start: 17, duration: 0.15, pitch: 36, velocity: 0.86},
+    {start: 18, duration: 0.15, pitch: 36, velocity: 0.86},
+    {start: 19, duration: 0.15, pitch: 36, velocity: 0.86},
+    {start: 20, duration: 0.15, pitch: 36, velocity: 0.885},
+    {start: 21, duration: 0.15, pitch: 36, velocity: 0.885},
+    {start: 22, duration: 0.15, pitch: 36, velocity: 0.885},
+    {start: 23, duration: 0.15, pitch: 36, velocity: 0.885},
+    {start: 24, duration: 0.15, pitch: 36, velocity: 0.91},
+    {start: 24.75, duration: 0.15, pitch: 36, velocity: 0.91},
+    {start: 25.5, duration: 0.15, pitch: 36, velocity: 0.91},
+    {start: 26, duration: 0.15, pitch: 36, velocity: 0.91},
+    {start: 26.5, duration: 0.15, pitch: 36, velocity: 0.91},
+    {start: 27, duration: 0.15, pitch: 36, velocity: 0.91},
+    {start: 28, duration: 0.15, pitch: 36, velocity: 0.935},
+    {start: 28.5, duration: 0.15, pitch: 36, velocity: 0.935},
+    {start: 29, duration: 0.15, pitch: 36, velocity: 0.935},
+    {start: 29.5, duration: 0.15, pitch: 36, velocity: 0.935},
+    {start: 30, duration: 0.15, pitch: 36, velocity: 0.935},
+    {start: 30.5, duration: 0.15, pitch: 36, velocity: 0.935}
+  ]}
+}
+
+prefab vt_build_hats {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 0.06, pitch: 92, velocity: 0.21},
+    {start: 0.5, duration: 0.06, pitch: 92, velocity: 0.215},
+    {start: 1, duration: 0.06, pitch: 92, velocity: 0.22},
+    {start: 1.5, duration: 0.06, pitch: 92, velocity: 0.225},
+    {start: 2, duration: 0.06, pitch: 92, velocity: 0.23},
+    {start: 2.5, duration: 0.06, pitch: 92, velocity: 0.235},
+    {start: 3, duration: 0.06, pitch: 92, velocity: 0.24},
+    {start: 3.5, duration: 0.06, pitch: 92, velocity: 0.245},
+    {start: 4, duration: 0.06, pitch: 92, velocity: 0.273},
+    {start: 4.5, duration: 0.06, pitch: 92, velocity: 0.278},
+    {start: 5, duration: 0.06, pitch: 92, velocity: 0.283},
+    {start: 5.5, duration: 0.06, pitch: 92, velocity: 0.288},
+    {start: 6, duration: 0.06, pitch: 92, velocity: 0.293},
+    {start: 6.5, duration: 0.06, pitch: 92, velocity: 0.298},
+    {start: 7, duration: 0.06, pitch: 92, velocity: 0.303},
+    {start: 7.5, duration: 0.06, pitch: 92, velocity: 0.308},
+    {start: 8, duration: 0.06, pitch: 92, velocity: 0.336},
+    {start: 8.5, duration: 0.06, pitch: 92, velocity: 0.341},
+    {start: 9, duration: 0.06, pitch: 92, velocity: 0.346},
+    {start: 9.5, duration: 0.06, pitch: 92, velocity: 0.351},
+    {start: 10, duration: 0.06, pitch: 92, velocity: 0.356},
+    {start: 10.5, duration: 0.06, pitch: 92, velocity: 0.361},
+    {start: 11, duration: 0.06, pitch: 92, velocity: 0.366},
+    {start: 11.5, duration: 0.06, pitch: 92, velocity: 0.371},
+    {start: 12, duration: 0.06, pitch: 92, velocity: 0.399},
+    {start: 12.25, duration: 0.06, pitch: 92, velocity: 0.404},
+    {start: 12.5, duration: 0.06, pitch: 92, velocity: 0.409},
+    {start: 12.75, duration: 0.06, pitch: 92, velocity: 0.414},
+    {start: 13, duration: 0.06, pitch: 92, velocity: 0.419},
+    {start: 13.25, duration: 0.06, pitch: 92, velocity: 0.424},
+    {start: 13.5, duration: 0.06, pitch: 92, velocity: 0.429},
+    {start: 13.75, duration: 0.06, pitch: 92, velocity: 0.434},
+    {start: 14, duration: 0.06, pitch: 92, velocity: 0.439},
+    {start: 14.25, duration: 0.06, pitch: 92, velocity: 0.444},
+    {start: 14.5, duration: 0.06, pitch: 92, velocity: 0.449},
+    {start: 14.75, duration: 0.06, pitch: 92, velocity: 0.454},
+    {start: 15, duration: 0.06, pitch: 92, velocity: 0.459},
+    {start: 15.25, duration: 0.06, pitch: 92, velocity: 0.464},
+    {start: 15.5, duration: 0.06, pitch: 92, velocity: 0.469},
+    {start: 15.75, duration: 0.06, pitch: 92, velocity: 0.474},
+    {start: 16, duration: 0.06, pitch: 92, velocity: 0.462},
+    {start: 16.25, duration: 0.06, pitch: 92, velocity: 0.467},
+    {start: 16.5, duration: 0.06, pitch: 92, velocity: 0.472},
+    {start: 16.75, duration: 0.06, pitch: 92, velocity: 0.477},
+    {start: 17, duration: 0.06, pitch: 92, velocity: 0.482},
+    {start: 17.25, duration: 0.06, pitch: 92, velocity: 0.487},
+    {start: 17.5, duration: 0.06, pitch: 92, velocity: 0.492},
+    {start: 17.75, duration: 0.06, pitch: 92, velocity: 0.497},
+    {start: 18, duration: 0.06, pitch: 92, velocity: 0.502},
+    {start: 18.25, duration: 0.06, pitch: 92, velocity: 0.507},
+    {start: 18.5, duration: 0.06, pitch: 92, velocity: 0.512},
+    {start: 18.75, duration: 0.06, pitch: 92, velocity: 0.517},
+    {start: 19, duration: 0.06, pitch: 92, velocity: 0.522},
+    {start: 19.25, duration: 0.06, pitch: 92, velocity: 0.527},
+    {start: 19.5, duration: 0.06, pitch: 92, velocity: 0.532},
+    {start: 19.75, duration: 0.06, pitch: 92, velocity: 0.537},
+    {start: 20, duration: 0.06, pitch: 92, velocity: 0.525},
+    {start: 20.25, duration: 0.06, pitch: 92, velocity: 0.53},
+    {start: 20.5, duration: 0.06, pitch: 92, velocity: 0.535},
+    {start: 20.75, duration: 0.06, pitch: 92, velocity: 0.54},
+    {start: 21, duration: 0.06, pitch: 92, velocity: 0.545},
+    {start: 21.25, duration: 0.06, pitch: 92, velocity: 0.55},
+    {start: 21.5, duration: 0.06, pitch: 92, velocity: 0.555},
+    {start: 21.75, duration: 0.06, pitch: 92, velocity: 0.56},
+    {start: 22, duration: 0.06, pitch: 92, velocity: 0.565},
+    {start: 22.25, duration: 0.06, pitch: 92, velocity: 0.57},
+    {start: 22.5, duration: 0.06, pitch: 92, velocity: 0.575},
+    {start: 22.75, duration: 0.06, pitch: 92, velocity: 0.58},
+    {start: 23, duration: 0.06, pitch: 92, velocity: 0.585},
+    {start: 23.25, duration: 0.06, pitch: 92, velocity: 0.59},
+    {start: 23.5, duration: 0.06, pitch: 92, velocity: 0.595},
+    {start: 23.75, duration: 0.06, pitch: 92, velocity: 0.6},
+    {start: 24, duration: 0.06, pitch: 92, velocity: 0.588},
+    {start: 24.125, duration: 0.06, pitch: 92, velocity: 0.593},
+    {start: 24.25, duration: 0.06, pitch: 92, velocity: 0.598},
+    {start: 24.375, duration: 0.06, pitch: 92, velocity: 0.603},
+    {start: 24.5, duration: 0.06, pitch: 92, velocity: 0.608},
+    {start: 24.625, duration: 0.06, pitch: 92, velocity: 0.613},
+    {start: 24.75, duration: 0.06, pitch: 92, velocity: 0.618},
+    {start: 24.875, duration: 0.06, pitch: 92, velocity: 0.623},
+    {start: 25, duration: 0.06, pitch: 92, velocity: 0.628},
+    {start: 25.125, duration: 0.06, pitch: 92, velocity: 0.633},
+    {start: 25.25, duration: 0.06, pitch: 92, velocity: 0.638},
+    {start: 25.375, duration: 0.06, pitch: 92, velocity: 0.643},
+    {start: 25.5, duration: 0.06, pitch: 92, velocity: 0.648},
+    {start: 25.625, duration: 0.06, pitch: 92, velocity: 0.653},
+    {start: 25.75, duration: 0.06, pitch: 92, velocity: 0.658},
+    {start: 25.875, duration: 0.06, pitch: 92, velocity: 0.663},
+    {start: 26, duration: 0.06, pitch: 92, velocity: 0.668},
+    {start: 26.125, duration: 0.06, pitch: 92, velocity: 0.673},
+    {start: 26.25, duration: 0.06, pitch: 92, velocity: 0.678},
+    {start: 26.375, duration: 0.06, pitch: 92, velocity: 0.683},
+    {start: 26.5, duration: 0.06, pitch: 92, velocity: 0.688},
+    {start: 26.625, duration: 0.06, pitch: 92, velocity: 0.693},
+    {start: 26.75, duration: 0.06, pitch: 92, velocity: 0.698},
+    {start: 26.875, duration: 0.06, pitch: 92, velocity: 0.703},
+    {start: 27, duration: 0.06, pitch: 92, velocity: 0.708},
+    {start: 27.125, duration: 0.06, pitch: 92, velocity: 0.713},
+    {start: 27.25, duration: 0.06, pitch: 92, velocity: 0.718},
+    {start: 27.375, duration: 0.06, pitch: 92, velocity: 0.723},
+    {start: 27.5, duration: 0.06, pitch: 92, velocity: 0.728},
+    {start: 27.625, duration: 0.06, pitch: 92, velocity: 0.733},
+    {start: 27.75, duration: 0.06, pitch: 92, velocity: 0.738},
+    {start: 27.875, duration: 0.06, pitch: 92, velocity: 0.743},
+    {start: 28, duration: 0.06, pitch: 92, velocity: 0.651},
+    {start: 28.125, duration: 0.06, pitch: 92, velocity: 0.656},
+    {start: 28.25, duration: 0.06, pitch: 92, velocity: 0.661},
+    {start: 28.375, duration: 0.06, pitch: 92, velocity: 0.666},
+    {start: 28.5, duration: 0.06, pitch: 92, velocity: 0.671},
+    {start: 28.625, duration: 0.06, pitch: 92, velocity: 0.676},
+    {start: 28.75, duration: 0.06, pitch: 92, velocity: 0.681},
+    {start: 28.875, duration: 0.06, pitch: 92, velocity: 0.686},
+    {start: 29, duration: 0.06, pitch: 92, velocity: 0.691},
+    {start: 29.125, duration: 0.06, pitch: 92, velocity: 0.696},
+    {start: 29.25, duration: 0.06, pitch: 92, velocity: 0.701},
+    {start: 29.375, duration: 0.06, pitch: 92, velocity: 0.706},
+    {start: 29.5, duration: 0.06, pitch: 92, velocity: 0.711},
+    {start: 29.625, duration: 0.06, pitch: 92, velocity: 0.716},
+    {start: 29.75, duration: 0.06, pitch: 92, velocity: 0.721},
+    {start: 29.875, duration: 0.06, pitch: 92, velocity: 0.726},
+    {start: 30, duration: 0.06, pitch: 92, velocity: 0.731},
+    {start: 30.125, duration: 0.06, pitch: 92, velocity: 0.736},
+    {start: 30.25, duration: 0.06, pitch: 92, velocity: 0.741},
+    {start: 30.375, duration: 0.06, pitch: 92, velocity: 0.746},
+    {start: 30.5, duration: 0.06, pitch: 92, velocity: 0.751},
+    {start: 30.625, duration: 0.06, pitch: 92, velocity: 0.756},
+    {start: 30.75, duration: 0.06, pitch: 92, velocity: 0.761},
+    {start: 30.875, duration: 0.06, pitch: 92, velocity: 0.766}
+  ]}
+}
+
+prefab vt_build_tension {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 0.58, pitch: 70, velocity: 0.32},
+    {start: 2, duration: 0.43, pitch: 77, velocity: 0.345},
+    {start: 4, duration: 0.58, pitch: 70, velocity: 0.373},
+    {start: 6, duration: 0.43, pitch: 77, velocity: 0.398},
+    {start: 8, duration: 0.58, pitch: 70, velocity: 0.426},
+    {start: 10, duration: 0.43, pitch: 77, velocity: 0.451},
+    {start: 12, duration: 0.58, pitch: 70, velocity: 0.479},
+    {start: 14, duration: 0.43, pitch: 77, velocity: 0.504},
+    {start: 16, duration: 0.58, pitch: 69, velocity: 0.532},
+    {start: 18, duration: 0.43, pitch: 77, velocity: 0.557},
+    {start: 19, duration: 0.32, pitch: 72, velocity: 0.562},
+    {start: 20, duration: 0.58, pitch: 69, velocity: 0.585},
+    {start: 22, duration: 0.43, pitch: 77, velocity: 0.61},
+    {start: 23, duration: 0.32, pitch: 72, velocity: 0.615},
+    {start: 24, duration: 0.58, pitch: 67, velocity: 0.638},
+    {start: 26, duration: 0.43, pitch: 76, velocity: 0.663},
+    {start: 27, duration: 0.32, pitch: 72, velocity: 0.668},
+    {start: 28, duration: 0.58, pitch: 67, velocity: 0.691},
+    {start: 30, duration: 0.43, pitch: 76, velocity: 0.716},
+    {start: 30.75, duration: 0.18, pitch: 76, velocity: 0.77}
+  ]}
+}
+
+prefab vt_build_toms {
+  NoteClip: {length: 32, notes: [
+    {start: 16, duration: 0.15, pitch: 43, velocity: 0.61},
+    {start: 17.5, duration: 0.15, pitch: 47, velocity: 0.58},
+    {start: 18.5, duration: 0.15, pitch: 50, velocity: 0.67},
+    {start: 19, duration: 0.15, pitch: 53, velocity: 0.72},
+    {start: 20, duration: 0.15, pitch: 43, velocity: 0.61},
+    {start: 21.5, duration: 0.15, pitch: 47, velocity: 0.58},
+    {start: 22.5, duration: 0.15, pitch: 50, velocity: 0.67},
+    {start: 23, duration: 0.15, pitch: 53, velocity: 0.72},
+    {start: 24, duration: 0.15, pitch: 43, velocity: 0.61},
+    {start: 25.5, duration: 0.15, pitch: 47, velocity: 0.58},
+    {start: 26.5, duration: 0.15, pitch: 50, velocity: 0.67},
+    {start: 27, duration: 0.15, pitch: 53, velocity: 0.72},
+    {start: 28, duration: 0.15, pitch: 43, velocity: 0.61},
+    {start: 29.5, duration: 0.15, pitch: 47, velocity: 0.58},
+    {start: 30.5, duration: 0.15, pitch: 50, velocity: 0.67}
+  ]}
+}
+
+prefab vt_drop_signature {
+  NoteClip: {length: 4, notes: [
+    {start: 0, duration: 0.2, pitch: 50, velocity: 1},
+    {start: 0.035, duration: 0.13, pitch: 50, velocity: 0.92},
+    {start: 0.16, duration: 0.1, pitch: 50, velocity: 0.29}
+  ]}
+}
+
+prefab vt_drop_clap_signature {
+  NoteClip: {length: 4, notes: [
+    {start: 0.02, duration: 0.16, pitch: 78, velocity: 1},
+    {start: 0.095, duration: 0.11, pitch: 78, velocity: 0.46}
+  ]}
+}
+
+prefab vt_drop_kick_signature {
+  NoteClip: {length: 4, notes: [
+    {start: 0, duration: 0.21, pitch: 36, velocity: 1},
+    {start: 0.5, duration: 0.13, pitch: 36, velocity: 0.64}
+  ]}
+}
+
+prefab vt_release_chord {
+  NoteClip: {length: 16, notes: [
+    {start: 0, duration: 14, pitch: 53, velocity: 0.41},
+    {start: 0, duration: 14, pitch: 60, velocity: 0.41},
+    {start: 0, duration: 14, pitch: 65, velocity: 0.41},
+    {start: 0, duration: 14, pitch: 69, velocity: 0.41},
+    {start: 0, duration: 14, pitch: 72, velocity: 0.41}
+  ]}
+}
+
+prefab vt_release_bell {
+  NoteClip: {length: 16, notes: [
+    {start: 0, duration: 0.5, pitch: 77, velocity: 0.64},
+    {start: 4, duration: 0.45, pitch: 72, velocity: 0.51},
+    {start: 8, duration: 0.55, pitch: 69, velocity: 0.47},
+    {start: 12, duration: 0.7, pitch: 65, velocity: 0.41}
+  ]}
+}
+
+prefab vt_release_kick {
+  NoteClip: {length: 16, notes: [
+    {start: 0, duration: 0.21, pitch: 36, velocity: 1},
+    {start: 4, duration: 0.17, pitch: 36, velocity: 0.71},
+    {start: 8, duration: 0.17, pitch: 36, velocity: 0.55}
+  ]}
+}
+
+prefab vt_release_snare {
+  NoteClip: {length: 16, notes: [
+    {start: 1, duration: 0.13, pitch: 50, velocity: 0.95},
+    {start: 3, duration: 0.13, pitch: 50, velocity: 0.88},
+    {start: 7, duration: 0.13, pitch: 50, velocity: 0.55}
+  ]}
+}
+
+
+prefab vt_rising_build {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 1.15, pitch: 70, velocity: 0.49},
+    {start: 2, duration: 0.67, pitch: 77, velocity: 0.45},
+    {start: 4, duration: 1.15, pitch: 70, velocity: 0.522},
+    {start: 6, duration: 0.67, pitch: 77, velocity: 0.482},
+    {start: 8, duration: 1.15, pitch: 70, velocity: 0.554},
+    {start: 10, duration: 0.67, pitch: 77, velocity: 0.514},
+    {start: 12, duration: 1.15, pitch: 70, velocity: 0.586},
+    {start: 14, duration: 0.67, pitch: 77, velocity: 0.546},
+    {start: 16, duration: 1, pitch: 69, velocity: 0.618},
+    {start: 17.5, duration: 0.34, pitch: 72, velocity: 0.578},
+    {start: 18, duration: 0.78, pitch: 77, velocity: 0.578},
+    {start: 19.25, duration: 0.33, pitch: 72, velocity: 0.578},
+    {start: 20, duration: 1, pitch: 69, velocity: 0.65},
+    {start: 21.5, duration: 0.34, pitch: 72, velocity: 0.61},
+    {start: 22, duration: 0.78, pitch: 77, velocity: 0.61},
+    {start: 23.25, duration: 0.33, pitch: 72, velocity: 0.61},
+    {start: 24, duration: 1, pitch: 67, velocity: 0.682},
+    {start: 25.5, duration: 0.34, pitch: 72, velocity: 0.642},
+    {start: 26, duration: 0.78, pitch: 76, velocity: 0.642},
+    {start: 27.25, duration: 0.33, pitch: 72, velocity: 0.642},
+    {start: 28, duration: 1, pitch: 67, velocity: 0.714},
+    {start: 29.5, duration: 0.34, pitch: 72, velocity: 0.674},
+    {start: 30, duration: 0.78, pitch: 76, velocity: 0.674}
+  ]}
+}
+
+prefab vt_bell_major_reply {
+  NoteClip: {length: 32, notes: [
+    {start: 7, duration: 0.42, pitch: 76, velocity: 0.43},
+    {start: 15, duration: 0.42, pitch: 74, velocity: 0.43},
+    {start: 23, duration: 0.42, pitch: 76, velocity: 0.43},
+    {start: 31, duration: 0.42, pitch: 74, velocity: 0.43}
+  ]}
+}
+
+
+
+// New intro groove and staged full-band buildups.
+prefab vt_intro_arp {
+  NoteClip: {length: 32, notes: [
+    {start: 0.5, duration: 0.32, pitch: 62, velocity: 0.28},
+    {start: 2.5, duration: 0.32, pitch: 65, velocity: 0.27},
+    {start: 3.5, duration: 0.32, pitch: 69, velocity: 0.25},
+    {start: 4.5, duration: 0.32, pitch: 58, velocity: 0.28},
+    {start: 6.5, duration: 0.32, pitch: 62, velocity: 0.27},
+    {start: 7.5, duration: 0.32, pitch: 65, velocity: 0.25},
+    {start: 8.5, duration: 0.32, pitch: 60, velocity: 0.28},
+    {start: 10.5, duration: 0.32, pitch: 65, velocity: 0.27},
+    {start: 11.5, duration: 0.32, pitch: 69, velocity: 0.25},
+    {start: 12.5, duration: 0.32, pitch: 60, velocity: 0.28},
+    {start: 14.5, duration: 0.32, pitch: 64, velocity: 0.27},
+    {start: 15.5, duration: 0.32, pitch: 67, velocity: 0.25},
+    {start: 16.5, duration: 0.32, pitch: 62, velocity: 0.28},
+    {start: 18.5, duration: 0.32, pitch: 65, velocity: 0.27},
+    {start: 19.5, duration: 0.32, pitch: 69, velocity: 0.25},
+    {start: 20.5, duration: 0.32, pitch: 58, velocity: 0.28},
+    {start: 22.5, duration: 0.32, pitch: 62, velocity: 0.27},
+    {start: 23.5, duration: 0.32, pitch: 65, velocity: 0.25},
+    {start: 24.5, duration: 0.32, pitch: 60, velocity: 0.28},
+    {start: 26.5, duration: 0.32, pitch: 65, velocity: 0.27},
+    {start: 27.5, duration: 0.32, pitch: 69, velocity: 0.25},
+    {start: 28.5, duration: 0.32, pitch: 60, velocity: 0.28},
+    {start: 30.5, duration: 0.32, pitch: 64, velocity: 0.27},
+    {start: 31.5, duration: 0.32, pitch: 67, velocity: 0.25}
+  ]}
+}
+
+prefab vt_intro_strings {
+  NoteClip: {length: 32, notes: [
+    {start: 8, duration: 0.72, pitch: 60, velocity: 0.27},
+    {start: 8, duration: 0.72, pitch: 69, velocity: 0.25},
+    {start: 10.5, duration: 0.38, pitch: 65, velocity: 0.224},
+    {start: 12, duration: 0.72, pitch: 60, velocity: 0.28},
+    {start: 12, duration: 0.72, pitch: 67, velocity: 0.26},
+    {start: 14.5, duration: 0.38, pitch: 64, velocity: 0.236},
+    {start: 16, duration: 0.72, pitch: 62, velocity: 0.29},
+    {start: 16, duration: 0.72, pitch: 69, velocity: 0.27},
+    {start: 18.5, duration: 0.38, pitch: 65, velocity: 0.248},
+    {start: 20, duration: 0.72, pitch: 58, velocity: 0.3},
+    {start: 20, duration: 0.72, pitch: 65, velocity: 0.28},
+    {start: 22.5, duration: 0.38, pitch: 62, velocity: 0.26},
+    {start: 24, duration: 0.72, pitch: 60, velocity: 0.31},
+    {start: 24, duration: 0.72, pitch: 69, velocity: 0.29},
+    {start: 26.5, duration: 0.38, pitch: 65, velocity: 0.272},
+    {start: 28, duration: 0.72, pitch: 60, velocity: 0.32},
+    {start: 28, duration: 0.72, pitch: 67, velocity: 0.3},
+    {start: 30.5, duration: 0.38, pitch: 64, velocity: 0.284}
+  ]}
+}
+
+prefab vt_intro_bass {
+  NoteClip: {length: 32, notes: [
+    {start: 12, duration: 0.7, pitch: 36, velocity: 0.44},
+    {start: 16, duration: 0.7, pitch: 38, velocity: 0.44},
+    {start: 20, duration: 0.7, pitch: 34, velocity: 0.54},
+    {start: 22.5, duration: 0.32, pitch: 34, velocity: 0.33},
+    {start: 24, duration: 0.7, pitch: 41, velocity: 0.54},
+    {start: 26.5, duration: 0.32, pitch: 41, velocity: 0.33},
+    {start: 28, duration: 0.7, pitch: 36, velocity: 0.54},
+    {start: 30.5, duration: 0.32, pitch: 36, velocity: 0.33}
+  ]}
+}
+
+prefab vt_intro_hats {
+  NoteClip: {length: 32, notes: [
+    {start: 8.5, duration: 0.09, pitch: 92, velocity: 0.27},
+    {start: 9.5, duration: 0.09, pitch: 92, velocity: 0.37},
+    {start: 10.5, duration: 0.09, pitch: 92, velocity: 0.27},
+    {start: 11.5, duration: 0.09, pitch: 92, velocity: 0.37},
+    {start: 12.5, duration: 0.09, pitch: 92, velocity: 0.27},
+    {start: 13.5, duration: 0.09, pitch: 92, velocity: 0.37},
+    {start: 14.5, duration: 0.09, pitch: 92, velocity: 0.27},
+    {start: 15.5, duration: 0.09, pitch: 92, velocity: 0.37},
+    {start: 16.5, duration: 0.09, pitch: 92, velocity: 0.27},
+    {start: 17.5, duration: 0.09, pitch: 92, velocity: 0.37},
+    {start: 18.5, duration: 0.09, pitch: 92, velocity: 0.27},
+    {start: 19.5, duration: 0.09, pitch: 92, velocity: 0.37},
+    {start: 20.5, duration: 0.09, pitch: 92, velocity: 0.27},
+    {start: 21.5, duration: 0.09, pitch: 92, velocity: 0.37},
+    {start: 22.5, duration: 0.09, pitch: 92, velocity: 0.27},
+    {start: 23.5, duration: 0.09, pitch: 92, velocity: 0.37},
+    {start: 24.5, duration: 0.09, pitch: 92, velocity: 0.27},
+    {start: 25.5, duration: 0.09, pitch: 92, velocity: 0.37},
+    {start: 26.5, duration: 0.09, pitch: 92, velocity: 0.27},
+    {start: 27.5, duration: 0.09, pitch: 92, velocity: 0.37},
+    {start: 28.5, duration: 0.09, pitch: 92, velocity: 0.27},
+    {start: 29.5, duration: 0.09, pitch: 92, velocity: 0.37},
+    {start: 30.5, duration: 0.09, pitch: 92, velocity: 0.27},
+    {start: 31.5, duration: 0.09, pitch: 92, velocity: 0.37}
+  ]}
+}
+
+prefab vt_intro_kick {
+  NoteClip: {length: 32, notes: [
+    {start: 16, duration: 0.15, pitch: 36, velocity: 0.55},
+    {start: 18, duration: 0.15, pitch: 36, velocity: 0.55},
+    {start: 20, duration: 0.15, pitch: 36, velocity: 0.55},
+    {start: 22, duration: 0.15, pitch: 36, velocity: 0.55},
+    {start: 24, duration: 0.15, pitch: 36, velocity: 0.55},
+    {start: 26, duration: 0.15, pitch: 36, velocity: 0.55},
+    {start: 27.5, duration: 0.15, pitch: 36, velocity: 0.35},
+    {start: 28, duration: 0.15, pitch: 36, velocity: 0.55},
+    {start: 30, duration: 0.15, pitch: 36, velocity: 0.55},
+    {start: 31.5, duration: 0.15, pitch: 36, velocity: 0.35}
+  ]}
+}
+
+prefab vt_intro_snare {
+  NoteClip: {length: 32, notes: [
+    {start: 17, duration: 0.12, pitch: 50, velocity: 0.48},
+    {start: 19, duration: 0.12, pitch: 50, velocity: 0.56},
+    {start: 21, duration: 0.12, pitch: 50, velocity: 0.48},
+    {start: 23, duration: 0.12, pitch: 50, velocity: 0.56},
+    {start: 25, duration: 0.12, pitch: 50, velocity: 0.48},
+    {start: 27, duration: 0.12, pitch: 50, velocity: 0.56},
+    {start: 29, duration: 0.12, pitch: 50, velocity: 0.48},
+    {start: 31, duration: 0.12, pitch: 50, velocity: 0.56}
+  ]}
+}
+
+prefab vt_build_bass_groove {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 0.7, pitch: 31, velocity: 0.49},
+    {start: 2, duration: 0.42, pitch: 31, velocity: 0.37},
+    {start: 4, duration: 0.7, pitch: 31, velocity: 0.5414},
+    {start: 6, duration: 0.42, pitch: 31, velocity: 0.4214},
+    {start: 8, duration: 0.7, pitch: 34, velocity: 0.5929},
+    {start: 9.5, duration: 0.3, pitch: 34, velocity: 0.4643},
+    {start: 10, duration: 0.42, pitch: 34, velocity: 0.4729},
+    {start: 11, duration: 0.3, pitch: 41, velocity: 0.4429},
+    {start: 12, duration: 0.7, pitch: 34, velocity: 0.6443},
+    {start: 13.5, duration: 0.3, pitch: 34, velocity: 0.5014},
+    {start: 14, duration: 0.42, pitch: 34, velocity: 0.5243},
+    {start: 15, duration: 0.3, pitch: 41, velocity: 0.4843},
+    {start: 16, duration: 0.7, pitch: 41, velocity: 0.6957},
+    {start: 17.5, duration: 0.3, pitch: 41, velocity: 0.5386},
+    {start: 18, duration: 0.42, pitch: 41, velocity: 0.5757},
+    {start: 19, duration: 0.3, pitch: 48, velocity: 0.5257},
+    {start: 20, duration: 0.7, pitch: 41, velocity: 0.7471},
+    {start: 21.5, duration: 0.3, pitch: 41, velocity: 0.5757},
+    {start: 22, duration: 0.42, pitch: 41, velocity: 0.6271},
+    {start: 22.75, duration: 0.19, pitch: 41, velocity: 0.6357},
+    {start: 23, duration: 0.3, pitch: 48, velocity: 0.5671},
+    {start: 24, duration: 0.7, pitch: 36, velocity: 0.7986},
+    {start: 25.5, duration: 0.3, pitch: 36, velocity: 0.6129},
+    {start: 26, duration: 0.42, pitch: 36, velocity: 0.6786},
+    {start: 26.75, duration: 0.19, pitch: 36, velocity: 0.6729},
+    {start: 27, duration: 0.3, pitch: 43, velocity: 0.6086},
+    {start: 28, duration: 0.7, pitch: 36, velocity: 0.85},
+    {start: 29.5, duration: 0.3, pitch: 36, velocity: 0.65},
+    {start: 30, duration: 0.42, pitch: 36, velocity: 0.73}
+  ]}
+}
+
+prefab vt_build_arp_lift {
+  NoteClip: {length: 32, notes: [
+    {start: 4.5, duration: 0.27, pitch: 55, velocity: 0.3371},
+    {start: 5.5, duration: 0.27, pitch: 58, velocity: 0.3371},
+    {start: 6.5, duration: 0.27, pitch: 62, velocity: 0.3371},
+    {start: 7.5, duration: 0.27, pitch: 55, velocity: 0.3371},
+    {start: 8.5, duration: 0.27, pitch: 58, velocity: 0.3843},
+    {start: 9.5, duration: 0.27, pitch: 62, velocity: 0.3843},
+    {start: 10.5, duration: 0.27, pitch: 65, velocity: 0.3843},
+    {start: 11.5, duration: 0.27, pitch: 58, velocity: 0.3843},
+    {start: 12.5, duration: 0.27, pitch: 58, velocity: 0.4314},
+    {start: 13.5, duration: 0.27, pitch: 62, velocity: 0.4314},
+    {start: 14.5, duration: 0.27, pitch: 65, velocity: 0.4314},
+    {start: 15.5, duration: 0.27, pitch: 58, velocity: 0.4314},
+    {start: 16, duration: 0.27, pitch: 60, velocity: 0.4786},
+    {start: 16.5, duration: 0.27, pitch: 60, velocity: 0.4786},
+    {start: 17, duration: 0.27, pitch: 65, velocity: 0.4786},
+    {start: 17.5, duration: 0.27, pitch: 65, velocity: 0.4786},
+    {start: 18, duration: 0.27, pitch: 69, velocity: 0.4786},
+    {start: 18.5, duration: 0.27, pitch: 69, velocity: 0.4786},
+    {start: 19, duration: 0.27, pitch: 60, velocity: 0.4786},
+    {start: 19.5, duration: 0.27, pitch: 60, velocity: 0.4786},
+    {start: 20, duration: 0.27, pitch: 60, velocity: 0.5257},
+    {start: 20.5, duration: 0.27, pitch: 60, velocity: 0.5257},
+    {start: 21, duration: 0.27, pitch: 65, velocity: 0.5257},
+    {start: 21.5, duration: 0.27, pitch: 65, velocity: 0.5257},
+    {start: 22, duration: 0.27, pitch: 69, velocity: 0.5257},
+    {start: 22.5, duration: 0.27, pitch: 69, velocity: 0.5257},
+    {start: 23, duration: 0.27, pitch: 60, velocity: 0.5257},
+    {start: 23.5, duration: 0.27, pitch: 60, velocity: 0.5257},
+    {start: 24, duration: 0.27, pitch: 60, velocity: 0.5729},
+    {start: 24.5, duration: 0.27, pitch: 60, velocity: 0.5729},
+    {start: 25, duration: 0.27, pitch: 64, velocity: 0.5729},
+    {start: 25.5, duration: 0.27, pitch: 64, velocity: 0.5729},
+    {start: 26, duration: 0.27, pitch: 67, velocity: 0.5729},
+    {start: 26.5, duration: 0.27, pitch: 67, velocity: 0.5729},
+    {start: 27, duration: 0.27, pitch: 60, velocity: 0.5729},
+    {start: 27.5, duration: 0.27, pitch: 60, velocity: 0.5729},
+    {start: 28, duration: 0.27, pitch: 60, velocity: 0.62},
+    {start: 28.5, duration: 0.27, pitch: 60, velocity: 0.62},
+    {start: 29, duration: 0.27, pitch: 64, velocity: 0.62},
+    {start: 29.5, duration: 0.27, pitch: 64, velocity: 0.62},
+    {start: 30, duration: 0.27, pitch: 67, velocity: 0.62},
+    {start: 30.5, duration: 0.27, pitch: 67, velocity: 0.62}
+  ]}
+}
+
+prefab vt_build_brass_lift {
+  NoteClip: {length: 32, notes: [
+    {start: 8, duration: 0.4, pitch: 58, velocity: 0.3286},
+    {start: 8, duration: 0.4, pitch: 62, velocity: 0.3286},
+    {start: 8, duration: 0.4, pitch: 65, velocity: 0.3286},
+    {start: 12, duration: 0.4, pitch: 58, velocity: 0.3729},
+    {start: 12, duration: 0.4, pitch: 62, velocity: 0.3729},
+    {start: 12, duration: 0.4, pitch: 65, velocity: 0.3729},
+    {start: 16, duration: 0.4, pitch: 60, velocity: 0.4171},
+    {start: 16, duration: 0.4, pitch: 65, velocity: 0.4171},
+    {start: 16, duration: 0.4, pitch: 69, velocity: 0.4171},
+    {start: 18, duration: 0.4, pitch: 60, velocity: 0.4171},
+    {start: 18, duration: 0.4, pitch: 65, velocity: 0.4171},
+    {start: 18, duration: 0.4, pitch: 69, velocity: 0.4171},
+    {start: 20, duration: 0.4, pitch: 60, velocity: 0.4614},
+    {start: 20, duration: 0.4, pitch: 65, velocity: 0.4614},
+    {start: 20, duration: 0.4, pitch: 69, velocity: 0.4614},
+    {start: 22, duration: 0.4, pitch: 60, velocity: 0.4614},
+    {start: 22, duration: 0.4, pitch: 65, velocity: 0.4614},
+    {start: 22, duration: 0.4, pitch: 69, velocity: 0.4614},
+    {start: 24, duration: 0.4, pitch: 60, velocity: 0.5057},
+    {start: 24, duration: 0.4, pitch: 64, velocity: 0.5057},
+    {start: 24, duration: 0.4, pitch: 67, velocity: 0.5057},
+    {start: 25.5, duration: 0.4, pitch: 60, velocity: 0.5057},
+    {start: 25.5, duration: 0.4, pitch: 64, velocity: 0.5057},
+    {start: 25.5, duration: 0.4, pitch: 67, velocity: 0.5057},
+    {start: 26.5, duration: 0.4, pitch: 60, velocity: 0.5057},
+    {start: 26.5, duration: 0.4, pitch: 64, velocity: 0.5057},
+    {start: 26.5, duration: 0.4, pitch: 67, velocity: 0.5057},
+    {start: 28, duration: 0.4, pitch: 60, velocity: 0.55},
+    {start: 28, duration: 0.4, pitch: 64, velocity: 0.55},
+    {start: 28, duration: 0.4, pitch: 67, velocity: 0.55},
+    {start: 29.5, duration: 0.4, pitch: 60, velocity: 0.55},
+    {start: 29.5, duration: 0.4, pitch: 64, velocity: 0.55},
+    {start: 29.5, duration: 0.4, pitch: 67, velocity: 0.55},
+    {start: 30.5, duration: 0.4, pitch: 60, velocity: 0.55},
+    {start: 30.5, duration: 0.4, pitch: 64, velocity: 0.55},
+    {start: 30.5, duration: 0.4, pitch: 67, velocity: 0.55}
+  ]}
+}
+
+prefab vt_build_choir_lift {
+  NoteClip: {length: 32, notes: [
+    {start: 12, duration: 3, pitch: 58, velocity: 0.3343},
+    {start: 12, duration: 3, pitch: 62, velocity: 0.3343},
+    {start: 12, duration: 3, pitch: 65, velocity: 0.3343},
+    {start: 16, duration: 3, pitch: 60, velocity: 0.3557},
+    {start: 16, duration: 3, pitch: 65, velocity: 0.3557},
+    {start: 16, duration: 3, pitch: 69, velocity: 0.3557},
+    {start: 20, duration: 3, pitch: 60, velocity: 0.3771},
+    {start: 20, duration: 3, pitch: 65, velocity: 0.3771},
+    {start: 20, duration: 3, pitch: 69, velocity: 0.3771},
+    {start: 24, duration: 3, pitch: 60, velocity: 0.3986},
+    {start: 24, duration: 3, pitch: 64, velocity: 0.3986},
+    {start: 24, duration: 3, pitch: 67, velocity: 0.3986},
+    {start: 28, duration: 2.7, pitch: 60, velocity: 0.42},
+    {start: 28, duration: 2.7, pitch: 64, velocity: 0.42},
+    {start: 28, duration: 2.7, pitch: 67, velocity: 0.42}
+  ]}
+}
+
+prefab vt_build_harmony_echo {
+  NoteClip: {length: 32, notes: [
+    {start: 17.5, duration: 0.75, pitch: 69, velocity: 0.3143},
+    {start: 21.5, duration: 0.75, pitch: 69, velocity: 0.3329},
+    {start: 25.5, duration: 0.75, pitch: 67, velocity: 0.3514},
+    {start: 29.5, duration: 0.75, pitch: 67, velocity: 0.37}
+  ]}
+}
+
+prefab vt_build_clap_lift {
+  NoteClip: {length: 32, notes: [
+    {start: 13, duration: 0.13, pitch: 78, velocity: 0.48},
+    {start: 15, duration: 0.13, pitch: 78, velocity: 0.48},
+    {start: 17, duration: 0.13, pitch: 78, velocity: 0.52},
+    {start: 19, duration: 0.13, pitch: 78, velocity: 0.52},
+    {start: 21, duration: 0.13, pitch: 78, velocity: 0.56},
+    {start: 23, duration: 0.13, pitch: 78, velocity: 0.56},
+    {start: 25, duration: 0.13, pitch: 78, velocity: 0.6},
+    {start: 27, duration: 0.13, pitch: 78, velocity: 0.6},
+    {start: 29, duration: 0.13, pitch: 78, velocity: 0.64}
+  ]}
+}
+
+prefab vt_build_ride_lift {
+  NoteClip: {length: 32, notes: [
+    {start: 16, duration: 0.15, pitch: 51, velocity: 0.4257},
+    {start: 17, duration: 0.15, pitch: 51, velocity: 0.3529},
+    {start: 18, duration: 0.15, pitch: 51, velocity: 0.4257},
+    {start: 19, duration: 0.15, pitch: 51, velocity: 0.3529},
+    {start: 20, duration: 0.15, pitch: 51, velocity: 0.4671},
+    {start: 21, duration: 0.15, pitch: 51, velocity: 0.3886},
+    {start: 22, duration: 0.15, pitch: 51, velocity: 0.4671},
+    {start: 23, duration: 0.15, pitch: 51, velocity: 0.3886},
+    {start: 24, duration: 0.15, pitch: 51, velocity: 0.5086},
+    {start: 25, duration: 0.15, pitch: 51, velocity: 0.4243},
+    {start: 26, duration: 0.15, pitch: 51, velocity: 0.5086},
+    {start: 27, duration: 0.15, pitch: 51, velocity: 0.4243},
+    {start: 28, duration: 0.15, pitch: 51, velocity: 0.55},
+    {start: 29, duration: 0.15, pitch: 51, velocity: 0.46},
+    {start: 30, duration: 0.15, pitch: 51, velocity: 0.55}
+  ]}
+}
+
+prefab vt_build_cymbal_waves {
+  NoteClip: {length: 32, notes: [
+    {start: 8, duration: 0.25, pitch: 96, velocity: 0.32},
+    {start: 16, duration: 0.25, pitch: 96, velocity: 0.34},
+    {start: 24, duration: 0.25, pitch: 96, velocity: 0.36}
+  ]}
+}
+
+prefab vt_ride_groove {
+  NoteClip: {length: 16, notes: [
+    {start: 0, duration: 0.15, pitch: 51, velocity: 0.39},
+    {start: 1, duration: 0.15, pitch: 51, velocity: 0.26},
+    {start: 2, duration: 0.15, pitch: 51, velocity: 0.34},
+    {start: 3, duration: 0.15, pitch: 51, velocity: 0.26},
+    {start: 8, duration: 0.15, pitch: 51, velocity: 0.39},
+    {start: 9, duration: 0.15, pitch: 51, velocity: 0.26},
+    {start: 10, duration: 0.15, pitch: 51, velocity: 0.34},
+    {start: 11, duration: 0.15, pitch: 51, velocity: 0.26}
+  ]}
+}
+
+// Arrangement: all parts placed with explicit beat positions.
+vt_track_horizon_pad {
+  Track: {instrument: vt_pad_inst}
+  AudioBus: {output: vt_mix, volume: 0.59, effects: [vt_pad_filter, vt_pad_chorus], sends: [{bus: vt_hall, level: 0.44}]}
+  AudioMeter: {}
+  part_1 { ClipPlacement: {clip: vt_pad_cycle, start: 0, duration: 128, loop: true} }
+  part_2 { ClipPlacement: {clip: vt_pad_cycle, start: 128, duration: 64, loop: true} }
+  part_3 { ClipPlacement: {clip: vt_pad_tension, start: 192} }
+  part_4 { ClipPlacement: {clip: vt_pad_drop, start: 224, duration: 64, loop: true} }
+  part_5 { ClipPlacement: {clip: vt_pad_cycle, start: 288} }
+  part_6 { ClipPlacement: {clip: vt_pad_tension, start: 320} }
+  part_7 { ClipPlacement: {clip: vt_pad_major, start: 352} }
+  part_8 { ClipPlacement: {clip: vt_pad_release, start: 384} }
+}
+
+vt_track_strings {
+  Track: {instrument: vt_strings_inst}
+  AudioBus: {output: vt_mix, volume: 0.58, sends: [{bus: vt_hall, level: 0.26}]}
+  AudioMeter: {}
+  intro_soft_stabs { ClipPlacement: {clip: vt_intro_strings, start: 0} }
+  part_1 { ClipPlacement: {clip: vt_string_pulse, start: 32, duration: 96, loop: true} }
+  part_2 { ClipPlacement: {clip: vt_string_pulse, start: 160} }
+  part_3 { ClipPlacement: {clip: vt_string_build, start: 192} }
+  part_4 { ClipPlacement: {clip: vt_string_pulse, start: 224, duration: 64, loop: true} }
+  part_5 { ClipPlacement: {clip: vt_string_pulse, start: 288} }
+  part_6 { ClipPlacement: {clip: vt_string_build, start: 320} }
+  part_7 { ClipPlacement: {clip: vt_string_major, start: 352} }
+}
+
+vt_track_motor_bass {
+  Track: {instrument: vt_bass_inst}
+  AudioBus: {output: vt_mix, volume: 0.69, sends: [{bus: vt_room, level: 0.06}]}
+  AudioMeter: {}
+  intro_bass_pulse { ClipPlacement: {clip: vt_intro_bass, start: 0} }
+  build_1 { ClipPlacement: {clip: vt_build_bass_groove, start: 192} }
+  build_2 { ClipPlacement: {clip: vt_build_bass_groove, start: 320} }
+  part_1 { ClipPlacement: {clip: vt_bass_motor, start: 32, duration: 96, loop: true} }
+  part_2 { ClipPlacement: {clip: vt_bass_motor, start: 160} }
+  part_3 { ClipPlacement: {clip: vt_bass_drop, start: 224, duration: 64, loop: true} }
+  part_4 { ClipPlacement: {clip: vt_bass_motor, start: 288} }
+  part_5 { ClipPlacement: {clip: vt_bass_major, start: 352} }
+}
+
+vt_track_sub {
+  Track: {instrument: vt_sub_inst}
+  AudioBus: {output: vt_mix, volume: 0.33}
+  AudioMeter: {}
+  part_1 { ClipPlacement: {clip: vt_sub_drop, start: 64, duration: 64, loop: true} }
+  part_2 { ClipPlacement: {clip: vt_sub_drop, start: 224, duration: 64, loop: true} }
+  part_3 { ClipPlacement: {clip: vt_sub_major, start: 352} }
+}
+
+vt_track_kinetic_arp {
+  Track: {instrument: vt_arp_inst}
+  AudioBus: {output: vt_mix, volume: 0.29, effects: [vt_arp_delay], sends: [{bus: vt_hall, level: 0.23}]}
+  AudioMeter: {}
+  intro_gently_moving { ClipPlacement: {clip: vt_intro_arp, start: 0} }
+  build_1 { ClipPlacement: {clip: vt_build_arp_lift, start: 192} }
+  build_2 { ClipPlacement: {clip: vt_build_arp_lift, start: 320} }
+  part_1 { ClipPlacement: {clip: vt_arp_racing, start: 32, duration: 96, loop: true} }
+  part_2 { ClipPlacement: {clip: vt_arp_racing, start: 160} }
+  part_3 { ClipPlacement: {clip: vt_arp_racing, start: 224, duration: 64, loop: true} }
+  part_4 { ClipPlacement: {clip: vt_arp_racing, start: 288} }
+  part_5 { ClipPlacement: {clip: vt_arp_sunrise, start: 352} }
+}
+
+vt_track_lead {
+  Track: {instrument: vt_lead_inst}
+  AudioBus: {output: vt_mix, volume: 0.76, effects: [vt_lead_eq, vt_lead_color, vt_lead_glue, vt_lead_motion, vt_lead_delay], sends: [{bus: vt_hall, level: 0.24}, {bus: vt_room, level: 0.065}]}
+  AudioMeter: {}
+  part_1 { ClipPlacement: {clip: vt_intro_signal, start: 8} }
+  part_2 { ClipPlacement: {clip: vt_theme, start: 64, duration: 64, loop: true} }
+  part_3 { ClipPlacement: {clip: vt_vacuum_melody, start: 128} }
+  part_4 { ClipPlacement: {clip: vt_rising_call, start: 160} }
+  part_5 { ClipPlacement: {clip: vt_rising_build, start: 192} }
+  part_6 { ClipPlacement: {clip: vt_theme, start: 224, duration: 64, loop: true} }
+  part_7 { ClipPlacement: {clip: vt_vacuum_melody, start: 288} }
+  part_8 { ClipPlacement: {clip: vt_rising_build, start: 320} }
+  part_9 { ClipPlacement: {clip: vt_theme_major, start: 352} }
+}
+
+vt_track_lead_double {
+  Track: {instrument: vt_harmony_inst}
+  AudioBus: {output: vt_mix, volume: 0.33, sends: [{bus: vt_hall, level: 0.23}]}
+  AudioMeter: {}
+  build_1 { ClipPlacement: {clip: vt_build_harmony_echo, start: 192} }
+  build_2 { ClipPlacement: {clip: vt_build_harmony_echo, start: 320} }
+  part_1 { ClipPlacement: {clip: vt_theme_harmony, start: 96} }
+  part_2 { ClipPlacement: {clip: vt_theme_harmony, start: 224, duration: 64, loop: true} }
+  part_3 { ClipPlacement: {clip: vt_theme_major_harmony, start: 352} }
+}
+
+vt_track_brass {
+  Track: {instrument: vt_brass_inst}
+  AudioBus: {output: vt_mix, volume: 0.48, sends: [{bus: vt_hall, level: 0.16}]}
+  AudioMeter: {}
+  build_1 { ClipPlacement: {clip: vt_build_brass_lift, start: 192} }
+  build_2 { ClipPlacement: {clip: vt_build_brass_lift, start: 320} }
+  part_1 { ClipPlacement: {clip: vt_brass_hits, start: 64, duration: 64, loop: true} }
+  part_2 { ClipPlacement: {clip: vt_brass_hits, start: 224, duration: 64, loop: true} }
+  part_3 { ClipPlacement: {clip: vt_brass_major, start: 352} }
+}
+
+vt_track_halo {
+  Track: {instrument: vt_halo_inst}
+  AudioBus: {output: vt_mix, volume: 0.34, sends: [{bus: vt_hall, level: 0.39}]}
+  AudioMeter: {}
+  build_1 { ClipPlacement: {clip: vt_build_choir_lift, start: 192} }
+  build_2 { ClipPlacement: {clip: vt_build_choir_lift, start: 320} }
+  part_1 { ClipPlacement: {clip: vt_choir, start: 64, duration: 64, loop: true} }
+  part_2 { ClipPlacement: {clip: vt_choir, start: 224, duration: 64, loop: true} }
+  part_3 { ClipPlacement: {clip: vt_choir_major, start: 352} }
+  part_4 { ClipPlacement: {clip: vt_release_chord, start: 384} }
+}
+
+vt_track_bells {
+  Track: {instrument: vt_bell_inst}
+  AudioBus: {output: vt_mix, volume: 0.28, effects: [vt_bell_delay], sends: [{bus: vt_hall, level: 0.44}]}
+  AudioMeter: {}
+  part_1 { ClipPlacement: {clip: vt_bell_reply, start: 0, duration: 128, loop: true} }
+  part_2 { ClipPlacement: {clip: vt_bell_reply, start: 128} }
+  part_3 { ClipPlacement: {clip: vt_bell_reply, start: 224, duration: 64, loop: true} }
+  part_4 { ClipPlacement: {clip: vt_bell_reply, start: 288} }
+  part_5 { ClipPlacement: {clip: vt_bell_major_reply, start: 352} }
+  part_6 { ClipPlacement: {clip: vt_release_bell, start: 384} }
+}
+
+vt_track_kick {
+  Track: {instrument: vt_kick_inst}
+  AudioBus: {output: vt_drum_bus, volume: 0.90}
+  AudioMeter: {}
+  intro_pulse { ClipPlacement: {clip: vt_intro_kick, start: 0} }
+  part_1 { ClipPlacement: {clip: vt_kick_heartbeat, start: 32} }
+  part_2 { ClipPlacement: {clip: vt_kick_drive, start: 64, duration: 64, loop: true} }
+  part_3 { ClipPlacement: {clip: vt_kick_heartbeat, start: 160} }
+  part_4 { ClipPlacement: {clip: vt_build_kick, start: 192} }
+  part_5 { ClipPlacement: {clip: vt_kick_drop, start: 224, duration: 64, loop: true} }
+  part_6 { ClipPlacement: {clip: vt_kick_heartbeat, start: 288} }
+  part_7 { ClipPlacement: {clip: vt_build_kick, start: 320} }
+  part_8 { ClipPlacement: {clip: vt_kick_drop, start: 352, duration: 32, loop: true} }
+  part_9 { ClipPlacement: {clip: vt_release_kick, start: 384} }
+}
+
+vt_track_snare_shell {
+  Track: {instrument: vt_snare_inst, humanize: {velocity: 0.06}}
+  AudioBus: {output: vt_drum_bus, volume: 0.76, sends: [{bus: vt_room, level: 0.22}]}
+  AudioMeter: {}
+  intro_backbeat { ClipPlacement: {clip: vt_intro_snare, start: 0} }
+  part_1 { ClipPlacement: {clip: vt_snare_backbeat, start: 48, duration: 80, loop: true} }
+  part_2 { ClipPlacement: {clip: vt_snare_backbeat, start: 176} }
+  part_3 { ClipPlacement: {clip: vt_build_roll, start: 192} }
+  part_4 { ClipPlacement: {clip: vt_snare_explosive, start: 224, duration: 64, loop: true} }
+  part_5 { ClipPlacement: {clip: vt_snare_backbeat, start: 304} }
+  part_6 { ClipPlacement: {clip: vt_build_roll, start: 320} }
+  part_7 { ClipPlacement: {clip: vt_snare_explosive, start: 352, duration: 32, loop: true} }
+  part_8 { ClipPlacement: {clip: vt_release_snare, start: 384} }
+}
+
+vt_track_clap_crack {
+  Track: {instrument: vt_clap_inst}
+  AudioBus: {output: vt_drum_bus, volume: 0.57, sends: [{bus: vt_room, level: 0.22}]}
+  AudioMeter: {}
+  build_1 { ClipPlacement: {clip: vt_build_clap_lift, start: 192} }
+  build_2 { ClipPlacement: {clip: vt_build_clap_lift, start: 320} }
+  part_1 { ClipPlacement: {clip: vt_clap_layer, start: 64, duration: 64, loop: true} }
+  part_2 { ClipPlacement: {clip: vt_clap_layer, start: 176} }
+  part_3 { ClipPlacement: {clip: vt_clap_drop, start: 224, duration: 64, loop: true} }
+  part_4 { ClipPlacement: {clip: vt_clap_layer, start: 304} }
+  part_5 { ClipPlacement: {clip: vt_clap_drop, start: 352, duration: 32, loop: true} }
+}
+
+vt_track_closed_hat {
+  Track: {instrument: vt_hat_inst, swing: 0.09, swing_grid: TrackSwing16, humanize: {timing: 3, velocity: 0.11}}
+  AudioBus: {output: vt_drum_bus, volume: 0.52}
+  AudioMeter: {}
+  intro_shimmer { ClipPlacement: {clip: vt_intro_hats, start: 0} }
+  part_1 { ClipPlacement: {clip: vt_hat_pulse, start: 32, duration: 96, loop: true} }
+  part_2 { ClipPlacement: {clip: vt_hat_pulse, start: 160} }
+  part_3 { ClipPlacement: {clip: vt_build_hats, start: 192} }
+  part_4 { ClipPlacement: {clip: vt_hat_sixteenths, start: 224, duration: 64, loop: true} }
+  part_5 { ClipPlacement: {clip: vt_hat_pulse, start: 288} }
+  part_6 { ClipPlacement: {clip: vt_build_hats, start: 320} }
+  part_7 { ClipPlacement: {clip: vt_hat_sixteenths, start: 352, duration: 32, loop: true} }
+}
+
+vt_track_open_hat {
+  Track: {instrument: vt_openhat_inst, swing: 0.055, swing_grid: TrackSwing16, humanize: {velocity: 0.08}}
+  AudioBus: {output: vt_drum_bus, volume: 0.42, pan: 0.15, sends: [{bus: vt_room, level: 0.08}]}
+  AudioMeter: {}
+  part_1 { ClipPlacement: {clip: vt_openhats, start: 64, duration: 64, loop: true} }
+  part_2 { ClipPlacement: {clip: vt_openhats, start: 224, duration: 64, loop: true} }
+  part_3 { ClipPlacement: {clip: vt_openhats, start: 352, duration: 32, loop: true} }
+}
+
+vt_track_tom_fills {
+  Track: {instrument: vt_tom_inst, humanize: {velocity: 0.06}}
+  AudioBus: {output: vt_drum_bus, volume: 0.59, sends: [{bus: vt_room, level: 0.20}]}
+  AudioMeter: {}
+  part_1 { ClipPlacement: {clip: vt_tom_cascade, start: 64, duration: 64, loop: true} }
+  part_2 { ClipPlacement: {clip: vt_build_toms, start: 192} }
+  part_3 { ClipPlacement: {clip: vt_tom_cascade, start: 224, duration: 64, loop: true} }
+  part_4 { ClipPlacement: {clip: vt_build_toms, start: 320} }
+  part_5 { ClipPlacement: {clip: vt_tom_cascade, start: 352, duration: 32, loop: true} }
+}
+
+vt_track_crash {
+  Track: {instrument: vt_crash_inst}
+  AudioBus: {output: vt_drum_bus, volume: 0.40, pan: -0.20, sends: [{bus: vt_room, level: 0.09}]}
+  AudioMeter: {}
+  build_1 { ClipPlacement: {clip: vt_build_cymbal_waves, start: 192} }
+  build_2 { ClipPlacement: {clip: vt_build_cymbal_waves, start: 320} }
+  part_1 { ClipPlacement: {clip: vt_crash_entry, start: 64} }
+  part_2 { ClipPlacement: {clip: vt_crash_giant, start: 224, duration: 64, loop: true} }
+  part_3 { ClipPlacement: {clip: vt_crash_giant, start: 352} }
+}
+
+vt_track_ride {
+  Track: {instrument: vt_ride_inst, swing: 0.055, swing_grid: TrackSwing16, humanize: {timing: 2, velocity: 0.07}}
+  AudioBus: {output: vt_drum_bus, volume: 0.32, pan: 0.24, sends: [{bus: vt_room, level: 0.11}]}
+  AudioMeter: {}
+  build_1 { ClipPlacement: {clip: vt_build_ride_lift, start: 192} }
+  drop_1 { ClipPlacement: {clip: vt_ride_groove, start: 224, duration: 64, loop: true} }
+  build_2 { ClipPlacement: {clip: vt_build_ride_lift, start: 320} }
+  drop_2 { ClipPlacement: {clip: vt_ride_groove, start: 352, duration: 32, loop: true} }
+}
+
+vt_track_riser {
+  Track: {instrument: vt_rise_inst}
+  AudioBus: {output: vt_mix, volume: 0.41, sends: [{bus: vt_hall, level: 0.32}]}
+  AudioMeter: {}
+  part_1 { ClipPlacement: {clip: vt_build_tension, start: 192} }
+  part_2 { ClipPlacement: {clip: vt_build_tension, start: 320} }
+}
+
+vt_track_downbeat_shell {
+  Track: {instrument: vt_snare_inst}
+  AudioBus: {output: vt_drum_bus, volume: 0.50}
+  AudioMeter: {}
+  part_1 { ClipPlacement: {clip: vt_drop_signature, start: 224} }
+  part_2 { ClipPlacement: {clip: vt_drop_signature, start: 352} }
+}
+
+vt_track_downbeat_clap {
+  Track: {instrument: vt_clap_inst}
+  AudioBus: {output: vt_drum_bus, volume: 0.40}
+  AudioMeter: {}
+  part_1 { ClipPlacement: {clip: vt_drop_clap_signature, start: 224} }
+  part_2 { ClipPlacement: {clip: vt_drop_clap_signature, start: 352} }
+}
+
+vt_track_downbeat_kick {
+  Track: {instrument: vt_kick_inst}
+  AudioBus: {output: vt_drum_bus, volume: 0.37}
+  AudioMeter: {}
+  part_1 { ClipPlacement: {clip: vt_drop_kick_signature, start: 224} }
+  part_2 { ClipPlacement: {clip: vt_drop_kick_signature, start: 352} }
+}
+
+// Two-stage spectral and spatial growth. Tight dry percussion stays outside this macro.
+vt_energy {
+  AudioMacro: {}
+  bright { AudioMacroMap: {target: vt_pad_filter, component: AudioFilter, member: "cutoff", min: 810, max: 7900, scale: AudioModOctaves} }
+  lead_brightness { AudioMacroMap: {target: vt_lead_color, component: AudioFilter, member: "cutoff", min: 2900, max: 8900, scale: AudioModOctaves} }
+  width { AudioMacroMap: {target: vt_hall, component: Reverb, member: "shimmer", min: 0.08, max: 0.30} }
+  bloom { AudioMacroMap: {target: vt_track_brass, component: AudioBus, member: "volume", min: 0.27, max: 0.70} }
+}
+vt_orbit {
+  AudioModulator: {target: vt_track_horizon_pad, component: AudioBus, member: "pan", depth: 0.17, sync: 32}
+}
+
+prefab vt_energy_path {
+  AutomationClip: {target: vt_energy, component: AudioMacro, member: "value", length: 400,
+    curve: {kind: CurveCatmullRom, keys: [
+      {0, 0.07}, {28, 0.24}, {32, 0.35}, {56, 0.52}, {64, 0.80},
+      {120, 0.88}, {128, 0.11}, {150, 0.09}, {160, 0.24},
+      {184, 0.46}, {192, 0.53}, {208, 0.73}, {216, 0.88}, {222, 1},
+      {223, 0.10}, {224, 1}, {256, 0.99}, {284, 0.95},
+      {288, 0.16}, {312, 0.24}, {320, 0.52}, {336, 0.78},
+      {348, 0.96}, {350, 1}, {351, 0.08}, {352, 1}, {376, 1},
+      {384, 0.54}, {394, 0.35}, {400, 0.09}
+    ]}}
+}
+vt_automation {
+  Track: {}
+  arc { ClipPlacement: {clip: vt_energy_path, start: 0} }
+}
+
+
+// Host song metadata and lane ordering.
+$ {
+  Song: {
+    title: "Voltage Tide", tempo: 110, beats_per_bar: 4, beat_unit: 4, beats: 400,
+    lanes: [
+      {name: "Horizon Pad", bus: vt_track_horizon_pad},
+      {name: "Velvet String Pulses", bus: vt_track_strings},
+      {name: "Motor Bass", bus: vt_track_motor_bass},
+      {name: "Sub Floor", bus: vt_track_sub},
+      {name: "Soft Plucked Ostinato", bus: vt_track_kinetic_arp},
+      {name: "Luminous Lead / Main Hook", bus: vt_track_lead},
+      {name: "Chorus / Sustained Harmony", bus: vt_track_lead_double},
+      {name: "Brass Stabs", bus: vt_track_brass},
+      {name: "Vocal Halo", bus: vt_track_halo},
+      {name: "Glass Replies", bus: vt_track_bells},
+      {name: "Kick / Tuned Sub & Click", bus: vt_track_kick},
+      {name: "Snare / Shell & Noise Wires", bus: vt_track_snare_shell},
+      {name: "Clap / Multi-burst Hands", bus: vt_track_clap_crack},
+      {name: "Closed Hats / Swung Metal", bus: vt_track_closed_hat},
+      {name: "Open Hats", bus: vt_track_open_hat},
+      {name: "Toms / Tuned Fills", bus: vt_track_tom_fills},
+      {name: "Crash / Noise Wash", bus: vt_track_crash},
+      {name: "Ride / Groove & Build", bus: vt_track_ride},
+      {name: "Riser / Critical Mass", bus: vt_track_riser},
+      {name: "Drop / Extra Snare", bus: vt_track_downbeat_shell},
+      {name: "Drop / Extra Clap", bus: vt_track_downbeat_clap},
+      {name: "Drop / Extra Kick", bus: vt_track_downbeat_kick}
+    ]
+  }
+}

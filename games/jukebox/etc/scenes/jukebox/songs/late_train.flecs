@@ -1,0 +1,1444 @@
+using box.audio
+using box.material
+
+// LATE TRAIN - LIVE POCKET
+// 103 BPM, 4/4, 32 bars + final cymbal-tail bar.
+// Sections: Intro 1-4 | Verse 5-12 | Hook 13-20 | Break 21-24 | Final Hook 25-32 | End 33.
+// Every four-bar phrase is fully written out: hand-played velocity hierarchy,
+// pulled snare backbeats, subtle timing changes, ghost notes and unique fills.
+// All synths and editable notes live inside this single project.
+
+box { audio { Song { Rgb: {255, 150, 60} } } }
+
+dk_room {
+  AudioBus: {output: master, kind: AudioChannelReturn, volume: 0.24, effects: [dk_room]}
+  Reverb: {decay: 0.72, damping: 0.65, predelay: 0.012, size: 0.30}
+}
+dk_drum_eq {
+  Equalizer: {bands: [
+    {kind: AudioEqLowCut, frequency: 30},
+    {kind: AudioEqPeak, frequency: 360, gain: -2.3, q: 1}
+  ]}
+}
+dk_drum_glue { Compressor: {threshold: -16, ratio: 2.4, attack: 0.026, release: 0.15, knee: 6, makeup: 1.12} }
+dk_drums {
+  AudioBus: {output: master, volume: 0.78, effects: [dk_drum_eq, dk_drum_glue]}
+  AudioMeter: {}
+}
+
+prefab dk_kick_sound {
+  SynthSound: {seed: 1}
+  SynthDrive: {drive: 0.23}
+  SynthFilter: {kind: SynthLowPass, cutoff: 6200}
+  body {
+    SynthOscillator: {wave: SynthSine, frequency: 54, level: 0.92}
+    SynthEnvelope: {attack: 0.001, decay: 0.39, curve: 3}
+    SynthPitchEnvelope: {amount: 44, decay: 0.046, curve: 6}
+  }
+  click {
+    SynthOscillator: {wave: SynthNoise, level: 0.22}
+    SynthEnvelope: {attack: 0.0005, decay: 0.009, curve: 3}
+  }
+}
+
+prefab dk_snare_sound {
+  SynthSound: {seed: 2, level_variance: 0.065}
+  SynthDrive: {drive: 0.19}
+  SynthFilter: {kind: SynthHighPass, cutoff: 165}
+  head {
+    SynthOscillator: {wave: SynthSine, frequency: 183, level: 0.58}
+    SynthEnvelope: {attack: 0.001, decay: 0.15, curve: 4}
+    SynthPitchEnvelope: {amount: 7, decay: 0.03, curve: 4}
+  }
+  ring {
+    SynthOscillator: {wave: SynthSine, frequency: 326, level: 0.17}
+    SynthEnvelope: {attack: 0.001, decay: 0.07, curve: 4}
+    SynthPitchEnvelope: {amount: 5, decay: 0.02, curve: 4}
+  }
+  wires {
+    SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, level: 0.5}
+    SynthEnvelope: {attack: 0.001, decay: 0.205, curve: 5}
+  }
+}
+
+prefab dk_hat_sound {
+  SynthSound: {seed: 3, level_variance: 0.08}
+  SynthEnvelope: {attack: 0.0005, decay: 0.070, curve: 5}
+  SynthFilter: {kind: SynthHighPass, cutoff: 5700, resonance: 0.12, slope: SynthSlope24}
+  m1 { SynthOscillator: {wave: SynthSquare, frequency: 205.3, level: 0.2} }
+  m2 { SynthOscillator: {wave: SynthSquare, frequency: 304.4, level: 0.2} }
+  m3 { SynthOscillator: {wave: SynthSquare, frequency: 369.6, level: 0.2} }
+  m4 { SynthOscillator: {wave: SynthSquare, frequency: 522.7, level: 0.2} }
+  m5 { SynthOscillator: {wave: SynthSquare, frequency: 540, level: 0.2} }
+  m6 { SynthOscillator: {wave: SynthSquare, frequency: 800, level: 0.2} }
+  air { SynthOscillator: {wave: SynthNoise, level: 0.29} }
+}
+
+prefab dk_open_hat_sound {
+  SynthSound: {seed: 4, level_variance: 0.05}
+  SynthEnvelope: {attack: 0.001, decay: 0.29, curve: 3}
+  SynthFilter: {kind: SynthHighPass, cutoff: 5700, resonance: 0.12, slope: SynthSlope24}
+  m1 { SynthOscillator: {wave: SynthSquare, frequency: 205.3, level: 0.2} }
+  m2 { SynthOscillator: {wave: SynthSquare, frequency: 304.4, level: 0.2} }
+  m3 { SynthOscillator: {wave: SynthSquare, frequency: 369.6, level: 0.2} }
+  m4 { SynthOscillator: {wave: SynthSquare, frequency: 522.7, level: 0.2} }
+  m5 { SynthOscillator: {wave: SynthSquare, frequency: 540, level: 0.2} }
+  m6 { SynthOscillator: {wave: SynthSquare, frequency: 800, level: 0.2} }
+  air { SynthOscillator: {wave: SynthNoise, level: 0.32} }
+}
+
+prefab dk_clap_sound {
+  SynthSound: {seed: 5, level_variance: 0.08}
+  SynthFilter: {kind: SynthBandPass, cutoff: 1200, resonance: 0.3}
+  hand1 {
+    SynthOscillator: {wave: SynthNoise, level: 1.3}
+    SynthEnvelope: {attack: 0.0005, decay: 0.009, curve: 4}
+  }
+  hand2 {
+    SynthOscillator: {wave: SynthNoise, level: 1.2}
+    SynthEnvelope: {attack: 0.011, attack_curve: -16, decay: 0.009, curve: 4}
+  }
+  hand3 {
+    SynthOscillator: {wave: SynthNoise, level: 1.2}
+    SynthEnvelope: {attack: 0.021, attack_curve: -16, decay: 0.009, curve: 4}
+  }
+  tail {
+    SynthOscillator: {wave: SynthNoise, level: 1.1}
+    SynthEnvelope: {attack: 0.031, attack_curve: -16, decay: 0.2, curve: 4}
+    SynthUnison: {voices: 2, detune: 0, width: 0.5}
+  }
+}
+
+prefab dk_tom_sound {
+  SynthSound: {seed: 6, level_variance: 0.04}
+  SynthDrive: {drive: 0.3}
+  SynthFilter: {kind: SynthLowPass, cutoff: 4500}
+  head {
+    SynthOscillator: {wave: SynthSine, frequency: 110, level: 0.8}
+    SynthEnvelope: {attack: 0.001, decay: 0.55, curve: 3.5, key_scale: 0.5}
+    SynthPitchEnvelope: {amount: 5, decay: 0.12, curve: 3}
+  }
+  mode {
+    SynthOscillator: {wave: SynthSine, frequency: 175, level: 0.22}
+    SynthEnvelope: {attack: 0.001, decay: 0.18, curve: 4, key_scale: 0.5}
+    SynthPitchEnvelope: {amount: 5, decay: 0.08, curve: 3}
+  }
+  stick {
+    SynthOscillator: {wave: SynthNoise, level: 0.3}
+    SynthEnvelope: {attack: 0.0005, decay: 0.012, curve: 3}
+  }
+}
+
+prefab dk_ride_sound {
+  SynthSound: {seed: 7, level_variance: 0.05}
+  SynthEnvelope: {attack: 0.001, decay: 1.65, curve: 4}
+  SynthFilter: {kind: SynthHighPass, cutoff: 3100}
+  m1 { SynthOscillator: {wave: SynthSquare, frequency: 287, level: 0.1} }
+  m2 { SynthOscillator: {wave: SynthSquare, frequency: 431, level: 0.1} }
+  m3 { SynthOscillator: {wave: SynthSquare, frequency: 513, level: 0.1} }
+  m4 { SynthOscillator: {wave: SynthSquare, frequency: 653, level: 0.1} }
+  m5 { SynthOscillator: {wave: SynthSquare, frequency: 769, level: 0.1} }
+  m6 { SynthOscillator: {wave: SynthSquare, frequency: 1021, level: 0.1} }
+  ping {
+    SynthOscillator: {wave: SynthSine, frequency: 3100, level: 0.23}
+    SynthEnvelope: {attack: 0.001, decay: 0.35, curve: 3}
+    bell { SynthOscillator: {frequency: 4371, modulation: SynthPhase, index: 2.2} }
+  }
+}
+
+prefab dk_crash_sound {
+  SynthSound: {seed: 8, level_variance: 0.04}
+  SynthEnvelope: {attack: 0.002, decay: 2.05, curve: 3}
+  SynthFilter: {kind: SynthHighPass, cutoff: 2200}
+  m1 { SynthOscillator: {wave: SynthSquare, frequency: 245, level: 0.09} }
+  m2 { SynthOscillator: {wave: SynthSquare, frequency: 367, level: 0.09} }
+  m3 { SynthOscillator: {wave: SynthSquare, frequency: 459, level: 0.09} }
+  m4 { SynthOscillator: {wave: SynthSquare, frequency: 611, level: 0.09} }
+  m5 { SynthOscillator: {wave: SynthSquare, frequency: 692, level: 0.09} }
+  wash {
+    SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, level: 0.6}
+    SynthUnison: {voices: 3, detune: 0, width: 0.9}
+  }
+  splash {
+    SynthOscillator: {wave: SynthNoise, level: 0.6}
+    SynthEnvelope: {attack: 0.001, decay: 0.18, curve: 4}
+    SynthUnison: {voices: 2, detune: 0, width: 0.7}
+  }
+}
+
+dk_kick_inst { Instrument: {sound: dk_kick_sound, root: 36, gate: false} }
+dk_snare_inst { Instrument: {sound: dk_snare_sound, root: 38, gate: false} }
+dk_hat_inst { Instrument: {sound: dk_hat_sound, root: 42, gate: false, spread: 0.15, spread_mode: InstrumentSpreadRandom} }
+dk_open_hat_inst { Instrument: {sound: dk_open_hat_sound, root: 46, gate: false} }
+dk_clap_inst { Instrument: {sound: dk_clap_sound, root: 39, gate: false} }
+dk_tom_inst { Instrument: {sound: dk_tom_sound, root: 45, gate: false, spread: 0.7} }
+dk_ride_inst { Instrument: {sound: dk_ride_sound, root: 51, gate: false} }
+dk_crash_inst { Instrument: {sound: dk_crash_sound, root: 49, gate: false} }
+
+
+// Additional low-level acoustic-style articulations for quiet moments and ghost texture.
+prefab lp_rim_sound {
+  SynthSound: {seed: 11, level_variance: 0.085}
+  SynthFilter: {kind: SynthHighPass, cutoff: 350}
+  wood {
+    SynthOscillator: {wave: SynthSine, frequency: 830, level: 0.42}
+    SynthEnvelope: {attack: 0.0008, decay: 0.055, curve: 4}
+  }
+  overtone {
+    SynthOscillator: {wave: SynthSine, frequency: 1225, level: 0.13}
+    SynthEnvelope: {attack: 0.0005, decay: 0.032, curve: 5}
+  }
+  tick {
+    SynthOscillator: {wave: SynthNoise, level: 0.24}
+    SynthEnvelope: {attack: 0.0005, decay: 0.012, curve: 5}
+  }
+}
+prefab lp_shaker_sound {
+  SynthSound: {seed: 12, level_variance: 0.11}
+  SynthFilter: {kind: SynthHighPass, cutoff: 5400}
+  SynthEnvelope: {attack: 0.002, decay: 0.064, curve: 5}
+  sand { SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, level: 0.65} }
+  grain { SynthOscillator: {wave: SynthNoise, level: 0.29} }
+}
+lp_rim_inst { Instrument: {sound: lp_rim_sound, root: 37, gate: false} }
+lp_shaker_inst { Instrument: {sound: lp_shaker_sound, root: 82, gate: false, spread: 0.20, spread_mode: InstrumentSpreadRandom} }
+
+prefab lp_kick_intro {
+  NoteClip: {length: 16, notes: [
+    {start: 0.0058, duration: 0.160, pitch: 36, velocity: 0.652},
+    {start: 2.5017, duration: 0.160, pitch: 36, velocity: 0.519},
+    {start: 4.0000, duration: 0.160, pitch: 36, velocity: 0.682},
+    {start: 6.7524, duration: 0.160, pitch: 36, velocity: 0.546},
+    {start: 8.0025, duration: 0.160, pitch: 36, velocity: 0.779},
+    {start: 9.7432, duration: 0.160, pitch: 36, velocity: 0.636},
+    {start: 10.0031, duration: 0.160, pitch: 36, velocity: 0.702},
+    {start: 12.0000, duration: 0.160, pitch: 36, velocity: 0.759},
+    {start: 13.7557, duration: 0.160, pitch: 36, velocity: 0.645},
+    {start: 14.5011, duration: 0.160, pitch: 36, velocity: 0.619},
+    {start: 15.7487, duration: 0.160, pitch: 36, velocity: 0.610}
+  ]}
+}
+
+prefab lp_kick_verse_a {
+  NoteClip: {length: 16, notes: [
+    {start: 0.0000, duration: 0.160, pitch: 36, velocity: 0.885},
+    {start: 1.7435, duration: 0.160, pitch: 36, velocity: 0.671},
+    {start: 2.4931, duration: 0.160, pitch: 36, velocity: 0.715},
+    {start: 4.0000, duration: 0.160, pitch: 36, velocity: 0.880},
+    {start: 5.5043, duration: 0.160, pitch: 36, velocity: 0.672},
+    {start: 6.7472, duration: 0.160, pitch: 36, velocity: 0.712},
+    {start: 7.5036, duration: 0.160, pitch: 36, velocity: 0.694},
+    {start: 8.0026, duration: 0.160, pitch: 36, velocity: 0.873},
+    {start: 8.7476, duration: 0.160, pitch: 36, velocity: 0.686},
+    {start: 10.0023, duration: 0.160, pitch: 36, velocity: 0.790},
+    {start: 10.7545, duration: 0.160, pitch: 36, velocity: 0.674},
+    {start: 12.0011, duration: 0.160, pitch: 36, velocity: 0.875},
+    {start: 13.7454, duration: 0.160, pitch: 36, velocity: 0.685},
+    {start: 14.4993, duration: 0.160, pitch: 36, velocity: 0.688},
+    {start: 15.7537, duration: 0.160, pitch: 36, velocity: 0.694}
+  ]}
+}
+
+prefab lp_kick_verse_b {
+  NoteClip: {length: 16, notes: [
+    {start: 0.0000, duration: 0.160, pitch: 36, velocity: 0.854},
+    {start: 1.5016, duration: 0.160, pitch: 36, velocity: 0.710},
+    {start: 1.9968, duration: 0.160, pitch: 36, velocity: 0.791},
+    {start: 3.4990, duration: 0.160, pitch: 36, velocity: 0.678},
+    {start: 4.0024, duration: 0.160, pitch: 36, velocity: 0.869},
+    {start: 5.7532, duration: 0.160, pitch: 36, velocity: 0.689},
+    {start: 6.7432, duration: 0.160, pitch: 36, velocity: 0.672},
+    {start: 8.0019, duration: 0.160, pitch: 36, velocity: 0.879},
+    {start: 8.7509, duration: 0.160, pitch: 36, velocity: 0.709},
+    {start: 9.9932, duration: 0.160, pitch: 36, velocity: 0.749},
+    {start: 10.5000, duration: 0.160, pitch: 36, velocity: 0.706},
+    {start: 12.0000, duration: 0.160, pitch: 36, velocity: 0.856},
+    {start: 13.7482, duration: 0.160, pitch: 36, velocity: 0.673},
+    {start: 14.7441, duration: 0.160, pitch: 36, velocity: 0.696},
+    {start: 15.5059, duration: 0.160, pitch: 36, velocity: 0.675}
+  ]}
+}
+
+prefab lp_kick_hook_a {
+  NoteClip: {length: 16, notes: [
+    {start: 0.0000, duration: 0.160, pitch: 36, velocity: 0.896},
+    {start: 1.5068, duration: 0.160, pitch: 36, velocity: 0.708},
+    {start: 1.9958, duration: 0.160, pitch: 36, velocity: 0.779},
+    {start: 2.7472, duration: 0.160, pitch: 36, velocity: 0.735},
+    {start: 4.0032, duration: 0.160, pitch: 36, velocity: 0.925},
+    {start: 4.7537, duration: 0.160, pitch: 36, velocity: 0.710},
+    {start: 6.0046, duration: 0.160, pitch: 36, velocity: 0.803},
+    {start: 6.5050, duration: 0.160, pitch: 36, velocity: 0.693},
+    {start: 7.4983, duration: 0.160, pitch: 36, velocity: 0.716},
+    {start: 8.0000, duration: 0.160, pitch: 36, velocity: 0.892},
+    {start: 9.7555, duration: 0.160, pitch: 36, velocity: 0.741},
+    {start: 10.0037, duration: 0.160, pitch: 36, velocity: 0.816},
+    {start: 10.7512, duration: 0.160, pitch: 36, velocity: 0.704},
+    {start: 12.0000, duration: 0.160, pitch: 36, velocity: 0.887},
+    {start: 13.4938, duration: 0.160, pitch: 36, velocity: 0.697},
+    {start: 13.9987, duration: 0.160, pitch: 36, velocity: 0.799},
+    {start: 15.4988, duration: 0.160, pitch: 36, velocity: 0.701}
+  ]}
+}
+
+prefab lp_kick_hook_b {
+  NoteClip: {length: 16, notes: [
+    {start: 0.0059, duration: 0.160, pitch: 36, velocity: 0.920},
+    {start: 1.4979, duration: 0.160, pitch: 36, velocity: 0.694},
+    {start: 2.0011, duration: 0.160, pitch: 36, velocity: 0.788},
+    {start: 2.7523, duration: 0.160, pitch: 36, velocity: 0.721},
+    {start: 4.0013, duration: 0.160, pitch: 36, velocity: 0.908},
+    {start: 4.7561, duration: 0.160, pitch: 36, velocity: 0.728},
+    {start: 6.0030, duration: 0.160, pitch: 36, velocity: 0.779},
+    {start: 6.4942, duration: 0.160, pitch: 36, velocity: 0.720},
+    {start: 7.4949, duration: 0.160, pitch: 36, velocity: 0.689},
+    {start: 8.0000, duration: 0.160, pitch: 36, velocity: 0.929},
+    {start: 9.7465, duration: 0.160, pitch: 36, velocity: 0.729},
+    {start: 10.0029, duration: 0.160, pitch: 36, velocity: 0.825},
+    {start: 11.5048, duration: 0.160, pitch: 36, velocity: 0.714},
+    {start: 12.0000, duration: 0.160, pitch: 36, velocity: 0.914},
+    {start: 13.5032, duration: 0.160, pitch: 36, velocity: 0.722},
+    {start: 13.9977, duration: 0.160, pitch: 36, velocity: 0.790},
+    {start: 14.7554, duration: 0.160, pitch: 36, velocity: 0.742},
+    {start: 15.7473, duration: 0.160, pitch: 36, velocity: 0.715}
+  ]}
+}
+
+prefab lp_kick_break {
+  NoteClip: {length: 16, notes: [
+    {start: 0.0000, duration: 0.160, pitch: 36, velocity: 0.630},
+    {start: 2.4962, duration: 0.160, pitch: 36, velocity: 0.501},
+    {start: 4.0030, duration: 0.160, pitch: 36, velocity: 0.639},
+    {start: 6.7450, duration: 0.160, pitch: 36, velocity: 0.494},
+    {start: 8.0000, duration: 0.160, pitch: 36, velocity: 0.732},
+    {start: 9.7483, duration: 0.160, pitch: 36, velocity: 0.554},
+    {start: 10.5070, duration: 0.160, pitch: 36, velocity: 0.587},
+    {start: 12.0000, duration: 0.160, pitch: 36, velocity: 0.727},
+    {start: 13.5028, duration: 0.160, pitch: 36, velocity: 0.575},
+    {start: 13.9986, duration: 0.160, pitch: 36, velocity: 0.657},
+    {start: 15.7505, duration: 0.160, pitch: 36, velocity: 0.579}
+  ]}
+}
+
+prefab lp_kick_final_a {
+  NoteClip: {length: 16, notes: [
+    {start: 0.0004, duration: 0.160, pitch: 36, velocity: 0.927},
+    {start: 1.5013, duration: 0.160, pitch: 36, velocity: 0.717},
+    {start: 1.9947, duration: 0.160, pitch: 36, velocity: 0.798},
+    {start: 2.7521, duration: 0.160, pitch: 36, velocity: 0.693},
+    {start: 4.0000, duration: 0.160, pitch: 36, velocity: 0.917},
+    {start: 4.7430, duration: 0.160, pitch: 36, velocity: 0.720},
+    {start: 5.9963, duration: 0.160, pitch: 36, velocity: 0.814},
+    {start: 6.4957, duration: 0.160, pitch: 36, velocity: 0.711},
+    {start: 7.4982, duration: 0.160, pitch: 36, velocity: 0.686},
+    {start: 8.0038, duration: 0.160, pitch: 36, velocity: 0.890},
+    {start: 9.7546, duration: 0.160, pitch: 36, velocity: 0.741},
+    {start: 10.0060, duration: 0.160, pitch: 36, velocity: 0.781},
+    {start: 10.7503, duration: 0.160, pitch: 36, velocity: 0.721},
+    {start: 12.0000, duration: 0.160, pitch: 36, velocity: 0.926},
+    {start: 13.4950, duration: 0.160, pitch: 36, velocity: 0.739},
+    {start: 13.9958, duration: 0.160, pitch: 36, velocity: 0.797},
+    {start: 14.7433, duration: 0.160, pitch: 36, velocity: 0.731},
+    {start: 15.5046, duration: 0.160, pitch: 36, velocity: 0.709}
+  ]}
+}
+
+prefab lp_kick_final_b {
+  NoteClip: {length: 16, notes: [
+    {start: 0.0000, duration: 0.160, pitch: 36, velocity: 0.942},
+    {start: 1.5036, duration: 0.160, pitch: 36, velocity: 0.731},
+    {start: 2.0051, duration: 0.160, pitch: 36, velocity: 0.834},
+    {start: 2.7485, duration: 0.160, pitch: 36, velocity: 0.769},
+    {start: 4.0059, duration: 0.160, pitch: 36, velocity: 0.930},
+    {start: 4.7567, duration: 0.160, pitch: 36, velocity: 0.750},
+    {start: 6.0006, duration: 0.160, pitch: 36, velocity: 0.809},
+    {start: 6.5049, duration: 0.160, pitch: 36, velocity: 0.744},
+    {start: 7.5009, duration: 0.160, pitch: 36, velocity: 0.747},
+    {start: 8.0008, duration: 0.160, pitch: 36, velocity: 0.924},
+    {start: 9.7486, duration: 0.160, pitch: 36, velocity: 0.727},
+    {start: 9.9968, duration: 0.160, pitch: 36, velocity: 0.842},
+    {start: 10.7458, duration: 0.160, pitch: 36, velocity: 0.743},
+    {start: 11.4995, duration: 0.160, pitch: 36, velocity: 0.738},
+    {start: 12.0000, duration: 0.160, pitch: 36, velocity: 0.923},
+    {start: 13.5066, duration: 0.160, pitch: 36, velocity: 0.762},
+    {start: 14.0010, duration: 0.160, pitch: 36, velocity: 0.826},
+    {start: 15.2497, duration: 0.160, pitch: 36, velocity: 0.765}
+  ]}
+}
+
+prefab lp_kick_end {
+  NoteClip: {length: 4, notes: [
+    {start: 0.0000, duration: 0.160, pitch: 36, velocity: 0.889}
+  ]}
+}
+
+prefab lp_snare_intro {
+  NoteClip: {length: 16, notes: [
+    {start: 9.0278, duration: 0.110, pitch: 38, velocity: 0.725},
+    {start: 11.0270, duration: 0.110, pitch: 38, velocity: 0.756},
+    {start: 13.0164, duration: 0.110, pitch: 38, velocity: 0.690},
+    {start: 14.7492, duration: 0.110, pitch: 38, velocity: 0.179},
+    {start: 15.0177, duration: 0.110, pitch: 38, velocity: 0.774}
+  ]}
+}
+
+prefab lp_snare_verse_a {
+  NoteClip: {length: 16, notes: [
+    {start: 1.0152, duration: 0.110, pitch: 38, velocity: 0.826},
+    {start: 1.7477, duration: 0.110, pitch: 38, velocity: 0.231},
+    {start: 2.7440, duration: 0.110, pitch: 38, velocity: 0.172},
+    {start: 3.0198, duration: 0.110, pitch: 38, velocity: 0.891},
+    {start: 5.0148, duration: 0.110, pitch: 38, velocity: 0.830},
+    {start: 6.7445, duration: 0.110, pitch: 38, velocity: 0.207},
+    {start: 7.0296, duration: 0.110, pitch: 38, velocity: 0.893},
+    {start: 8.7517, duration: 0.110, pitch: 38, velocity: 0.162},
+    {start: 9.0307, duration: 0.110, pitch: 38, velocity: 0.824},
+    {start: 10.7162, duration: 0.110, pitch: 38, velocity: 0.281},
+    {start: 11.0194, duration: 0.110, pitch: 38, velocity: 0.902},
+    {start: 13.0289, duration: 0.110, pitch: 38, velocity: 0.842},
+    {start: 14.7438, duration: 0.110, pitch: 38, velocity: 0.190},
+    {start: 15.0180, duration: 0.110, pitch: 38, velocity: 0.919}
+  ]}
+}
+
+prefab lp_snare_verse_b {
+  NoteClip: {length: 16, notes: [
+    {start: 0.7264, duration: 0.110, pitch: 38, velocity: 0.149},
+    {start: 1.0230, duration: 0.110, pitch: 38, velocity: 0.855},
+    {start: 1.7465, duration: 0.110, pitch: 38, velocity: 0.186},
+    {start: 2.7257, duration: 0.110, pitch: 38, velocity: 0.240},
+    {start: 3.0178, duration: 0.110, pitch: 38, velocity: 0.914},
+    {start: 5.0166, duration: 0.110, pitch: 38, velocity: 0.834},
+    {start: 5.7593, duration: 0.110, pitch: 38, velocity: 0.220},
+    {start: 6.7314, duration: 0.110, pitch: 38, velocity: 0.169},
+    {start: 7.0113, duration: 0.110, pitch: 38, velocity: 0.875},
+    {start: 9.0128, duration: 0.110, pitch: 38, velocity: 0.840},
+    {start: 10.7499, duration: 0.110, pitch: 38, velocity: 0.221},
+    {start: 11.0219, duration: 0.110, pitch: 38, velocity: 0.868},
+    {start: 13.0167, duration: 0.110, pitch: 38, velocity: 0.826},
+    {start: 14.7445, duration: 0.110, pitch: 38, velocity: 0.231},
+    {start: 15.0127, duration: 0.110, pitch: 38, velocity: 0.917},
+    {start: 15.5148, duration: 0.110, pitch: 38, velocity: 0.386},
+    {start: 15.7665, duration: 0.110, pitch: 38, velocity: 0.524},
+    {start: 15.7708, duration: 0.110, pitch: 38, velocity: 0.233}
+  ]}
+}
+
+prefab lp_snare_hook_a {
+  NoteClip: {length: 16, notes: [
+    {start: 0.7621, duration: 0.110, pitch: 38, velocity: 0.192},
+    {start: 1.0290, duration: 0.110, pitch: 38, velocity: 0.854},
+    {start: 2.7179, duration: 0.110, pitch: 38, velocity: 0.240},
+    {start: 3.0282, duration: 0.110, pitch: 38, velocity: 0.884},
+    {start: 5.0182, duration: 0.110, pitch: 38, velocity: 0.884},
+    {start: 6.7533, duration: 0.110, pitch: 38, velocity: 0.203},
+    {start: 7.0184, duration: 0.110, pitch: 38, velocity: 0.913},
+    {start: 9.0245, duration: 0.110, pitch: 38, velocity: 0.872},
+    {start: 9.7541, duration: 0.110, pitch: 38, velocity: 0.212},
+    {start: 10.7330, duration: 0.110, pitch: 38, velocity: 0.199},
+    {start: 11.0111, duration: 0.110, pitch: 38, velocity: 0.915},
+    {start: 12.7387, duration: 0.110, pitch: 38, velocity: 0.183},
+    {start: 13.0197, duration: 0.110, pitch: 38, velocity: 0.888},
+    {start: 13.7499, duration: 0.110, pitch: 38, velocity: 0.168},
+    {start: 14.7279, duration: 0.110, pitch: 38, velocity: 0.277},
+    {start: 15.0260, duration: 0.110, pitch: 38, velocity: 0.890}
+  ]}
+}
+
+prefab lp_snare_hook_b {
+  NoteClip: {length: 16, notes: [
+    {start: 0.7618, duration: 0.110, pitch: 38, velocity: 0.145},
+    {start: 1.0175, duration: 0.110, pitch: 38, velocity: 0.886},
+    {start: 2.7212, duration: 0.110, pitch: 38, velocity: 0.232},
+    {start: 3.0262, duration: 0.110, pitch: 38, velocity: 0.921},
+    {start: 5.0248, duration: 0.110, pitch: 38, velocity: 0.863},
+    {start: 5.7542, duration: 0.110, pitch: 38, velocity: 0.199},
+    {start: 6.7359, duration: 0.110, pitch: 38, velocity: 0.170},
+    {start: 7.0277, duration: 0.110, pitch: 38, velocity: 0.893},
+    {start: 9.0260, duration: 0.110, pitch: 38, velocity: 0.860},
+    {start: 10.7477, duration: 0.110, pitch: 38, velocity: 0.213},
+    {start: 11.0282, duration: 0.110, pitch: 38, velocity: 0.933},
+    {start: 13.0147, duration: 0.110, pitch: 38, velocity: 0.840},
+    {start: 14.7466, duration: 0.110, pitch: 38, velocity: 0.220},
+    {start: 15.0155, duration: 0.110, pitch: 38, velocity: 0.913},
+    {start: 15.5233, duration: 0.110, pitch: 38, velocity: 0.395},
+    {start: 15.7692, duration: 0.110, pitch: 38, velocity: 0.226},
+    {start: 15.7710, duration: 0.110, pitch: 38, velocity: 0.504}
+  ]}
+}
+
+prefab lp_snare_break {
+  NoteClip: {length: 16, notes: [
+    {start: 11.0280, duration: 0.110, pitch: 38, velocity: 0.620},
+    {start: 13.0159, duration: 0.110, pitch: 38, velocity: 0.716},
+    {start: 15.0175, duration: 0.110, pitch: 38, velocity: 0.747},
+    {start: 15.7785, duration: 0.110, pitch: 38, velocity: 0.387}
+  ]}
+}
+
+prefab lp_snare_final_a {
+  NoteClip: {length: 16, notes: [
+    {start: 0.7277, duration: 0.110, pitch: 38, velocity: 0.209},
+    {start: 1.0244, duration: 0.110, pitch: 38, velocity: 0.900},
+    {start: 1.7503, duration: 0.110, pitch: 38, velocity: 0.186},
+    {start: 2.7258, duration: 0.110, pitch: 38, velocity: 0.257},
+    {start: 3.0132, duration: 0.110, pitch: 38, velocity: 0.907},
+    {start: 5.0276, duration: 0.110, pitch: 38, velocity: 0.869},
+    {start: 6.7483, duration: 0.110, pitch: 38, velocity: 0.232},
+    {start: 7.0174, duration: 0.110, pitch: 38, velocity: 0.901},
+    {start: 9.0183, duration: 0.110, pitch: 38, velocity: 0.854},
+    {start: 9.7541, duration: 0.110, pitch: 38, velocity: 0.231},
+    {start: 10.7330, duration: 0.110, pitch: 38, velocity: 0.203},
+    {start: 11.0125, duration: 0.110, pitch: 38, velocity: 0.921},
+    {start: 13.0252, duration: 0.110, pitch: 38, velocity: 0.889},
+    {start: 14.7602, duration: 0.110, pitch: 38, velocity: 0.191},
+    {start: 15.0250, duration: 0.110, pitch: 38, velocity: 0.900}
+  ]}
+}
+
+prefab lp_snare_final_b {
+  NoteClip: {length: 16, notes: [
+    {start: 0.7591, duration: 0.110, pitch: 38, velocity: 0.148},
+    {start: 1.0115, duration: 0.110, pitch: 38, velocity: 0.850},
+    {start: 2.7126, duration: 0.110, pitch: 38, velocity: 0.290},
+    {start: 3.0249, duration: 0.110, pitch: 38, velocity: 0.942},
+    {start: 4.7341, duration: 0.110, pitch: 38, velocity: 0.205},
+    {start: 5.0300, duration: 0.110, pitch: 38, velocity: 0.899},
+    {start: 5.7609, duration: 0.110, pitch: 38, velocity: 0.196},
+    {start: 6.7304, duration: 0.110, pitch: 38, velocity: 0.240},
+    {start: 7.0224, duration: 0.110, pitch: 38, velocity: 0.952},
+    {start: 9.0169, duration: 0.110, pitch: 38, velocity: 0.890},
+    {start: 9.7602, duration: 0.110, pitch: 38, velocity: 0.229},
+    {start: 10.7498, duration: 0.110, pitch: 38, velocity: 0.159},
+    {start: 11.0237, duration: 0.110, pitch: 38, velocity: 0.939},
+    {start: 13.0177, duration: 0.110, pitch: 38, velocity: 0.885},
+    {start: 14.7460, duration: 0.110, pitch: 38, velocity: 0.208},
+    {start: 15.0251, duration: 0.110, pitch: 38, velocity: 0.934},
+    {start: 15.2805, duration: 0.110, pitch: 38, velocity: 0.312},
+    {start: 15.5186, duration: 0.110, pitch: 38, velocity: 0.434},
+    {start: 15.7641, duration: 0.110, pitch: 38, velocity: 0.199},
+    {start: 15.7642, duration: 0.110, pitch: 38, velocity: 0.595}
+  ]}
+}
+
+prefab lp_hat_intro {
+  NoteClip: {length: 16, notes: [
+    {start: 0.0000, duration: 0.075, pitch: 42, velocity: 0.429},
+    {start: 0.5045, duration: 0.075, pitch: 42, velocity: 0.308},
+    {start: 1.0027, duration: 0.075, pitch: 42, velocity: 0.399},
+    {start: 1.9914, duration: 0.075, pitch: 42, velocity: 0.439},
+    {start: 2.5006, duration: 0.075, pitch: 42, velocity: 0.291},
+    {start: 3.0038, duration: 0.075, pitch: 42, velocity: 0.413},
+    {start: 3.5055, duration: 0.075, pitch: 42, velocity: 0.260},
+    {start: 4.0033, duration: 0.075, pitch: 42, velocity: 0.454},
+    {start: 4.5077, duration: 0.075, pitch: 42, velocity: 0.269},
+    {start: 5.0028, duration: 0.075, pitch: 42, velocity: 0.418},
+    {start: 5.4980, duration: 0.075, pitch: 42, velocity: 0.272},
+    {start: 5.9913, duration: 0.075, pitch: 42, velocity: 0.467},
+    {start: 6.5022, duration: 0.075, pitch: 42, velocity: 0.314},
+    {start: 6.9947, duration: 0.075, pitch: 42, velocity: 0.439},
+    {start: 7.4957, duration: 0.075, pitch: 42, velocity: 0.286},
+    {start: 8.0023, duration: 0.075, pitch: 42, velocity: 0.507},
+    {start: 8.5077, duration: 0.075, pitch: 42, velocity: 0.383},
+    {start: 8.9961, duration: 0.075, pitch: 42, velocity: 0.519},
+    {start: 9.4978, duration: 0.075, pitch: 42, velocity: 0.362},
+    {start: 9.9933, duration: 0.075, pitch: 42, velocity: 0.584},
+    {start: 10.4942, duration: 0.075, pitch: 42, velocity: 0.377},
+    {start: 10.9948, duration: 0.075, pitch: 42, velocity: 0.540},
+    {start: 11.5003, duration: 0.075, pitch: 42, velocity: 0.318},
+    {start: 12.0000, duration: 0.075, pitch: 42, velocity: 0.525},
+    {start: 12.5012, duration: 0.075, pitch: 42, velocity: 0.323},
+    {start: 12.9965, duration: 0.075, pitch: 42, velocity: 0.526},
+    {start: 13.5077, duration: 0.075, pitch: 42, velocity: 0.351},
+    {start: 13.9960, duration: 0.075, pitch: 42, velocity: 0.561},
+    {start: 14.5039, duration: 0.075, pitch: 42, velocity: 0.337},
+    {start: 14.7887, duration: 0.075, pitch: 42, velocity: 0.232},
+    {start: 15.0083, duration: 0.075, pitch: 42, velocity: 0.517},
+    {start: 15.4935, duration: 0.075, pitch: 42, velocity: 0.361},
+    {start: 15.7846, duration: 0.075, pitch: 42, velocity: 0.224}
+  ]}
+}
+
+prefab lp_hat_verse_a {
+  NoteClip: {length: 16, notes: [
+    {start: 0.0000, duration: 0.075, pitch: 42, velocity: 0.608},
+    {start: 0.4928, duration: 0.075, pitch: 42, velocity: 0.391},
+    {start: 0.7790, duration: 0.075, pitch: 42, velocity: 0.236},
+    {start: 1.0045, duration: 0.075, pitch: 42, velocity: 0.590},
+    {start: 1.4904, duration: 0.075, pitch: 42, velocity: 0.420},
+    {start: 1.9978, duration: 0.075, pitch: 42, velocity: 0.639},
+    {start: 2.5067, duration: 0.075, pitch: 42, velocity: 0.370},
+    {start: 2.9946, duration: 0.075, pitch: 42, velocity: 0.614},
+    {start: 3.5008, duration: 0.075, pitch: 42, velocity: 0.375},
+    {start: 3.7838, duration: 0.075, pitch: 42, velocity: 0.277},
+    {start: 4.0000, duration: 0.075, pitch: 42, velocity: 0.605},
+    {start: 4.4939, duration: 0.075, pitch: 42, velocity: 0.407},
+    {start: 4.9911, duration: 0.075, pitch: 42, velocity: 0.594},
+    {start: 5.5045, duration: 0.075, pitch: 42, velocity: 0.455},
+    {start: 5.7782, duration: 0.075, pitch: 42, velocity: 0.223},
+    {start: 6.0008, duration: 0.075, pitch: 42, velocity: 0.615},
+    {start: 6.4945, duration: 0.075, pitch: 42, velocity: 0.415},
+    {start: 6.9979, duration: 0.075, pitch: 42, velocity: 0.559},
+    {start: 7.5045, duration: 0.075, pitch: 42, velocity: 0.449},
+    {start: 8.0000, duration: 0.075, pitch: 42, velocity: 0.593},
+    {start: 8.2889, duration: 0.075, pitch: 42, velocity: 0.282},
+    {start: 8.4966, duration: 0.075, pitch: 42, velocity: 0.426},
+    {start: 8.9978, duration: 0.075, pitch: 42, velocity: 0.579},
+    {start: 9.4959, duration: 0.075, pitch: 42, velocity: 0.377},
+    {start: 9.9969, duration: 0.075, pitch: 42, velocity: 0.634},
+    {start: 10.4905, duration: 0.075, pitch: 42, velocity: 0.382},
+    {start: 10.7829, duration: 0.075, pitch: 42, velocity: 0.261},
+    {start: 11.0009, duration: 0.075, pitch: 42, velocity: 0.589},
+    {start: 11.4969, duration: 0.075, pitch: 42, velocity: 0.403},
+    {start: 12.0098, duration: 0.075, pitch: 42, velocity: 0.593},
+    {start: 12.5083, duration: 0.075, pitch: 42, velocity: 0.384},
+    {start: 13.0024, duration: 0.075, pitch: 42, velocity: 0.558},
+    {start: 13.5004, duration: 0.075, pitch: 42, velocity: 0.403},
+    {start: 13.7773, duration: 0.075, pitch: 42, velocity: 0.264},
+    {start: 13.9915, duration: 0.075, pitch: 42, velocity: 0.612},
+    {start: 14.4975, duration: 0.075, pitch: 42, velocity: 0.410},
+    {start: 15.0052, duration: 0.075, pitch: 42, velocity: 0.598},
+    {start: 15.4982, duration: 0.075, pitch: 42, velocity: 0.372},
+    {start: 15.7948, duration: 0.075, pitch: 42, velocity: 0.234}
+  ]}
+}
+
+prefab lp_hat_verse_b {
+  NoteClip: {length: 16, notes: [
+    {start: 0.0000, duration: 0.075, pitch: 42, velocity: 0.623},
+    {start: 0.4906, duration: 0.075, pitch: 42, velocity: 0.416},
+    {start: 0.7811, duration: 0.075, pitch: 42, velocity: 0.227},
+    {start: 0.9901, duration: 0.075, pitch: 42, velocity: 0.602},
+    {start: 1.4988, duration: 0.075, pitch: 42, velocity: 0.383},
+    {start: 2.0014, duration: 0.075, pitch: 42, velocity: 0.638},
+    {start: 2.2818, duration: 0.075, pitch: 42, velocity: 0.244},
+    {start: 2.4918, duration: 0.075, pitch: 42, velocity: 0.380},
+    {start: 3.0084, duration: 0.075, pitch: 42, velocity: 0.617},
+    {start: 3.4913, duration: 0.075, pitch: 42, velocity: 0.378},
+    {start: 4.0000, duration: 0.075, pitch: 42, velocity: 0.560},
+    {start: 4.5022, duration: 0.075, pitch: 42, velocity: 0.446},
+    {start: 5.0035, duration: 0.075, pitch: 42, velocity: 0.625},
+    {start: 5.4942, duration: 0.075, pitch: 42, velocity: 0.417},
+    {start: 5.9965, duration: 0.075, pitch: 42, velocity: 0.594},
+    {start: 6.4967, duration: 0.075, pitch: 42, velocity: 0.426},
+    {start: 7.0070, duration: 0.075, pitch: 42, velocity: 0.606},
+    {start: 7.5076, duration: 0.075, pitch: 42, velocity: 0.431},
+    {start: 7.7904, duration: 0.075, pitch: 42, velocity: 0.232},
+    {start: 8.0000, duration: 0.075, pitch: 42, velocity: 0.622},
+    {start: 8.4975, duration: 0.075, pitch: 42, velocity: 0.371},
+    {start: 8.7797, duration: 0.075, pitch: 42, velocity: 0.239},
+    {start: 9.0092, duration: 0.075, pitch: 42, velocity: 0.618},
+    {start: 9.5015, duration: 0.075, pitch: 42, velocity: 0.389},
+    {start: 9.7838, duration: 0.075, pitch: 42, velocity: 0.252},
+    {start: 9.9986, duration: 0.075, pitch: 42, velocity: 0.659},
+    {start: 10.5027, duration: 0.075, pitch: 42, velocity: 0.421},
+    {start: 11.0067, duration: 0.075, pitch: 42, velocity: 0.582},
+    {start: 11.5082, duration: 0.075, pitch: 42, velocity: 0.422},
+    {start: 11.7802, duration: 0.075, pitch: 42, velocity: 0.223},
+    {start: 12.0000, duration: 0.075, pitch: 42, velocity: 0.589},
+    {start: 12.5058, duration: 0.075, pitch: 42, velocity: 0.376},
+    {start: 12.9986, duration: 0.075, pitch: 42, velocity: 0.571},
+    {start: 13.4967, duration: 0.075, pitch: 42, velocity: 0.378},
+    {start: 14.0036, duration: 0.075, pitch: 42, velocity: 0.637},
+    {start: 14.4933, duration: 0.075, pitch: 42, velocity: 0.403},
+    {start: 14.7839, duration: 0.075, pitch: 42, velocity: 0.257},
+    {start: 15.0090, duration: 0.075, pitch: 42, velocity: 0.563},
+    {start: 15.4951, duration: 0.075, pitch: 42, velocity: 0.410}
+  ]}
+}
+
+prefab lp_hat_hook_a {
+  NoteClip: {length: 16, notes: [
+    {start: 0.0000, duration: 0.075, pitch: 42, velocity: 0.642},
+    {start: 0.5053, duration: 0.075, pitch: 42, velocity: 0.395},
+    {start: 0.7862, duration: 0.075, pitch: 42, velocity: 0.284},
+    {start: 0.9933, duration: 0.075, pitch: 42, velocity: 0.607},
+    {start: 1.5061, duration: 0.075, pitch: 42, velocity: 0.400},
+    {start: 1.7926, duration: 0.075, pitch: 42, velocity: 0.257},
+    {start: 2.0000, duration: 0.075, pitch: 42, velocity: 0.685},
+    {start: 2.4950, duration: 0.075, pitch: 42, velocity: 0.405},
+    {start: 3.0024, duration: 0.075, pitch: 42, velocity: 0.659},
+    {start: 3.4941, duration: 0.075, pitch: 42, velocity: 0.415},
+    {start: 3.7822, duration: 0.075, pitch: 42, velocity: 0.274},
+    {start: 4.0000, duration: 0.075, pitch: 42, velocity: 0.612},
+    {start: 4.2909, duration: 0.075, pitch: 42, velocity: 0.290},
+    {start: 4.5006, duration: 0.075, pitch: 42, velocity: 0.398},
+    {start: 5.0098, duration: 0.075, pitch: 42, velocity: 0.659},
+    {start: 5.5029, duration: 0.075, pitch: 42, velocity: 0.399},
+    {start: 5.9936, duration: 0.075, pitch: 42, velocity: 0.698},
+    {start: 6.5034, duration: 0.075, pitch: 42, velocity: 0.402},
+    {start: 6.7956, duration: 0.075, pitch: 42, velocity: 0.284},
+    {start: 7.0088, duration: 0.075, pitch: 42, velocity: 0.612},
+    {start: 8.0031, duration: 0.075, pitch: 42, velocity: 0.648},
+    {start: 8.5061, duration: 0.075, pitch: 42, velocity: 0.437},
+    {start: 8.7816, duration: 0.075, pitch: 42, velocity: 0.286},
+    {start: 8.9988, duration: 0.075, pitch: 42, velocity: 0.637},
+    {start: 9.4967, duration: 0.075, pitch: 42, velocity: 0.409},
+    {start: 10.0036, duration: 0.075, pitch: 42, velocity: 0.642},
+    {start: 10.2965, duration: 0.075, pitch: 42, velocity: 0.256},
+    {start: 10.5019, duration: 0.075, pitch: 42, velocity: 0.417},
+    {start: 11.0060, duration: 0.075, pitch: 42, velocity: 0.647},
+    {start: 11.5076, duration: 0.075, pitch: 42, velocity: 0.400},
+    {start: 11.7825, duration: 0.075, pitch: 42, velocity: 0.260},
+    {start: 12.0000, duration: 0.075, pitch: 42, velocity: 0.642},
+    {start: 12.4949, duration: 0.075, pitch: 42, velocity: 0.422},
+    {start: 12.9982, duration: 0.075, pitch: 42, velocity: 0.641},
+    {start: 13.4966, duration: 0.075, pitch: 42, velocity: 0.393},
+    {start: 13.7947, duration: 0.075, pitch: 42, velocity: 0.301},
+    {start: 13.9900, duration: 0.075, pitch: 42, velocity: 0.699},
+    {start: 14.5098, duration: 0.075, pitch: 42, velocity: 0.448},
+    {start: 15.0015, duration: 0.075, pitch: 42, velocity: 0.615},
+    {start: 15.7922, duration: 0.075, pitch: 42, velocity: 0.252}
+  ]}
+}
+
+prefab lp_hat_hook_b {
+  NoteClip: {length: 16, notes: [
+    {start: 0.0099, duration: 0.075, pitch: 42, velocity: 0.452},
+    {start: 0.4936, duration: 0.075, pitch: 42, velocity: 0.323},
+    {start: 0.7776, duration: 0.075, pitch: 42, velocity: 0.210},
+    {start: 0.9943, duration: 0.075, pitch: 42, velocity: 0.472},
+    {start: 1.4900, duration: 0.075, pitch: 42, velocity: 0.356},
+    {start: 1.7819, duration: 0.075, pitch: 42, velocity: 0.199},
+    {start: 1.9967, duration: 0.075, pitch: 42, velocity: 0.478},
+    {start: 2.5044, duration: 0.075, pitch: 42, velocity: 0.317},
+    {start: 3.0068, duration: 0.075, pitch: 42, velocity: 0.459},
+    {start: 3.5077, duration: 0.075, pitch: 42, velocity: 0.301},
+    {start: 3.7826, duration: 0.075, pitch: 42, velocity: 0.178},
+    {start: 4.0000, duration: 0.075, pitch: 42, velocity: 0.489},
+    {start: 4.2916, duration: 0.075, pitch: 42, velocity: 0.231},
+    {start: 4.4981, duration: 0.075, pitch: 42, velocity: 0.351},
+    {start: 5.0076, duration: 0.075, pitch: 42, velocity: 0.494},
+    {start: 5.5019, duration: 0.075, pitch: 42, velocity: 0.310},
+    {start: 5.9912, duration: 0.075, pitch: 42, velocity: 0.539},
+    {start: 6.5077, duration: 0.075, pitch: 42, velocity: 0.320},
+    {start: 6.7912, duration: 0.075, pitch: 42, velocity: 0.212},
+    {start: 7.0049, duration: 0.075, pitch: 42, velocity: 0.460},
+    {start: 8.0039, duration: 0.075, pitch: 42, velocity: 0.486},
+    {start: 8.4954, duration: 0.075, pitch: 42, velocity: 0.326},
+    {start: 8.7878, duration: 0.075, pitch: 42, velocity: 0.224},
+    {start: 8.9932, duration: 0.075, pitch: 42, velocity: 0.506},
+    {start: 9.5006, duration: 0.075, pitch: 42, velocity: 0.342},
+    {start: 10.0072, duration: 0.075, pitch: 42, velocity: 0.537},
+    {start: 10.2907, duration: 0.075, pitch: 42, velocity: 0.210},
+    {start: 10.5042, duration: 0.075, pitch: 42, velocity: 0.296},
+    {start: 10.9917, duration: 0.075, pitch: 42, velocity: 0.505},
+    {start: 11.4964, duration: 0.075, pitch: 42, velocity: 0.326},
+    {start: 11.7821, duration: 0.075, pitch: 42, velocity: 0.200},
+    {start: 12.0029, duration: 0.075, pitch: 42, velocity: 0.516},
+    {start: 12.4963, duration: 0.075, pitch: 42, velocity: 0.325},
+    {start: 12.9988, duration: 0.075, pitch: 42, velocity: 0.485},
+    {start: 13.4965, duration: 0.075, pitch: 42, velocity: 0.290},
+    {start: 13.7856, duration: 0.075, pitch: 42, velocity: 0.177},
+    {start: 14.0069, duration: 0.075, pitch: 42, velocity: 0.513},
+    {start: 14.5055, duration: 0.075, pitch: 42, velocity: 0.351},
+    {start: 15.0055, duration: 0.075, pitch: 42, velocity: 0.482},
+    {start: 15.7923, duration: 0.075, pitch: 42, velocity: 0.226}
+  ]}
+}
+
+prefab lp_hat_break {
+  NoteClip: {length: 16, notes: [
+    {start: 0.0000, duration: 0.075, pitch: 42, velocity: 0.316},
+    {start: 0.4931, duration: 0.075, pitch: 42, velocity: 0.190},
+    {start: 1.5052, duration: 0.075, pitch: 42, velocity: 0.244},
+    {start: 1.9960, duration: 0.075, pitch: 42, velocity: 0.372},
+    {start: 2.4958, duration: 0.075, pitch: 42, velocity: 0.244},
+    {start: 3.5055, duration: 0.075, pitch: 42, velocity: 0.234},
+    {start: 4.0000, duration: 0.075, pitch: 42, velocity: 0.326},
+    {start: 4.4960, duration: 0.075, pitch: 42, velocity: 0.247},
+    {start: 5.4947, duration: 0.075, pitch: 42, velocity: 0.251},
+    {start: 6.0096, duration: 0.075, pitch: 42, velocity: 0.343},
+    {start: 6.4996, duration: 0.075, pitch: 42, velocity: 0.229},
+    {start: 7.4955, duration: 0.075, pitch: 42, velocity: 0.247},
+    {start: 8.0000, duration: 0.075, pitch: 42, velocity: 0.404},
+    {start: 8.4936, duration: 0.075, pitch: 42, velocity: 0.307},
+    {start: 9.4941, duration: 0.075, pitch: 42, velocity: 0.286},
+    {start: 9.9949, duration: 0.075, pitch: 42, velocity: 0.471},
+    {start: 10.4950, duration: 0.075, pitch: 42, velocity: 0.279},
+    {start: 11.4929, duration: 0.075, pitch: 42, velocity: 0.257},
+    {start: 12.0000, duration: 0.075, pitch: 42, velocity: 0.397},
+    {start: 12.5048, duration: 0.075, pitch: 42, velocity: 0.247},
+    {start: 13.4972, duration: 0.075, pitch: 42, velocity: 0.294},
+    {start: 14.0008, duration: 0.075, pitch: 42, velocity: 0.437},
+    {start: 14.4950, duration: 0.075, pitch: 42, velocity: 0.265},
+    {start: 14.7896, duration: 0.075, pitch: 42, velocity: 0.160},
+    {start: 15.2800, duration: 0.075, pitch: 42, velocity: 0.169},
+    {start: 15.4933, duration: 0.075, pitch: 42, velocity: 0.290},
+    {start: 15.7784, duration: 0.075, pitch: 42, velocity: 0.198}
+  ]}
+}
+
+prefab lp_hat_final_a {
+  NoteClip: {length: 16, notes: [
+    {start: 0.0000, duration: 0.075, pitch: 42, velocity: 0.642},
+    {start: 0.5085, duration: 0.075, pitch: 42, velocity: 0.456},
+    {start: 0.7884, duration: 0.075, pitch: 42, velocity: 0.277},
+    {start: 0.9917, duration: 0.075, pitch: 42, velocity: 0.666},
+    {start: 1.5099, duration: 0.075, pitch: 42, velocity: 0.400},
+    {start: 1.7790, duration: 0.075, pitch: 42, velocity: 0.260},
+    {start: 1.9907, duration: 0.075, pitch: 42, velocity: 0.690},
+    {start: 2.5017, duration: 0.075, pitch: 42, velocity: 0.452},
+    {start: 2.7854, duration: 0.075, pitch: 42, velocity: 0.258},
+    {start: 3.0042, duration: 0.075, pitch: 42, velocity: 0.633},
+    {start: 3.4911, duration: 0.075, pitch: 42, velocity: 0.443},
+    {start: 4.0000, duration: 0.075, pitch: 42, velocity: 0.621},
+    {start: 4.2862, duration: 0.075, pitch: 42, velocity: 0.280},
+    {start: 4.5056, duration: 0.075, pitch: 42, velocity: 0.415},
+    {start: 4.9997, duration: 0.075, pitch: 42, velocity: 0.637},
+    {start: 5.5020, duration: 0.075, pitch: 42, velocity: 0.409},
+    {start: 5.7948, duration: 0.075, pitch: 42, velocity: 0.263},
+    {start: 5.9929, duration: 0.075, pitch: 42, velocity: 0.665},
+    {start: 6.4945, duration: 0.075, pitch: 42, velocity: 0.442},
+    {start: 7.0088, duration: 0.075, pitch: 42, velocity: 0.645},
+    {start: 7.7888, duration: 0.075, pitch: 42, velocity: 0.253},
+    {start: 8.0046, duration: 0.075, pitch: 42, velocity: 0.605},
+    {start: 8.4966, duration: 0.075, pitch: 42, velocity: 0.404},
+    {start: 8.7918, duration: 0.075, pitch: 42, velocity: 0.283},
+    {start: 8.9968, duration: 0.075, pitch: 42, velocity: 0.639},
+    {start: 9.4954, duration: 0.075, pitch: 42, velocity: 0.418},
+    {start: 9.9986, duration: 0.075, pitch: 42, velocity: 0.646},
+    {start: 10.2816, duration: 0.075, pitch: 42, velocity: 0.298},
+    {start: 10.5083, duration: 0.075, pitch: 42, velocity: 0.413},
+    {start: 11.0009, duration: 0.075, pitch: 42, velocity: 0.632},
+    {start: 11.4969, duration: 0.075, pitch: 42, velocity: 0.447},
+    {start: 11.7863, duration: 0.075, pitch: 42, velocity: 0.263},
+    {start: 12.0000, duration: 0.075, pitch: 42, velocity: 0.609},
+    {start: 12.2781, duration: 0.075, pitch: 42, velocity: 0.263},
+    {start: 12.5011, duration: 0.075, pitch: 42, velocity: 0.404},
+    {start: 13.0028, duration: 0.075, pitch: 42, velocity: 0.643},
+    {start: 13.4933, duration: 0.075, pitch: 42, velocity: 0.409},
+    {start: 14.0022, duration: 0.075, pitch: 42, velocity: 0.691},
+    {start: 14.5027, duration: 0.075, pitch: 42, velocity: 0.434},
+    {start: 14.7897, duration: 0.075, pitch: 42, velocity: 0.300},
+    {start: 14.9979, duration: 0.075, pitch: 42, velocity: 0.665}
+  ]}
+}
+
+prefab lp_hat_final_b {
+  NoteClip: {length: 16, notes: [
+    {start: 0.2892, duration: 0.075, pitch: 42, velocity: 0.258},
+    {start: 0.7778, duration: 0.075, pitch: 42, velocity: 0.214},
+    {start: 1.2823, duration: 0.075, pitch: 42, velocity: 0.266},
+    {start: 1.7854, duration: 0.075, pitch: 42, velocity: 0.228},
+    {start: 2.2786, duration: 0.075, pitch: 42, velocity: 0.252},
+    {start: 2.7775, duration: 0.075, pitch: 42, velocity: 0.211},
+    {start: 3.2854, duration: 0.075, pitch: 42, velocity: 0.240},
+    {start: 3.7898, duration: 0.075, pitch: 42, velocity: 0.250},
+    {start: 4.2708, duration: 0.075, pitch: 42, velocity: 0.209},
+    {start: 4.7703, duration: 0.075, pitch: 42, velocity: 0.271},
+    {start: 5.2790, duration: 0.075, pitch: 42, velocity: 0.272},
+    {start: 5.7835, duration: 0.075, pitch: 42, velocity: 0.242},
+    {start: 6.2807, duration: 0.075, pitch: 42, velocity: 0.247},
+    {start: 6.7818, duration: 0.075, pitch: 42, velocity: 0.239},
+    {start: 7.2792, duration: 0.075, pitch: 42, velocity: 0.230},
+    {start: 7.7710, duration: 0.075, pitch: 42, velocity: 0.260},
+    {start: 8.2733, duration: 0.075, pitch: 42, velocity: 0.263},
+    {start: 8.7759, duration: 0.075, pitch: 42, velocity: 0.206},
+    {start: 9.2839, duration: 0.075, pitch: 42, velocity: 0.226},
+    {start: 9.7710, duration: 0.075, pitch: 42, velocity: 0.263},
+    {start: 10.2829, duration: 0.075, pitch: 42, velocity: 0.213},
+    {start: 10.7742, duration: 0.075, pitch: 42, velocity: 0.247},
+    {start: 11.2804, duration: 0.075, pitch: 42, velocity: 0.215},
+    {start: 11.7867, duration: 0.075, pitch: 42, velocity: 0.264},
+    {start: 12.2792, duration: 0.075, pitch: 42, velocity: 0.270},
+    {start: 12.7821, duration: 0.075, pitch: 42, velocity: 0.242},
+    {start: 13.2806, duration: 0.075, pitch: 42, velocity: 0.234},
+    {start: 13.7708, duration: 0.075, pitch: 42, velocity: 0.249},
+    {start: 14.2730, duration: 0.075, pitch: 42, velocity: 0.250},
+    {start: 14.7829, duration: 0.075, pitch: 42, velocity: 0.215},
+    {start: 15.2857, duration: 0.075, pitch: 42, velocity: 0.231},
+    {start: 15.7710, duration: 0.075, pitch: 42, velocity: 0.266}
+  ]}
+}
+
+prefab lp_open_hat_hook_a {
+  NoteClip: {length: 16, notes: [
+    {start: 7.5114, duration: 0.160, pitch: 46, velocity: 0.533},
+    {start: 15.5012, duration: 0.160, pitch: 46, velocity: 0.519}
+  ]}
+}
+
+prefab lp_open_hat_hook_b {
+  NoteClip: {length: 16, notes: [
+    {start: 7.5098, duration: 0.160, pitch: 46, velocity: 0.560},
+    {start: 15.5094, duration: 0.160, pitch: 46, velocity: 0.519}
+  ]}
+}
+
+prefab lp_open_hat_final_a {
+  NoteClip: {length: 16, notes: [
+    {start: 7.5103, duration: 0.160, pitch: 46, velocity: 0.567},
+    {start: 15.5109, duration: 0.160, pitch: 46, velocity: 0.581}
+  ]}
+}
+
+prefab lp_open_hat_final_b {
+  NoteClip: {length: 16, notes: [
+    {start: 7.5122, duration: 0.160, pitch: 46, velocity: 0.588},
+    {start: 15.5063, duration: 0.160, pitch: 46, velocity: 0.551}
+  ]}
+}
+
+prefab lp_clap_hook_a {
+  NoteClip: {length: 16, notes: [
+    {start: 1.0231, duration: 0.110, pitch: 39, velocity: 0.310},
+    {start: 3.0166, duration: 0.110, pitch: 39, velocity: 0.341},
+    {start: 5.0146, duration: 0.110, pitch: 39, velocity: 0.284},
+    {start: 7.0280, duration: 0.110, pitch: 39, velocity: 0.339},
+    {start: 9.0281, duration: 0.110, pitch: 39, velocity: 0.315},
+    {start: 11.0217, duration: 0.110, pitch: 39, velocity: 0.369},
+    {start: 13.0216, duration: 0.110, pitch: 39, velocity: 0.310},
+    {start: 15.0252, duration: 0.110, pitch: 39, velocity: 0.337}
+  ]}
+}
+
+prefab lp_clap_hook_b {
+  NoteClip: {length: 16, notes: [
+    {start: 1.0227, duration: 0.110, pitch: 39, velocity: 0.325},
+    {start: 3.0150, duration: 0.110, pitch: 39, velocity: 0.383},
+    {start: 5.0187, duration: 0.110, pitch: 39, velocity: 0.280},
+    {start: 7.0150, duration: 0.110, pitch: 39, velocity: 0.348},
+    {start: 9.0298, duration: 0.110, pitch: 39, velocity: 0.300},
+    {start: 11.0217, duration: 0.110, pitch: 39, velocity: 0.380},
+    {start: 13.0244, duration: 0.110, pitch: 39, velocity: 0.294},
+    {start: 15.0262, duration: 0.110, pitch: 39, velocity: 0.380}
+  ]}
+}
+
+prefab lp_clap_final_a {
+  NoteClip: {length: 16, notes: [
+    {start: 1.0225, duration: 0.110, pitch: 39, velocity: 0.308},
+    {start: 3.0211, duration: 0.110, pitch: 39, velocity: 0.353},
+    {start: 5.0245, duration: 0.110, pitch: 39, velocity: 0.300},
+    {start: 7.0224, duration: 0.110, pitch: 39, velocity: 0.359},
+    {start: 9.0216, duration: 0.110, pitch: 39, velocity: 0.329},
+    {start: 11.0247, duration: 0.110, pitch: 39, velocity: 0.378},
+    {start: 13.0268, duration: 0.110, pitch: 39, velocity: 0.320},
+    {start: 15.0153, duration: 0.110, pitch: 39, velocity: 0.349}
+  ]}
+}
+
+prefab lp_clap_final_b {
+  NoteClip: {length: 16, notes: [
+    {start: 1.0210, duration: 0.110, pitch: 39, velocity: 0.304},
+    {start: 3.0134, duration: 0.110, pitch: 39, velocity: 0.359},
+    {start: 5.0166, duration: 0.110, pitch: 39, velocity: 0.330},
+    {start: 7.0196, duration: 0.110, pitch: 39, velocity: 0.377},
+    {start: 9.0201, duration: 0.110, pitch: 39, velocity: 0.324},
+    {start: 11.0218, duration: 0.110, pitch: 39, velocity: 0.348},
+    {start: 13.0197, duration: 0.110, pitch: 39, velocity: 0.339},
+    {start: 15.0267, duration: 0.110, pitch: 39, velocity: 0.352}
+  ]}
+}
+
+prefab lp_tom_intro {
+  NoteClip: {length: 16, notes: [
+    {start: 15.2403, duration: 0.180, pitch: 47, velocity: 0.470},
+    {start: 15.7543, duration: 0.180, pitch: 43, velocity: 0.660}
+  ]}
+}
+
+prefab lp_tom_verse_a {
+  NoteClip: {length: 16, notes: [
+    {start: 15.2582, duration: 0.180, pitch: 47, velocity: 0.409},
+    {start: 15.7612, duration: 0.180, pitch: 43, velocity: 0.672}
+  ]}
+}
+
+prefab lp_tom_verse_b {
+  NoteClip: {length: 16, notes: [
+    {start: 14.7505, duration: 0.180, pitch: 50, velocity: 0.453},
+    {start: 15.2590, duration: 0.180, pitch: 47, velocity: 0.586},
+    {start: 15.7434, duration: 0.180, pitch: 43, velocity: 0.786}
+  ]}
+}
+
+prefab lp_tom_hook_a {
+  NoteClip: {length: 16, notes: [
+    {start: 15.2429, duration: 0.180, pitch: 47, velocity: 0.457},
+    {start: 15.7420, duration: 0.180, pitch: 43, velocity: 0.666}
+  ]}
+}
+
+prefab lp_tom_hook_b {
+  NoteClip: {length: 16, notes: [
+    {start: 14.5072, duration: 0.180, pitch: 50, velocity: 0.499},
+    {start: 14.7607, duration: 0.180, pitch: 50, velocity: 0.425},
+    {start: 14.9999, duration: 0.180, pitch: 47, velocity: 0.634},
+    {start: 15.2467, duration: 0.180, pitch: 47, velocity: 0.564},
+    {start: 15.4905, duration: 0.180, pitch: 43, velocity: 0.715},
+    {start: 15.7478, duration: 0.180, pitch: 40, velocity: 0.842}
+  ]}
+}
+
+prefab lp_tom_break {
+  NoteClip: {length: 16, notes: [
+    {start: 10.7585, duration: 0.180, pitch: 47, velocity: 0.358},
+    {start: 15.0084, duration: 0.180, pitch: 47, velocity: 0.491},
+    {start: 15.2576, duration: 0.180, pitch: 43, velocity: 0.582},
+    {start: 15.4934, duration: 0.180, pitch: 40, velocity: 0.781},
+    {start: 15.7581, duration: 0.180, pitch: 40, velocity: 0.616}
+  ]}
+}
+
+prefab lp_tom_final_a {
+  NoteClip: {length: 16, notes: [
+    {start: 14.7413, duration: 0.180, pitch: 50, velocity: 0.476},
+    {start: 15.2507, duration: 0.180, pitch: 47, velocity: 0.607},
+    {start: 15.7487, duration: 0.180, pitch: 43, velocity: 0.773}
+  ]}
+}
+
+prefab lp_tom_final_b {
+  NoteClip: {length: 16, notes: [
+    {start: 14.4968, duration: 0.180, pitch: 50, velocity: 0.531},
+    {start: 14.7594, duration: 0.180, pitch: 50, velocity: 0.456},
+    {start: 14.9985, duration: 0.180, pitch: 47, velocity: 0.621},
+    {start: 15.2584, duration: 0.180, pitch: 47, velocity: 0.539},
+    {start: 15.4968, duration: 0.180, pitch: 43, velocity: 0.699},
+    {start: 15.7407, duration: 0.180, pitch: 40, velocity: 0.817}
+  ]}
+}
+
+prefab lp_tom_end {
+  NoteClip: {length: 4, notes: [
+    {start: 0.0000, duration: 0.180, pitch: 40, velocity: 0.459}
+  ]}
+}
+
+prefab lp_ride_hook_b {
+  NoteClip: {length: 16, notes: [
+    {start: 0.0008, duration: 0.120, pitch: 51, velocity: 0.590},
+    {start: 0.5084, duration: 0.120, pitch: 51, velocity: 0.403},
+    {start: 0.9937, duration: 0.120, pitch: 51, velocity: 0.591},
+    {start: 1.5004, duration: 0.120, pitch: 51, velocity: 0.437},
+    {start: 2.0022, duration: 0.120, pitch: 51, velocity: 0.581},
+    {start: 2.5063, duration: 0.120, pitch: 51, velocity: 0.390},
+    {start: 2.9937, duration: 0.120, pitch: 51, velocity: 0.567},
+    {start: 3.4917, duration: 0.120, pitch: 51, velocity: 0.413},
+    {start: 4.0000, duration: 0.120, pitch: 51, velocity: 0.577},
+    {start: 4.4978, duration: 0.120, pitch: 51, velocity: 0.416},
+    {start: 4.9941, duration: 0.120, pitch: 51, velocity: 0.555},
+    {start: 5.4892, duration: 0.120, pitch: 51, velocity: 0.451},
+    {start: 5.9950, duration: 0.120, pitch: 51, velocity: 0.579},
+    {start: 6.5102, duration: 0.120, pitch: 51, velocity: 0.417},
+    {start: 7.0018, duration: 0.120, pitch: 51, velocity: 0.558},
+    {start: 8.0042, duration: 0.120, pitch: 51, velocity: 0.529},
+    {start: 8.4933, duration: 0.120, pitch: 51, velocity: 0.412},
+    {start: 8.9994, duration: 0.120, pitch: 51, velocity: 0.536},
+    {start: 9.4926, duration: 0.120, pitch: 51, velocity: 0.393},
+    {start: 9.9963, duration: 0.120, pitch: 51, velocity: 0.562},
+    {start: 10.5006, duration: 0.120, pitch: 51, velocity: 0.413},
+    {start: 10.9910, duration: 0.120, pitch: 51, velocity: 0.571},
+    {start: 11.4977, duration: 0.120, pitch: 51, velocity: 0.447},
+    {start: 12.0000, duration: 0.120, pitch: 51, velocity: 0.537},
+    {start: 12.4929, duration: 0.120, pitch: 51, velocity: 0.431},
+    {start: 13.0056, duration: 0.120, pitch: 51, velocity: 0.567},
+    {start: 13.5011, duration: 0.120, pitch: 51, velocity: 0.420},
+    {start: 14.0090, duration: 0.120, pitch: 51, velocity: 0.560},
+    {start: 14.4906, duration: 0.120, pitch: 51, velocity: 0.416},
+    {start: 14.9966, duration: 0.120, pitch: 51, velocity: 0.564}
+  ]}
+}
+
+prefab lp_ride_final_b {
+  NoteClip: {length: 16, notes: [
+    {start: 0.0000, duration: 0.120, pitch: 51, velocity: 0.622},
+    {start: 0.4907, duration: 0.120, pitch: 51, velocity: 0.486},
+    {start: 1.0054, duration: 0.120, pitch: 51, velocity: 0.632},
+    {start: 1.4937, duration: 0.120, pitch: 51, velocity: 0.485},
+    {start: 2.0068, duration: 0.120, pitch: 51, velocity: 0.602},
+    {start: 2.4918, duration: 0.120, pitch: 51, velocity: 0.450},
+    {start: 3.0063, duration: 0.120, pitch: 51, velocity: 0.608},
+    {start: 3.4939, duration: 0.120, pitch: 51, velocity: 0.475},
+    {start: 4.0000, duration: 0.120, pitch: 51, velocity: 0.626},
+    {start: 4.5007, duration: 0.120, pitch: 51, velocity: 0.450},
+    {start: 5.0088, duration: 0.120, pitch: 51, velocity: 0.648},
+    {start: 5.5092, duration: 0.120, pitch: 51, velocity: 0.440},
+    {start: 6.0066, duration: 0.120, pitch: 51, velocity: 0.604},
+    {start: 6.5074, duration: 0.120, pitch: 51, velocity: 0.465},
+    {start: 6.9979, duration: 0.120, pitch: 51, velocity: 0.623},
+    {start: 8.0000, duration: 0.120, pitch: 51, velocity: 0.608},
+    {start: 8.4891, duration: 0.120, pitch: 51, velocity: 0.459},
+    {start: 8.9994, duration: 0.120, pitch: 51, velocity: 0.604},
+    {start: 9.5086, duration: 0.120, pitch: 51, velocity: 0.488},
+    {start: 9.9966, duration: 0.120, pitch: 51, velocity: 0.638},
+    {start: 10.4953, duration: 0.120, pitch: 51, velocity: 0.480},
+    {start: 11.0070, duration: 0.120, pitch: 51, velocity: 0.610},
+    {start: 11.4960, duration: 0.120, pitch: 51, velocity: 0.480},
+    {start: 12.0086, duration: 0.120, pitch: 51, velocity: 0.614},
+    {start: 12.4935, duration: 0.120, pitch: 51, velocity: 0.444},
+    {start: 12.9915, duration: 0.120, pitch: 51, velocity: 0.619},
+    {start: 13.4983, duration: 0.120, pitch: 51, velocity: 0.492},
+    {start: 14.0073, duration: 0.120, pitch: 51, velocity: 0.610},
+    {start: 14.4930, duration: 0.120, pitch: 51, velocity: 0.487},
+    {start: 15.0080, duration: 0.120, pitch: 51, velocity: 0.627}
+  ]}
+}
+
+prefab lp_crash_hook_a {
+  NoteClip: {length: 16, notes: [
+    {start: 0.0010, duration: 0.150, pitch: 49, velocity: 0.687}
+  ]}
+}
+
+prefab lp_crash_hook_b {
+  NoteClip: {length: 16, notes: [
+    {start: 0.0000, duration: 0.150, pitch: 49, velocity: 0.513}
+  ]}
+}
+
+prefab lp_crash_final_a {
+  NoteClip: {length: 16, notes: [
+    {start: 0.0020, duration: 0.150, pitch: 49, velocity: 0.712}
+  ]}
+}
+
+prefab lp_crash_final_b {
+  NoteClip: {length: 16, notes: [
+    {start: 0.0000, duration: 0.150, pitch: 49, velocity: 0.617}
+  ]}
+}
+
+prefab lp_crash_end {
+  NoteClip: {length: 4, notes: [
+    {start: 0.0000, duration: 0.150, pitch: 49, velocity: 0.758}
+  ]}
+}
+
+prefab lp_rim_intro {
+  NoteClip: {length: 16, notes: [
+    {start: 1.0207, duration: 0.075, pitch: 37, velocity: 0.558},
+    {start: 3.0319, duration: 0.075, pitch: 37, velocity: 0.592},
+    {start: 5.0246, duration: 0.075, pitch: 37, velocity: 0.577},
+    {start: 7.0110, duration: 0.075, pitch: 37, velocity: 0.598},
+    {start: 7.7772, duration: 0.075, pitch: 37, velocity: 0.208}
+  ]}
+}
+
+prefab lp_rim_break {
+  NoteClip: {length: 16, notes: [
+    {start: 1.0249, duration: 0.075, pitch: 37, velocity: 0.515},
+    {start: 3.0292, duration: 0.075, pitch: 37, velocity: 0.617},
+    {start: 5.0248, duration: 0.075, pitch: 37, velocity: 0.490},
+    {start: 7.0279, duration: 0.075, pitch: 37, velocity: 0.615},
+    {start: 9.0123, duration: 0.075, pitch: 37, velocity: 0.559},
+    {start: 11.0266, duration: 0.075, pitch: 37, velocity: 0.599},
+    {start: 13.0236, duration: 0.075, pitch: 37, velocity: 0.525},
+    {start: 15.0222, duration: 0.075, pitch: 37, velocity: 0.583}
+  ]}
+}
+
+prefab lp_shaker_verse_a {
+  NoteClip: {length: 16, notes: [
+    {start: 8.7939, duration: 0.055, pitch: 82, velocity: 0.295},
+    {start: 9.7905, duration: 0.055, pitch: 82, velocity: 0.143},
+    {start: 10.7715, duration: 0.055, pitch: 82, velocity: 0.252},
+    {start: 11.7841, duration: 0.055, pitch: 82, velocity: 0.191}
+  ]}
+}
+
+prefab lp_shaker_verse_b {
+  NoteClip: {length: 16, notes: [
+    {start: 8.7723, duration: 0.055, pitch: 82, velocity: 0.236},
+    {start: 10.7734, duration: 0.055, pitch: 82, velocity: 0.203},
+    {start: 11.7682, duration: 0.055, pitch: 82, velocity: 0.149}
+  ]}
+}
+
+prefab lp_shaker_hook_a {
+  NoteClip: {length: 16, notes: [
+    {start: 0.2872, duration: 0.055, pitch: 82, velocity: 0.297},
+    {start: 0.7694, duration: 0.055, pitch: 82, velocity: 0.265},
+    {start: 1.2704, duration: 0.055, pitch: 82, velocity: 0.290},
+    {start: 1.7792, duration: 0.055, pitch: 82, velocity: 0.243},
+    {start: 2.2679, duration: 0.055, pitch: 82, velocity: 0.278},
+    {start: 2.7841, duration: 0.055, pitch: 82, velocity: 0.181},
+    {start: 3.2822, duration: 0.055, pitch: 82, velocity: 0.311},
+    {start: 3.7920, duration: 0.055, pitch: 82, velocity: 0.228},
+    {start: 5.7762, duration: 0.055, pitch: 82, velocity: 0.150},
+    {start: 6.7753, duration: 0.055, pitch: 82, velocity: 0.286},
+    {start: 7.7820, duration: 0.055, pitch: 82, velocity: 0.220},
+    {start: 8.2740, duration: 0.055, pitch: 82, velocity: 0.340},
+    {start: 8.7738, duration: 0.055, pitch: 82, velocity: 0.214},
+    {start: 9.2726, duration: 0.055, pitch: 82, velocity: 0.316},
+    {start: 9.7767, duration: 0.055, pitch: 82, velocity: 0.262},
+    {start: 10.7735, duration: 0.055, pitch: 82, velocity: 0.260},
+    {start: 11.2838, duration: 0.055, pitch: 82, velocity: 0.315},
+    {start: 11.7861, duration: 0.055, pitch: 82, velocity: 0.193},
+    {start: 12.7688, duration: 0.055, pitch: 82, velocity: 0.196},
+    {start: 13.7688, duration: 0.055, pitch: 82, velocity: 0.216},
+    {start: 14.7930, duration: 0.055, pitch: 82, velocity: 0.274},
+    {start: 15.7675, duration: 0.055, pitch: 82, velocity: 0.177}
+  ]}
+}
+
+prefab lp_shaker_hook_b {
+  NoteClip: {length: 16, notes: [
+    {start: 0.2856, duration: 0.055, pitch: 82, velocity: 0.257},
+    {start: 0.7923, duration: 0.055, pitch: 82, velocity: 0.273},
+    {start: 1.2831, duration: 0.055, pitch: 82, velocity: 0.311},
+    {start: 1.7892, duration: 0.055, pitch: 82, velocity: 0.231},
+    {start: 2.2819, duration: 0.055, pitch: 82, velocity: 0.258},
+    {start: 2.7900, duration: 0.055, pitch: 82, velocity: 0.182},
+    {start: 3.2885, duration: 0.055, pitch: 82, velocity: 0.347},
+    {start: 3.7809, duration: 0.055, pitch: 82, velocity: 0.198},
+    {start: 4.7851, duration: 0.055, pitch: 82, velocity: 0.273},
+    {start: 5.7743, duration: 0.055, pitch: 82, velocity: 0.144},
+    {start: 6.7840, duration: 0.055, pitch: 82, velocity: 0.257},
+    {start: 8.2907, duration: 0.055, pitch: 82, velocity: 0.323},
+    {start: 8.7859, duration: 0.055, pitch: 82, velocity: 0.231},
+    {start: 9.2899, duration: 0.055, pitch: 82, velocity: 0.340},
+    {start: 9.7722, duration: 0.055, pitch: 82, velocity: 0.182},
+    {start: 10.2756, duration: 0.055, pitch: 82, velocity: 0.309},
+    {start: 10.7810, duration: 0.055, pitch: 82, velocity: 0.236},
+    {start: 11.2835, duration: 0.055, pitch: 82, velocity: 0.263},
+    {start: 12.7930, duration: 0.055, pitch: 82, velocity: 0.290},
+    {start: 13.7860, duration: 0.055, pitch: 82, velocity: 0.180},
+    {start: 14.7692, duration: 0.055, pitch: 82, velocity: 0.202},
+    {start: 15.7858, duration: 0.055, pitch: 82, velocity: 0.212}
+  ]}
+}
+
+prefab lp_shaker_break {
+  NoteClip: {length: 16, notes: [
+    {start: 0.0111, duration: 0.055, pitch: 82, velocity: 0.245},
+    {start: 0.5041, duration: 0.055, pitch: 82, velocity: 0.231},
+    {start: 1.0096, duration: 0.055, pitch: 82, velocity: 0.277},
+    {start: 1.4891, duration: 0.055, pitch: 82, velocity: 0.218},
+    {start: 2.0041, duration: 0.055, pitch: 82, velocity: 0.217},
+    {start: 2.5071, duration: 0.055, pitch: 82, velocity: 0.221},
+    {start: 3.0111, duration: 0.055, pitch: 82, velocity: 0.235},
+    {start: 3.4929, duration: 0.055, pitch: 82, velocity: 0.148},
+    {start: 4.0000, duration: 0.055, pitch: 82, velocity: 0.294},
+    {start: 4.5026, duration: 0.055, pitch: 82, velocity: 0.232},
+    {start: 5.0020, duration: 0.055, pitch: 82, velocity: 0.252},
+    {start: 5.4970, duration: 0.055, pitch: 82, velocity: 0.220},
+    {start: 5.9974, duration: 0.055, pitch: 82, velocity: 0.205},
+    {start: 6.5082, duration: 0.055, pitch: 82, velocity: 0.200},
+    {start: 6.9946, duration: 0.055, pitch: 82, velocity: 0.259},
+    {start: 7.5087, duration: 0.055, pitch: 82, velocity: 0.161},
+    {start: 8.0000, duration: 0.055, pitch: 82, velocity: 0.292},
+    {start: 8.4877, duration: 0.055, pitch: 82, velocity: 0.168},
+    {start: 9.0048, duration: 0.055, pitch: 82, velocity: 0.270},
+    {start: 9.4876, duration: 0.055, pitch: 82, velocity: 0.208},
+    {start: 10.0096, duration: 0.055, pitch: 82, velocity: 0.216},
+    {start: 10.4909, duration: 0.055, pitch: 82, velocity: 0.147},
+    {start: 11.0021, duration: 0.055, pitch: 82, velocity: 0.288},
+    {start: 11.4861, duration: 0.055, pitch: 82, velocity: 0.160},
+    {start: 12.0127, duration: 0.055, pitch: 82, velocity: 0.216},
+    {start: 12.5066, duration: 0.055, pitch: 82, velocity: 0.158},
+    {start: 12.9903, duration: 0.055, pitch: 82, velocity: 0.238},
+    {start: 13.4999, duration: 0.055, pitch: 82, velocity: 0.213},
+    {start: 14.0011, duration: 0.055, pitch: 82, velocity: 0.260},
+    {start: 14.4860, duration: 0.055, pitch: 82, velocity: 0.228},
+    {start: 14.9872, duration: 0.055, pitch: 82, velocity: 0.276},
+    {start: 15.5080, duration: 0.055, pitch: 82, velocity: 0.227}
+  ]}
+}
+
+prefab lp_shaker_final_a {
+  NoteClip: {length: 16, notes: [
+    {start: 0.2699, duration: 0.055, pitch: 82, velocity: 0.326},
+    {start: 0.7692, duration: 0.055, pitch: 82, velocity: 0.236},
+    {start: 1.2748, duration: 0.055, pitch: 82, velocity: 0.301},
+    {start: 1.7701, duration: 0.055, pitch: 82, velocity: 0.185},
+    {start: 2.2808, duration: 0.055, pitch: 82, velocity: 0.259},
+    {start: 3.2709, duration: 0.055, pitch: 82, velocity: 0.300},
+    {start: 3.7827, duration: 0.055, pitch: 82, velocity: 0.245},
+    {start: 4.2748, duration: 0.055, pitch: 82, velocity: 0.324},
+    {start: 4.7790, duration: 0.055, pitch: 82, velocity: 0.223},
+    {start: 5.2886, duration: 0.055, pitch: 82, velocity: 0.338},
+    {start: 5.7675, duration: 0.055, pitch: 82, velocity: 0.229},
+    {start: 6.2840, duration: 0.055, pitch: 82, velocity: 0.270},
+    {start: 6.7788, duration: 0.055, pitch: 82, velocity: 0.254},
+    {start: 7.2823, duration: 0.055, pitch: 82, velocity: 0.260},
+    {start: 7.7791, duration: 0.055, pitch: 82, velocity: 0.242},
+    {start: 8.7737, duration: 0.055, pitch: 82, velocity: 0.230},
+    {start: 9.2678, duration: 0.055, pitch: 82, velocity: 0.300},
+    {start: 9.7870, duration: 0.055, pitch: 82, velocity: 0.241},
+    {start: 10.2669, duration: 0.055, pitch: 82, velocity: 0.295},
+    {start: 10.7769, duration: 0.055, pitch: 82, velocity: 0.262},
+    {start: 11.2859, duration: 0.055, pitch: 82, velocity: 0.301},
+    {start: 11.7841, duration: 0.055, pitch: 82, velocity: 0.227},
+    {start: 12.2762, duration: 0.055, pitch: 82, velocity: 0.257},
+    {start: 12.7680, duration: 0.055, pitch: 82, velocity: 0.211},
+    {start: 13.2800, duration: 0.055, pitch: 82, velocity: 0.304},
+    {start: 13.7915, duration: 0.055, pitch: 82, velocity: 0.216},
+    {start: 14.7794, duration: 0.055, pitch: 82, velocity: 0.240},
+    {start: 15.2793, duration: 0.055, pitch: 82, velocity: 0.283},
+    {start: 15.7816, duration: 0.055, pitch: 82, velocity: 0.234}
+  ]}
+}
+
+prefab lp_shaker_final_b {
+  NoteClip: {length: 16, notes: [
+    {start: 0.2873, duration: 0.055, pitch: 82, velocity: 0.257},
+    {start: 0.7744, duration: 0.055, pitch: 82, velocity: 0.229},
+    {start: 1.2818, duration: 0.055, pitch: 82, velocity: 0.346},
+    {start: 1.7785, duration: 0.055, pitch: 82, velocity: 0.189},
+    {start: 2.2903, duration: 0.055, pitch: 82, velocity: 0.286},
+    {start: 2.7721, duration: 0.055, pitch: 82, velocity: 0.278},
+    {start: 3.2680, duration: 0.055, pitch: 82, velocity: 0.337},
+    {start: 3.7706, duration: 0.055, pitch: 82, velocity: 0.252},
+    {start: 4.2925, duration: 0.055, pitch: 82, velocity: 0.325},
+    {start: 4.7695, duration: 0.055, pitch: 82, velocity: 0.234},
+    {start: 5.2868, duration: 0.055, pitch: 82, velocity: 0.307},
+    {start: 5.7698, duration: 0.055, pitch: 82, velocity: 0.266},
+    {start: 6.2791, duration: 0.055, pitch: 82, velocity: 0.286},
+    {start: 6.7688, duration: 0.055, pitch: 82, velocity: 0.226},
+    {start: 7.2681, duration: 0.055, pitch: 82, velocity: 0.296},
+    {start: 7.7857, duration: 0.055, pitch: 82, velocity: 0.219},
+    {start: 8.2812, duration: 0.055, pitch: 82, velocity: 0.261},
+    {start: 8.7887, duration: 0.055, pitch: 82, velocity: 0.276},
+    {start: 9.2841, duration: 0.055, pitch: 82, velocity: 0.314},
+    {start: 10.2775, duration: 0.055, pitch: 82, velocity: 0.326},
+    {start: 10.7763, duration: 0.055, pitch: 82, velocity: 0.211},
+    {start: 11.2787, duration: 0.055, pitch: 82, velocity: 0.256},
+    {start: 11.7671, duration: 0.055, pitch: 82, velocity: 0.260},
+    {start: 12.2672, duration: 0.055, pitch: 82, velocity: 0.328},
+    {start: 12.7769, duration: 0.055, pitch: 82, velocity: 0.212},
+    {start: 13.2730, duration: 0.055, pitch: 82, velocity: 0.318},
+    {start: 13.7664, duration: 0.055, pitch: 82, velocity: 0.220},
+    {start: 14.2794, duration: 0.055, pitch: 82, velocity: 0.265},
+    {start: 14.7770, duration: 0.055, pitch: 82, velocity: 0.186},
+    {start: 15.2813, duration: 0.055, pitch: 82, velocity: 0.292}
+  ]}
+}
+
+lp_track_kick {
+  Track: {instrument: dk_kick_inst, humanize: {timing: 2, velocity: 0.035}}
+  AudioBus: {output: dk_drums, volume: 0.93}
+  AudioMeter: {}
+  clip_01 { ClipPlacement: {clip: lp_kick_intro, start: 0} }
+  clip_02 { ClipPlacement: {clip: lp_kick_verse_a, start: 16} }
+  clip_03 { ClipPlacement: {clip: lp_kick_verse_b, start: 32} }
+  clip_04 { ClipPlacement: {clip: lp_kick_hook_a, start: 48} }
+  clip_05 { ClipPlacement: {clip: lp_kick_hook_b, start: 64} }
+  clip_06 { ClipPlacement: {clip: lp_kick_break, start: 80} }
+  clip_07 { ClipPlacement: {clip: lp_kick_final_a, start: 96} }
+  clip_08 { ClipPlacement: {clip: lp_kick_final_b, start: 112} }
+  clip_09 { ClipPlacement: {clip: lp_kick_end, start: 128} }
+}
+
+lp_track_snare {
+  Track: {instrument: dk_snare_inst, humanize: {timing: 3, velocity: 0.055}}
+  AudioBus: {output: dk_drums, volume: 0.74, sends: [{bus: dk_room, level: 0.17}]}
+  AudioMeter: {}
+  clip_01 { ClipPlacement: {clip: lp_snare_intro, start: 0} }
+  clip_02 { ClipPlacement: {clip: lp_snare_verse_a, start: 16} }
+  clip_03 { ClipPlacement: {clip: lp_snare_verse_b, start: 32} }
+  clip_04 { ClipPlacement: {clip: lp_snare_hook_a, start: 48} }
+  clip_05 { ClipPlacement: {clip: lp_snare_hook_b, start: 64} }
+  clip_06 { ClipPlacement: {clip: lp_snare_break, start: 80} }
+  clip_07 { ClipPlacement: {clip: lp_snare_final_a, start: 96} }
+  clip_08 { ClipPlacement: {clip: lp_snare_final_b, start: 112} }
+}
+
+lp_track_hat {
+  Track: {instrument: dk_hat_inst, humanize: {timing: 3, velocity: 0.08}}
+  AudioBus: {output: dk_drums, volume: 0.46, pan: -0.15}
+  AudioMeter: {}
+  clip_01 { ClipPlacement: {clip: lp_hat_intro, start: 0} }
+  clip_02 { ClipPlacement: {clip: lp_hat_verse_a, start: 16} }
+  clip_03 { ClipPlacement: {clip: lp_hat_verse_b, start: 32} }
+  clip_04 { ClipPlacement: {clip: lp_hat_hook_a, start: 48} }
+  clip_05 { ClipPlacement: {clip: lp_hat_hook_b, start: 64} }
+  clip_06 { ClipPlacement: {clip: lp_hat_break, start: 80} }
+  clip_07 { ClipPlacement: {clip: lp_hat_final_a, start: 96} }
+  clip_08 { ClipPlacement: {clip: lp_hat_final_b, start: 112} }
+}
+
+lp_track_open_hat {
+  Track: {instrument: dk_open_hat_inst, humanize: {timing: 4, velocity: 0.06}}
+  AudioBus: {output: dk_drums, volume: 0.36, pan: 0.19}
+  AudioMeter: {}
+  clip_01 { ClipPlacement: {clip: lp_open_hat_hook_a, start: 48} }
+  clip_02 { ClipPlacement: {clip: lp_open_hat_hook_b, start: 64} }
+  clip_03 { ClipPlacement: {clip: lp_open_hat_final_a, start: 96} }
+  clip_04 { ClipPlacement: {clip: lp_open_hat_final_b, start: 112} }
+}
+
+lp_track_clap {
+  Track: {instrument: dk_clap_inst, humanize: {timing: 4, velocity: 0.05}}
+  AudioBus: {output: dk_drums, volume: 0.26, sends: [{bus: dk_room, level: 0.17}]}
+  AudioMeter: {}
+  clip_01 { ClipPlacement: {clip: lp_clap_hook_a, start: 48} }
+  clip_02 { ClipPlacement: {clip: lp_clap_hook_b, start: 64} }
+  clip_03 { ClipPlacement: {clip: lp_clap_final_a, start: 96} }
+  clip_04 { ClipPlacement: {clip: lp_clap_final_b, start: 112} }
+}
+
+lp_track_tom {
+  Track: {instrument: dk_tom_inst, humanize: {timing: 4, velocity: 0.07}}
+  AudioBus: {output: dk_drums, volume: 0.56, sends: [{bus: dk_room, level: 0.19}]}
+  AudioMeter: {}
+  clip_01 { ClipPlacement: {clip: lp_tom_intro, start: 0} }
+  clip_02 { ClipPlacement: {clip: lp_tom_verse_a, start: 16} }
+  clip_03 { ClipPlacement: {clip: lp_tom_verse_b, start: 32} }
+  clip_04 { ClipPlacement: {clip: lp_tom_hook_a, start: 48} }
+  clip_05 { ClipPlacement: {clip: lp_tom_hook_b, start: 64} }
+  clip_06 { ClipPlacement: {clip: lp_tom_break, start: 80} }
+  clip_07 { ClipPlacement: {clip: lp_tom_final_a, start: 96} }
+  clip_08 { ClipPlacement: {clip: lp_tom_final_b, start: 112} }
+  clip_09 { ClipPlacement: {clip: lp_tom_end, start: 128} }
+}
+
+lp_track_ride {
+  Track: {instrument: dk_ride_inst, humanize: {timing: 3, velocity: 0.07}}
+  AudioBus: {output: dk_drums, volume: 0.34, pan: 0.30}
+  AudioMeter: {}
+  clip_01 { ClipPlacement: {clip: lp_ride_hook_b, start: 64} }
+  clip_02 { ClipPlacement: {clip: lp_ride_final_b, start: 112} }
+}
+
+lp_track_crash {
+  Track: {instrument: dk_crash_inst, humanize: {timing: 2, velocity: 0.035}}
+  AudioBus: {output: dk_drums, volume: 0.37, pan: -0.24, sends: [{bus: dk_room, level: 0.13}]}
+  AudioMeter: {}
+  clip_01 { ClipPlacement: {clip: lp_crash_hook_a, start: 48} }
+  clip_02 { ClipPlacement: {clip: lp_crash_hook_b, start: 64} }
+  clip_03 { ClipPlacement: {clip: lp_crash_final_a, start: 96} }
+  clip_04 { ClipPlacement: {clip: lp_crash_final_b, start: 112} }
+  clip_05 { ClipPlacement: {clip: lp_crash_end, start: 128} }
+}
+
+lp_track_rim {
+  Track: {instrument: lp_rim_inst, humanize: {timing: 4, velocity: 0.07}}
+  AudioBus: {output: dk_drums, volume: 0.36, pan: -0.10, sends: [{bus: dk_room, level: 0.11}]}
+  AudioMeter: {}
+  clip_01 { ClipPlacement: {clip: lp_rim_intro, start: 0} }
+  clip_02 { ClipPlacement: {clip: lp_rim_break, start: 80} }
+}
+
+lp_track_shaker {
+  Track: {instrument: lp_shaker_inst, humanize: {timing: 4, velocity: 0.09}}
+  AudioBus: {output: dk_drums, volume: 0.26, pan: 0.23}
+  AudioMeter: {}
+  clip_01 { ClipPlacement: {clip: lp_shaker_verse_a, start: 16} }
+  clip_02 { ClipPlacement: {clip: lp_shaker_verse_b, start: 32} }
+  clip_03 { ClipPlacement: {clip: lp_shaker_hook_a, start: 48} }
+  clip_04 { ClipPlacement: {clip: lp_shaker_hook_b, start: 64} }
+  clip_05 { ClipPlacement: {clip: lp_shaker_break, start: 80} }
+  clip_06 { ClipPlacement: {clip: lp_shaker_final_a, start: 96} }
+  clip_07 { ClipPlacement: {clip: lp_shaker_final_b, start: 112} }
+}
+
+$ {
+  Song: {
+    title: "Late Train - Live Pocket", tempo: 103, beats_per_bar: 4, beat_unit: 4, beats: 132,
+    lanes: [
+      {name: "Kick", bus: lp_track_kick},
+      {name: "Snare + ghosts", bus: lp_track_snare},
+      {name: "Closed hat", bus: lp_track_hat},
+      {name: "Open hat", bus: lp_track_open_hat},
+      {name: "Clap layer", bus: lp_track_clap},
+      {name: "Toms / fills", bus: lp_track_tom},
+      {name: "Ride cymbal", bus: lp_track_ride},
+      {name: "Crash accents", bus: lp_track_crash},
+      {name: "Rim click", bus: lp_track_rim},
+      {name: "Shaker", bus: lp_track_shaker}
+    ]
+  }
+}

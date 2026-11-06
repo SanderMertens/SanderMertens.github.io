@@ -1,0 +1,1447 @@
+using box.audio
+using box.material
+
+// STARFALL: BEYOND THE ORBIT
+// Original companion composition to "Distant Orbit".
+// 96 BPM | E minor -> E major final resolution | 96 bars | 4:00
+// Journey: Transmission / Ignition / Flight / Silence / Ascent / Supernova / Afterglow / Finale / Dawn
+
+box { audio { Song { Rgb: {255, 155, 91} } } }
+
+starfall_space {
+  AudioBus: {output: master, kind: AudioChannelReturn, volume: 0.28, effects: [starfall_space]}
+  Reverb: {decay: 6.5, damping: 0.48, predelay: 0.045, size: 1, shimmer: 0.22}
+}
+
+starfall_tone {
+  Equalizer: {bands: [
+    {kind: AudioEqLowCut, frequency: 28},
+    {kind: AudioEqPeak, frequency: 260, gain: -2, q: 0.8},
+    {kind: AudioEqHighShelf, frequency: 7600, gain: 1.5}
+  ]}
+}
+
+starfall_glue {
+  Compressor: {threshold: -17, ratio: 2.2, attack: 0.035, release: 0.28, knee: 8, makeup: 1}
+}
+
+starfall_mix {
+  AudioBus: {output: master, volume: 0.9, effects: [starfall_tone, starfall_glue]}
+  AudioMeter: {}
+}
+
+prefab starfall_harmonics { Wavetable: {kind: WavetableHarmonics} }
+
+prefab starfall_pad_sound {
+  SynthSound: {seed: 201, drift: 9, free_phase: true}
+  SynthEnvelope: {attack: 1.5, decay: 1.4, sustain: 0.82, release: 4}
+  SynthFilter: {kind: SynthLowPass, cutoff: 2400, resonance: 0.07, keytrack: 0.35}
+  body {
+    SynthOscillator: {wave: SynthWavetable, frequency: 440, level: 0.17}
+    SynthTable: {table: starfall_harmonics, position: 3, envelope: 6}
+    SynthUnison: {voices: 4, detune: 9, width: 0.9}
+  }
+  air {
+    SynthOscillator: {wave: SynthSine, frequency: 880, level: 0.038}
+    SynthUnison: {voices: 2, detune: 12, width: 1}
+    SynthLfo: {rate: 0.075, random_phase: true, amplitude: 0.1}
+  }
+}
+
+prefab starfall_string_sound {
+  SynthSound: {seed: 202, drift: 4}
+  SynthEnvelope: {attack: 0.48, decay: 0.8, sustain: 0.86, release: 2.2}
+  SynthFilter: {kind: SynthLowPass, cutoff: 3900, keytrack: 0.5}
+  body {
+    SynthOscillator: {wave: SynthWavetable, frequency: 440, level: 0.21}
+    SynthTable: {table: starfall_harmonics, position: 4, envelope: 3}
+    SynthUnison: {voices: 5, detune: 6, width: 0.85}
+  }
+}
+
+prefab starfall_bass_sound {
+  SynthSound: {seed: 203, drift: 2}
+  SynthEnvelope: {attack: 0.015, decay: 0.25, sustain: 0.64, release: 0.24}
+  SynthDrive: {drive: 0.21}
+  SynthFilter: {kind: SynthLowPass, cutoff: 1100, keytrack: 0.5}
+  core { SynthOscillator: {wave: SynthTriangle, frequency: 440, level: 0.31} }
+  weight { SynthOscillator: {wave: SynthSine, frequency: 220, level: 0.14} }
+}
+
+prefab starfall_sub_sound {
+  SynthSound: {seed: 204}
+  SynthEnvelope: {attack: 0.09, decay: 0.35, sustain: 0.86, release: 0.6}
+  SynthFilter: {kind: SynthLowPass, cutoff: 280, keytrack: 0.4}
+  core { SynthOscillator: {wave: SynthSine, frequency: 440, level: 0.36} }
+}
+
+prefab starfall_arp_sound {
+  SynthSound: {seed: 205, level_variance: 0.045}
+  SynthFilter: {kind: SynthLowPass, cutoff: 7500, velocity: 1.2}
+  string {
+    SynthOscillator: {wave: SynthPluck, frequency: 440, level: 0.34}
+    SynthString: {decay: 1.5, brightness: 0.72, hardness: 0.75, velocity: 0.55}
+  }
+  gloss {
+    SynthOscillator: {wave: SynthSine, frequency: 880, level: 0.065}
+    SynthEnvelope: {attack: 0.012, decay: 0.43, curve: 3}
+  }
+}
+
+prefab starfall_lead_sound {
+  SynthSound: {seed: 206, drift: 4, level_variance: 0.02}
+  SynthEnvelope: {attack: 0.065, decay: 0.4, sustain: 0.8, release: 0.75}
+  SynthFilter: {kind: SynthComb, tune: 2, feedback: -0.55, cutoff: 4400, keytrack: 0.65, velocity: 0.6}
+  vibrato { SynthLfo: {rate: 5.15, delay: 0.2, fade: 0.6, pitch: 8} }
+  core {
+    SynthOscillator: {wave: SynthTriangle, frequency: 440, level: 0.34}
+    SynthUnison: {voices: 3, detune: 5, width: 0.58}
+    fire {
+      SynthOscillator: {frequency: 880, modulation: SynthPhase, index: 1.25, velocity: 0.65}
+      SynthEnvelope: {attack: 0.08, decay: 0.5, sustain: 0.26, release: 0.6}
+    }
+  }
+}
+
+prefab starfall_wide_sound {
+  SynthSound: {seed: 207, drift: 7}
+  SynthEnvelope: {attack: 0.14, decay: 0.6, sustain: 0.68, release: 1.6}
+  SynthFilter: {kind: SynthLowPass, cutoff: 5800, keytrack: 0.4}
+  core {
+    SynthOscillator: {wave: SynthWavetable, frequency: 440, level: 0.24}
+    SynthTable: {table: starfall_harmonics, position: 5, envelope: 4}
+    SynthUnison: {voices: 4, detune: 8, width: 0.92}
+  }
+}
+
+prefab starfall_bell_sound {
+  SynthSound: {seed: 208, level_variance: 0.04}
+  SynthEnvelope: {attack: 0.025, decay: 4.3, curve: 0.72}
+  SynthFilter: {kind: SynthLowPass, cutoff: 8900, velocity: 1}
+  glass {
+    SynthOscillator: {wave: SynthSine, frequency: 440, level: 0.31}
+    upper {
+      SynthOscillator: {frequency: 1232, modulation: SynthPhase, index: 1.7, velocity: 0.6}
+      SynthEnvelope: {attack: 0.02, decay: 1.8, curve: 2}
+    }
+  }
+  tint { SynthOscillator: {wave: SynthSine, frequency: 1320, level: 0.065} }
+}
+
+prefab starfall_spark_sound {
+  SynthSound: {seed: 209, drift: 3, level_variance: 0.08}
+  SynthFilter: {kind: SynthLowPass, cutoff: 9000}
+  tone {
+    SynthOscillator: {wave: SynthPluck, frequency: 440, level: 0.24}
+    SynthString: {decay: 1.15, brightness: 0.88, hardness: 0.82}
+  }
+}
+
+prefab starfall_counter_sound {
+  SynthSound: {seed: 210, drift: 5}
+  SynthEnvelope: {attack: 0.38, decay: 0.6, sustain: 0.77, release: 1.45}
+  SynthFilter: {kind: SynthComb, tune: 2, feedback: -0.62, cutoff: 5100, keytrack: 0.55}
+  vibrato { SynthLfo: {rate: 5.4, delay: 0.55, fade: 0.7, pitch: 6} }
+  core { SynthOscillator: {wave: SynthTriangle, frequency: 440, level: 0.36} }
+}
+
+prefab starfall_brass_sound {
+  SynthSound: {seed: 211, drift: 4}
+  SynthEnvelope: {attack: 0.1, decay: 0.32, sustain: 0.71, release: 0.65}
+  SynthDrive: {drive: 0.17}
+  SynthFilter: {kind: SynthLowPass, cutoff: 3900, resonance: 0.11, keytrack: 0.4}
+  body {
+    SynthOscillator: {wave: SynthWavetable, frequency: 440, level: 0.25}
+    SynthTable: {table: starfall_harmonics, position: 5, envelope: 4}
+    SynthUnison: {voices: 4, detune: 7, width: 0.55}
+  }
+}
+
+prefab starfall_choir_sound {
+  SynthSound: {seed: 212, drift: 8, free_phase: true}
+  SynthEnvelope: {attack: 0.75, decay: 1, sustain: 0.87, release: 3.0}
+  SynthFilter: {kind: SynthComb, tune: 2, feedback: -0.67, cutoff: 2900, keytrack: 0.3}
+  throat {
+    SynthOscillator: {wave: SynthTriangle, frequency: 440, level: 0.26}
+    SynthUnison: {voices: 4, detune: 7, width: 0.8}
+  }
+}
+
+prefab starfall_kick_sound {
+  SynthSound: {seed: 213}
+  SynthEnvelope: {attack: 0.005, decay: 0.2, curve: 3}
+  SynthFilter: {kind: SynthLowPass, cutoff: 1100}
+  SynthDrive: {drive: 0.3}
+  thump { SynthOscillator: {wave: SynthSine, frequency: 440, level: 0.62} }
+  click { SynthOscillator: {wave: SynthTriangle, frequency: 880, level: 0.07} }
+}
+
+prefab starfall_snare_sound {
+  SynthSound: {seed: 214, level_variance: 0.05}
+  SynthEnvelope: {attack: 0.006, decay: 0.17, curve: 3}
+  SynthDrive: {drive: 0.25}
+  body {
+    SynthOscillator: {wave: SynthTriangle, frequency: 440, level: 0.27}
+    rasp { SynthOscillator: {frequency: 1452, modulation: SynthPhase, index: 4, velocity: 0.8} }
+  }
+}
+
+prefab starfall_hat_sound {
+  SynthSound: {seed: 215, level_variance: 0.1}
+  SynthEnvelope: {attack: 0.002, decay: 0.075, curve: 4}
+  SynthFilter: {kind: SynthLowPass, cutoff: 9300}
+  metal {
+    SynthOscillator: {wave: SynthSine, frequency: 440, level: 0.20}
+    ring { SynthOscillator: {frequency: 1978, modulation: SynthPhase, index: 5} }
+  }
+}
+
+prefab starfall_tom_sound {
+  SynthSound: {seed: 216}
+  SynthEnvelope: {attack: 0.007, decay: 0.34, curve: 2}
+  SynthFilter: {kind: SynthLowPass, cutoff: 1700}
+  body { SynthOscillator: {wave: SynthTriangle, frequency: 440, level: 0.31} }
+}
+
+prefab starfall_impact_sound {
+  SynthSound: {seed: 217, drift: 6}
+  SynthEnvelope: {attack: 0.002, decay: 4, curve: 1.1}
+  SynthFilter: {kind: SynthLowPass, cutoff: 9500}
+  core {
+    SynthOscillator: {wave: SynthSine, frequency: 440, level: 0.3}
+    crash { SynthOscillator: {frequency: 3218, modulation: SynthPhase, index: 5} }
+    SynthUnison: {voices: 5, detune: 24, width: 1}
+  }
+}
+
+starfall_pad_inst { Instrument: {sound: starfall_pad_sound, spread: 0.7} }
+starfall_strings_inst { Instrument: {sound: starfall_string_sound, spread: 0.72} }
+starfall_bass_inst { Instrument: {sound: starfall_bass_sound} }
+starfall_sub_inst { Instrument: {sound: starfall_sub_sound} }
+starfall_arp_inst { Instrument: {sound: starfall_arp_sound, gate: false, spread: 0.7, spread_mode: InstrumentSpreadAlternate} }
+starfall_lead_inst { Instrument: {sound: starfall_lead_sound, spread: 0.26} }
+starfall_wide_inst { Instrument: {sound: starfall_wide_sound, spread: 0.8} }
+starfall_bell_inst { Instrument: {sound: starfall_bell_sound, gate: false, spread: 0.6, spread_mode: InstrumentSpreadAlternate} }
+starfall_spark_inst { Instrument: {sound: starfall_spark_sound, gate: false, spread: 0.95, spread_mode: InstrumentSpreadRandom} }
+starfall_counter_inst { Instrument: {sound: starfall_counter_sound} }
+starfall_brass_inst { Instrument: {sound: starfall_brass_sound, spread: 0.65} }
+starfall_choir_inst { Instrument: {sound: starfall_choir_sound, spread: 0.76} }
+starfall_kick_inst { Instrument: {sound: starfall_kick_sound, gate: false} }
+starfall_snare_inst { Instrument: {sound: starfall_snare_sound, gate: false} }
+starfall_hat_inst { Instrument: {sound: starfall_hat_sound, gate: false} }
+starfall_tom_inst { Instrument: {sound: starfall_tom_sound, gate: false} }
+starfall_impact_inst { Instrument: {sound: starfall_impact_sound, gate: false} }
+starfall_tick_inst { Instrument: {sound: starfall_hat_sound, gate: false} }
+
+starfall_pad_filter { AudioFilter: {cutoff: 1150, resonance: 0.07} }
+starfall_pad_chorus { Chorus: {voices: 3, rate: 0.14, depth: 4, delay: 17, spread: 1, mix: 0.32} }
+starfall_lead_delay { Delay: {sync: 0.75, feedback: 0.23, mix: 0.20, damping: 4800, ping_pong: true} }
+starfall_arp_delay { Delay: {sync: 0.75, feedback: 0.28, mix: 0.15, damping: 5200, ping_pong: true} }
+starfall_bell_delay { Delay: {sync: 1.5, feedback: 0.4, mix: 0.26, damping: 4000, ping_pong: true} }
+
+// Composition clips -- beat-relative; reusable for the larger arrangement.
+prefab starfall_pad_progression {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 3.85, pitch: 52, velocity: 0.45},
+    {start: 0, duration: 3.85, pitch: 55, velocity: 0.432},
+    {start: 0, duration: 3.85, pitch: 59, velocity: 0.414},
+    {start: 0, duration: 3.85, pitch: 66, velocity: 0.396},
+    {start: 4, duration: 3.85, pitch: 48, velocity: 0.45},
+    {start: 4, duration: 3.85, pitch: 52, velocity: 0.432},
+    {start: 4, duration: 3.85, pitch: 55, velocity: 0.414},
+    {start: 4, duration: 3.85, pitch: 59, velocity: 0.396},
+    {start: 8, duration: 3.85, pitch: 43, velocity: 0.45},
+    {start: 8, duration: 3.85, pitch: 50, velocity: 0.432},
+    {start: 8, duration: 3.85, pitch: 57, velocity: 0.414},
+    {start: 8, duration: 3.85, pitch: 59, velocity: 0.396},
+    {start: 12, duration: 3.85, pitch: 50, velocity: 0.45},
+    {start: 12, duration: 3.85, pitch: 54, velocity: 0.432},
+    {start: 12, duration: 3.85, pitch: 57, velocity: 0.414},
+    {start: 12, duration: 3.85, pitch: 62, velocity: 0.396},
+    {start: 16, duration: 3.85, pitch: 52, velocity: 0.45},
+    {start: 16, duration: 3.85, pitch: 55, velocity: 0.432},
+    {start: 16, duration: 3.85, pitch: 59, velocity: 0.414},
+    {start: 16, duration: 3.85, pitch: 64, velocity: 0.396},
+    {start: 20, duration: 3.85, pitch: 48, velocity: 0.45},
+    {start: 20, duration: 3.85, pitch: 52, velocity: 0.432},
+    {start: 20, duration: 3.85, pitch: 55, velocity: 0.414},
+    {start: 20, duration: 3.85, pitch: 62, velocity: 0.396},
+    {start: 24, duration: 3.85, pitch: 45, velocity: 0.45},
+    {start: 24, duration: 3.85, pitch: 52, velocity: 0.432},
+    {start: 24, duration: 3.85, pitch: 55, velocity: 0.414},
+    {start: 24, duration: 3.85, pitch: 60, velocity: 0.396},
+    {start: 28, duration: 3.85, pitch: 47, velocity: 0.45},
+    {start: 28, duration: 3.85, pitch: 54, velocity: 0.432},
+    {start: 28, duration: 3.85, pitch: 57, velocity: 0.414},
+    {start: 28, duration: 3.85, pitch: 63, velocity: 0.396}
+  ]}
+}
+
+prefab starfall_pad_final {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 3.85, pitch: 52, velocity: 0.53},
+    {start: 0, duration: 3.85, pitch: 55, velocity: 0.512},
+    {start: 0, duration: 3.85, pitch: 59, velocity: 0.494},
+    {start: 0, duration: 3.85, pitch: 66, velocity: 0.476},
+    {start: 4, duration: 3.85, pitch: 48, velocity: 0.53},
+    {start: 4, duration: 3.85, pitch: 52, velocity: 0.512},
+    {start: 4, duration: 3.85, pitch: 55, velocity: 0.494},
+    {start: 4, duration: 3.85, pitch: 59, velocity: 0.476},
+    {start: 8, duration: 3.85, pitch: 43, velocity: 0.53},
+    {start: 8, duration: 3.85, pitch: 50, velocity: 0.512},
+    {start: 8, duration: 3.85, pitch: 57, velocity: 0.494},
+    {start: 8, duration: 3.85, pitch: 59, velocity: 0.476},
+    {start: 12, duration: 3.85, pitch: 50, velocity: 0.53},
+    {start: 12, duration: 3.85, pitch: 54, velocity: 0.512},
+    {start: 12, duration: 3.85, pitch: 57, velocity: 0.494},
+    {start: 12, duration: 3.85, pitch: 62, velocity: 0.476},
+    {start: 16, duration: 3.85, pitch: 52, velocity: 0.53},
+    {start: 16, duration: 3.85, pitch: 55, velocity: 0.512},
+    {start: 16, duration: 3.85, pitch: 59, velocity: 0.494},
+    {start: 16, duration: 3.85, pitch: 64, velocity: 0.476},
+    {start: 20, duration: 3.85, pitch: 48, velocity: 0.53},
+    {start: 20, duration: 3.85, pitch: 52, velocity: 0.512},
+    {start: 20, duration: 3.85, pitch: 55, velocity: 0.494},
+    {start: 20, duration: 3.85, pitch: 62, velocity: 0.476},
+    {start: 24, duration: 3.85, pitch: 45, velocity: 0.53},
+    {start: 24, duration: 3.85, pitch: 52, velocity: 0.512},
+    {start: 24, duration: 3.85, pitch: 55, velocity: 0.494},
+    {start: 24, duration: 3.85, pitch: 60, velocity: 0.476},
+    {start: 28, duration: 3.85, pitch: 52, velocity: 0.53},
+    {start: 28, duration: 3.85, pitch: 56, velocity: 0.512},
+    {start: 28, duration: 3.85, pitch: 59, velocity: 0.494},
+    {start: 28, duration: 3.85, pitch: 64, velocity: 0.476},
+    {start: 28, duration: 3.85, pitch: 68, velocity: 0.458}
+  ]}
+}
+
+prefab starfall_strings {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 3.78, pitch: 55, velocity: 0.45},
+    {start: 0, duration: 3.78, pitch: 59, velocity: 0.48},
+    {start: 0, duration: 3.78, pitch: 78, velocity: 0.51},
+    {start: 4, duration: 3.78, pitch: 52, velocity: 0.45},
+    {start: 4, duration: 3.78, pitch: 55, velocity: 0.48},
+    {start: 4, duration: 3.78, pitch: 71, velocity: 0.51},
+    {start: 8, duration: 3.78, pitch: 50, velocity: 0.45},
+    {start: 8, duration: 3.78, pitch: 57, velocity: 0.48},
+    {start: 8, duration: 3.78, pitch: 71, velocity: 0.51},
+    {start: 12, duration: 3.78, pitch: 54, velocity: 0.45},
+    {start: 12, duration: 3.78, pitch: 57, velocity: 0.48},
+    {start: 12, duration: 3.78, pitch: 74, velocity: 0.51},
+    {start: 16, duration: 3.78, pitch: 55, velocity: 0.45},
+    {start: 16, duration: 3.78, pitch: 59, velocity: 0.48},
+    {start: 16, duration: 3.78, pitch: 76, velocity: 0.51},
+    {start: 20, duration: 3.78, pitch: 52, velocity: 0.45},
+    {start: 20, duration: 3.78, pitch: 55, velocity: 0.48},
+    {start: 20, duration: 3.78, pitch: 74, velocity: 0.51},
+    {start: 24, duration: 3.78, pitch: 52, velocity: 0.45},
+    {start: 24, duration: 3.78, pitch: 55, velocity: 0.48},
+    {start: 24, duration: 3.78, pitch: 72, velocity: 0.51},
+    {start: 28, duration: 3.78, pitch: 54, velocity: 0.45},
+    {start: 28, duration: 3.78, pitch: 57, velocity: 0.48},
+    {start: 28, duration: 3.78, pitch: 75, velocity: 0.51}
+  ]}
+}
+
+prefab starfall_strings_final {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 3.78, pitch: 55, velocity: 0.52},
+    {start: 0, duration: 3.78, pitch: 59, velocity: 0.555},
+    {start: 0, duration: 3.78, pitch: 78, velocity: 0.59},
+    {start: 4, duration: 3.78, pitch: 52, velocity: 0.52},
+    {start: 4, duration: 3.78, pitch: 55, velocity: 0.555},
+    {start: 4, duration: 3.78, pitch: 71, velocity: 0.59},
+    {start: 8, duration: 3.78, pitch: 50, velocity: 0.52},
+    {start: 8, duration: 3.78, pitch: 57, velocity: 0.555},
+    {start: 8, duration: 3.78, pitch: 71, velocity: 0.59},
+    {start: 12, duration: 3.78, pitch: 54, velocity: 0.52},
+    {start: 12, duration: 3.78, pitch: 57, velocity: 0.555},
+    {start: 12, duration: 3.78, pitch: 74, velocity: 0.59},
+    {start: 16, duration: 3.78, pitch: 55, velocity: 0.52},
+    {start: 16, duration: 3.78, pitch: 59, velocity: 0.555},
+    {start: 16, duration: 3.78, pitch: 76, velocity: 0.59},
+    {start: 20, duration: 3.78, pitch: 52, velocity: 0.52},
+    {start: 20, duration: 3.78, pitch: 55, velocity: 0.555},
+    {start: 20, duration: 3.78, pitch: 74, velocity: 0.59},
+    {start: 24, duration: 3.78, pitch: 52, velocity: 0.52},
+    {start: 24, duration: 3.78, pitch: 55, velocity: 0.555},
+    {start: 24, duration: 3.78, pitch: 72, velocity: 0.59},
+    {start: 28, duration: 3.78, pitch: 56, velocity: 0.52},
+    {start: 28, duration: 3.78, pitch: 59, velocity: 0.555},
+    {start: 28, duration: 3.78, pitch: 76, velocity: 0.59},
+    {start: 28, duration: 3.78, pitch: 80, velocity: 0.625}
+  ]}
+}
+
+prefab starfall_bass_throb {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 1.6, pitch: 40, velocity: 0.74},
+    {start: 2, duration: 0.8, pitch: 47, velocity: 0.53},
+    {start: 3.25, duration: 0.65, pitch: 40, velocity: 0.58},
+    {start: 4, duration: 1.6, pitch: 36, velocity: 0.74},
+    {start: 6, duration: 0.8, pitch: 43, velocity: 0.53},
+    {start: 7.25, duration: 0.65, pitch: 36, velocity: 0.58},
+    {start: 8, duration: 1.6, pitch: 43, velocity: 0.74},
+    {start: 10, duration: 0.8, pitch: 50, velocity: 0.53},
+    {start: 11.25, duration: 0.65, pitch: 43, velocity: 0.58},
+    {start: 12, duration: 1.6, pitch: 38, velocity: 0.74},
+    {start: 14, duration: 0.8, pitch: 45, velocity: 0.53},
+    {start: 15.25, duration: 0.65, pitch: 38, velocity: 0.58},
+    {start: 16, duration: 1.6, pitch: 40, velocity: 0.74},
+    {start: 18, duration: 0.8, pitch: 47, velocity: 0.53},
+    {start: 19.25, duration: 0.65, pitch: 40, velocity: 0.58},
+    {start: 20, duration: 1.6, pitch: 36, velocity: 0.74},
+    {start: 22, duration: 0.8, pitch: 43, velocity: 0.53},
+    {start: 23.25, duration: 0.65, pitch: 36, velocity: 0.58},
+    {start: 24, duration: 1.6, pitch: 33, velocity: 0.74},
+    {start: 26, duration: 0.8, pitch: 40, velocity: 0.53},
+    {start: 27.25, duration: 0.65, pitch: 33, velocity: 0.58},
+    {start: 28, duration: 1.6, pitch: 35, velocity: 0.74},
+    {start: 30, duration: 0.8, pitch: 42, velocity: 0.53},
+    {start: 31.25, duration: 0.65, pitch: 35, velocity: 0.58}
+  ]}
+}
+
+prefab starfall_sub_foundation {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 3.8, pitch: 28, velocity: 0.64},
+    {start: 4, duration: 3.8, pitch: 24, velocity: 0.64},
+    {start: 8, duration: 3.8, pitch: 31, velocity: 0.64},
+    {start: 12, duration: 3.8, pitch: 26, velocity: 0.64},
+    {start: 16, duration: 3.8, pitch: 28, velocity: 0.64},
+    {start: 20, duration: 3.8, pitch: 24, velocity: 0.64},
+    {start: 24, duration: 3.8, pitch: 21, velocity: 0.64},
+    {start: 28, duration: 3.8, pitch: 23, velocity: 0.64}
+  ]}
+}
+
+prefab starfall_bass_final {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 1.6, pitch: 40, velocity: 0.8},
+    {start: 2, duration: 0.85, pitch: 47, velocity: 0.68},
+    {start: 3.25, duration: 0.6, pitch: 40, velocity: 0.72},
+    {start: 4, duration: 1.6, pitch: 36, velocity: 0.8},
+    {start: 6, duration: 0.85, pitch: 43, velocity: 0.68},
+    {start: 7.25, duration: 0.6, pitch: 36, velocity: 0.72},
+    {start: 8, duration: 1.6, pitch: 43, velocity: 0.8},
+    {start: 10, duration: 0.85, pitch: 50, velocity: 0.68},
+    {start: 11.25, duration: 0.6, pitch: 43, velocity: 0.72},
+    {start: 12, duration: 1.6, pitch: 38, velocity: 0.8},
+    {start: 14, duration: 0.85, pitch: 45, velocity: 0.68},
+    {start: 15.25, duration: 0.6, pitch: 38, velocity: 0.72},
+    {start: 16, duration: 1.6, pitch: 40, velocity: 0.8},
+    {start: 18, duration: 0.85, pitch: 47, velocity: 0.68},
+    {start: 19.25, duration: 0.6, pitch: 40, velocity: 0.72},
+    {start: 20, duration: 1.6, pitch: 36, velocity: 0.8},
+    {start: 22, duration: 0.85, pitch: 43, velocity: 0.68},
+    {start: 23.25, duration: 0.6, pitch: 36, velocity: 0.72},
+    {start: 24, duration: 1.6, pitch: 33, velocity: 0.8},
+    {start: 26, duration: 0.85, pitch: 40, velocity: 0.68},
+    {start: 27.25, duration: 0.6, pitch: 33, velocity: 0.72},
+    {start: 28, duration: 3.8, pitch: 40, velocity: 0.8}
+  ]}
+}
+
+prefab starfall_arp_river {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 0.32, pitch: 64, velocity: 0.53, pan: 0.2},
+    {start: 0.5, duration: 0.32, pitch: 71, velocity: 0.38, pan: -0.2},
+    {start: 1, duration: 0.32, pitch: 74, velocity: 0.38, pan: 0.2},
+    {start: 1.5, duration: 0.32, pitch: 67, velocity: 0.38, pan: -0.2},
+    {start: 2, duration: 0.32, pitch: 78, velocity: 0.53, pan: 0.2},
+    {start: 2.5, duration: 0.32, pitch: 71, velocity: 0.38, pan: -0.2},
+    {start: 3, duration: 0.32, pitch: 74, velocity: 0.38, pan: 0.2},
+    {start: 3.5, duration: 0.32, pitch: 67, velocity: 0.45, pan: -0.2},
+    {start: 4, duration: 0.32, pitch: 64, velocity: 0.53, pan: 0.2},
+    {start: 4.5, duration: 0.32, pitch: 71, velocity: 0.38, pan: -0.2},
+    {start: 5, duration: 0.32, pitch: 76, velocity: 0.38, pan: 0.2},
+    {start: 5.5, duration: 0.32, pitch: 67, velocity: 0.38, pan: -0.2},
+    {start: 6, duration: 0.32, pitch: 79, velocity: 0.53, pan: 0.2},
+    {start: 6.5, duration: 0.32, pitch: 71, velocity: 0.38, pan: -0.2},
+    {start: 7, duration: 0.32, pitch: 76, velocity: 0.38, pan: 0.2},
+    {start: 7.5, duration: 0.32, pitch: 67, velocity: 0.45, pan: -0.2},
+    {start: 8, duration: 0.32, pitch: 62, velocity: 0.53, pan: 0.2},
+    {start: 8.5, duration: 0.32, pitch: 69, velocity: 0.38, pan: -0.2},
+    {start: 9, duration: 0.32, pitch: 74, velocity: 0.38, pan: 0.2},
+    {start: 9.5, duration: 0.32, pitch: 67, velocity: 0.38, pan: -0.2},
+    {start: 10, duration: 0.32, pitch: 79, velocity: 0.53, pan: 0.2},
+    {start: 10.5, duration: 0.32, pitch: 69, velocity: 0.38, pan: -0.2},
+    {start: 11, duration: 0.32, pitch: 74, velocity: 0.38, pan: 0.2},
+    {start: 11.5, duration: 0.32, pitch: 67, velocity: 0.45, pan: -0.2},
+    {start: 12, duration: 0.32, pitch: 62, velocity: 0.53, pan: 0.2},
+    {start: 12.5, duration: 0.32, pitch: 69, velocity: 0.38, pan: -0.2},
+    {start: 13, duration: 0.32, pitch: 74, velocity: 0.38, pan: 0.2},
+    {start: 13.5, duration: 0.32, pitch: 66, velocity: 0.38, pan: -0.2},
+    {start: 14, duration: 0.32, pitch: 78, velocity: 0.53, pan: 0.2},
+    {start: 14.5, duration: 0.32, pitch: 69, velocity: 0.38, pan: -0.2},
+    {start: 15, duration: 0.32, pitch: 74, velocity: 0.38, pan: 0.2},
+    {start: 15.5, duration: 0.32, pitch: 66, velocity: 0.45, pan: -0.2},
+    {start: 16, duration: 0.32, pitch: 64, velocity: 0.53, pan: 0.2},
+    {start: 16.5, duration: 0.32, pitch: 71, velocity: 0.38, pan: -0.2},
+    {start: 17, duration: 0.32, pitch: 76, velocity: 0.38, pan: 0.2},
+    {start: 17.5, duration: 0.32, pitch: 67, velocity: 0.38, pan: -0.2},
+    {start: 18, duration: 0.32, pitch: 79, velocity: 0.53, pan: 0.2},
+    {start: 18.5, duration: 0.32, pitch: 71, velocity: 0.38, pan: -0.2},
+    {start: 19, duration: 0.32, pitch: 76, velocity: 0.38, pan: 0.2},
+    {start: 19.5, duration: 0.32, pitch: 67, velocity: 0.45, pan: -0.2},
+    {start: 20, duration: 0.32, pitch: 64, velocity: 0.53, pan: 0.2},
+    {start: 20.5, duration: 0.32, pitch: 71, velocity: 0.38, pan: -0.2},
+    {start: 21, duration: 0.32, pitch: 74, velocity: 0.38, pan: 0.2},
+    {start: 21.5, duration: 0.32, pitch: 67, velocity: 0.38, pan: -0.2},
+    {start: 22, duration: 0.32, pitch: 79, velocity: 0.53, pan: 0.2},
+    {start: 22.5, duration: 0.32, pitch: 71, velocity: 0.38, pan: -0.2},
+    {start: 23, duration: 0.32, pitch: 74, velocity: 0.38, pan: 0.2},
+    {start: 23.5, duration: 0.32, pitch: 67, velocity: 0.45, pan: -0.2},
+    {start: 24, duration: 0.32, pitch: 60, velocity: 0.53, pan: 0.2},
+    {start: 24.5, duration: 0.32, pitch: 67, velocity: 0.38, pan: -0.2},
+    {start: 25, duration: 0.32, pitch: 71, velocity: 0.38, pan: 0.2},
+    {start: 25.5, duration: 0.32, pitch: 64, velocity: 0.38, pan: -0.2},
+    {start: 26, duration: 0.32, pitch: 76, velocity: 0.53, pan: 0.2},
+    {start: 26.5, duration: 0.32, pitch: 67, velocity: 0.38, pan: -0.2},
+    {start: 27, duration: 0.32, pitch: 71, velocity: 0.38, pan: 0.2},
+    {start: 27.5, duration: 0.32, pitch: 64, velocity: 0.45, pan: -0.2},
+    {start: 28, duration: 0.32, pitch: 63, velocity: 0.53, pan: 0.2},
+    {start: 28.5, duration: 0.32, pitch: 69, velocity: 0.38, pan: -0.2},
+    {start: 29, duration: 0.32, pitch: 71, velocity: 0.38, pan: 0.2},
+    {start: 29.5, duration: 0.32, pitch: 66, velocity: 0.38, pan: -0.2},
+    {start: 30, duration: 0.32, pitch: 75, velocity: 0.53, pan: 0.2},
+    {start: 30.5, duration: 0.32, pitch: 69, velocity: 0.38, pan: -0.2},
+    {start: 31, duration: 0.32, pitch: 71, velocity: 0.38, pan: 0.2},
+    {start: 31.5, duration: 0.32, pitch: 66, velocity: 0.45, pan: -0.2}
+  ]}
+}
+
+prefab starfall_first_signal {
+  NoteClip: {length: 32, notes: [
+    {start: 1, duration: 2.3, pitch: 76, velocity: 0.46},
+    {start: 4.75, duration: 0.8, pitch: 78, velocity: 0.38},
+    {start: 6, duration: 1.6, pitch: 79, velocity: 0.4},
+    {start: 11, duration: 2.1, pitch: 74, velocity: 0.4},
+    {start: 16.25, duration: 2.4, pitch: 83, velocity: 0.45},
+    {start: 22, duration: 1.25, pitch: 79, velocity: 0.4},
+    {start: 26.5, duration: 1.3, pitch: 76, velocity: 0.43},
+    {start: 30.25, duration: 1.45, pitch: 75, velocity: 0.35}
+  ]}
+}
+
+prefab starfall_main_theme {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 1, pitch: 76, velocity: 0.72},
+    {start: 1, duration: 0.43, pitch: 78, velocity: 0.62},
+    {start: 1.5, duration: 0.82, pitch: 79, velocity: 0.62},
+    {start: 2.5, duration: 1.25, pitch: 83, velocity: 0.68},
+    {start: 4, duration: 1.4, pitch: 79, velocity: 0.72},
+    {start: 5.5, duration: 0.8, pitch: 76, velocity: 0.62},
+    {start: 6.5, duration: 0.45, pitch: 74, velocity: 0.62},
+    {start: 7, duration: 0.85, pitch: 72, velocity: 0.68},
+    {start: 8, duration: 0.65, pitch: 74, velocity: 0.72},
+    {start: 8.75, duration: 0.63, pitch: 79, velocity: 0.62},
+    {start: 9.5, duration: 0.72, pitch: 81, velocity: 0.62},
+    {start: 10.5, duration: 1.3, pitch: 83, velocity: 0.68},
+    {start: 12, duration: 1.3, pitch: 81, velocity: 0.72},
+    {start: 13.75, duration: 0.62, pitch: 78, velocity: 0.62},
+    {start: 14.5, duration: 0.48, pitch: 76, velocity: 0.62},
+    {start: 15, duration: 0.86, pitch: 74, velocity: 0.68},
+    {start: 16, duration: 0.68, pitch: 79, velocity: 0.72},
+    {start: 17, duration: 0.77, pitch: 83, velocity: 0.62},
+    {start: 18, duration: 1.05, pitch: 88, velocity: 0.62},
+    {start: 19.25, duration: 0.57, pitch: 86, velocity: 0.68},
+    {start: 20, duration: 1.45, pitch: 84, velocity: 0.72},
+    {start: 21.75, duration: 0.56, pitch: 83, velocity: 0.62},
+    {start: 22.5, duration: 0.5, pitch: 79, velocity: 0.62},
+    {start: 23, duration: 0.94, pitch: 76, velocity: 0.68},
+    {start: 24, duration: 0.7, pitch: 76, velocity: 0.72},
+    {start: 24.75, duration: 0.68, pitch: 81, velocity: 0.62},
+    {start: 25.5, duration: 1, pitch: 84, velocity: 0.62},
+    {start: 26.75, duration: 1, pitch: 83, velocity: 0.68},
+    {start: 28, duration: 1.07, pitch: 78, velocity: 0.72},
+    {start: 29.25, duration: 0.55, pitch: 75, velocity: 0.62},
+    {start: 30, duration: 1, pitch: 71, velocity: 0.62},
+    {start: 31.25, duration: 0.65, pitch: 75, velocity: 0.68}
+  ]}
+}
+
+prefab starfall_theme_harmony {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 1.4, pitch: 71, velocity: 0.47},
+    {start: 1.5, duration: 0.8, pitch: 74, velocity: 0.47},
+    {start: 2.5, duration: 1.25, pitch: 79, velocity: 0.47},
+    {start: 4, duration: 1.4, pitch: 76, velocity: 0.47},
+    {start: 5.5, duration: 1, pitch: 72, velocity: 0.47},
+    {start: 7, duration: 0.8, pitch: 67, velocity: 0.47},
+    {start: 8, duration: 1.5, pitch: 71, velocity: 0.47},
+    {start: 10, duration: 0.75, pitch: 74, velocity: 0.47},
+    {start: 10.75, duration: 1, pitch: 79, velocity: 0.47},
+    {start: 12, duration: 1.5, pitch: 78, velocity: 0.47},
+    {start: 13.75, duration: 0.75, pitch: 74, velocity: 0.47},
+    {start: 15, duration: 0.9, pitch: 69, velocity: 0.47},
+    {start: 16, duration: 0.75, pitch: 76, velocity: 0.47},
+    {start: 17, duration: 0.85, pitch: 79, velocity: 0.47},
+    {start: 18, duration: 1.65, pitch: 83, velocity: 0.47},
+    {start: 20, duration: 1.5, pitch: 79, velocity: 0.47},
+    {start: 21.5, duration: 0.9, pitch: 76, velocity: 0.47},
+    {start: 22.5, duration: 1.2, pitch: 72, velocity: 0.47},
+    {start: 24, duration: 0.9, pitch: 72, velocity: 0.47},
+    {start: 25, duration: 0.9, pitch: 76, velocity: 0.47},
+    {start: 26.25, duration: 1.25, pitch: 81, velocity: 0.47},
+    {start: 28, duration: 1.65, pitch: 75, velocity: 0.47},
+    {start: 29.75, duration: 1, pitch: 71, velocity: 0.47},
+    {start: 31, duration: 0.8, pitch: 66, velocity: 0.47}
+  ]}
+}
+
+prefab starfall_zero_gravity {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 3.3, pitch: 64, velocity: 0.44},
+    {start: 5, duration: 1.5, pitch: 67, velocity: 0.41},
+    {start: 7, duration: 0.9, pitch: 71, velocity: 0.38},
+    {start: 8, duration: 2.8, pitch: 74, velocity: 0.48},
+    {start: 12, duration: 2.4, pitch: 69, velocity: 0.4},
+    {start: 15, duration: 0.8, pitch: 66, velocity: 0.37},
+    {start: 16, duration: 3.1, pitch: 67, velocity: 0.48},
+    {start: 20, duration: 2.1, pitch: 64, velocity: 0.4},
+    {start: 23.25, duration: 0.6, pitch: 62, velocity: 0.37},
+    {start: 24, duration: 2.7, pitch: 60, velocity: 0.46},
+    {start: 27, duration: 1, pitch: 63, velocity: 0.37},
+    {start: 28, duration: 3.5, pitch: 66, velocity: 0.5}
+  ]}
+}
+
+prefab starfall_rising_call {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 1.5, pitch: 71, velocity: 0.45},
+    {start: 2, duration: 1, pitch: 74, velocity: 0.52},
+    {start: 4, duration: 1.5, pitch: 76, velocity: 0.57},
+    {start: 6, duration: 1.1, pitch: 79, velocity: 0.59},
+    {start: 8, duration: 1.5, pitch: 78, velocity: 0.61},
+    {start: 10, duration: 1, pitch: 81, velocity: 0.6},
+    {start: 12, duration: 1.5, pitch: 83, velocity: 0.64},
+    {start: 14, duration: 1.2, pitch: 86, velocity: 0.69},
+    {start: 16, duration: 1.5, pitch: 79, velocity: 0.68},
+    {start: 18, duration: 1, pitch: 83, velocity: 0.7},
+    {start: 20, duration: 1.3, pitch: 84, velocity: 0.71},
+    {start: 22, duration: 1.4, pitch: 88, velocity: 0.77},
+    {start: 24, duration: 1, pitch: 83, velocity: 0.7},
+    {start: 25.5, duration: 0.75, pitch: 84, velocity: 0.73},
+    {start: 27, duration: 1, pitch: 86, velocity: 0.78},
+    {start: 28, duration: 0.7, pitch: 87, velocity: 0.81},
+    {start: 29.25, duration: 0.5, pitch: 90, velocity: 0.83},
+    {start: 30, duration: 1.7, pitch: 91, velocity: 0.9}
+  ]}
+}
+
+prefab starfall_bell_replies {
+  NoteClip: {length: 32, notes: [
+    {start: 3.25, duration: 0.65, pitch: 88, velocity: 0.4},
+    {start: 7, duration: 0.7, pitch: 83, velocity: 0.36},
+    {start: 10, duration: 0.52, pitch: 86, velocity: 0.4},
+    {start: 14, duration: 0.75, pitch: 90, velocity: 0.39},
+    {start: 19, duration: 0.7, pitch: 91, velocity: 0.37},
+    {start: 23, duration: 0.8, pitch: 88, velocity: 0.43},
+    {start: 26, duration: 0.9, pitch: 84, velocity: 0.43},
+    {start: 30.5, duration: 0.55, pitch: 87, velocity: 0.46}
+  ]}
+}
+
+prefab starfall_sparkles {
+  NoteClip: {length: 32, notes: [
+    {start: 0.75, duration: 0.12, pitch: 90, velocity: 0.24},
+    {start: 2.25, duration: 0.12, pitch: 83, velocity: 0.34},
+    {start: 3.5, duration: 0.12, pitch: 86, velocity: 0.28},
+    {start: 4.75, duration: 0.12, pitch: 91, velocity: 0.24},
+    {start: 6.25, duration: 0.12, pitch: 83, velocity: 0.34},
+    {start: 7.5, duration: 0.12, pitch: 88, velocity: 0.28},
+    {start: 8.75, duration: 0.12, pitch: 91, velocity: 0.24},
+    {start: 10.25, duration: 0.12, pitch: 81, velocity: 0.34},
+    {start: 11.5, duration: 0.12, pitch: 86, velocity: 0.28},
+    {start: 12.75, duration: 0.12, pitch: 90, velocity: 0.24},
+    {start: 14.25, duration: 0.12, pitch: 81, velocity: 0.34},
+    {start: 15.5, duration: 0.12, pitch: 86, velocity: 0.28},
+    {start: 16.75, duration: 0.12, pitch: 91, velocity: 0.24},
+    {start: 18.25, duration: 0.12, pitch: 83, velocity: 0.34},
+    {start: 19.5, duration: 0.12, pitch: 88, velocity: 0.28},
+    {start: 20.75, duration: 0.12, pitch: 91, velocity: 0.24},
+    {start: 22.25, duration: 0.12, pitch: 83, velocity: 0.34},
+    {start: 23.5, duration: 0.12, pitch: 86, velocity: 0.28},
+    {start: 24.75, duration: 0.12, pitch: 88, velocity: 0.24},
+    {start: 26.25, duration: 0.12, pitch: 79, velocity: 0.34},
+    {start: 27.5, duration: 0.12, pitch: 83, velocity: 0.28},
+    {start: 28.75, duration: 0.12, pitch: 87, velocity: 0.24},
+    {start: 30.25, duration: 0.12, pitch: 81, velocity: 0.34},
+    {start: 31.5, duration: 0.12, pitch: 83, velocity: 0.28}
+  ]}
+}
+
+prefab starfall_counterlight {
+  NoteClip: {length: 32, notes: [
+    {start: 0.5, duration: 1.3, pitch: 83, velocity: 0.5},
+    {start: 2.5, duration: 0.85, pitch: 86, velocity: 0.5},
+    {start: 4.5, duration: 1.4, pitch: 84, velocity: 0.5},
+    {start: 6.5, duration: 0.85, pitch: 79, velocity: 0.48},
+    {start: 8.5, duration: 1.5, pitch: 86, velocity: 0.51},
+    {start: 10.5, duration: 1, pitch: 88, velocity: 0.51},
+    {start: 12.25, duration: 1.65, pitch: 90, velocity: 0.54},
+    {start: 16.5, duration: 1.4, pitch: 91, velocity: 0.55},
+    {start: 18.75, duration: 0.85, pitch: 88, velocity: 0.56},
+    {start: 20.5, duration: 1.1, pitch: 88, velocity: 0.52},
+    {start: 22, duration: 1.55, pitch: 84, velocity: 0.49},
+    {start: 24.5, duration: 1.3, pitch: 88, velocity: 0.54},
+    {start: 26, duration: 1.1, pitch: 91, velocity: 0.56},
+    {start: 28.5, duration: 1.05, pitch: 90, velocity: 0.55},
+    {start: 30, duration: 1.7, pitch: 87, velocity: 0.55}
+  ]}
+}
+
+prefab starfall_horizon_brass {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 1.05, pitch: 67, velocity: 0.52},
+    {start: 0, duration: 1.05, pitch: 71, velocity: 0.52},
+    {start: 0, duration: 1.05, pitch: 78, velocity: 0.52},
+    {start: 2.5, duration: 0.75, pitch: 67, velocity: 0.46},
+    {start: 2.5, duration: 0.75, pitch: 71, velocity: 0.46},
+    {start: 2.5, duration: 0.75, pitch: 78, velocity: 0.46},
+    {start: 4, duration: 1.05, pitch: 64, velocity: 0.52},
+    {start: 4, duration: 1.05, pitch: 67, velocity: 0.52},
+    {start: 4, duration: 1.05, pitch: 71, velocity: 0.52},
+    {start: 8, duration: 1.05, pitch: 62, velocity: 0.52},
+    {start: 8, duration: 1.05, pitch: 69, velocity: 0.52},
+    {start: 8, duration: 1.05, pitch: 71, velocity: 0.52},
+    {start: 10.5, duration: 0.75, pitch: 62, velocity: 0.46},
+    {start: 10.5, duration: 0.75, pitch: 69, velocity: 0.46},
+    {start: 10.5, duration: 0.75, pitch: 71, velocity: 0.46},
+    {start: 12, duration: 1.05, pitch: 66, velocity: 0.52},
+    {start: 12, duration: 1.05, pitch: 69, velocity: 0.52},
+    {start: 12, duration: 1.05, pitch: 74, velocity: 0.52},
+    {start: 16, duration: 1.05, pitch: 67, velocity: 0.52},
+    {start: 16, duration: 1.05, pitch: 71, velocity: 0.52},
+    {start: 16, duration: 1.05, pitch: 76, velocity: 0.52},
+    {start: 18.5, duration: 0.75, pitch: 67, velocity: 0.46},
+    {start: 18.5, duration: 0.75, pitch: 71, velocity: 0.46},
+    {start: 18.5, duration: 0.75, pitch: 76, velocity: 0.46},
+    {start: 20, duration: 1.05, pitch: 64, velocity: 0.52},
+    {start: 20, duration: 1.05, pitch: 67, velocity: 0.52},
+    {start: 20, duration: 1.05, pitch: 74, velocity: 0.52},
+    {start: 24, duration: 1.05, pitch: 64, velocity: 0.52},
+    {start: 24, duration: 1.05, pitch: 67, velocity: 0.52},
+    {start: 24, duration: 1.05, pitch: 72, velocity: 0.52},
+    {start: 26.5, duration: 0.75, pitch: 64, velocity: 0.46},
+    {start: 26.5, duration: 0.75, pitch: 67, velocity: 0.46},
+    {start: 26.5, duration: 0.75, pitch: 72, velocity: 0.46},
+    {start: 28, duration: 1.05, pitch: 66, velocity: 0.52},
+    {start: 28, duration: 1.05, pitch: 69, velocity: 0.52},
+    {start: 28, duration: 1.05, pitch: 75, velocity: 0.52}
+  ]}
+}
+
+prefab starfall_choir {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 3.8, pitch: 67, velocity: 0.38},
+    {start: 0, duration: 3.8, pitch: 78, velocity: 0.38},
+    {start: 4, duration: 3.8, pitch: 64, velocity: 0.38},
+    {start: 4, duration: 3.8, pitch: 71, velocity: 0.38},
+    {start: 8, duration: 3.8, pitch: 62, velocity: 0.38},
+    {start: 8, duration: 3.8, pitch: 71, velocity: 0.38},
+    {start: 12, duration: 3.8, pitch: 66, velocity: 0.38},
+    {start: 12, duration: 3.8, pitch: 74, velocity: 0.38},
+    {start: 16, duration: 3.8, pitch: 67, velocity: 0.38},
+    {start: 16, duration: 3.8, pitch: 76, velocity: 0.38},
+    {start: 20, duration: 3.8, pitch: 64, velocity: 0.38},
+    {start: 20, duration: 3.8, pitch: 74, velocity: 0.38},
+    {start: 24, duration: 3.8, pitch: 64, velocity: 0.38},
+    {start: 24, duration: 3.8, pitch: 72, velocity: 0.38},
+    {start: 28, duration: 3.8, pitch: 66, velocity: 0.38},
+    {start: 28, duration: 3.8, pitch: 75, velocity: 0.38}
+  ]}
+}
+
+prefab starfall_kick_sparse {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 0.16, pitch: 36, velocity: 0.76},
+    {start: 2, duration: 0.16, pitch: 36, velocity: 0.76},
+    {start: 4, duration: 0.16, pitch: 36, velocity: 0.76},
+    {start: 6, duration: 0.16, pitch: 36, velocity: 0.76},
+    {start: 8, duration: 0.16, pitch: 36, velocity: 0.76},
+    {start: 10, duration: 0.16, pitch: 36, velocity: 0.76},
+    {start: 12, duration: 0.16, pitch: 36, velocity: 0.76},
+    {start: 14, duration: 0.16, pitch: 36, velocity: 0.76},
+    {start: 16, duration: 0.16, pitch: 36, velocity: 0.76},
+    {start: 18, duration: 0.16, pitch: 36, velocity: 0.76},
+    {start: 20, duration: 0.16, pitch: 36, velocity: 0.76},
+    {start: 22, duration: 0.16, pitch: 36, velocity: 0.76},
+    {start: 24, duration: 0.16, pitch: 36, velocity: 0.76},
+    {start: 26, duration: 0.16, pitch: 36, velocity: 0.76},
+    {start: 28, duration: 0.16, pitch: 36, velocity: 0.76},
+    {start: 30, duration: 0.16, pitch: 36, velocity: 0.76}
+  ]}
+}
+
+prefab starfall_kick_drive {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 0.18, pitch: 36, velocity: 0.9},
+    {start: 1, duration: 0.18, pitch: 36, velocity: 0.78},
+    {start: 2, duration: 0.18, pitch: 36, velocity: 0.78},
+    {start: 3, duration: 0.18, pitch: 36, velocity: 0.78},
+    {start: 4, duration: 0.18, pitch: 36, velocity: 0.9},
+    {start: 5, duration: 0.18, pitch: 36, velocity: 0.78},
+    {start: 6, duration: 0.18, pitch: 36, velocity: 0.78},
+    {start: 7, duration: 0.18, pitch: 36, velocity: 0.78},
+    {start: 7.5, duration: 0.14, pitch: 36, velocity: 0.54},
+    {start: 8, duration: 0.18, pitch: 36, velocity: 0.9},
+    {start: 9, duration: 0.18, pitch: 36, velocity: 0.78},
+    {start: 10, duration: 0.18, pitch: 36, velocity: 0.78},
+    {start: 11, duration: 0.18, pitch: 36, velocity: 0.78},
+    {start: 12, duration: 0.18, pitch: 36, velocity: 0.9},
+    {start: 13, duration: 0.18, pitch: 36, velocity: 0.78},
+    {start: 14, duration: 0.18, pitch: 36, velocity: 0.78},
+    {start: 15, duration: 0.18, pitch: 36, velocity: 0.78},
+    {start: 15.5, duration: 0.14, pitch: 36, velocity: 0.54},
+    {start: 16, duration: 0.18, pitch: 36, velocity: 0.9},
+    {start: 17, duration: 0.18, pitch: 36, velocity: 0.78},
+    {start: 18, duration: 0.18, pitch: 36, velocity: 0.78},
+    {start: 19, duration: 0.18, pitch: 36, velocity: 0.78},
+    {start: 20, duration: 0.18, pitch: 36, velocity: 0.9},
+    {start: 21, duration: 0.18, pitch: 36, velocity: 0.78},
+    {start: 22, duration: 0.18, pitch: 36, velocity: 0.78},
+    {start: 23, duration: 0.18, pitch: 36, velocity: 0.78},
+    {start: 23.5, duration: 0.14, pitch: 36, velocity: 0.54},
+    {start: 24, duration: 0.18, pitch: 36, velocity: 0.9},
+    {start: 25, duration: 0.18, pitch: 36, velocity: 0.78},
+    {start: 26, duration: 0.18, pitch: 36, velocity: 0.78},
+    {start: 27, duration: 0.18, pitch: 36, velocity: 0.78},
+    {start: 28, duration: 0.18, pitch: 36, velocity: 0.9},
+    {start: 29, duration: 0.18, pitch: 36, velocity: 0.78},
+    {start: 30, duration: 0.18, pitch: 36, velocity: 0.78},
+    {start: 31, duration: 0.18, pitch: 36, velocity: 0.78},
+    {start: 31.5, duration: 0.14, pitch: 36, velocity: 0.54}
+  ]}
+}
+
+prefab starfall_snare_main {
+  NoteClip: {length: 32, notes: [
+    {start: 1, duration: 0.14, pitch: 69, velocity: 0.68},
+    {start: 3, duration: 0.14, pitch: 69, velocity: 0.83},
+    {start: 5, duration: 0.14, pitch: 69, velocity: 0.68},
+    {start: 7, duration: 0.14, pitch: 69, velocity: 0.83},
+    {start: 9, duration: 0.14, pitch: 69, velocity: 0.68},
+    {start: 11, duration: 0.14, pitch: 69, velocity: 0.83},
+    {start: 13, duration: 0.14, pitch: 69, velocity: 0.68},
+    {start: 15, duration: 0.14, pitch: 69, velocity: 0.83},
+    {start: 17, duration: 0.14, pitch: 69, velocity: 0.68},
+    {start: 19, duration: 0.14, pitch: 69, velocity: 0.83},
+    {start: 21, duration: 0.14, pitch: 69, velocity: 0.68},
+    {start: 23, duration: 0.14, pitch: 69, velocity: 0.83},
+    {start: 25, duration: 0.14, pitch: 69, velocity: 0.68},
+    {start: 27, duration: 0.14, pitch: 69, velocity: 0.83},
+    {start: 29, duration: 0.14, pitch: 69, velocity: 0.68},
+    {start: 31, duration: 0.14, pitch: 69, velocity: 0.83}
+  ]}
+}
+
+prefab starfall_hat_lattice {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 0.095, pitch: 92, velocity: 0.28},
+    {start: 0.5, duration: 0.095, pitch: 92, velocity: 0.43},
+    {start: 1, duration: 0.095, pitch: 92, velocity: 0.28},
+    {start: 1.5, duration: 0.095, pitch: 92, velocity: 0.43},
+    {start: 2, duration: 0.095, pitch: 92, velocity: 0.28},
+    {start: 2.5, duration: 0.095, pitch: 92, velocity: 0.43},
+    {start: 3, duration: 0.095, pitch: 92, velocity: 0.39},
+    {start: 3.5, duration: 0.095, pitch: 92, velocity: 0.43},
+    {start: 4, duration: 0.095, pitch: 92, velocity: 0.28},
+    {start: 4.5, duration: 0.095, pitch: 92, velocity: 0.43},
+    {start: 5, duration: 0.095, pitch: 92, velocity: 0.28},
+    {start: 5.5, duration: 0.095, pitch: 92, velocity: 0.43},
+    {start: 6, duration: 0.095, pitch: 92, velocity: 0.28},
+    {start: 6.5, duration: 0.095, pitch: 92, velocity: 0.43},
+    {start: 7, duration: 0.095, pitch: 92, velocity: 0.39},
+    {start: 7.5, duration: 0.095, pitch: 92, velocity: 0.43},
+    {start: 8, duration: 0.095, pitch: 92, velocity: 0.28},
+    {start: 8.5, duration: 0.095, pitch: 92, velocity: 0.43},
+    {start: 9, duration: 0.095, pitch: 92, velocity: 0.28},
+    {start: 9.5, duration: 0.095, pitch: 92, velocity: 0.43},
+    {start: 10, duration: 0.095, pitch: 92, velocity: 0.28},
+    {start: 10.5, duration: 0.095, pitch: 92, velocity: 0.43},
+    {start: 11, duration: 0.095, pitch: 92, velocity: 0.39},
+    {start: 11.5, duration: 0.095, pitch: 92, velocity: 0.43},
+    {start: 12, duration: 0.095, pitch: 92, velocity: 0.28},
+    {start: 12.5, duration: 0.095, pitch: 92, velocity: 0.43},
+    {start: 13, duration: 0.095, pitch: 92, velocity: 0.28},
+    {start: 13.5, duration: 0.095, pitch: 92, velocity: 0.43},
+    {start: 14, duration: 0.095, pitch: 92, velocity: 0.28},
+    {start: 14.5, duration: 0.095, pitch: 92, velocity: 0.43},
+    {start: 15, duration: 0.095, pitch: 92, velocity: 0.39},
+    {start: 15.5, duration: 0.095, pitch: 92, velocity: 0.43},
+    {start: 16, duration: 0.095, pitch: 92, velocity: 0.28},
+    {start: 16.5, duration: 0.095, pitch: 92, velocity: 0.43},
+    {start: 17, duration: 0.095, pitch: 92, velocity: 0.28},
+    {start: 17.5, duration: 0.095, pitch: 92, velocity: 0.43},
+    {start: 18, duration: 0.095, pitch: 92, velocity: 0.28},
+    {start: 18.5, duration: 0.095, pitch: 92, velocity: 0.43},
+    {start: 19, duration: 0.095, pitch: 92, velocity: 0.39},
+    {start: 19.5, duration: 0.095, pitch: 92, velocity: 0.43},
+    {start: 20, duration: 0.095, pitch: 92, velocity: 0.28},
+    {start: 20.5, duration: 0.095, pitch: 92, velocity: 0.43},
+    {start: 21, duration: 0.095, pitch: 92, velocity: 0.28},
+    {start: 21.5, duration: 0.095, pitch: 92, velocity: 0.43},
+    {start: 22, duration: 0.095, pitch: 92, velocity: 0.28},
+    {start: 22.5, duration: 0.095, pitch: 92, velocity: 0.43},
+    {start: 23, duration: 0.095, pitch: 92, velocity: 0.39},
+    {start: 23.5, duration: 0.095, pitch: 92, velocity: 0.43},
+    {start: 24, duration: 0.095, pitch: 92, velocity: 0.28},
+    {start: 24.5, duration: 0.095, pitch: 92, velocity: 0.43},
+    {start: 25, duration: 0.095, pitch: 92, velocity: 0.28},
+    {start: 25.5, duration: 0.095, pitch: 92, velocity: 0.43},
+    {start: 26, duration: 0.095, pitch: 92, velocity: 0.28},
+    {start: 26.5, duration: 0.095, pitch: 92, velocity: 0.43},
+    {start: 27, duration: 0.095, pitch: 92, velocity: 0.39},
+    {start: 27.5, duration: 0.095, pitch: 92, velocity: 0.43},
+    {start: 28, duration: 0.095, pitch: 92, velocity: 0.28},
+    {start: 28.5, duration: 0.095, pitch: 92, velocity: 0.43},
+    {start: 29, duration: 0.095, pitch: 92, velocity: 0.28},
+    {start: 29.5, duration: 0.095, pitch: 92, velocity: 0.43},
+    {start: 30, duration: 0.095, pitch: 92, velocity: 0.28},
+    {start: 30.5, duration: 0.095, pitch: 92, velocity: 0.43},
+    {start: 31, duration: 0.095, pitch: 92, velocity: 0.39},
+    {start: 31.5, duration: 0.095, pitch: 92, velocity: 0.43}
+  ]}
+}
+
+prefab starfall_hat_rolling {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 0.25, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 0.5, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 0.75, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 1, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 1.25, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 1.5, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 1.75, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 2, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 2.25, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 2.5, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 3, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 3.5, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 3.75, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 4, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 4.25, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 4.5, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 4.75, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 5, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 5.25, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 5.5, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 5.75, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 6, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 6.25, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 6.5, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 7, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 7.5, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 7.75, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 8, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 8.25, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 8.5, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 8.75, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 9, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 9.25, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 9.5, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 9.75, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 10, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 10.25, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 10.5, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 11, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 11.5, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 11.75, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 12, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 12.25, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 12.5, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 12.75, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 13, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 13.25, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 13.5, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 13.75, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 14, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 14.25, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 14.5, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 15, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 15.5, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 15.75, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 16, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 16.25, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 16.5, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 16.75, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 17, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 17.25, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 17.5, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 17.75, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 18, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 18.25, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 18.5, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 19, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 19.5, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 19.75, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 20, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 20.25, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 20.5, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 20.75, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 21, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 21.25, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 21.5, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 21.75, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 22, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 22.25, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 22.5, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 23, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 23.5, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 23.75, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 24, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 24.25, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 24.5, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 24.75, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 25, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 25.25, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 25.5, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 25.75, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 26, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 26.25, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 26.5, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 27, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 27.5, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 27.75, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 28, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 28.25, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 28.5, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 28.75, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 29, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 29.25, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 29.5, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 29.75, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 30, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 30.25, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 30.5, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 31, duration: 0.065, pitch: 92, velocity: 0.19},
+    {start: 31.5, duration: 0.065, pitch: 92, velocity: 0.34},
+    {start: 31.75, duration: 0.065, pitch: 92, velocity: 0.19}
+  ]}
+}
+
+prefab starfall_toms {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 0.18, pitch: 50, velocity: 0.51},
+    {start: 2.5, duration: 0.18, pitch: 54, velocity: 0.42},
+    {start: 3.25, duration: 0.18, pitch: 57, velocity: 0.34},
+    {start: 3.5, duration: 0.18, pitch: 59, velocity: 0.38},
+    {start: 3.75, duration: 0.18, pitch: 62, velocity: 0.44},
+    {start: 8, duration: 0.18, pitch: 50, velocity: 0.51},
+    {start: 10.5, duration: 0.18, pitch: 54, velocity: 0.42},
+    {start: 11.25, duration: 0.18, pitch: 57, velocity: 0.34},
+    {start: 11.5, duration: 0.18, pitch: 59, velocity: 0.38},
+    {start: 11.75, duration: 0.18, pitch: 62, velocity: 0.44},
+    {start: 16, duration: 0.18, pitch: 50, velocity: 0.51},
+    {start: 18.5, duration: 0.18, pitch: 54, velocity: 0.42},
+    {start: 19.25, duration: 0.18, pitch: 57, velocity: 0.34},
+    {start: 19.5, duration: 0.18, pitch: 59, velocity: 0.38},
+    {start: 19.75, duration: 0.18, pitch: 62, velocity: 0.44},
+    {start: 24, duration: 0.18, pitch: 50, velocity: 0.51},
+    {start: 26.5, duration: 0.18, pitch: 54, velocity: 0.42},
+    {start: 27.25, duration: 0.18, pitch: 57, velocity: 0.34},
+    {start: 27.5, duration: 0.18, pitch: 59, velocity: 0.38},
+    {start: 27.75, duration: 0.18, pitch: 62, velocity: 0.44}
+  ]}
+}
+
+prefab starfall_crash {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 0.36, pitch: 94, velocity: 0.57},
+    {start: 16, duration: 0.36, pitch: 94, velocity: 0.57}
+  ]}
+}
+
+prefab starfall_build_ticks {
+  NoteClip: {length: 16, notes: [
+    {start: 0, duration: 0.1, pitch: 92, velocity: 0.25},
+    {start: 0.5, duration: 0.1, pitch: 92, velocity: 0.259},
+    {start: 1, duration: 0.1, pitch: 92, velocity: 0.268},
+    {start: 1.5, duration: 0.1, pitch: 92, velocity: 0.277},
+    {start: 2, duration: 0.1, pitch: 92, velocity: 0.286},
+    {start: 2.5, duration: 0.1, pitch: 92, velocity: 0.295},
+    {start: 3, duration: 0.1, pitch: 92, velocity: 0.304},
+    {start: 3.5, duration: 0.1, pitch: 92, velocity: 0.313},
+    {start: 4, duration: 0.1, pitch: 92, velocity: 0.322},
+    {start: 4.5, duration: 0.1, pitch: 92, velocity: 0.331},
+    {start: 5, duration: 0.1, pitch: 92, velocity: 0.34},
+    {start: 5.5, duration: 0.1, pitch: 92, velocity: 0.349},
+    {start: 6, duration: 0.1, pitch: 92, velocity: 0.358},
+    {start: 6.5, duration: 0.1, pitch: 92, velocity: 0.367},
+    {start: 7, duration: 0.1, pitch: 92, velocity: 0.376},
+    {start: 7.5, duration: 0.1, pitch: 92, velocity: 0.385},
+    {start: 8, duration: 0.1, pitch: 69, velocity: 0.3},
+    {start: 8, duration: 0.1, pitch: 92, velocity: 0.394},
+    {start: 8.25, duration: 0.1, pitch: 69, velocity: 0.317},
+    {start: 8.5, duration: 0.1, pitch: 69, velocity: 0.334},
+    {start: 8.5, duration: 0.1, pitch: 92, velocity: 0.403},
+    {start: 8.75, duration: 0.1, pitch: 69, velocity: 0.351},
+    {start: 9, duration: 0.1, pitch: 69, velocity: 0.368},
+    {start: 9, duration: 0.1, pitch: 92, velocity: 0.412},
+    {start: 9.25, duration: 0.1, pitch: 69, velocity: 0.385},
+    {start: 9.5, duration: 0.1, pitch: 69, velocity: 0.402},
+    {start: 9.5, duration: 0.1, pitch: 92, velocity: 0.421},
+    {start: 9.75, duration: 0.1, pitch: 69, velocity: 0.419},
+    {start: 10, duration: 0.1, pitch: 69, velocity: 0.436},
+    {start: 10, duration: 0.1, pitch: 92, velocity: 0.43},
+    {start: 10.25, duration: 0.1, pitch: 69, velocity: 0.453},
+    {start: 10.5, duration: 0.1, pitch: 69, velocity: 0.47},
+    {start: 10.5, duration: 0.1, pitch: 92, velocity: 0.439},
+    {start: 10.75, duration: 0.1, pitch: 69, velocity: 0.487},
+    {start: 11, duration: 0.1, pitch: 69, velocity: 0.504},
+    {start: 11, duration: 0.1, pitch: 92, velocity: 0.448},
+    {start: 11.25, duration: 0.1, pitch: 69, velocity: 0.521},
+    {start: 11.5, duration: 0.1, pitch: 69, velocity: 0.538},
+    {start: 11.5, duration: 0.1, pitch: 92, velocity: 0.457},
+    {start: 11.75, duration: 0.1, pitch: 69, velocity: 0.555},
+    {start: 12, duration: 0.13, pitch: 50, velocity: 0.36},
+    {start: 12, duration: 0.1, pitch: 69, velocity: 0.572},
+    {start: 12, duration: 0.1, pitch: 92, velocity: 0.466},
+    {start: 12.25, duration: 0.13, pitch: 50, velocity: 0.378},
+    {start: 12.25, duration: 0.1, pitch: 69, velocity: 0.589},
+    {start: 12.5, duration: 0.13, pitch: 50, velocity: 0.396},
+    {start: 12.5, duration: 0.1, pitch: 69, velocity: 0.606},
+    {start: 12.5, duration: 0.1, pitch: 92, velocity: 0.475},
+    {start: 12.75, duration: 0.13, pitch: 50, velocity: 0.414},
+    {start: 12.75, duration: 0.1, pitch: 69, velocity: 0.623},
+    {start: 13, duration: 0.13, pitch: 50, velocity: 0.432},
+    {start: 13, duration: 0.1, pitch: 69, velocity: 0.64},
+    {start: 13, duration: 0.1, pitch: 92, velocity: 0.484},
+    {start: 13.25, duration: 0.13, pitch: 50, velocity: 0.45},
+    {start: 13.25, duration: 0.1, pitch: 69, velocity: 0.657},
+    {start: 13.5, duration: 0.13, pitch: 50, velocity: 0.468},
+    {start: 13.5, duration: 0.1, pitch: 69, velocity: 0.674},
+    {start: 13.5, duration: 0.1, pitch: 92, velocity: 0.493},
+    {start: 13.75, duration: 0.13, pitch: 50, velocity: 0.486},
+    {start: 13.75, duration: 0.1, pitch: 69, velocity: 0.691},
+    {start: 14, duration: 0.13, pitch: 50, velocity: 0.504},
+    {start: 14, duration: 0.1, pitch: 69, velocity: 0.708},
+    {start: 14, duration: 0.1, pitch: 92, velocity: 0.502},
+    {start: 14.25, duration: 0.13, pitch: 50, velocity: 0.522},
+    {start: 14.25, duration: 0.1, pitch: 69, velocity: 0.725},
+    {start: 14.5, duration: 0.13, pitch: 50, velocity: 0.54},
+    {start: 14.5, duration: 0.1, pitch: 69, velocity: 0.742},
+    {start: 14.5, duration: 0.1, pitch: 92, velocity: 0.511},
+    {start: 14.75, duration: 0.13, pitch: 50, velocity: 0.558},
+    {start: 14.75, duration: 0.1, pitch: 69, velocity: 0.759},
+    {start: 15, duration: 0.13, pitch: 50, velocity: 0.576},
+    {start: 15, duration: 0.1, pitch: 69, velocity: 0.776},
+    {start: 15, duration: 0.1, pitch: 92, velocity: 0.52},
+    {start: 15.25, duration: 0.13, pitch: 50, velocity: 0.594},
+    {start: 15.25, duration: 0.1, pitch: 69, velocity: 0.793},
+    {start: 15.5, duration: 0.13, pitch: 50, velocity: 0.612},
+    {start: 15.5, duration: 0.1, pitch: 69, velocity: 0.81},
+    {start: 15.5, duration: 0.1, pitch: 92, velocity: 0.529},
+    {start: 15.75, duration: 0.13, pitch: 50, velocity: 0.63},
+    {start: 15.75, duration: 0.1, pitch: 69, velocity: 0.827}
+  ]}
+}
+
+prefab starfall_fill {
+  NoteClip: {length: 4, notes: [
+    {start: 0, duration: 0.11, pitch: 69, velocity: 0.35},
+    {start: 0.25, duration: 0.11, pitch: 59, velocity: 0.38},
+    {start: 0.5, duration: 0.11, pitch: 59, velocity: 0.41},
+    {start: 0.75, duration: 0.11, pitch: 59, velocity: 0.44},
+    {start: 1, duration: 0.11, pitch: 69, velocity: 0.47},
+    {start: 1.25, duration: 0.11, pitch: 59, velocity: 0.5},
+    {start: 1.5, duration: 0.11, pitch: 59, velocity: 0.53},
+    {start: 1.75, duration: 0.11, pitch: 59, velocity: 0.56},
+    {start: 2, duration: 0.11, pitch: 69, velocity: 0.59},
+    {start: 2.25, duration: 0.11, pitch: 59, velocity: 0.62},
+    {start: 2.5, duration: 0.11, pitch: 59, velocity: 0.65},
+    {start: 2.75, duration: 0.11, pitch: 59, velocity: 0.68},
+    {start: 3, duration: 0.11, pitch: 69, velocity: 0.71},
+    {start: 3.25, duration: 0.11, pitch: 59, velocity: 0.74},
+    {start: 3.5, duration: 0.11, pitch: 59, velocity: 0.77},
+    {start: 3.75, duration: 0.11, pitch: 59, velocity: 0.8}
+  ]}
+}
+
+prefab starfall_last_light {
+  NoteClip: {length: 32, notes: [
+    {start: 0, duration: 1.2, pitch: 88, velocity: 0.75},
+    {start: 1.5, duration: 0.65, pitch: 86, velocity: 0.62},
+    {start: 2.5, duration: 1.3, pitch: 83, velocity: 0.68},
+    {start: 4, duration: 1.5, pitch: 84, velocity: 0.71},
+    {start: 6, duration: 1.6, pitch: 79, velocity: 0.6},
+    {start: 8, duration: 1, pitch: 83, velocity: 0.65},
+    {start: 9.5, duration: 0.8, pitch: 79, velocity: 0.56},
+    {start: 10.5, duration: 1.15, pitch: 76, velocity: 0.58},
+    {start: 12, duration: 1.4, pitch: 81, velocity: 0.64},
+    {start: 14, duration: 1.4, pitch: 78, velocity: 0.54},
+    {start: 16, duration: 2.5, pitch: 79, velocity: 0.69},
+    {start: 19, duration: 1.1, pitch: 76, velocity: 0.55},
+    {start: 20, duration: 1.2, pitch: 79, velocity: 0.61},
+    {start: 22, duration: 1.6, pitch: 76, velocity: 0.54},
+    {start: 24, duration: 1.3, pitch: 81, velocity: 0.66},
+    {start: 25.5, duration: 0.65, pitch: 78, velocity: 0.55},
+    {start: 26.5, duration: 1.35, pitch: 75, velocity: 0.62},
+    {start: 28, duration: 1.3, pitch: 80, velocity: 0.7},
+    {start: 29.5, duration: 1, pitch: 83, velocity: 0.72},
+    {start: 30.75, duration: 1.2, pitch: 88, velocity: 0.83}
+  ]}
+}
+
+prefab starfall_epilogue_chord {
+  NoteClip: {length: 32, notes: [
+    {start: 28, duration: 3.9, pitch: 40, velocity: 0.63},
+    {start: 28, duration: 3.9, pitch: 52, velocity: 0.63},
+    {start: 28, duration: 3.9, pitch: 56, velocity: 0.63},
+    {start: 28, duration: 3.9, pitch: 59, velocity: 0.63},
+    {start: 28, duration: 3.9, pitch: 64, velocity: 0.63},
+    {start: 28, duration: 3.9, pitch: 68, velocity: 0.63},
+    {start: 28, duration: 3.9, pitch: 71, velocity: 0.63},
+    {start: 28, duration: 3.9, pitch: 76, velocity: 0.63}
+  ]}
+}
+
+// All sound sources route to the same mastering bus.
+starfall_track_celestial_pad {
+  Track: {instrument: starfall_pad_inst}
+  AudioBus: {output: starfall_mix, volume: 0.75, effects: [starfall_pad_filter, starfall_pad_chorus], sends: [{bus: starfall_space, level: 0.45}]}
+  AudioMeter: {}
+  part_1 { ClipPlacement: {clip: starfall_pad_progression, start: 0, duration: 352, loop: true} }
+  part_2 { ClipPlacement: {clip: starfall_pad_final, start: 352} }
+}
+
+starfall_track_orchestral_strings {
+  Track: {instrument: starfall_strings_inst}
+  AudioBus: {output: starfall_mix, volume: 0.65, sends: [{bus: starfall_space, level: 0.31}]}
+  AudioMeter: {}
+  part_1 { ClipPlacement: {clip: starfall_strings, start: 48, duration: 80, loop: true} }
+  part_2 { ClipPlacement: {clip: starfall_strings, start: 160, duration: 96, loop: true} }
+  part_3 { ClipPlacement: {clip: starfall_strings, start: 288, duration: 64, loop: true} }
+  part_4 { ClipPlacement: {clip: starfall_strings_final, start: 352} }
+}
+
+starfall_track_deep_bass {
+  Track: {instrument: starfall_bass_inst}
+  AudioBus: {output: starfall_mix, volume: 0.60, sends: [{bus: starfall_space, level: 0.1}]}
+  AudioMeter: {}
+  part_1 { ClipPlacement: {clip: starfall_bass_throb, start: 32, duration: 96, loop: true} }
+  part_2 { ClipPlacement: {clip: starfall_bass_throb, start: 160, duration: 96, loop: true} }
+  part_3 { ClipPlacement: {clip: starfall_bass_throb, start: 288, duration: 64, loop: true} }
+  part_4 { ClipPlacement: {clip: starfall_bass_final, start: 352} }
+}
+
+starfall_track_sub_foundation {
+  Track: {instrument: starfall_sub_inst}
+  AudioBus: {output: starfall_mix, volume: 0.27}
+  AudioMeter: {}
+  part_1 { ClipPlacement: {clip: starfall_sub_foundation, start: 64, duration: 64, loop: true} }
+  part_2 { ClipPlacement: {clip: starfall_sub_foundation, start: 192, duration: 64, loop: true} }
+  part_3 { ClipPlacement: {clip: starfall_sub_foundation, start: 288, duration: 64, loop: true} }
+}
+
+starfall_track_crystal_arpeggios {
+  Track: {instrument: starfall_arp_inst}
+  AudioBus: {output: starfall_mix, volume: 0.55, effects: [starfall_arp_delay], sends: [{bus: starfall_space, level: 0.36}]}
+  AudioMeter: {}
+  part_1 { ClipPlacement: {clip: starfall_arp_river, start: 32, duration: 96, loop: true} }
+  part_2 { ClipPlacement: {clip: starfall_arp_river, start: 160, duration: 96, loop: true} }
+  part_3 { ClipPlacement: {clip: starfall_arp_river, start: 288, duration: 64, loop: true} }
+}
+
+starfall_track_lead___the_signal {
+  Track: {instrument: starfall_lead_inst}
+  AudioBus: {output: starfall_mix, volume: 0.78, effects: [starfall_lead_delay], sends: [{bus: starfall_space, level: 0.30}]}
+  AudioMeter: {}
+  part_1 { ClipPlacement: {clip: starfall_first_signal, start: 0} }
+  part_2 { ClipPlacement: {clip: starfall_main_theme, start: 64, duration: 64, loop: true} }
+  part_3 { ClipPlacement: {clip: starfall_zero_gravity, start: 128} }
+  part_4 { ClipPlacement: {clip: starfall_rising_call, start: 160} }
+  part_5 { ClipPlacement: {clip: starfall_main_theme, start: 192, duration: 64, loop: true} }
+  part_6 { ClipPlacement: {clip: starfall_first_signal, start: 256} }
+  part_7 { ClipPlacement: {clip: starfall_main_theme, start: 288, duration: 64, loop: true} }
+  part_8 { ClipPlacement: {clip: starfall_last_light, start: 352} }
+}
+
+starfall_track_wide_lead_harmony {
+  Track: {instrument: starfall_wide_inst}
+  AudioBus: {output: starfall_mix, volume: 0.54, sends: [{bus: starfall_space, level: 0.28}]}
+  AudioMeter: {}
+  part_1 { ClipPlacement: {clip: starfall_theme_harmony, start: 96} }
+  part_2 { ClipPlacement: {clip: starfall_theme_harmony, start: 192, duration: 64, loop: true} }
+  part_3 { ClipPlacement: {clip: starfall_theme_harmony, start: 288, duration: 64, loop: true} }
+}
+
+starfall_track_glass_bells {
+  Track: {instrument: starfall_bell_inst}
+  AudioBus: {output: starfall_mix, volume: 0.56, effects: [starfall_bell_delay], sends: [{bus: starfall_space, level: 0.52}]}
+  AudioMeter: {}
+  part_1 { ClipPlacement: {clip: starfall_bell_replies, start: 0, duration: 128, loop: true} }
+  part_2 { ClipPlacement: {clip: starfall_bell_replies, start: 128} }
+  part_3 { ClipPlacement: {clip: starfall_bell_replies, start: 192, duration: 64, loop: true} }
+  part_4 { ClipPlacement: {clip: starfall_bell_replies, start: 256, duration: 128, loop: true} }
+}
+
+starfall_track_star_particles {
+  Track: {instrument: starfall_spark_inst}
+  AudioBus: {output: starfall_mix, volume: 0.45, sends: [{bus: starfall_space, level: 0.55}]}
+  AudioMeter: {}
+  part_1 { ClipPlacement: {clip: starfall_sparkles, start: 0, duration: 384, loop: true} }
+}
+
+starfall_track_high_countermelody {
+  Track: {instrument: starfall_counter_inst}
+  AudioBus: {output: starfall_mix, volume: 0.42, sends: [{bus: starfall_space, level: 0.32}]}
+  AudioMeter: {}
+  part_1 { ClipPlacement: {clip: starfall_counterlight, start: 192, duration: 64, loop: true} }
+  part_2 { ClipPlacement: {clip: starfall_counterlight, start: 288, duration: 64, loop: true} }
+}
+
+starfall_track_brass_horizon {
+  Track: {instrument: starfall_brass_inst}
+  AudioBus: {output: starfall_mix, volume: 0.63, sends: [{bus: starfall_space, level: 0.23}]}
+  AudioMeter: {}
+  part_1 { ClipPlacement: {clip: starfall_horizon_brass, start: 192, duration: 64, loop: true} }
+  part_2 { ClipPlacement: {clip: starfall_horizon_brass, start: 288, duration: 64, loop: true} }
+}
+
+starfall_track_vocal_halo {
+  Track: {instrument: starfall_choir_inst}
+  AudioBus: {output: starfall_mix, volume: 0.47, sends: [{bus: starfall_space, level: 0.45}]}
+  AudioMeter: {}
+  part_1 { ClipPlacement: {clip: starfall_choir, start: 64, duration: 64, loop: true} }
+  part_2 { ClipPlacement: {clip: starfall_choir, start: 192, duration: 64, loop: true} }
+  part_3 { ClipPlacement: {clip: starfall_choir, start: 288, duration: 64, loop: true} }
+}
+
+starfall_track_kick {
+  Track: {instrument: starfall_kick_inst}
+  AudioBus: {output: starfall_mix, volume: 0.9}
+  AudioMeter: {}
+  part_1 { ClipPlacement: {clip: starfall_kick_sparse, start: 32} }
+  part_2 { ClipPlacement: {clip: starfall_kick_drive, start: 64, duration: 64, loop: true} }
+  part_3 { ClipPlacement: {clip: starfall_kick_sparse, start: 160} }
+  part_4 { ClipPlacement: {clip: starfall_kick_drive, start: 192, duration: 64, loop: true} }
+  part_5 { ClipPlacement: {clip: starfall_kick_drive, start: 288, duration: 64, loop: true} }
+}
+
+starfall_track_snare {
+  Track: {instrument: starfall_snare_inst}
+  AudioBus: {output: starfall_mix, volume: 0.38, sends: [{bus: starfall_space, level: 0.12}]}
+  AudioMeter: {}
+  part_1 { ClipPlacement: {clip: starfall_snare_main, start: 48, duration: 80, loop: true} }
+  part_2 { ClipPlacement: {clip: starfall_snare_main, start: 176, duration: 80, loop: true} }
+  part_3 { ClipPlacement: {clip: starfall_snare_main, start: 288, duration: 64, loop: true} }
+  part_4 { ClipPlacement: {clip: starfall_fill, start: 60} }
+  part_5 { ClipPlacement: {clip: starfall_fill, start: 124} }
+  part_6 { ClipPlacement: {clip: starfall_fill, start: 188} }
+  part_7 { ClipPlacement: {clip: starfall_fill, start: 252} }
+  part_8 { ClipPlacement: {clip: starfall_fill, start: 284} }
+  part_9 { ClipPlacement: {clip: starfall_fill, start: 348} }
+}
+
+starfall_track_hi_hat {
+  Track: {instrument: starfall_hat_inst}
+  AudioBus: {output: starfall_mix, volume: 0.37}
+  AudioMeter: {}
+  part_1 { ClipPlacement: {clip: starfall_hat_lattice, start: 32, duration: 96, loop: true} }
+  part_2 { ClipPlacement: {clip: starfall_hat_lattice, start: 160, duration: 96, loop: true} }
+  part_3 { ClipPlacement: {clip: starfall_hat_lattice, start: 288, duration: 64, loop: true} }
+}
+
+starfall_track_rushing_hats {
+  Track: {instrument: starfall_hat_inst}
+  AudioBus: {output: starfall_mix, volume: 0.15}
+  AudioMeter: {}
+  part_1 { ClipPlacement: {clip: starfall_hat_rolling, start: 192, duration: 64, loop: true} }
+  part_2 { ClipPlacement: {clip: starfall_hat_rolling, start: 288, duration: 64, loop: true} }
+}
+
+starfall_track_cinematic_toms {
+  Track: {instrument: starfall_tom_inst}
+  AudioBus: {output: starfall_mix, volume: 0.31, sends: [{bus: starfall_space, level: 0.16}]}
+  AudioMeter: {}
+  part_1 { ClipPlacement: {clip: starfall_toms, start: 192, duration: 64, loop: true} }
+  part_2 { ClipPlacement: {clip: starfall_toms, start: 288, duration: 64, loop: true} }
+}
+
+starfall_track_impact_cymbal {
+  Track: {instrument: starfall_impact_inst}
+  AudioBus: {output: starfall_mix, volume: 0.37, sends: [{bus: starfall_space, level: 0.48}]}
+  AudioMeter: {}
+  part_1 { ClipPlacement: {clip: starfall_crash, start: 64} }
+  part_2 { ClipPlacement: {clip: starfall_crash, start: 192} }
+  part_3 { ClipPlacement: {clip: starfall_crash, start: 224} }
+  part_4 { ClipPlacement: {clip: starfall_crash, start: 288} }
+  part_5 { ClipPlacement: {clip: starfall_crash, start: 320} }
+}
+
+starfall_track_riser___countdown {
+  Track: {instrument: starfall_tick_inst}
+  AudioBus: {output: starfall_mix, volume: 0.27, sends: [{bus: starfall_space, level: 0.22}]}
+  AudioMeter: {}
+  part_1 { ClipPlacement: {clip: starfall_build_ticks, start: 48} }
+  part_2 { ClipPlacement: {clip: starfall_build_ticks, start: 176} }
+  part_3 { ClipPlacement: {clip: starfall_build_ticks, start: 272} }
+  part_4 { ClipPlacement: {clip: starfall_build_ticks, start: 336} }
+}
+
+starfall_track_last_light {
+  Track: {instrument: starfall_choir_inst}
+  AudioBus: {output: starfall_mix, volume: 0.43, sends: [{bus: starfall_space, level: 0.56}]}
+  AudioMeter: {}
+  part_1 { ClipPlacement: {clip: starfall_epilogue_chord, start: 352} }
+}
+
+// One macro controls the orchestra's spectral opening across all nine acts.
+starfall_bloom {
+  AudioMacro: {}
+  sunlight { AudioMacroMap: {target: starfall_pad_filter, component: AudioFilter, member: "cutoff", min: 850, max: 6200, scale: AudioModOctaves} }
+  horizon { AudioMacroMap: {target: starfall_space, component: Reverb, member: "shimmer", min: 0.11, max: 0.38} }
+  particles { AudioMacroMap: {target: starfall_track_star_particles, component: AudioBus, member: "volume", min: 0.13, max: 0.58} }
+}
+
+starfall_analog_sway {
+  AudioModulator: {target: starfall_track_celestial_pad, component: AudioBus, member: "pan", depth: 0.24, sync: 32}
+}
+
+prefab starfall_dynamics {
+  AutomationClip: {target: starfall_bloom, component: AudioMacro, member: "value", length: 384,
+    curve: {kind: CurveCatmullRom, keys: [
+      {0, 0.06}, {24, 0.17}, {32, 0.28}, {56, 0.50}, {64, 0.65},
+      {96, 0.83}, {124, 0.87}, {128, 0.17}, {152, 0.13},
+      {160, 0.22}, {176, 0.35}, {188, 0.74}, {192, 1},
+      {240, 0.98}, {256, 0.25}, {280, 0.14}, {288, 1},
+      {344, 1}, {352, 0.72}, {368, 0.43}, {380, 0.16}, {384, 0.04}
+    ]}}
+}
+
+starfall_automation { Track: {}
+  journey { ClipPlacement: {clip: starfall_dynamics, start: 0} }
+}
+
+$ {
+  Song: {
+    title: "Starfall - Beyond the Orbit", tempo: 96, beats_per_bar: 4, beat_unit: 4, beats: 384,
+    lanes: [
+      {name: "Celestial Pad", bus: starfall_track_celestial_pad},
+      {name: "Orchestral Strings", bus: starfall_track_orchestral_strings},
+      {name: "Deep Bass", bus: starfall_track_deep_bass},
+      {name: "Sub Foundation", bus: starfall_track_sub_foundation},
+      {name: "Crystal Arpeggios", bus: starfall_track_crystal_arpeggios},
+      {name: "Lead / The Signal", bus: starfall_track_lead___the_signal},
+      {name: "Wide Lead Harmony", bus: starfall_track_wide_lead_harmony},
+      {name: "Glass Bells", bus: starfall_track_glass_bells},
+      {name: "Star Particles", bus: starfall_track_star_particles},
+      {name: "High Countermelody", bus: starfall_track_high_countermelody},
+      {name: "Brass Horizon", bus: starfall_track_brass_horizon},
+      {name: "Vocal Halo", bus: starfall_track_vocal_halo},
+      {name: "Kick", bus: starfall_track_kick},
+      {name: "Snare", bus: starfall_track_snare},
+      {name: "Hi-Hat", bus: starfall_track_hi_hat},
+      {name: "Rushing Hats", bus: starfall_track_rushing_hats},
+      {name: "Cinematic Toms", bus: starfall_track_cinematic_toms},
+      {name: "Impact Cymbal", bus: starfall_track_impact_cymbal},
+      {name: "Riser / Countdown", bus: starfall_track_riser___countdown},
+      {name: "Last Light", bus: starfall_track_last_light}
+    ]
+  }
+}

@@ -1,0 +1,617 @@
+using box.audio
+using box.material
+
+box { audio { Song { Rgb: {232, 172, 64} } } }
+
+tp_hall {
+  AudioBus: {output: master, kind: AudioChannelReturn, volume: 0.32, effects: [tp_hall]}
+  Reverb: {decay: 1.9, damping: 0.55, predelay: 0.022, size: 0.62}
+}
+tp_brass_glue { Compressor: {threshold: -15, ratio: 2.2, attack: 0.015, release: 0.18, knee: 8, makeup: 1} }
+tp_brass {
+  AudioBus: {output: master, volume: 1.15, effects: [tp_brass_glue]}
+  AudioMeter: {}
+}
+
+tp_trumpet_bell {
+  Equalizer: {bands: [
+    {kind: AudioEqLowCut, frequency: 100},
+    {kind: AudioEqLowShelf, frequency: 450, gain: -3},
+    {kind: AudioEqPeak, frequency: 1500, gain: 4.5, q: 0.7},
+    {kind: AudioEqPeak, frequency: 3200, gain: 3, q: 0.9}
+  ]}
+}
+
+tp_piccolo_bell {
+  Equalizer: {bands: [
+    {kind: AudioEqLowCut, frequency: 380},
+    {kind: AudioEqPeak, frequency: 2600, gain: 3, q: 0.8},
+    {kind: AudioEqHighShelf, frequency: 7000, gain: 1.5}
+  ]}
+}
+
+tp_cornet_bell {
+  Equalizer: {bands: [
+    {kind: AudioEqLowCut, frequency: 80},
+    {kind: AudioEqPeak, frequency: 1000, gain: 2, q: 0.8},
+    {kind: AudioEqHighShelf, frequency: 4000, gain: -3}
+  ]}
+}
+
+tp_flugel_bell {
+  Equalizer: {bands: [
+    {kind: AudioEqLowCut, frequency: 70},
+    {kind: AudioEqLowShelf, frequency: 250, gain: 2},
+    {kind: AudioEqHighShelf, frequency: 2500, gain: -4}
+  ]}
+}
+
+tp_straight_mute {
+  Equalizer: {bands: [
+    {kind: AudioEqLowCut, frequency: 950},
+    {kind: AudioEqLowCut, frequency: 750},
+    {kind: AudioEqPeak, frequency: 1800, gain: 6, q: 1.6},
+    {kind: AudioEqPeak, frequency: 4200, gain: 2.5, q: 1.2}
+  ]}
+}
+
+tp_harmon_mute {
+  Equalizer: {bands: [
+    {kind: AudioEqLowCut, frequency: 1100, q: 0.8},
+    {kind: AudioEqLowCut, frequency: 800},
+    {kind: AudioEqPeak, frequency: 2000, gain: 4, q: 1.2},
+    {kind: AudioEqHighShelf, frequency: 5000, gain: 3}
+  ]}
+}
+tp_harmon_buzz { Saturator: {drive: 0.15, tone: 0.4, low_cut: 700, high_cut: 11000, mix: 0.7} }
+
+prefab tp_trumpet_sound {
+  SynthSound: {seed: 11, level_variance: 0.03}
+  SynthGlide: {time: 0.03, legato: true, channel: 1}
+  SynthEnvelope: {attack: 0.03, attack_curve: 0.5, decay: 0.16, sustain: 0.78, release: 0.09, curve: 2}
+  SynthPitchEnvelope: {amount: -0.8, decay: 0.06, curve: 2}
+  SynthFilter: {kind: SynthLowPass, cutoff: 1500, resonance: 0.3, velocity: 4, keytrack: 0.35}
+  SynthFilterEnvelope: {attack: 0.045, attack_curve: -1, decay: 0.3, sustain: 0.4, release: 0.15, amount: 1, velocity: 0.6}
+  SynthLfo: {rate: 5.5, delay: 0.3, fade: 0.35, random_phase: true, pitch: 9, amplitude: 0.03, cutoff: 0.05}
+  wander { SynthLfo: {wave: SynthLfoTriangle, rate: 0.6, random_phase: true, pitch: 2.5} }
+  buzz {
+    SynthOscillator: {wave: SynthSaw, frequency: 440, level: 0.08}
+    bloom {
+      SynthOscillator: {wave: SynthSine, frequency: 440, modulation: SynthPhase, index: 1.35, velocity: 1}
+      SynthEnvelope: {attack: 0.05, attack_curve: -1, decay: 0.25, sustain: 0.85, release: 0.1, curve: 2}
+    }
+  }
+  tongue {
+    SynthOscillator: {wave: SynthNoise, level: 0.02}
+    SynthEnvelope: {attack: 0.001, decay: 0.025, sustain: 0, release: 0.01, curve: 3}
+    attack_force { SynthModRoute: {source: SynthSourceVelocity, target: SynthTargetLevel, amount: 2} }
+  }
+  breath { SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, level: 0.0025} }
+  breath_bloom { SynthModRoute: {source: SynthSourceMod, target: SynthTargetIndex, amount: 0.15} }
+  breath_level { SynthModRoute: {source: SynthSourceMod, target: SynthTargetLevel, amount: 3} }
+  breath_tone { SynthModRoute: {source: SynthSourceMod, target: SynthTargetCutoff, amount: 1.2} }
+  push_level { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetLevel, amount: 1.5} }
+  push_bloom { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetIndex, amount: 0.6} }
+  push_tone { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetCutoff, amount: 0.8} }
+}
+
+prefab tp_piccolo_sound {
+  SynthSound: {seed: 21, level_variance: 0.03}
+  SynthGlide: {time: 0.02, legato: true, channel: 2}
+  SynthEnvelope: {attack: 0.018, attack_curve: 0.5, decay: 0.1, sustain: 0.75, release: 0.07, curve: 2}
+  SynthPitchEnvelope: {amount: -0.4, decay: 0.035, curve: 2}
+  SynthFilter: {kind: SynthLowPass, cutoff: 2800, resonance: 0.2, velocity: 2.4, keytrack: 0.3}
+  SynthFilterEnvelope: {attack: 0.03, attack_curve: -1, decay: 0.2, sustain: 0.5, release: 0.1, amount: 0.8, velocity: 0.5}
+  SynthLfo: {rate: 5.8, delay: 0.45, fade: 0.4, random_phase: true, pitch: 4, amplitude: 0.02}
+  wander { SynthLfo: {wave: SynthLfoTriangle, rate: 0.7, random_phase: true, pitch: 2} }
+  buzz {
+    SynthOscillator: {wave: SynthSaw, frequency: 440, level: 0.075}
+    bloom {
+      SynthOscillator: {wave: SynthSine, frequency: 440, modulation: SynthPhase, index: 1.15, velocity: 1}
+      SynthEnvelope: {attack: 0.03, attack_curve: -1, decay: 0.18, sustain: 0.7, release: 0.1, curve: 2}
+    }
+  }
+  tongue {
+    SynthOscillator: {wave: SynthNoise, level: 0.018}
+    SynthEnvelope: {attack: 0.001, decay: 0.018, sustain: 0, release: 0.01, curve: 3}
+    attack_force { SynthModRoute: {source: SynthSourceVelocity, target: SynthTargetLevel, amount: 2} }
+  }
+  breath { SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, level: 0.0015} }
+  breath_bloom { SynthModRoute: {source: SynthSourceMod, target: SynthTargetIndex, amount: 0.25} }
+  breath_level { SynthModRoute: {source: SynthSourceMod, target: SynthTargetLevel, amount: 3} }
+  breath_tone { SynthModRoute: {source: SynthSourceMod, target: SynthTargetCutoff, amount: 1.2} }
+  push_level { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetLevel, amount: 1.5} }
+  push_bloom { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetIndex, amount: 0.5} }
+  push_tone { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetCutoff, amount: 0.8} }
+}
+
+prefab tp_cornet_sound {
+  SynthSound: {seed: 31, level_variance: 0.03}
+  SynthGlide: {time: 0.035, legato: true, channel: 3}
+  SynthEnvelope: {attack: 0.034, attack_curve: 0.5, decay: 0.18, sustain: 0.8, release: 0.11, curve: 2}
+  SynthPitchEnvelope: {amount: -0.6, decay: 0.06, curve: 2}
+  SynthFilter: {kind: SynthLowPass, cutoff: 850, resonance: 0.15, velocity: 2.6, keytrack: 0.4}
+  SynthFilterEnvelope: {attack: 0.05, attack_curve: -1, decay: 0.3, sustain: 0.4, release: 0.15, amount: 0.9, velocity: 0.6}
+  SynthLfo: {rate: 5.6, delay: 0.32, fade: 0.4, random_phase: true, pitch: 13, amplitude: 0.04}
+  wander { SynthLfo: {wave: SynthLfoTriangle, rate: 0.55, random_phase: true, pitch: 2.5} }
+  buzz {
+    SynthOscillator: {wave: SynthSaw, frequency: 440, level: 0.075}
+    bloom {
+      SynthOscillator: {wave: SynthSine, frequency: 440, modulation: SynthPhase, index: 0.6, velocity: 1}
+      SynthEnvelope: {attack: 0.055, attack_curve: -1, decay: 0.3, sustain: 0.7, release: 0.1, curve: 2}
+    }
+  }
+  tongue {
+    SynthOscillator: {wave: SynthNoise, level: 0.015}
+    SynthEnvelope: {attack: 0.001, decay: 0.022, sustain: 0, release: 0.01, curve: 3}
+    attack_force { SynthModRoute: {source: SynthSourceVelocity, target: SynthTargetLevel, amount: 2} }
+  }
+  breath { SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, level: 0.003} }
+  breath_bloom { SynthModRoute: {source: SynthSourceMod, target: SynthTargetIndex, amount: 0.2} }
+  breath_level { SynthModRoute: {source: SynthSourceMod, target: SynthTargetLevel, amount: 3} }
+  breath_tone { SynthModRoute: {source: SynthSourceMod, target: SynthTargetCutoff, amount: 1.2} }
+  push_level { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetLevel, amount: 1.5} }
+  push_bloom { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetIndex, amount: 0.4} }
+  push_tone { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetCutoff, amount: 0.8} }
+}
+
+prefab tp_flugel_sound {
+  SynthSound: {seed: 41, level_variance: 0.03}
+  SynthGlide: {time: 0.045, legato: true, channel: 4}
+  SynthEnvelope: {attack: 0.05, attack_curve: 0.5, decay: 0.25, sustain: 0.85, release: 0.18, curve: 2}
+  SynthPitchEnvelope: {amount: -0.5, decay: 0.08, curve: 2}
+  SynthFilter: {kind: SynthLowPass, cutoff: 800, resonance: 0.05, slope: SynthSlope24, velocity: 2.2, keytrack: 0.45}
+  SynthFilterEnvelope: {attack: 0.07, attack_curve: -1, decay: 0.35, sustain: 0.4, release: 0.2, amount: 0.7, velocity: 0.5}
+  SynthLfo: {rate: 5.2, delay: 0.4, fade: 0.5, random_phase: true, pitch: 11, amplitude: 0.05}
+  wander { SynthLfo: {wave: SynthLfoTriangle, rate: 0.5, random_phase: true, pitch: 3} }
+  buzz {
+    SynthOscillator: {wave: SynthSaw, frequency: 440, level: 0.075}
+    bloom {
+      SynthOscillator: {wave: SynthSine, frequency: 440, modulation: SynthPhase, index: 0.3, velocity: 1}
+      SynthEnvelope: {attack: 0.075, attack_curve: -1, decay: 0.35, sustain: 0.7, release: 0.1, curve: 2}
+    }
+  }
+  tongue {
+    SynthOscillator: {wave: SynthNoise, level: 0.01}
+    SynthEnvelope: {attack: 0.002, decay: 0.03, sustain: 0, release: 0.01, curve: 3}
+    attack_force { SynthModRoute: {source: SynthSourceVelocity, target: SynthTargetLevel, amount: 2} }
+  }
+  breath { SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, level: 0.008} }
+  breath_bloom { SynthModRoute: {source: SynthSourceMod, target: SynthTargetIndex, amount: 0.2} }
+  breath_level { SynthModRoute: {source: SynthSourceMod, target: SynthTargetLevel, amount: 3} }
+  breath_tone { SynthModRoute: {source: SynthSourceMod, target: SynthTargetCutoff, amount: 1.2} }
+  push_level { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetLevel, amount: 1.5} }
+  push_bloom { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetIndex, amount: 0.3} }
+  push_tone { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetCutoff, amount: 0.8} }
+}
+
+prefab tp_straight_sound {
+  SynthSound: {seed: 51, level_variance: 0.03}
+  SynthGlide: {time: 0.025, legato: true, channel: 5}
+  SynthEnvelope: {attack: 0.022, attack_curve: 0.5, decay: 0.12, sustain: 0.75, release: 0.08, curve: 2}
+  SynthPitchEnvelope: {amount: -0.6, decay: 0.045, curve: 2}
+  SynthFilter: {kind: SynthLowPass, cutoff: 1050, resonance: 0.25, velocity: 1.8, keytrack: 0.3}
+  SynthFilterEnvelope: {attack: 0.035, attack_curve: -1, decay: 0.2, sustain: 0.5, release: 0.1, amount: 0.8, velocity: 0.5}
+  SynthLfo: {rate: 5.8, delay: 0.3, fade: 0.3, random_phase: true, pitch: 8, amplitude: 0.03}
+  wander { SynthLfo: {wave: SynthLfoTriangle, rate: 0.6, random_phase: true, pitch: 2.5} }
+  buzz {
+    SynthOscillator: {wave: SynthSaw, frequency: 440, level: 0.08}
+    bloom {
+      SynthOscillator: {wave: SynthSine, frequency: 440, modulation: SynthPhase, index: 0.8, velocity: 1}
+      SynthEnvelope: {attack: 0.04, attack_curve: -1, decay: 0.2, sustain: 0.7, release: 0.1, curve: 2}
+    }
+  }
+  tongue {
+    SynthOscillator: {wave: SynthNoise, level: 0.018}
+    SynthEnvelope: {attack: 0.001, decay: 0.02, sustain: 0, release: 0.01, curve: 3}
+    attack_force { SynthModRoute: {source: SynthSourceVelocity, target: SynthTargetLevel, amount: 2} }
+  }
+  breath { SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, level: 0.002} }
+  breath_bloom { SynthModRoute: {source: SynthSourceMod, target: SynthTargetIndex, amount: 0.25} }
+  breath_level { SynthModRoute: {source: SynthSourceMod, target: SynthTargetLevel, amount: 3} }
+  breath_tone { SynthModRoute: {source: SynthSourceMod, target: SynthTargetCutoff, amount: 1.2} }
+  push_level { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetLevel, amount: 1.5} }
+  push_bloom { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetIndex, amount: 0.5} }
+  push_tone { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetCutoff, amount: 0.8} }
+}
+
+prefab tp_harmon_sound {
+  SynthSound: {seed: 61, level_variance: 0.03}
+  SynthGlide: {time: 0.03, legato: true, channel: 6}
+  SynthEnvelope: {attack: 0.025, attack_curve: 0.5, decay: 0.15, sustain: 0.8, release: 0.1, curve: 2}
+  SynthPitchEnvelope: {amount: -0.8, decay: 0.07, curve: 2}
+  SynthFilter: {kind: SynthLowPass, cutoff: 900, resonance: 0.55, velocity: 0.8, keytrack: 0.25}
+  SynthFilterEnvelope: {attack: 0.04, attack_curve: -1, decay: 0.2, sustain: 0.6, release: 0.1, amount: 0.3, velocity: 0.5}
+  SynthLfo: {rate: 5.6, delay: 0.35, fade: 0.4, random_phase: true, pitch: 12, amplitude: 0.03}
+  wander { SynthLfo: {wave: SynthLfoTriangle, rate: 0.6, random_phase: true, pitch: 2.5} }
+  buzz {
+    SynthOscillator: {wave: SynthSaw, frequency: 440, level: 0.15}
+    bloom {
+      SynthOscillator: {wave: SynthSine, frequency: 440, modulation: SynthPhase, index: 0.8, velocity: 1}
+      SynthEnvelope: {attack: 0.04, attack_curve: -1, decay: 0.2, sustain: 0.75, release: 0.1, curve: 2}
+    }
+  }
+  tongue {
+    SynthOscillator: {wave: SynthNoise, level: 0.03}
+    SynthEnvelope: {attack: 0.001, decay: 0.02, sustain: 0, release: 0.01, curve: 3}
+    attack_force { SynthModRoute: {source: SynthSourceVelocity, target: SynthTargetLevel, amount: 2} }
+  }
+  hand_bloom { SynthModRoute: {source: SynthSourceMod, target: SynthTargetIndex, amount: 0.3} }
+  sizzle { SynthOscillator: {wave: SynthNoise, level: 0.006} }
+  hand_tone { SynthModRoute: {source: SynthSourceMod, target: SynthTargetCutoff, amount: 1.4} }
+  hand_level { SynthModRoute: {source: SynthSourceMod, target: SynthTargetLevel, amount: 0.8} }
+  push_level { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetLevel, amount: 1.5} }
+  push_tone { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetCutoff, amount: 0.6} }
+}
+
+tp_trumpet_inst { Instrument: {sound: tp_trumpet_sound, velocity_curve: 1.8} }
+tp_piccolo_inst { Instrument: {sound: tp_piccolo_sound, velocity_curve: 1.8} }
+tp_cornet_inst { Instrument: {sound: tp_cornet_sound, velocity_curve: 1.6} }
+tp_flugel_inst { Instrument: {sound: tp_flugel_sound, velocity_curve: 1.6} }
+tp_straight_inst { Instrument: {sound: tp_straight_sound, velocity_curve: 1.6} }
+tp_harmon_inst { Instrument: {sound: tp_harmon_sound, velocity_curve: 1.6} }
+
+prefab tp_flugel_air_sound {
+  SynthSound: {seed: 42, level_variance: 0.05}
+  SynthEnvelope: {attack: 0.04, attack_curve: 0.5, decay: 0.15, sustain: 0.5, release: 0.15, curve: 2}
+  SynthFilter: {kind: SynthBandPass, cutoff: 2600, resonance: 0.15, velocity: 0.8, keytrack: 0.3}
+  hiss { SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, level: 0.019} }
+  breath_level { SynthModRoute: {source: SynthSourceMod, target: SynthTargetLevel, amount: 3} }
+}
+tp_flugel_air_inst { Instrument: {sound: tp_flugel_air_sound, velocity_curve: 1.6} }
+
+prefab tp_trumpet_call {
+  NoteClip: {length: 16, notes: [
+    {start: 0, duration: 0.3, pitch: 58, velocity: 0.7},
+    {start: 0.5, duration: 0.3, pitch: 62, velocity: 0.72},
+    {start: 1, duration: 0.3, pitch: 65, velocity: 0.75},
+    {start: 1.5, duration: 1.3, pitch: 70, velocity: 0.88},
+    {start: 3, duration: 0.22, pitch: 65, velocity: 0.68},
+    {start: 3.5, duration: 0.22, pitch: 65, velocity: 0.72},
+    {start: 4, duration: 0.22, pitch: 70, velocity: 0.8},
+    {start: 4.5, duration: 0.22, pitch: 74, velocity: 0.82},
+    {start: 5, duration: 1.4, pitch: 77, velocity: 0.92},
+    {start: 6.5, duration: 0.5, pitch: 75, velocity: 0.6},
+    {start: 7, duration: 0.5, pitch: 74, velocity: 0.6},
+    {start: 7.5, duration: 0.5, pitch: 72, velocity: 0.6},
+    {start: 8, duration: 0.95, pitch: 74, velocity: 0.6},
+    {start: 9, duration: 0.42, pitch: 75, velocity: 0.62},
+    {start: 9.5, duration: 0.42, pitch: 77, velocity: 0.66},
+    {start: 10, duration: 0.42, pitch: 79, velocity: 0.7},
+    {start: 10.5, duration: 0.42, pitch: 81, velocity: 0.74},
+    {start: 11, duration: 3.2, pitch: 82, velocity: 0.62,
+      mod: {keys: [{0, 0.3}, {2.2, 1}]}, pressure: {keys: [{0, 0}, {1.6, 0}, {3.2, 0.9}]}}
+  ]}
+}
+
+prefab tp_piccolo_air {
+  NoteClip: {length: 12, notes: [
+    {start: 0, duration: 0.4, pitch: 81, velocity: 0.75},
+    {start: 0.5, duration: 0.95, pitch: 86, velocity: 0.85},
+    {start: 1.5, duration: 0.25, pitch: 85, velocity: 0.7},
+    {start: 1.75, duration: 0.2, pitch: 83, velocity: 0.7},
+    {start: 2, duration: 0.4, pitch: 81, velocity: 0.75},
+    {start: 2.5, duration: 0.4, pitch: 79, velocity: 0.72},
+    {start: 3, duration: 0.7, pitch: 78, velocity: 0.75},
+    {start: 3.75, duration: 0.2, pitch: 76, velocity: 0.7},
+    {start: 4, duration: 0.9, pitch: 74, velocity: 0.78},
+    {start: 5, duration: 0.4, pitch: 81, velocity: 0.75},
+    {start: 5.5, duration: 0.2, pitch: 83, velocity: 0.72},
+    {start: 5.75, duration: 0.2, pitch: 81, velocity: 0.7},
+    {start: 6, duration: 0.2, pitch: 79, velocity: 0.72},
+    {start: 6.25, duration: 0.2, pitch: 78, velocity: 0.7},
+    {start: 6.5, duration: 0.125, pitch: 78, velocity: 0.74},
+    {start: 6.625, duration: 0.125, pitch: 76, velocity: 0.7},
+    {start: 6.75, duration: 0.125, pitch: 78, velocity: 0.7},
+    {start: 6.875, duration: 0.125, pitch: 76, velocity: 0.7},
+    {start: 7, duration: 0.125, pitch: 78, velocity: 0.7},
+    {start: 7.125, duration: 0.125, pitch: 76, velocity: 0.7},
+    {start: 7.25, duration: 0.25, pitch: 76, velocity: 0.7},
+    {start: 7.5, duration: 2, pitch: 74, velocity: 0.8, mod: {keys: [{0, 0.8}, {1, 1}, {2, 0.7}]}}
+  ]}
+}
+
+prefab tp_cornet_song {
+  NoteClip: {length: 12, notes: [
+    {start: 0, duration: 0.9, pitch: 70, velocity: 0.6},
+    {start: 1, duration: 1.5, pitch: 75, velocity: 0.72},
+    {start: 2.5, duration: 0.5, pitch: 74, velocity: 0.66},
+    {start: 3, duration: 0.5, pitch: 72, velocity: 0.64},
+    {start: 3.5, duration: 0.45, pitch: 70, velocity: 0.62},
+    {start: 4, duration: 0.9, pitch: 68, velocity: 0.62},
+    {start: 5, duration: 0.9, pitch: 67, velocity: 0.6},
+    {start: 6, duration: 0.5, pitch: 65, velocity: 0.62},
+    {start: 6.5, duration: 0.5, pitch: 67, velocity: 0.64},
+    {start: 7, duration: 0.5, pitch: 68, velocity: 0.66},
+    {start: 7.5, duration: 0.5, pitch: 70, velocity: 0.68},
+    {start: 8, duration: 1.5, pitch: 72, velocity: 0.72},
+    {start: 9.5, duration: 0.45, pitch: 74, velocity: 0.7},
+    {start: 10, duration: 1.8, pitch: 75, velocity: 0.75, mod: {keys: [{0, 0.7}, {1, 1}, {1.8, 0.85}]}}
+  ]}
+}
+
+prefab tp_flugel_ballad {
+  NoteClip: {length: 12, notes: [
+    {start: 0, duration: 0.95, pitch: 63, velocity: 0.57},
+    {start: 1, duration: 1.5, pitch: 68, velocity: 0.62},
+    {start: 2.5, duration: 0.5, pitch: 67, velocity: 0.59},
+    {start: 3, duration: 0.95, pitch: 65, velocity: 0.57},
+    {start: 4, duration: 0.95, pitch: 63, velocity: 0.55},
+    {start: 5, duration: 2, pitch: 72, velocity: 0.65, mod: {keys: [{0, 0.5}, {1, 1}, {2, 0.75}]}},
+    {start: 7, duration: 0.5, pitch: 70, velocity: 0.62},
+    {start: 7.5, duration: 0.5, pitch: 67, velocity: 0.59},
+    {start: 8, duration: 3, pitch: 68, velocity: 0.59, mod: {keys: [{0, 0.9}, {3, 0.35}]}}
+  ]}
+}
+
+prefab tp_straight_peck {
+  NoteClip: {length: 8, notes: [
+    {start: 0, duration: 0.18, pitch: 67, velocity: 0.7},
+    {start: 0.5, duration: 0.18, pitch: 70, velocity: 0.72},
+    {start: 1, duration: 0.18, pitch: 72, velocity: 0.75},
+    {start: 1.5, duration: 0.6, pitch: 74, velocity: 0.88},
+    {start: 2.25, duration: 0.18, pitch: 72, velocity: 0.7},
+    {start: 2.5, duration: 0.18, pitch: 70, velocity: 0.7},
+    {start: 3, duration: 0.8, pitch: 67, velocity: 0.78},
+    {start: 4, duration: 0.18, pitch: 65, velocity: 0.7},
+    {start: 4.5, duration: 0.18, pitch: 67, velocity: 0.72},
+    {start: 4.75, duration: 0.18, pitch: 70, velocity: 0.72},
+    {start: 5, duration: 0.18, pitch: 72, velocity: 0.75},
+    {start: 5.5, duration: 0.18, pitch: 74, velocity: 0.78},
+    {start: 6, duration: 0.9, pitch: 77, velocity: 0.95},
+    {start: 7, duration: 0.5, pitch: 74, velocity: 0.75, bend: {keys: [{0, 0}, {0.25, 0}, {0.5, -2}]}}
+  ]}
+}
+
+prefab tp_harmon_solo {
+  NoteClip: {length: 12, notes: [
+    {start: 0, duration: 1.5, pitch: 74, velocity: 0.7, mod: {keys: [{0, 0}, {0.6, 1}]}},
+    {start: 1.67, duration: 0.3, pitch: 72, velocity: 0.62},
+    {start: 2, duration: 0.95, pitch: 69, velocity: 0.66, mod: {keys: [{0, 0.1}, {0.4, 1}, {0.95, 0.4}]}},
+    {start: 3, duration: 0.9, pitch: 67, velocity: 0.62},
+    {start: 4, duration: 0.3, pitch: 70, velocity: 0.64},
+    {start: 4.67, duration: 0.3, pitch: 72, velocity: 0.66},
+    {start: 5, duration: 2.2, pitch: 74, velocity: 0.72,
+      mod: {keys: [{0, 0}, {0.5, 1}, {1, 0.1}, {1.5, 1}, {2.2, 0.3}]}},
+    {start: 7.67, duration: 0.3, pitch: 77, velocity: 0.7},
+    {start: 8, duration: 0.3, pitch: 74, velocity: 0.66},
+    {start: 8.67, duration: 0.3, pitch: 72, velocity: 0.64},
+    {start: 9, duration: 2.3, pitch: 69, velocity: 0.66,
+      mod: {keys: [{0, 0}, {2.3, 1}]}, bend: {keys: [{0, -1}, {0.3, 0}]}}
+  ]}
+}
+
+prefab tp_harmon_fills {
+  NoteClip: {length: 16, notes: [
+    {start: 1, duration: 0.6, pitch: 77, velocity: 0.68, mod: {keys: [{0, 0.2}, {0.3, 1}]}},
+    {start: 1.67, duration: 0.3, pitch: 75, velocity: 0.62},
+    {start: 2.33, duration: 0.3, pitch: 74, velocity: 0.62},
+    {start: 2.67, duration: 0.9, pitch: 72, velocity: 0.66, mod: {keys: [{0, 0}, {0.45, 1}, {0.9, 0.3}]}},
+    {start: 5, duration: 1.5, pitch: 70, velocity: 0.66, mod: {keys: [{0, 0}, {0.75, 1}, {1.5, 0.2}]}},
+    {start: 6.67, duration: 0.3, pitch: 72, velocity: 0.62},
+    {start: 7, duration: 0.5, pitch: 74, velocity: 0.64},
+    {start: 9, duration: 0.3, pitch: 77, velocity: 0.66},
+    {start: 9.67, duration: 0.3, pitch: 79, velocity: 0.68},
+    {start: 10, duration: 1.4, pitch: 77, velocity: 0.7,
+      mod: {keys: [{0, 0}, {0.4, 1}, {0.9, 0.2}, {1.4, 1}]}, bend: {keys: [{0, -1}, {0.25, 0}]}},
+    {start: 11.67, duration: 0.3, pitch: 74, velocity: 0.62}
+  ]}
+}
+
+prefab tp_straight_riff {
+  NoteClip: {length: 16, notes: [
+    {start: 5.67, duration: 0.18, pitch: 67, velocity: 0.55},
+    {start: 6, duration: 0.18, pitch: 70, velocity: 0.58},
+    {start: 6.67, duration: 0.18, pitch: 72, velocity: 0.55},
+    {start: 7, duration: 0.3, pitch: 70, velocity: 0.6},
+    {start: 9.67, duration: 0.18, pitch: 69, velocity: 0.55},
+    {start: 10, duration: 0.18, pitch: 72, velocity: 0.58},
+    {start: 10.67, duration: 0.18, pitch: 74, velocity: 0.55},
+    {start: 11, duration: 0.3, pitch: 72, velocity: 0.6}
+  ]}
+}
+
+prefab tp_trumpet_hits {
+  NoteClip: {length: 16, notes: [
+    {start: 0.67, duration: 0.22, pitch: 77, velocity: 0.85},
+    {start: 2, duration: 0.22, pitch: 77, velocity: 0.8},
+    {start: 3.67, duration: 0.9, pitch: 77, velocity: 0.92},
+    {start: 4.67, duration: 0.22, pitch: 79, velocity: 0.85},
+    {start: 6, duration: 0.22, pitch: 79, velocity: 0.8},
+    {start: 7.67, duration: 0.6, pitch: 79, velocity: 0.9,
+      bend: {keys: [{0, 0}, {0.3, 0}, {0.6, 5}]}, mod: {keys: [{0, 1}, {0.35, 1}, {0.6, 0.3}]}},
+    {start: 8.67, duration: 0.22, pitch: 77, velocity: 0.88},
+    {start: 10, duration: 0.22, pitch: 77, velocity: 0.82},
+    {start: 11.67, duration: 0.28, pitch: 77, velocity: 0.95},
+    {start: 12, duration: 1.5, pitch: 82, velocity: 0.7, mod: {keys: [{0, 0.4}, {1.5, 1}]}},
+    {start: 14, duration: 0.22, pitch: 82, velocity: 0.95},
+    {start: 14.67, duration: 1.2, pitch: 77, velocity: 0.95,
+      bend: {kind: CurveCatmullRom, keys: [{0, 0}, {0.4, 0}, {0.7, -1}, {1, -4}, {1.2, -11}]},
+      mod: {keys: [{0, 1}, {0.5, 1}, {1.2, 0.1}]}}
+  ]}
+}
+
+prefab tp_cornet_hits {
+  NoteClip: {length: 16, notes: [
+    {start: 0.67, duration: 0.22, pitch: 74, velocity: 0.8},
+    {start: 2, duration: 0.22, pitch: 74, velocity: 0.75},
+    {start: 3.67, duration: 0.9, pitch: 74, velocity: 0.88},
+    {start: 4.67, duration: 0.22, pitch: 73, velocity: 0.8},
+    {start: 6, duration: 0.22, pitch: 73, velocity: 0.75},
+    {start: 7.67, duration: 0.3, pitch: 73, velocity: 0.85},
+    {start: 8.67, duration: 0.22, pitch: 74, velocity: 0.82},
+    {start: 10, duration: 0.22, pitch: 74, velocity: 0.78},
+    {start: 11.67, duration: 0.28, pitch: 74, velocity: 0.9},
+    {start: 12, duration: 1.5, pitch: 77, velocity: 0.68, mod: {keys: [{0, 0.4}, {1.5, 1}]}},
+    {start: 14, duration: 0.22, pitch: 77, velocity: 0.9},
+    {start: 14.67, duration: 1.1, pitch: 74, velocity: 0.9,
+      bend: {kind: CurveCatmullRom, keys: [{0, 0}, {0.45, 0}, {0.75, -1}, {1.1, -9}]},
+      mod: {keys: [{0, 1}, {0.5, 1}, {1.1, 0.1}]}}
+  ]}
+}
+
+prefab tp_flugel_hits {
+  NoteClip: {length: 16, notes: [
+    {start: 0.67, duration: 0.22, pitch: 68, velocity: 0.78},
+    {start: 2, duration: 0.22, pitch: 68, velocity: 0.72},
+    {start: 3.67, duration: 0.9, pitch: 68, velocity: 0.85},
+    {start: 4.67, duration: 0.22, pitch: 70, velocity: 0.78},
+    {start: 6, duration: 0.22, pitch: 70, velocity: 0.72},
+    {start: 7.67, duration: 0.3, pitch: 70, velocity: 0.82},
+    {start: 8.67, duration: 0.22, pitch: 68, velocity: 0.8},
+    {start: 10, duration: 0.22, pitch: 68, velocity: 0.75},
+    {start: 11.67, duration: 0.28, pitch: 68, velocity: 0.88},
+    {start: 12, duration: 1.5, pitch: 74, velocity: 0.66, mod: {keys: [{0, 0.4}, {1.5, 1}]}},
+    {start: 14, duration: 0.22, pitch: 74, velocity: 0.88},
+    {start: 14.67, duration: 1, pitch: 70, velocity: 0.88,
+      bend: {kind: CurveCatmullRom, keys: [{0, 0}, {0.45, 0}, {0.7, -1}, {1, -7}]},
+      mod: {keys: [{0, 1}, {0.5, 1}, {1, 0.1}]}}
+  ]}
+}
+
+prefab tp_piccolo_finale {
+  NoteClip: {length: 12, notes: [
+    {start: 0, duration: 0.4, pitch: 77, velocity: 0.8},
+    {start: 0.5, duration: 0.2, pitch: 77, velocity: 0.7},
+    {start: 0.75, duration: 0.2, pitch: 77, velocity: 0.72},
+    {start: 1, duration: 0.95, pitch: 82, velocity: 0.85},
+    {start: 2, duration: 0.45, pitch: 81, velocity: 0.78},
+    {start: 2.5, duration: 0.45, pitch: 79, velocity: 0.76},
+    {start: 3, duration: 0.95, pitch: 77, velocity: 0.8},
+    {start: 4, duration: 0.45, pitch: 79, velocity: 0.76},
+    {start: 4.5, duration: 0.45, pitch: 81, velocity: 0.78},
+    {start: 5, duration: 0.45, pitch: 82, velocity: 0.8},
+    {start: 5.5, duration: 0.45, pitch: 84, velocity: 0.82},
+    {start: 6, duration: 5, pitch: 86, velocity: 0.72,
+      mod: {keys: [{0, 0.45}, {3.5, 1}]}, pressure: {keys: [{0, 0}, {2.5, 0}, {4.5, 0.9}]}}
+  ]}
+}
+
+prefab tp_trumpet_finale {
+  NoteClip: {length: 12, notes: [
+    {start: 0, duration: 0.4, pitch: 74, velocity: 0.8},
+    {start: 0.5, duration: 0.2, pitch: 74, velocity: 0.7},
+    {start: 0.75, duration: 0.2, pitch: 74, velocity: 0.72},
+    {start: 1, duration: 0.95, pitch: 77, velocity: 0.85},
+    {start: 2, duration: 0.45, pitch: 77, velocity: 0.78},
+    {start: 2.5, duration: 0.45, pitch: 75, velocity: 0.76},
+    {start: 3, duration: 0.95, pitch: 74, velocity: 0.8},
+    {start: 4, duration: 0.45, pitch: 75, velocity: 0.76},
+    {start: 4.5, duration: 0.45, pitch: 77, velocity: 0.78},
+    {start: 5, duration: 0.45, pitch: 77, velocity: 0.8},
+    {start: 5.5, duration: 0.45, pitch: 81, velocity: 0.82},
+    {start: 6, duration: 5, pitch: 82, velocity: 0.72,
+      mod: {keys: [{0, 0.45}, {3.5, 1}]}, pressure: {keys: [{0, 0}, {2.5, 0}, {4.5, 0.9}]}}
+  ]}
+}
+
+prefab tp_cornet_finale {
+  NoteClip: {length: 12, notes: [
+    {start: 0, duration: 0.4, pitch: 70, velocity: 0.78},
+    {start: 0.5, duration: 0.2, pitch: 70, velocity: 0.68},
+    {start: 0.75, duration: 0.2, pitch: 70, velocity: 0.7},
+    {start: 1, duration: 0.95, pitch: 74, velocity: 0.82},
+    {start: 2, duration: 0.45, pitch: 72, velocity: 0.76},
+    {start: 2.5, duration: 0.45, pitch: 70, velocity: 0.74},
+    {start: 3, duration: 0.95, pitch: 70, velocity: 0.78},
+    {start: 4, duration: 0.45, pitch: 72, velocity: 0.74},
+    {start: 4.5, duration: 0.45, pitch: 72, velocity: 0.76},
+    {start: 5, duration: 0.45, pitch: 74, velocity: 0.78},
+    {start: 5.5, duration: 0.45, pitch: 75, velocity: 0.8},
+    {start: 6, duration: 5, pitch: 77, velocity: 0.7,
+      mod: {keys: [{0, 0.45}, {3.5, 1}]}, pressure: {keys: [{0, 0}, {2.5, 0}, {4.5, 0.9}]}}
+  ]}
+}
+
+prefab tp_flugel_finale {
+  NoteClip: {length: 12, notes: [
+    {start: 0, duration: 0.4, pitch: 65, velocity: 0.76},
+    {start: 0.5, duration: 0.2, pitch: 65, velocity: 0.66},
+    {start: 0.75, duration: 0.2, pitch: 65, velocity: 0.68},
+    {start: 1, duration: 0.95, pitch: 70, velocity: 0.8},
+    {start: 2, duration: 0.45, pitch: 65, velocity: 0.74},
+    {start: 2.5, duration: 0.45, pitch: 63, velocity: 0.72},
+    {start: 3, duration: 0.95, pitch: 65, velocity: 0.76},
+    {start: 4, duration: 0.45, pitch: 67, velocity: 0.72},
+    {start: 4.5, duration: 0.45, pitch: 69, velocity: 0.74},
+    {start: 5, duration: 0.45, pitch: 70, velocity: 0.76},
+    {start: 5.5, duration: 0.45, pitch: 72, velocity: 0.78},
+    {start: 6, duration: 5, pitch: 70, velocity: 0.68,
+      mod: {keys: [{0, 0.45}, {3.5, 1}]}, pressure: {keys: [{0, 0}, {2.5, 0}, {4.5, 0.9}]}}
+  ]}
+}
+
+tp_track_trumpet {
+  Track: {instrument: tp_trumpet_inst, humanize: {velocity: 0.05}}
+  AudioBus: {output: tp_brass, volume: 1, pan: -0.1, effects: [tp_trumpet_bell], sends: [{bus: tp_hall, level: 0.18}]}
+  AudioMeter: {}
+  solo { ClipPlacement: {clip: tp_trumpet_call, start: 0} }
+  hits { ClipPlacement: {clip: tp_trumpet_hits, start: 72} }
+  finale { ClipPlacement: {clip: tp_trumpet_finale, start: 88} }
+}
+
+tp_track_piccolo {
+  Track: {instrument: tp_piccolo_inst, humanize: {velocity: 0.05}}
+  AudioBus: {output: tp_brass, volume: 1, pan: -0.3, effects: [tp_piccolo_bell], sends: [{bus: tp_hall, level: 0.3}]}
+  AudioMeter: {}
+  solo { ClipPlacement: {clip: tp_piccolo_air, start: 16} }
+  finale { ClipPlacement: {clip: tp_piccolo_finale, start: 88.006} }
+}
+
+tp_track_cornet {
+  Track: {instrument: tp_cornet_inst, humanize: {velocity: 0.05}}
+  AudioBus: {output: tp_brass, volume: 1, pan: 0.15, effects: [tp_cornet_bell], sends: [{bus: tp_hall, level: 0.22}]}
+  AudioMeter: {}
+  solo { ClipPlacement: {clip: tp_cornet_song, start: 28} }
+  hits { ClipPlacement: {clip: tp_cornet_hits, start: 71.99} }
+  finale { ClipPlacement: {clip: tp_cornet_finale, start: 87.992} }
+}
+
+tp_track_flugel {
+  Track: {instrument: tp_flugel_inst, humanize: {velocity: 0.05}}
+  AudioBus: {output: tp_brass, volume: 1.15, pan: 0.35, effects: [tp_flugel_bell], sends: [{bus: tp_hall, level: 0.28}]}
+  AudioMeter: {}
+  solo { ClipPlacement: {clip: tp_flugel_ballad, start: 40} }
+  hits { ClipPlacement: {clip: tp_flugel_hits, start: 72.012} }
+  finale { ClipPlacement: {clip: tp_flugel_finale, start: 88.012} }
+}
+
+tp_track_flugel_air {
+  Track: {instrument: tp_flugel_air_inst}
+  AudioBus: {output: tp_brass, volume: 1, pan: 0.35, sends: [{bus: tp_hall, level: 0.2}]}
+  AudioMeter: {}
+  solo { ClipPlacement: {clip: tp_flugel_ballad, start: 40} }
+  hits { ClipPlacement: {clip: tp_flugel_hits, start: 72.012} }
+  finale { ClipPlacement: {clip: tp_flugel_finale, start: 88.012} }
+}
+
+tp_track_straight {
+  Track: {instrument: tp_straight_inst, humanize: {velocity: 0.05}}
+  AudioBus: {output: tp_brass, volume: 1, pan: -0.35, effects: [tp_straight_mute], sends: [{bus: tp_hall, level: 0.12}]}
+  AudioMeter: {}
+  solo { ClipPlacement: {clip: tp_straight_peck, start: 52} }
+  riff { ClipPlacement: {clip: tp_straight_riff, start: 72} }
+}
+
+tp_track_harmon {
+  Track: {instrument: tp_harmon_inst, humanize: {velocity: 0.05}}
+  AudioBus: {output: tp_brass, volume: 1, pan: 0, effects: [tp_harmon_mute, tp_harmon_buzz], sends: [{bus: tp_hall, level: 0.08}]}
+  AudioMeter: {}
+  solo { ClipPlacement: {clip: tp_harmon_solo, start: 60} }
+  fills { ClipPlacement: {clip: tp_harmon_fills, start: 72} }
+}
+
+$ {
+  Song: {
+    title: "Trumpets", tempo: 108, beats_per_bar: 4, beat_unit: 4, beats: 104,
+    lanes: [
+      {name: "Trumpet", bus: tp_track_trumpet},
+      {name: "Piccolo Trumpet", bus: tp_track_piccolo},
+      {name: "Cornet", bus: tp_track_cornet},
+      {name: "Flugelhorn", bus: tp_track_flugel},
+      {name: "Flugelhorn Air", bus: tp_track_flugel_air},
+      {name: "Straight Mute", bus: tp_track_straight},
+      {name: "Harmon Mute", bus: tp_track_harmon}
+    ]
+  }
+}

@@ -2,19 +2,12 @@ using flecs.script
 using flecs.script.math
 using box.audio
 using box.input
+using box.material
 
 jukebox_actions {
-  pick_harbor { Action: {description: "Play Harbor Lights"}; Binding: {key: Num3} }
-  pick_neon { Action: {description: "Play Neon Run"}; Binding: {key: Num2} }
-  pick_lantern { Action: {description: "Play Lantern Waltz"}; Binding: {key: Num4} }
-  pick_orbit { Action: {description: "Play Distant Orbit"}; Binding: {key: Num1} }
-  pick_lane { Action: {description: "Play Trade Lane Dawn"}; Binding: {key: Num5} }
   play { Action: {description: "Play or pause"}; Binding: {key: Space} }
   crash { Action: {description: "Crash on the next bar"}; Binding: {key: C} }
 }
-
-export const SONG_KEY: string[] = ["orbit", "neon", "harbor", "lantern", "lane"]
-export const SONG_ACTION = [jukebox_actions.pick_orbit, jukebox_actions.pick_neon, jukebox_actions.pick_harbor, jukebox_actions.pick_lantern, jukebox_actions.pick_lane]
 
 prefab jb_crash {
   AudioOutput: {bus: sfx}
@@ -47,31 +40,8 @@ box {
 }
 
 $ {
-  Transport: {
-    tempo: SONG_TEMPO[song], beats_per_bar: SONG_BPB[song], beat_unit: 4,
-    position: SONG_START[song], loop: true,
-    loop_start: SONG_START[song], loop_end: SONG_START[song] + SONG_BEATS[song]
-  }
+  AudioSong: {file: "etc/scenes/jukebox/songs/{SONGS[song].file}.flecs"}
   Transport = {playing: playing}
-  Transport = {position: SONG_START[song] + stops * 0}
-}
-
-const LANES = [
-  orbit_pad, orbit_bass, orbit_bells, orbit_melody, orbit, orbit,
-  neon_kit, nr_bass, nr_pad, nr_arp, nr_lead, neon,
-  harbor_kit, hl_bass, hl_keys, hl_vibes, harbor, harbor,
-  lantern_kit, lw_bass, lw_harp, lw_strings, lw_flute, lw_glock,
-  lane_choirs, lane_strings, lane_horns, lane_engine, lane_signals, lane_motion
-]
-
-proc pick(n: i32) {
-  if playing && song == n {
-    playing = false
-    stops += 1
-  } else {
-    song = n
-    playing = true
-  }
 }
 
 async {
@@ -91,25 +61,52 @@ async {
 async {
   while true {
     const t = Transport[Transport]
-    const b = t.position - SONG_START[song]
+    const s = Song[Song]
+    const se: entity = Song
+    const status = AudioSongStatus[AudioSongStatus]
+    const b = t.position
     beat = b
+    song_beats = max(s.beats, 1)
 
-    for i in 0..6 {
-      const e = LANES[song * 6 + i]
-      const m = e[AudioMeter]
-      const rms = max(max(m.rms_left, m.rms_right), 0.00001)
-      levels[i] = clamp((20 * log10(rms) + 48) / 48, 0, 1)
+    const ready = status.state == SongReady
+    if loaded != ready {
+      loaded = ready
+    }
+
+    const shows = playing && ready && se.has(Rgb)
+    if lit != shows {
+      lit = shows
+    }
+
+    if shows {
+      const c = se[Rgb]
+      if color.r != c.r || color.g != c.g || color.b != c.b {
+        color = c
+      }
+    } else if color.r != IDLE.r || color.g != IDLE.g || color.b != IDLE.b {
+      color = IDLE
+    }
+
+    const lanes = s.lanes.count()
+    for i in 0..LANE_MAX {
+      if i < lanes {
+        const e = s.lanes[i].bus
+        if e.has(AudioMeter) {
+          const m = e[AudioMeter]
+          const rms = max(max(m.rms_left, m.rms_right), 0.00001)
+          levels[i] = clamp((20 * log10(rms) + 48) / 48, 0, 1)
+        } else {
+          levels[i] = 0
+        }
+      } else {
+        levels[i] = 0
+      }
     }
 
     const mm = box.audio.master[AudioMeter]
     master_level[0] = clamp((20 * log10(max(mm.rms_left, 0.00001)) + 48) / 48, 0, 1)
     master_level[1] = clamp((20 * log10(max(mm.rms_right, 0.00001)) + 48) / 48, 0, 1)
     glow = clamp((20 * log10(max(max(mm.peak_left, mm.peak_right), 0.00001)) + 30) / 30, 0, 1)
-
-    const open = 300 * pow(2, 5 * clamp(b / 16, 0, 1))
-    if abs(open - sweep) > sweep * 0.01 {
-      sweep = open
-    }
 
     await next_frame()
   }

@@ -2,6 +2,7 @@ include ui/widgets
 include cfg/hud
 include jungle_city/city
 include jungle_city/lights
+include jungle_city/audio
 using flecs.script
 using box.transform
 using box.geometry
@@ -68,6 +69,13 @@ jungle_city {
   LightBake: {environment: sky, probe_spacing: 12, bounds_padding: 0.3, bounces: 0, capture_size: 32, budget_ms: 8, compute: hud.screen.options.body.baked[Checkbox.mut].current}
   assets.JungleCity city(rows: 15, columns: 15, spacing: 17, seed: 17) { camera {} }
   CanopyWaterFx water(depth: 15 * 17 + 20, seed: 17, civic_z: (15 - 2 - (15 - 1) / 2.0) * 17 + 17 / 2.0, radius: 11, height: 4.52)
+  CanopySoundscape soundscape(width: 15 * 17 + 32, depth: 15 * 17 + 20, civic_z: (15 - 2 - (15 - 1) / 2.0) * 17 + 17 / 2.0, radius: 11, height: 4.52)
+}
+
+async {
+  canopy_width = 15 * 17 + 32
+  canopy_depth = 15 * 17 + 20
+  canopy_listener = jungle_city.city.camera
 }
 
 main_view {

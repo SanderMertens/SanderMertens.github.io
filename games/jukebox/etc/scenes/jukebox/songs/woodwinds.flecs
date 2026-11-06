@@ -1,0 +1,577 @@
+using box.audio
+using box.material
+
+box { audio { Song { Rgb: {176, 196, 112} } } }
+
+ww_hall {
+  AudioBus: {output: master, kind: AudioChannelReturn, volume: 0.32, effects: [ww_hall]}
+  Reverb: {decay: 1.9, damping: 0.55, predelay: 0.024, size: 0.8}
+}
+ww_winds_eq {
+  Equalizer: {bands: [
+    {kind: AudioEqLowCut, frequency: 35},
+    {kind: AudioEqPeak, frequency: 3200, gain: -1, q: 0.8}
+  ]}
+}
+ww_winds_glue { Compressor: {threshold: -14, ratio: 1.8, attack: 0.03, release: 0.3, knee: 8, makeup: 0.5} }
+ww_winds {
+  AudioBus: {output: master, volume: 0.7, effects: [ww_winds_eq, ww_winds_glue]}
+  AudioMeter: {}
+}
+
+prefab ww_flute_sound {
+  SynthSound: {seed: 11, drift: 3}
+  SynthGlide: {time: 0.018, legato: true, channel: 11}
+  SynthEnvelope: {attack: 0.07, decay: 0.12, sustain: 0.85, release: 0.09, curve: 2}
+  SynthFilter: {kind: SynthLowPass, cutoff: 7000, keytrack: 0.3, velocity: 1}
+  SynthLfo: {rate: 5, delay: 0.22, fade: 0.4, pitch: 10, amplitude: 0.18, random_phase: true}
+  ww_swell { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetLevel, amount: 0.7} }
+  ww_tone {
+    SynthOscillator: {wave: SynthSine, frequency: 523.25, level: 0.5}
+    ww_turbulence { SynthOscillator: {wave: SynthNoise, color: SynthNoiseBrown, modulation: SynthRing, index: 0.2} }
+  }
+  ww_h2 {
+    SynthOscillator: {wave: SynthSine, frequency: 1046.5, level: 0.11}
+    ww_register { SynthModRoute: {source: SynthSourceKey, target: SynthTargetLevel, amount: -1.1} }
+    ww_vib { SynthModRoute: {source: SynthSourceLfo1, target: SynthTargetLevel, amount: 0.8} }
+    ww_force { SynthModRoute: {source: SynthSourceVelocity, target: SynthTargetLevel, amount: 2} }
+    ww_press { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetLevel, amount: 1.5} }
+  }
+  ww_h3 {
+    SynthOscillator: {wave: SynthSine, frequency: 1569.75, level: 0.086}
+    ww_register { SynthModRoute: {source: SynthSourceKey, target: SynthTargetLevel, amount: -0.77} }
+  }
+  ww_chiff {
+    SynthOscillator: {wave: SynthSine, frequency: 1046.5, level: 0.15}
+    SynthEnvelope: {attack: 0.004, decay: 0.05, curve: 3}
+  }
+  ww_tongue {
+    SynthOscillator: {wave: SynthNoise, level: 0.2}
+    SynthEnvelope: {attack: 0.002, decay: 0.035, curve: 3}
+  }
+  ww_edge {
+    SynthOscillator: {wave: SynthSaw, frequency: 523.25, level: 0.02}
+    ww_register { SynthModRoute: {source: SynthSourceKey, target: SynthTargetLevel, amount: -2} }
+    ww_force { SynthModRoute: {source: SynthSourceVelocity, target: SynthTargetLevel, amount: 3} }
+  }
+  ww_breath {
+    SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, level: 0.045}
+    SynthEnvelope: {attack: 0.02, sustain: 1, release: 0.07}
+  }
+}
+
+prefab ww_piccolo_sound {
+  SynthSound: {seed: 16, drift: 2.5}
+  SynthGlide: {time: 0.015, legato: true, channel: 16}
+  SynthEnvelope: {attack: 0.045, decay: 0.1, sustain: 0.85, release: 0.07, curve: 2}
+  SynthFilter: {kind: SynthLowPass, cutoff: 10000, keytrack: 0.2, velocity: 1}
+  SynthLfo: {rate: 5.6, delay: 0.2, fade: 0.35, pitch: 8, amplitude: 0.12, random_phase: true}
+  ww_swell { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetLevel, amount: 0.6} }
+  ww_shine { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetCutoff, amount: 1} }
+  ww_tone {
+    SynthOscillator: {wave: SynthSine, frequency: 1046.5, level: 0.45}
+    ww_turbulence { SynthOscillator: {wave: SynthNoise, color: SynthNoiseBrown, modulation: SynthRing, index: 0.15} }
+  }
+  ww_h2 {
+    SynthOscillator: {wave: SynthSine, frequency: 2093, level: 0.035}
+    ww_register { SynthModRoute: {source: SynthSourceKey, target: SynthTargetLevel, amount: -0.5} }
+    ww_vib { SynthModRoute: {source: SynthSourceLfo1, target: SynthTargetLevel, amount: 0.6} }
+    ww_force { SynthModRoute: {source: SynthSourceVelocity, target: SynthTargetLevel, amount: 1.5} }
+  }
+  ww_h3 {
+    SynthOscillator: {wave: SynthSine, frequency: 3139.5, level: 0.02}
+  }
+  ww_chiff {
+    SynthOscillator: {wave: SynthSine, frequency: 2093, level: 0.1}
+    SynthEnvelope: {attack: 0.003, decay: 0.04, curve: 3}
+  }
+  ww_tongue {
+    SynthOscillator: {wave: SynthNoise, level: 0.15}
+    SynthEnvelope: {attack: 0.002, decay: 0.03, curve: 3}
+  }
+  ww_breath {
+    SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, level: 0.022}
+    SynthEnvelope: {attack: 0.02, sustain: 1, release: 0.06}
+  }
+}
+
+prefab ww_oboe_sound {
+  SynthSound: {seed: 12, drift: 2.5}
+  SynthGlide: {time: 0.018, legato: true, channel: 12}
+  SynthEnvelope: {attack: 0.025, decay: 0.08, sustain: 0.9, release: 0.05, curve: 2}
+  SynthFilter: {kind: SynthBandPass, cutoff: 1200, resonance: 0.3, slope: SynthSlope24}
+  SynthPitchEnvelope: {amount: -0.12, decay: 0.04, curve: 2}
+  SynthLfo: {rate: 5.2, delay: 0.25, fade: 0.35, pitch: 14, amplitude: 0.1, random_phase: true}
+  ww_swell { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetLevel, amount: 0.6} }
+  ww_reed {
+    SynthOscillator: {wave: SynthSaw, frequency: 440, level: 1}
+    ww_turbulence { SynthOscillator: {wave: SynthNoise, color: SynthNoiseBrown, modulation: SynthRing, index: 0.06} }
+  }
+  ww_formant {
+    SynthOscillator: {wave: SynthSine, frequency: 440, sync: 6.48, level: 0.035}
+    ww_fixed { SynthModRoute: {source: SynthSourceKey, target: SynthTargetHardSync, amount: -12} }
+    ww_force { SynthModRoute: {source: SynthSourceVelocity, target: SynthTargetLevel, amount: 4} }
+    ww_press { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetLevel, amount: 2} }
+  }
+  ww_tongue {
+    SynthOscillator: {wave: SynthNoise, level: 0.2}
+    SynthEnvelope: {attack: 0.001, decay: 0.015, curve: 3}
+  }
+  ww_breath {
+    SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, level: 0.02}
+    SynthEnvelope: {attack: 0.02, sustain: 1, release: 0.05}
+  }
+}
+
+prefab ww_clarinet_sound {
+  SynthSound: {seed: 13, drift: 2}
+  SynthGlide: {time: 0.018, legato: true, channel: 13}
+  SynthEnvelope: {attack: 0.04, decay: 0.1, sustain: 0.9, release: 0.06, curve: 2}
+  SynthFilter: {kind: SynthLowPass, cutoff: 2200, resonance: 0.1, slope: SynthSlope24, keytrack: 0.3, velocity: 1.3}
+  SynthPitchEnvelope: {amount: -0.08, decay: 0.05, curve: 2}
+  ww_swell { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetLevel, amount: 0.6} }
+  ww_shine { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetCutoff, amount: 0.8} }
+  ww_reed {
+    SynthOscillator: {wave: SynthSquare, frequency: 164.81, level: 0.32}
+    ww_turbulence { SynthOscillator: {wave: SynthNoise, color: SynthNoiseBrown, modulation: SynthRing, index: 0.08} }
+    ww_register { SynthModRoute: {source: SynthSourceKey, target: SynthTargetPulseWidth, amount: -0.025} }
+  }
+  ww_body {
+    SynthOscillator: {wave: SynthSine, frequency: 164.81, level: 0.05}
+  }
+  ww_formant {
+    SynthOscillator: {wave: SynthSine, frequency: 164.81, sync: 13.35, level: 0.035}
+    ww_fixed { SynthModRoute: {source: SynthSourceKey, target: SynthTargetHardSync, amount: -12} }
+  }
+  ww_tongue {
+    SynthOscillator: {wave: SynthNoise, level: 0.12}
+    SynthEnvelope: {attack: 0.001, decay: 0.02, curve: 3}
+  }
+  ww_breath {
+    SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, level: 0.012}
+    SynthEnvelope: {attack: 0.02, sustain: 1, release: 0.06}
+  }
+}
+
+prefab ww_bassoon_sound {
+  SynthSound: {seed: 14, drift: 3}
+  SynthGlide: {time: 0.022, legato: true, channel: 14}
+  SynthEnvelope: {attack: 0.035, decay: 0.1, sustain: 0.9, release: 0.07, curve: 2}
+  SynthFilter: {kind: SynthBandPass, cutoff: 480, resonance: 0.3, slope: SynthSlope24}
+  SynthPitchEnvelope: {amount: -0.1, decay: 0.05, curve: 2}
+  SynthLfo: {rate: 4.8, delay: 0.3, fade: 0.4, pitch: 9, amplitude: 0.08, random_phase: true}
+  ww_swell { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetLevel, amount: 0.6} }
+  ww_reed {
+    SynthOscillator: {wave: SynthSaw, frequency: 130.81, level: 1.1}
+    ww_turbulence { SynthOscillator: {wave: SynthNoise, color: SynthNoiseBrown, modulation: SynthRing, index: 0.06} }
+  }
+  ww_formant {
+    SynthOscillator: {wave: SynthSine, frequency: 130.81, sync: 9.17, level: 0.04}
+    ww_fixed { SynthModRoute: {source: SynthSourceKey, target: SynthTargetHardSync, amount: -12} }
+    ww_force { SynthModRoute: {source: SynthSourceVelocity, target: SynthTargetLevel, amount: 4} }
+    ww_press { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetLevel, amount: 2} }
+  }
+  ww_tongue {
+    SynthOscillator: {wave: SynthNoise, level: 0.2}
+    SynthEnvelope: {attack: 0.001, decay: 0.02, curve: 3}
+  }
+  ww_breath {
+    SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, level: 0.022}
+    SynthEnvelope: {attack: 0.02, sustain: 1, release: 0.06}
+  }
+}
+
+prefab ww_sax_sound {
+  SynthSound: {seed: 15, drift: 3}
+  SynthGlide: {time: 0.03, legato: true, channel: 15}
+  SynthDrive: {drive: 0.35, asymmetry: 0.25}
+  SynthEnvelope: {attack: 0.03, decay: 0.1, sustain: 0.85, release: 0.07, curve: 2}
+  SynthFilter: {kind: SynthLowPass, cutoff: 3400, resonance: 0.4, keytrack: 0.2, velocity: 1}
+  SynthFilterEnvelope: {attack: 0.01, decay: 0.12, sustain: 0, release: 0.05, amount: 0.6}
+  SynthPitchEnvelope: {amount: -0.25, decay: 0.07, curve: 2}
+  SynthLfo: {rate: 5.4, delay: 0.3, fade: 0.5, pitch: 16, amplitude: 0.05, random_phase: true}
+  ww_swell { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetLevel, amount: 0.6} }
+  ww_shine { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetCutoff, amount: 1.2} }
+  ww_reed {
+    SynthOscillator: {wave: SynthSaw, frequency: 293.66, level: 0.4}
+    ww_turbulence { SynthOscillator: {wave: SynthNoise, color: SynthNoiseBrown, modulation: SynthRing, index: 0.1} }
+  }
+  ww_body {
+    SynthOscillator: {wave: SynthSine, frequency: 293.66, level: 0.06}
+  }
+  ww_tongue {
+    SynthOscillator: {wave: SynthNoise, level: 0.12}
+    SynthEnvelope: {attack: 0.001, decay: 0.02, curve: 3}
+  }
+  ww_breath {
+    SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, level: 0.02}
+    SynthEnvelope: {attack: 0.02, sustain: 1, release: 0.06}
+  }
+}
+
+ww_flute_inst { Instrument: {sound: ww_flute_sound, root: 72} }
+ww_oboe_inst { Instrument: {sound: ww_oboe_sound, root: 69} }
+ww_clarinet_inst { Instrument: {sound: ww_clarinet_sound, root: 52} }
+ww_bassoon_inst { Instrument: {sound: ww_bassoon_sound, root: 48} }
+ww_sax_inst { Instrument: {sound: ww_sax_sound, root: 62} }
+ww_piccolo_inst { Instrument: {sound: ww_piccolo_sound, root: 84} }
+
+prefab ww_flute_solo {
+  NoteClip: {length: 8, notes: [
+    {start: 0, duration: 0.5, pitch: 65, velocity: 0.75},
+    {start: 0.5, duration: 0.5, pitch: 69, velocity: 0.75},
+    {start: 1, duration: 0.5, pitch: 72, velocity: 0.75},
+    {start: 1.5, duration: 0.5, pitch: 77, velocity: 0.75},
+    {start: 2, duration: 0.94, pitch: 81, velocity: 0.75},
+    {start: 3, duration: 0.5, pitch: 79, velocity: 0.75},
+    {start: 3.5, duration: 0.25, pitch: 77, velocity: 0.75},
+    {start: 3.75, duration: 0.19, pitch: 79, velocity: 0.75},
+    {start: 4, duration: 0.125, pitch: 81, velocity: 0.75},
+    {start: 4.25, duration: 0.125, pitch: 84, velocity: 0.75},
+    {start: 4.5, duration: 0.125, pitch: 86, velocity: 0.75},
+    {start: 4.75, duration: 0.125, pitch: 84, velocity: 0.75},
+    {start: 5, duration: 0.5, pitch: 81, velocity: 0.75},
+    {start: 5.5, duration: 0.5, pitch: 82, velocity: 0.75},
+    {start: 6, duration: 1.94, pitch: 84, velocity: 0.75, pressure: {kind: CurveCatmullRom, keys: [{0, 0}, {1.1, 0.55}, {2, 0.05}]}}
+  ]}
+}
+
+prefab ww_flute_tutti {
+  NoteClip: {length: 26, notes: [
+    {start: 0, duration: 1, pitch: 81, velocity: 0.72},
+    {start: 1, duration: 0.5, pitch: 84, velocity: 0.72},
+    {start: 1.5, duration: 0.5, pitch: 82, velocity: 0.72},
+    {start: 2, duration: 0.94, pitch: 81, velocity: 0.72},
+    {start: 3, duration: 0.5, pitch: 79, velocity: 0.72},
+    {start: 3.5, duration: 0.44, pitch: 77, velocity: 0.72},
+    {start: 4, duration: 1.5, pitch: 86, velocity: 0.72},
+    {start: 5.5, duration: 0.5, pitch: 84, velocity: 0.72},
+    {start: 6, duration: 0.94, pitch: 81, velocity: 0.72},
+    {start: 7, duration: 0.5, pitch: 77, velocity: 0.72},
+    {start: 7.5, duration: 0.44, pitch: 81, velocity: 0.72},
+    {start: 8, duration: 1, pitch: 82, velocity: 0.72},
+    {start: 9, duration: 0.5, pitch: 86, velocity: 0.72},
+    {start: 9.5, duration: 0.5, pitch: 84, velocity: 0.72},
+    {start: 10, duration: 0.94, pitch: 82, velocity: 0.72},
+    {start: 11, duration: 0.5, pitch: 81, velocity: 0.72},
+    {start: 11.5, duration: 0.44, pitch: 79, velocity: 0.72},
+    {start: 12, duration: 1.94, pitch: 79, velocity: 0.72, pressure: {kind: CurveCatmullRom, keys: [{0, 0}, {1.1, 0.35}, {2, 0.1}]}},
+    {start: 14, duration: 0.5, pitch: 76, velocity: 0.72},
+    {start: 14.5, duration: 0.5, pitch: 77, velocity: 0.72},
+    {start: 15, duration: 0.5, pitch: 79, velocity: 0.72},
+    {start: 15.5, duration: 0.44, pitch: 82, velocity: 0.72},
+    {start: 16, duration: 1.5, pitch: 81, velocity: 0.72},
+    {start: 17.5, duration: 0.44, pitch: 77, velocity: 0.72},
+    {start: 18, duration: 1, pitch: 86, velocity: 0.72},
+    {start: 19, duration: 0.5, pitch: 84, velocity: 0.72},
+    {start: 19.5, duration: 0.44, pitch: 82, velocity: 0.72},
+    {start: 20, duration: 1, pitch: 81, velocity: 0.72},
+    {start: 21, duration: 1, pitch: 79, velocity: 0.72},
+    {start: 22, duration: 3.94, pitch: 77, velocity: 0.72, pressure: {kind: CurveCatmullRom, keys: [{0, 0}, {2.2, 0.4}, {4, 0}]}}
+  ]}
+}
+
+prefab ww_oboe_solo {
+  NoteClip: {length: 8, notes: [
+    {start: 0, duration: 0.5, pitch: 62, velocity: 0.75},
+    {start: 0.5, duration: 0.5, pitch: 69, velocity: 0.75},
+    {start: 1, duration: 0.5, pitch: 74, velocity: 0.75},
+    {start: 1.5, duration: 0.5, pitch: 76, velocity: 0.75},
+    {start: 2, duration: 0.94, pitch: 77, velocity: 0.75},
+    {start: 3, duration: 0.5, pitch: 76, velocity: 0.75},
+    {start: 3.5, duration: 0.44, pitch: 74, velocity: 0.75},
+    {start: 4, duration: 0.125, pitch: 73, velocity: 0.75},
+    {start: 4.25, duration: 0.125, pitch: 74, velocity: 0.75},
+    {start: 4.5, duration: 0.125, pitch: 76, velocity: 0.75},
+    {start: 4.75, duration: 0.125, pitch: 77, velocity: 0.75},
+    {start: 5, duration: 0.5, pitch: 79, velocity: 0.75},
+    {start: 5.5, duration: 0.25, pitch: 77, velocity: 0.75},
+    {start: 5.75, duration: 0.19, pitch: 76, velocity: 0.75},
+    {start: 6, duration: 1.94, pitch: 74, velocity: 0.75, pressure: {kind: CurveCatmullRom, keys: [{0, 0}, {1.1, 0.5}, {2, 0.05}]}}
+  ]}
+}
+
+prefab ww_oboe_tutti {
+  NoteClip: {length: 26, notes: [
+    {start: 0, duration: 1.94, pitch: 72, velocity: 0.6},
+    {start: 2, duration: 1, pitch: 77, velocity: 0.6},
+    {start: 3, duration: 0.94, pitch: 76, velocity: 0.6},
+    {start: 4, duration: 1.5, pitch: 77, velocity: 0.6},
+    {start: 5.5, duration: 0.5, pitch: 76, velocity: 0.6},
+    {start: 6, duration: 1.94, pitch: 74, velocity: 0.6},
+    {start: 8, duration: 1, pitch: 74, velocity: 0.6},
+    {start: 9, duration: 0.94, pitch: 77, velocity: 0.6},
+    {start: 10, duration: 1, pitch: 79, velocity: 0.6},
+    {start: 11, duration: 0.5, pitch: 77, velocity: 0.6},
+    {start: 11.5, duration: 0.44, pitch: 76, velocity: 0.6},
+    {start: 12, duration: 1, pitch: 76, velocity: 0.6},
+    {start: 13, duration: 0.94, pitch: 72, velocity: 0.6},
+    {start: 14, duration: 0.5, pitch: 72, velocity: 0.6},
+    {start: 14.5, duration: 0.5, pitch: 74, velocity: 0.6},
+    {start: 15, duration: 0.94, pitch: 76, velocity: 0.6},
+    {start: 16, duration: 1.5, pitch: 77, velocity: 0.6},
+    {start: 17.5, duration: 0.44, pitch: 74, velocity: 0.6},
+    {start: 18, duration: 1, pitch: 77, velocity: 0.6},
+    {start: 19, duration: 0.94, pitch: 74, velocity: 0.6},
+    {start: 20, duration: 1, pitch: 76, velocity: 0.6},
+    {start: 21, duration: 1, pitch: 70, velocity: 0.6},
+    {start: 22, duration: 3.94, pitch: 69, velocity: 0.6, pressure: {kind: CurveCatmullRom, keys: [{0, 0}, {2.2, 0.3}, {4, 0}]}}
+  ]}
+}
+
+prefab ww_clarinet_solo {
+  NoteClip: {length: 8, notes: [
+    {start: 0, duration: 0.5, pitch: 72, velocity: 0.75},
+    {start: 0.5, duration: 0.5, pitch: 69, velocity: 0.75},
+    {start: 1, duration: 0.5, pitch: 65, velocity: 0.75},
+    {start: 1.5, duration: 0.5, pitch: 60, velocity: 0.75},
+    {start: 2, duration: 0.94, pitch: 62, velocity: 0.75},
+    {start: 3, duration: 0.5, pitch: 65, velocity: 0.75},
+    {start: 3.5, duration: 0.44, pitch: 64, velocity: 0.75},
+    {start: 4, duration: 0.125, pitch: 62, velocity: 0.75},
+    {start: 4.25, duration: 0.125, pitch: 60, velocity: 0.75},
+    {start: 4.5, duration: 0.125, pitch: 58, velocity: 0.75},
+    {start: 4.75, duration: 0.125, pitch: 57, velocity: 0.75},
+    {start: 5, duration: 0.5, pitch: 55, velocity: 0.75},
+    {start: 5.5, duration: 0.5, pitch: 57, velocity: 0.75},
+    {start: 6, duration: 1.94, pitch: 53, velocity: 0.75, pressure: {kind: CurveCatmullRom, keys: [{0, 0}, {1.1, 0.45}, {2, 0}]}}
+  ]}
+}
+
+prefab ww_clarinet_tutti {
+  NoteClip: {length: 26, notes: [
+    {start: 0, duration: 0.5, pitch: 57, velocity: 0.6},
+    {start: 0.5, duration: 0.44, pitch: 60, velocity: 0.5},
+    {start: 1, duration: 0.5, pitch: 65, velocity: 0.5},
+    {start: 1.5, duration: 0.44, pitch: 60, velocity: 0.5},
+    {start: 2, duration: 0.5, pitch: 57, velocity: 0.6},
+    {start: 2.5, duration: 0.44, pitch: 60, velocity: 0.5},
+    {start: 3, duration: 0.5, pitch: 65, velocity: 0.5},
+    {start: 3.5, duration: 0.44, pitch: 60, velocity: 0.5},
+    {start: 4, duration: 0.5, pitch: 57, velocity: 0.6},
+    {start: 4.5, duration: 0.44, pitch: 62, velocity: 0.5},
+    {start: 5, duration: 0.5, pitch: 65, velocity: 0.5},
+    {start: 5.5, duration: 0.44, pitch: 62, velocity: 0.5},
+    {start: 6, duration: 0.5, pitch: 57, velocity: 0.6},
+    {start: 6.5, duration: 0.44, pitch: 62, velocity: 0.5},
+    {start: 7, duration: 0.5, pitch: 65, velocity: 0.5},
+    {start: 7.5, duration: 0.44, pitch: 62, velocity: 0.5},
+    {start: 8, duration: 0.5, pitch: 58, velocity: 0.6},
+    {start: 8.5, duration: 0.44, pitch: 62, velocity: 0.5},
+    {start: 9, duration: 0.5, pitch: 65, velocity: 0.5},
+    {start: 9.5, duration: 0.44, pitch: 62, velocity: 0.5},
+    {start: 10, duration: 0.5, pitch: 58, velocity: 0.6},
+    {start: 10.5, duration: 0.44, pitch: 62, velocity: 0.5},
+    {start: 11, duration: 0.5, pitch: 67, velocity: 0.5},
+    {start: 11.5, duration: 0.44, pitch: 62, velocity: 0.5},
+    {start: 12, duration: 0.5, pitch: 55, velocity: 0.6},
+    {start: 12.5, duration: 0.44, pitch: 60, velocity: 0.5},
+    {start: 13, duration: 0.5, pitch: 64, velocity: 0.5},
+    {start: 13.5, duration: 0.44, pitch: 67, velocity: 0.5},
+    {start: 14, duration: 0.5, pitch: 64, velocity: 0.6},
+    {start: 14.5, duration: 0.44, pitch: 60, velocity: 0.5},
+    {start: 15, duration: 0.5, pitch: 58, velocity: 0.5},
+    {start: 15.5, duration: 0.44, pitch: 60, velocity: 0.5},
+    {start: 16, duration: 0.5, pitch: 57, velocity: 0.6},
+    {start: 16.5, duration: 0.44, pitch: 62, velocity: 0.5},
+    {start: 17, duration: 0.5, pitch: 65, velocity: 0.5},
+    {start: 17.5, duration: 0.44, pitch: 62, velocity: 0.5},
+    {start: 18, duration: 0.5, pitch: 58, velocity: 0.6},
+    {start: 18.5, duration: 0.44, pitch: 62, velocity: 0.5},
+    {start: 19, duration: 0.5, pitch: 65, velocity: 0.5},
+    {start: 19.5, duration: 0.44, pitch: 62, velocity: 0.5},
+    {start: 20, duration: 0.5, pitch: 55, velocity: 0.6},
+    {start: 20.5, duration: 0.44, pitch: 58, velocity: 0.5},
+    {start: 21, duration: 0.5, pitch: 60, velocity: 0.5},
+    {start: 21.5, duration: 0.44, pitch: 64, velocity: 0.5},
+    {start: 22, duration: 3.94, pitch: 60, velocity: 0.5, pressure: {kind: CurveCatmullRom, keys: [{0, 0}, {2.2, 0.25}, {4, 0}]}}
+  ]}
+}
+
+prefab ww_bassoon_solo {
+  NoteClip: {length: 8, notes: [
+    {start: 0, duration: 0.2, pitch: 41, velocity: 0.8},
+    {start: 0.5, duration: 0.2, pitch: 48, velocity: 0.8},
+    {start: 1, duration: 0.2, pitch: 45, velocity: 0.8},
+    {start: 1.5, duration: 0.2, pitch: 41, velocity: 0.8},
+    {start: 2, duration: 0.94, pitch: 34, velocity: 0.8},
+    {start: 3, duration: 0.5, pitch: 45, velocity: 0.8},
+    {start: 3.5, duration: 0.44, pitch: 43, velocity: 0.8},
+    {start: 4, duration: 0.5, pitch: 41, velocity: 0.8},
+    {start: 4.5, duration: 0.25, pitch: 40, velocity: 0.8},
+    {start: 4.75, duration: 0.25, pitch: 41, velocity: 0.8},
+    {start: 5, duration: 0.5, pitch: 43, velocity: 0.8},
+    {start: 5.5, duration: 0.44, pitch: 45, velocity: 0.8},
+    {start: 6, duration: 1.94, pitch: 41, velocity: 0.8, pressure: {kind: CurveCatmullRom, keys: [{0, 0}, {1.1, 0.5}, {2, 0.05}]}}
+  ]}
+}
+
+prefab ww_bassoon_tutti {
+  NoteClip: {length: 26, notes: [
+    {start: 0, duration: 0.94, pitch: 41, velocity: 0.7},
+    {start: 1, duration: 0.2, pitch: 48, velocity: 0.55},
+    {start: 2, duration: 0.94, pitch: 45, velocity: 0.7},
+    {start: 3, duration: 0.2, pitch: 48, velocity: 0.55},
+    {start: 4, duration: 0.94, pitch: 38, velocity: 0.7},
+    {start: 5, duration: 0.2, pitch: 41, velocity: 0.55},
+    {start: 6, duration: 0.94, pitch: 45, velocity: 0.7},
+    {start: 7, duration: 0.2, pitch: 41, velocity: 0.55},
+    {start: 8, duration: 0.94, pitch: 34, velocity: 0.7},
+    {start: 9, duration: 0.2, pitch: 38, velocity: 0.55},
+    {start: 10, duration: 0.94, pitch: 43, velocity: 0.7},
+    {start: 11, duration: 0.2, pitch: 46, velocity: 0.55},
+    {start: 12, duration: 0.94, pitch: 36, velocity: 0.7},
+    {start: 13, duration: 0.2, pitch: 43, velocity: 0.55},
+    {start: 14, duration: 0.94, pitch: 40, velocity: 0.7},
+    {start: 15, duration: 0.2, pitch: 36, velocity: 0.55},
+    {start: 16, duration: 0.94, pitch: 38, velocity: 0.7},
+    {start: 17, duration: 0.2, pitch: 45, velocity: 0.55},
+    {start: 18, duration: 0.94, pitch: 34, velocity: 0.7},
+    {start: 19, duration: 0.2, pitch: 41, velocity: 0.55},
+    {start: 20, duration: 1.94, pitch: 36, velocity: 0.68},
+    {start: 22, duration: 3.94, pitch: 41, velocity: 0.68, pressure: {kind: CurveCatmullRom, keys: [{0, 0}, {2.2, 0.3}, {4, 0}]}}
+  ]}
+}
+
+prefab ww_sax_solo {
+  NoteClip: {length: 8, notes: [
+    {start: 0, duration: 0.5, pitch: 53, velocity: 0.75},
+    {start: 0.5, duration: 0.5, pitch: 60, velocity: 0.75},
+    {start: 1, duration: 0.75, pitch: 65, velocity: 0.75},
+    {start: 1.75, duration: 0.19, pitch: 67, velocity: 0.75},
+    {start: 2, duration: 0.5, pitch: 69, velocity: 0.75},
+    {start: 2.5, duration: 0.44, pitch: 65, velocity: 0.75},
+    {start: 3, duration: 0.94, pitch: 68, velocity: 0.75, bend: {keys: [{0, -1}, {0.2, 0}]}},
+    {start: 4, duration: 0.125, pitch: 67, velocity: 0.75},
+    {start: 4.25, duration: 0.125, pitch: 69, velocity: 0.75},
+    {start: 4.5, duration: 0.125, pitch: 72, velocity: 0.75},
+    {start: 4.75, duration: 0.125, pitch: 74, velocity: 0.75},
+    {start: 5, duration: 0.5, pitch: 75, velocity: 0.75},
+    {start: 5.5, duration: 0.5, pitch: 74, velocity: 0.75},
+    {start: 6, duration: 1.94, pitch: 72, velocity: 0.75, pressure: {kind: CurveCatmullRom, keys: [{0, 0}, {1.1, 0.55}, {2, 0.05}]}}
+  ]}
+}
+
+prefab ww_sax_tutti {
+  NoteClip: {length: 26, notes: [
+    {start: 0, duration: 1.94, pitch: 69, velocity: 0.5},
+    {start: 2, duration: 1, pitch: 69, velocity: 0.5},
+    {start: 3, duration: 0.94, pitch: 67, velocity: 0.5},
+    {start: 4, duration: 2, pitch: 69, velocity: 0.5},
+    {start: 6, duration: 1.94, pitch: 65, velocity: 0.5},
+    {start: 8, duration: 1.94, pitch: 65, velocity: 0.5},
+    {start: 10, duration: 1, pitch: 67, velocity: 0.5},
+    {start: 11, duration: 0.94, pitch: 70, velocity: 0.5},
+    {start: 12, duration: 1.94, pitch: 67, velocity: 0.5},
+    {start: 14, duration: 1, pitch: 67, velocity: 0.5},
+    {start: 15, duration: 0.94, pitch: 70, velocity: 0.5},
+    {start: 16, duration: 1.94, pitch: 69, velocity: 0.5},
+    {start: 18, duration: 1.94, pitch: 65, velocity: 0.5},
+    {start: 20, duration: 1, pitch: 67, velocity: 0.5},
+    {start: 21, duration: 1, pitch: 64, velocity: 0.5},
+    {start: 22, duration: 3.94, pitch: 65, velocity: 0.5, pressure: {kind: CurveCatmullRom, keys: [{0, 0}, {2.2, 0.3}, {4, 0}]}}
+  ]}
+}
+
+prefab ww_piccolo_solo {
+  NoteClip: {length: 8, notes: [
+    {start: 0, duration: 0.125, pitch: 89, velocity: 0.7},
+    {start: 0.25, duration: 0.125, pitch: 91, velocity: 0.7},
+    {start: 0.5, duration: 0.44, pitch: 93, velocity: 0.7},
+    {start: 1, duration: 0.5, pitch: 96, velocity: 0.7},
+    {start: 1.5, duration: 0.25, pitch: 93, velocity: 0.7},
+    {start: 1.75, duration: 0.19, pitch: 89, velocity: 0.7},
+    {start: 2, duration: 0.125, pitch: 91, velocity: 0.7},
+    {start: 2.125, duration: 0.125, pitch: 93, velocity: 0.7},
+    {start: 2.25, duration: 0.125, pitch: 91, velocity: 0.7},
+    {start: 2.375, duration: 0.125, pitch: 93, velocity: 0.7},
+    {start: 2.5, duration: 0.125, pitch: 91, velocity: 0.7},
+    {start: 2.625, duration: 0.125, pitch: 93, velocity: 0.7},
+    {start: 2.75, duration: 0.125, pitch: 91, velocity: 0.7},
+    {start: 2.875, duration: 0.065, pitch: 93, velocity: 0.7},
+    {start: 3, duration: 0.5, pitch: 89, velocity: 0.7},
+    {start: 3.5, duration: 0.44, pitch: 86, velocity: 0.7},
+    {start: 4, duration: 0.125, pitch: 84, velocity: 0.7},
+    {start: 4.25, duration: 0.125, pitch: 86, velocity: 0.7},
+    {start: 4.5, duration: 0.125, pitch: 89, velocity: 0.7},
+    {start: 4.75, duration: 0.125, pitch: 93, velocity: 0.7},
+    {start: 5, duration: 0.5, pitch: 94, velocity: 0.7},
+    {start: 5.5, duration: 0.44, pitch: 93, velocity: 0.7},
+    {start: 6, duration: 1.94, pitch: 89, velocity: 0.7, pressure: {kind: CurveCatmullRom, keys: [{0, 0}, {1.1, 0.4}, {2, 0.05}]}}
+  ]}
+}
+
+prefab ww_piccolo_tutti {
+  NoteClip: {length: 10, notes: [
+    {start: 0, duration: 1.5, pitch: 93, velocity: 0.55},
+    {start: 1.5, duration: 0.44, pitch: 89, velocity: 0.55},
+    {start: 2, duration: 1, pitch: 98, velocity: 0.55},
+    {start: 3, duration: 0.5, pitch: 96, velocity: 0.55},
+    {start: 3.5, duration: 0.44, pitch: 94, velocity: 0.55},
+    {start: 4, duration: 1, pitch: 93, velocity: 0.55},
+    {start: 5, duration: 1, pitch: 91, velocity: 0.55},
+    {start: 6, duration: 3.94, pitch: 89, velocity: 0.55, pressure: {kind: CurveCatmullRom, keys: [{0, 0}, {2.2, 0.4}, {4, 0}]}}
+  ]}
+}
+
+ww_track_flute {
+  Track: {instrument: ww_flute_inst, humanize: {velocity: 0.05}}
+  AudioBus: {output: ww_winds, volume: 0.95, pan: -0.3, sends: [{bus: ww_hall, level: 0.3}]}
+  AudioMeter: {}
+  ww_solo { ClipPlacement: {clip: ww_flute_solo, start: 0} }
+  ww_tutti { ClipPlacement: {clip: ww_flute_tutti, start: 48} }
+}
+
+ww_track_oboe {
+  Track: {instrument: ww_oboe_inst, humanize: {velocity: 0.05}}
+  AudioBus: {output: ww_winds, volume: 1, pan: -0.05, sends: [{bus: ww_hall, level: 0.28}]}
+  AudioMeter: {}
+  ww_solo { ClipPlacement: {clip: ww_oboe_solo, start: 8} }
+  ww_tutti { ClipPlacement: {clip: ww_oboe_tutti, start: 48} }
+}
+
+ww_track_clarinet {
+  Track: {instrument: ww_clarinet_inst, humanize: {velocity: 0.05}}
+  AudioBus: {output: ww_winds, volume: 1.4, pan: 0.2, sends: [{bus: ww_hall, level: 0.3}]}
+  AudioMeter: {}
+  ww_solo { ClipPlacement: {clip: ww_clarinet_solo, start: 16} }
+  ww_tutti { ClipPlacement: {clip: ww_clarinet_tutti, start: 48} }
+}
+
+ww_track_bassoon {
+  Track: {instrument: ww_bassoon_inst, humanize: {velocity: 0.05}}
+  AudioBus: {output: ww_winds, volume: 2, pan: 0.4, sends: [{bus: ww_hall, level: 0.28}]}
+  AudioMeter: {}
+  ww_solo { ClipPlacement: {clip: ww_bassoon_solo, start: 24} }
+  ww_tutti { ClipPlacement: {clip: ww_bassoon_tutti, start: 48} }
+}
+
+ww_track_sax {
+  Track: {instrument: ww_sax_inst, humanize: {velocity: 0.05}}
+  AudioBus: {output: ww_winds, volume: 1, pan: -0.15, sends: [{bus: ww_hall, level: 0.3}]}
+  AudioMeter: {}
+  ww_solo { ClipPlacement: {clip: ww_sax_solo, start: 32} }
+  ww_tutti { ClipPlacement: {clip: ww_sax_tutti, start: 48} }
+}
+
+ww_track_piccolo {
+  Track: {instrument: ww_piccolo_inst, humanize: {velocity: 0.05}}
+  AudioBus: {output: ww_winds, volume: 0.95, pan: -0.5, sends: [{bus: ww_hall, level: 0.3}]}
+  AudioMeter: {}
+  ww_solo { ClipPlacement: {clip: ww_piccolo_solo, start: 40} }
+  ww_tutti { ClipPlacement: {clip: ww_piccolo_tutti, start: 64} }
+}
+
+$ {
+  Song: {
+    title: "Woodwinds", tempo: 96, beats_per_bar: 4, beat_unit: 4, beats: 77,
+    lanes: [
+      {name: "Flute", bus: ww_track_flute},
+      {name: "Oboe", bus: ww_track_oboe},
+      {name: "Clarinet", bus: ww_track_clarinet},
+      {name: "Bassoon", bus: ww_track_bassoon},
+      {name: "Alto Sax", bus: ww_track_sax},
+      {name: "Piccolo", bus: ww_track_piccolo}
+    ]
+  }
+}

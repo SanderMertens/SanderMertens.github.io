@@ -1,0 +1,444 @@
+using box.audio
+using box.material
+
+box { audio { Song { Rgb: {205, 150, 60} } } }
+
+hn_hall {
+  AudioBus: {output: master, kind: AudioChannelReturn, volume: 0.7, effects: [hn_hall]}
+  Reverb: {decay: 2.3, damping: 0.6, predelay: 0.028, size: 0.8}
+}
+hn_brass_eq {
+  Equalizer: {bands: [
+    {kind: AudioEqLowCut, frequency: 28},
+    {kind: AudioEqPeak, frequency: 220, gain: -1.5, q: 0.9}
+  ]}
+}
+hn_brass_glue { Compressor: {threshold: -10, ratio: 2, attack: 0.03, release: 0.25, knee: 8, makeup: 0} }
+hn_brass {
+  AudioBus: {output: master, volume: 0.5, effects: [hn_brass_eq, hn_brass_glue]}
+  AudioMeter: {}
+}
+
+hn_horn_tone {
+  Equalizer: {bands: [
+    {kind: AudioEqPeak, frequency: 400, gain: 3, q: 1},
+    {kind: AudioEqHighShelf, frequency: 2000, gain: -6}
+  ]}
+}
+hn_stopped_tone {
+  Equalizer: {bands: [
+    {kind: AudioEqLowShelf, frequency: 600, gain: -9},
+    {kind: AudioEqPeak, frequency: 3000, gain: 4, q: 1.2}
+  ]}
+}
+hn_trombone_tone { Equalizer: {bands: [{kind: AudioEqPeak, frequency: 550, gain: 3, q: 1.1}]} }
+hn_bass_trombone_tone { Equalizer: {bands: [{kind: AudioEqPeak, frequency: 420, gain: 3, q: 1}]} }
+hn_euphonium_tone {
+  Equalizer: {bands: [
+    {kind: AudioEqPeak, frequency: 380, gain: 2.5, q: 1},
+    {kind: AudioEqHighShelf, frequency: 3000, gain: -3}
+  ]}
+}
+hn_tuba_tone {
+  Equalizer: {bands: [
+    {kind: AudioEqPeak, frequency: 240, gain: 3, q: 1},
+    {kind: AudioEqHighShelf, frequency: 2000, gain: -4}
+  ]}
+}
+
+prefab hn_horn_sound {
+  SynthSound: {seed: 11}
+  SynthGlide: {time: 0.03, legato: true, channel: 11}
+  SynthEnvelope: {attack: 0.05, decay: 0.2, sustain: 0.88, release: 0.14, curve: 2}
+  SynthPitchEnvelope: {amount: -0.5, decay: 0.07, curve: 2}
+  SynthFilter: {kind: SynthLowPass, cutoff: 650, resonance: 0.15, velocity: 3.7, keytrack: 0.5, drive: 0.25}
+  SynthFilterEnvelope: {attack: 0.02, decay: 0.15, sustain: 0, release: 0.1, amount: 0.8, velocity: 1, curve: 2}
+  hn_wander { SynthLfo: {rate: 0.23, pitch: 3, random_phase: true} }
+  hn_bloom { SynthModRoute: {source: SynthSourceAmpEnvelope, target: SynthTargetCutoff, amount: 1} }
+  hn_push { SynthModRoute: {source: SynthSourceVelocity, target: SynthTargetLevel, amount: 1.2} }
+  hn_swell { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetLevel, amount: 3.5} }
+  hn_swell_tone { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetCutoff, amount: 1.8} }
+  hn_body {
+    SynthOscillator: {wave: SynthSaw, frequency: 174.614, level: 0.04}
+    SynthEnvelope: {attack: 0.06, decay: 0.2, sustain: 0.88, release: 0.14, curve: 2}
+    hn_hard { SynthModRoute: {source: SynthSourceVelocity, target: SynthTargetLevel, amount: 5.5} }
+  }
+  hn_soft {
+    SynthOscillator: {wave: SynthSaw, frequency: 174.614, level: 0.32}
+    SynthEnvelope: {attack: 0.16, decay: 0.2, sustain: 0.88, release: 0.14, curve: 2}
+    hn_gentle { SynthModRoute: {source: SynthSourceVelocity, target: SynthTargetLevel, amount: -1} }
+  }
+  hn_core { SynthOscillator: {wave: SynthSine, frequency: 174.614, level: -0.1} }
+  hn_air { SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, level: 0.012} }
+  hn_tongue {
+    SynthOscillator: {wave: SynthNoise, level: 0.1}
+    SynthEnvelope: {attack: 0.001, decay: 0.025, curve: 4}
+    hn_tongue_hard { SynthModRoute: {source: SynthSourceVelocity, target: SynthTargetLevel, amount: 1.5} }
+  }
+}
+
+prefab hn_stopped_sound {
+  SynthSound: {seed: 12}
+  SynthGlide: {time: 0.02, legato: true, channel: 12}
+  SynthEnvelope: {attack: 0.03, decay: 0.1, sustain: 0.85, release: 0.09, curve: 2}
+  SynthPitchEnvelope: {amount: -0.35, decay: 0.05, curve: 2}
+  SynthDrive: {drive: 0.35, asymmetry: 0.3}
+  SynthLfo: {rate: 0.23, pitch: 3, random_phase: true}
+  SynthFilter: {kind: SynthBandPass, cutoff: 2800, resonance: 0.35, velocity: 1, keytrack: 0.2}
+  hn_push { SynthModRoute: {source: SynthSourceVelocity, target: SynthTargetLevel, amount: 1.2} }
+  hn_swell { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetLevel, amount: 3.5} }
+  hn_swell_tone { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetCutoff, amount: 0.8} }
+  hn_body { SynthOscillator: {wave: SynthSaw, frequency: 174.614, level: 0.35} }
+  hn_tongue {
+    SynthOscillator: {wave: SynthNoise, level: 0.08}
+    SynthEnvelope: {attack: 0.001, decay: 0.02, curve: 4}
+  }
+}
+
+prefab hn_trombone_sound {
+  SynthSound: {seed: 21}
+  SynthGlide: {time: 0.04, legato: true, channel: 21}
+  SynthEnvelope: {attack: 0.04, decay: 0.2, sustain: 0.88, release: 0.11, curve: 2}
+  SynthPitchEnvelope: {amount: -0.5, decay: 0.07, curve: 2}
+  SynthFilter: {kind: SynthLowPass, cutoff: 1600, resonance: 0.2, velocity: 3.8, keytrack: 0.6, drive: 0.4}
+  SynthFilterEnvelope: {attack: 0.012, decay: 0.12, sustain: 0, release: 0.1, amount: 1.2, velocity: 1, curve: 2}
+  hn_wander { SynthLfo: {rate: 0.23, pitch: 3, random_phase: true} }
+  hn_bloom { SynthModRoute: {source: SynthSourceAmpEnvelope, target: SynthTargetCutoff, amount: 1} }
+  hn_push { SynthModRoute: {source: SynthSourceVelocity, target: SynthTargetLevel, amount: 1.2} }
+  hn_swell { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetLevel, amount: 3.5} }
+  hn_swell_tone { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetCutoff, amount: 1.8} }
+  hn_body {
+    SynthOscillator: {wave: SynthSaw, frequency: 174.614, level: 0.04}
+    SynthEnvelope: {attack: 0.04, decay: 0.2, sustain: 0.88, release: 0.11, curve: 2}
+    hn_hard { SynthModRoute: {source: SynthSourceVelocity, target: SynthTargetLevel, amount: 5.5} }
+  }
+  hn_soft {
+    SynthOscillator: {wave: SynthSaw, frequency: 174.614, level: 0.32}
+    SynthEnvelope: {attack: 0.11, decay: 0.2, sustain: 0.88, release: 0.11, curve: 2}
+    hn_gentle { SynthModRoute: {source: SynthSourceVelocity, target: SynthTargetLevel, amount: -1} }
+  }
+  hn_air { SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, level: 0.012} }
+  hn_tongue {
+    SynthOscillator: {wave: SynthNoise, level: 0.12}
+    SynthEnvelope: {attack: 0.001, decay: 0.022, curve: 4}
+    hn_tongue_hard { SynthModRoute: {source: SynthSourceVelocity, target: SynthTargetLevel, amount: 1.5} }
+  }
+}
+
+prefab hn_bass_trombone_sound {
+  SynthSound: {seed: 31}
+  SynthGlide: {time: 0.045, legato: true, channel: 31}
+  SynthEnvelope: {attack: 0.05, decay: 0.2, sustain: 0.88, release: 0.14, curve: 2}
+  SynthPitchEnvelope: {amount: -0.6, decay: 0.09, curve: 2, release_amount: -0.15}
+  SynthFilter: {kind: SynthLowPass, cutoff: 1180, resonance: 0.2, velocity: 5, keytrack: 0.6, drive: 0.55}
+  SynthFilterEnvelope: {attack: 0.015, decay: 0.15, sustain: 0, release: 0.1, amount: 1.4, velocity: 1, curve: 2}
+  hn_wander { SynthLfo: {rate: 0.23, pitch: 3, random_phase: true} }
+  hn_bloom { SynthModRoute: {source: SynthSourceAmpEnvelope, target: SynthTargetCutoff, amount: 1} }
+  hn_push { SynthModRoute: {source: SynthSourceVelocity, target: SynthTargetLevel, amount: 1.5} }
+  hn_swell { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetLevel, amount: 3.5} }
+  hn_swell_tone { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetCutoff, amount: 1.8} }
+  hn_body {
+    SynthOscillator: {wave: SynthSaw, frequency: 87.307, level: 0.04}
+    SynthEnvelope: {attack: 0.05, decay: 0.2, sustain: 0.88, release: 0.14, curve: 2}
+    hn_hard { SynthModRoute: {source: SynthSourceVelocity, target: SynthTargetLevel, amount: 5.5} }
+  }
+  hn_soft {
+    SynthOscillator: {wave: SynthSaw, frequency: 87.307, level: 0.32}
+    SynthEnvelope: {attack: 0.13, decay: 0.2, sustain: 0.88, release: 0.14, curve: 2}
+    hn_gentle { SynthModRoute: {source: SynthSourceVelocity, target: SynthTargetLevel, amount: -1} }
+  }
+  hn_core { SynthOscillator: {wave: SynthSine, frequency: 87.307, level: -0.06} }
+  hn_air { SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, level: 0.012} }
+  hn_tongue {
+    SynthOscillator: {wave: SynthNoise, level: 0.12}
+    SynthEnvelope: {attack: 0.001, decay: 0.025, curve: 4}
+    hn_tongue_hard { SynthModRoute: {source: SynthSourceVelocity, target: SynthTargetLevel, amount: 1.5} }
+  }
+}
+
+prefab hn_euphonium_sound {
+  SynthSound: {seed: 41}
+  SynthGlide: {time: 0.025, legato: true, channel: 41}
+  SynthEnvelope: {attack: 0.05, decay: 0.2, sustain: 0.88, release: 0.16, curve: 2}
+  SynthPitchEnvelope: {amount: -0.4, decay: 0.07, curve: 2}
+  SynthFilter: {kind: SynthLowPass, cutoff: 855, resonance: 0.12, velocity: 4, keytrack: 0.55, drive: 0.25}
+  SynthFilterEnvelope: {attack: 0.02, decay: 0.15, sustain: 0, release: 0.1, amount: 0.4, velocity: 1, curve: 2}
+  SynthLfo: {rate: 5.4, pitch: 12, amplitude: 0.04, delay: 0.25, fade: 0.4}
+  hn_wander { SynthLfo: {rate: 0.23, pitch: 3, random_phase: true} }
+  hn_bloom { SynthModRoute: {source: SynthSourceAmpEnvelope, target: SynthTargetCutoff, amount: 1} }
+  hn_push { SynthModRoute: {source: SynthSourceVelocity, target: SynthTargetLevel, amount: 1.2} }
+  hn_swell { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetLevel, amount: 3.5} }
+  hn_swell_tone { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetCutoff, amount: 1.8} }
+  hn_body {
+    SynthOscillator: {wave: SynthSaw, frequency: 116.541, level: 0.04}
+    SynthEnvelope: {attack: 0.05, decay: 0.2, sustain: 0.88, release: 0.16, curve: 2}
+    hn_hard { SynthModRoute: {source: SynthSourceVelocity, target: SynthTargetLevel, amount: 5.5} }
+  }
+  hn_soft {
+    SynthOscillator: {wave: SynthSaw, frequency: 116.541, level: 0.32}
+    SynthEnvelope: {attack: 0.13, decay: 0.2, sustain: 0.88, release: 0.16, curve: 2}
+    hn_gentle { SynthModRoute: {source: SynthSourceVelocity, target: SynthTargetLevel, amount: -1} }
+  }
+  hn_core { SynthOscillator: {wave: SynthSine, frequency: 116.541, level: -0.15} }
+  hn_air { SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, level: 0.01} }
+  hn_tongue {
+    SynthOscillator: {wave: SynthNoise, level: 0.09}
+    SynthEnvelope: {attack: 0.001, decay: 0.025, curve: 4}
+    hn_tongue_hard { SynthModRoute: {source: SynthSourceVelocity, target: SynthTargetLevel, amount: 1.5} }
+  }
+}
+
+prefab hn_tuba_sound {
+  SynthSound: {seed: 51}
+  SynthGlide: {time: 0.035, legato: true, channel: 51}
+  SynthEnvelope: {attack: 0.07, decay: 0.2, sustain: 0.88, release: 0.2, curve: 2}
+  SynthPitchEnvelope: {amount: -0.6, decay: 0.1, curve: 2, release_amount: -0.15}
+  SynthFilter: {kind: SynthLowPass, cutoff: 480, resonance: 0.12, velocity: 4.15, keytrack: 0.5, drive: 0.3}
+  SynthFilterEnvelope: {attack: 0.025, decay: 0.18, sustain: 0, release: 0.1, amount: 0.9, velocity: 1, curve: 2}
+  hn_wander { SynthLfo: {rate: 0.23, pitch: 3, random_phase: true} }
+  hn_bloom { SynthModRoute: {source: SynthSourceAmpEnvelope, target: SynthTargetCutoff, amount: 1} }
+  hn_push { SynthModRoute: {source: SynthSourceVelocity, target: SynthTargetLevel, amount: 1.2} }
+  hn_swell { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetLevel, amount: 3.5} }
+  hn_swell_tone { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetCutoff, amount: 1.8} }
+  hn_body {
+    SynthOscillator: {wave: SynthSaw, frequency: 58.270, level: 0.04}
+    SynthEnvelope: {attack: 0.08, decay: 0.2, sustain: 0.88, release: 0.2, curve: 2}
+    hn_hard { SynthModRoute: {source: SynthSourceVelocity, target: SynthTargetLevel, amount: 5.5} }
+  }
+  hn_soft {
+    SynthOscillator: {wave: SynthSaw, frequency: 58.270, level: 0.32}
+    SynthEnvelope: {attack: 0.2, decay: 0.2, sustain: 0.88, release: 0.2, curve: 2}
+    hn_gentle { SynthModRoute: {source: SynthSourceVelocity, target: SynthTargetLevel, amount: -1} }
+  }
+  hn_core { SynthOscillator: {wave: SynthSine, frequency: 58.270, level: -0.18} }
+  hn_air { SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, level: 0.01} }
+  hn_tongue {
+    SynthOscillator: {wave: SynthNoise, level: 0.08}
+    SynthEnvelope: {attack: 0.001, decay: 0.03, curve: 4}
+    hn_tongue_hard { SynthModRoute: {source: SynthSourceVelocity, target: SynthTargetLevel, amount: 1.5} }
+  }
+}
+
+hn_horn { Instrument: {sound: hn_horn_sound, root: 53, velocity_curve: 1.6} }
+hn_stopped { Instrument: {sound: hn_stopped_sound, root: 53, velocity_curve: 1.6} }
+hn_trombone { Instrument: {sound: hn_trombone_sound, root: 53, velocity_curve: 1.6} }
+hn_bass_trombone { Instrument: {sound: hn_bass_trombone_sound, root: 41, velocity_curve: 1.6} }
+hn_euphonium { Instrument: {sound: hn_euphonium_sound, root: 46, velocity_curve: 1.6} }
+hn_tuba { Instrument: {sound: hn_tuba_sound, root: 34, velocity_curve: 1.6} }
+
+prefab hn_horn_call {
+  NoteClip: {length: 9, notes: [
+    {start: 0, duration: 1, pitch: 53, velocity: 0.5},
+    {start: 1, duration: 1, pitch: 58, velocity: 0.5, pressure: {keys: [{0, 0}, {1, 0.1}]}},
+    {start: 2, duration: 1.5, pitch: 62, velocity: 0.5, pressure: {keys: [{0, 0.1}, {1.5, 0.3}]}},
+    {start: 3.5, duration: 0.42, pitch: 60, velocity: 0.5, pressure: {keys: [{0, 0.3}, {0.42, 0.2}]}},
+    {start: 4, duration: 2, pitch: 65, velocity: 0.6, pressure: {keys: [{0, 0}, {1, 0.75}, {2, 0.35}]}},
+    {start: 6, duration: 0.5, pitch: 63, velocity: 0.6, pressure: {keys: [{0, 0.35}, {0.5, 0.25}]}},
+    {start: 6.5, duration: 0.5, pitch: 60, velocity: 0.6, pressure: {keys: [{0, 0.25}, {0.5, 0.15}]}},
+    {start: 7, duration: 1.75, pitch: 58, velocity: 0.6, pressure: {keys: [{0, 0.15}, {1.75, 0}]}}
+  ]}
+}
+
+prefab hn_stopped_echo {
+  NoteClip: {length: 4, notes: [
+    {start: 0, duration: 1.4, pitch: 65, velocity: 0.65},
+    {start: 1.5, duration: 0.42, pitch: 63, velocity: 0.55},
+    {start: 2, duration: 0.42, pitch: 60, velocity: 0.55},
+    {start: 2.5, duration: 1.5, pitch: 58, velocity: 0.6, pressure: {keys: [{0, 0}, {1.2, 0.9}, {1.5, 0.6}]}}
+  ]}
+}
+
+prefab hn_trombone_solo {
+  NoteClip: {length: 9, notes: [
+    {start: 0, duration: 1, pitch: 53, velocity: 0.6},
+    {start: 1, duration: 1, pitch: 58, velocity: 0.6, pressure: {keys: [{0, 0}, {1, 0.2}]}},
+    {start: 2, duration: 0.5, pitch: 57, velocity: 0.6, pressure: {keys: [{0, 0.2}, {0.5, 0.15}]}},
+    {start: 2.5, duration: 0.42, pitch: 55, velocity: 0.6, pressure: {keys: [{0, 0.15}, {0.42, 0.1}]}},
+    {start: 3, duration: 0.9, pitch: 53, velocity: 0.5},
+    {start: 4, duration: 2, pitch: 58, velocity: 0.65,
+      bend: {keys: [{0, -6}, {0.15, -6}, {0.75, 0}]},
+      pressure: {keys: [{0, 0.1}, {0.75, 0.4}, {2, 0.9}]}},
+    {start: 6, duration: 0.5, pitch: 57, velocity: 0.65, pressure: {keys: [{0, 0.9}, {0.5, 0.6}]}},
+    {start: 6.5, duration: 0.5, pitch: 55, velocity: 0.65, pressure: {keys: [{0, 0.6}, {0.5, 0.4}]}},
+    {start: 7, duration: 1.5, pitch: 53, velocity: 0.65, pressure: {keys: [{0, 0.4}, {1.5, 0}]}}
+  ]}
+}
+
+prefab hn_bass_trombone_solo {
+  NoteClip: {length: 8, notes: [
+    {start: 0, duration: 0.9, pitch: 41, velocity: 0.8},
+    {start: 1, duration: 1.9, pitch: 34, velocity: 1, pressure: {keys: [{0, 0.4}, {0.25, 0.1}, {1.9, 0}]}},
+    {start: 3, duration: 0.45, pitch: 36, velocity: 0.4},
+    {start: 3.5, duration: 0.45, pitch: 38, velocity: 0.4},
+    {start: 4, duration: 1, pitch: 39, velocity: 0.4, pressure: {keys: [{0, 0}, {1, 0.4}]}},
+    {start: 5, duration: 1, pitch: 38, velocity: 0.4, pressure: {keys: [{0, 0.4}, {1, 0.15}]}},
+    {start: 6, duration: 1.75, pitch: 34, velocity: 0.4, pressure: {keys: [{0, 0.15}, {1.75, 0}]}}
+  ]}
+}
+
+prefab hn_euphonium_solo {
+  NoteClip: {length: 9, notes: [
+    {start: 0, duration: 0.5, pitch: 53, velocity: 0.55, mod: {keys: [{0, 0}]}},
+    {start: 0.5, duration: 1, pitch: 58, velocity: 0.55, pressure: {keys: [{0, 0}, {1, 0.15}]}, mod: {keys: [{0, 0}, {1, 0.4}]}},
+    {start: 1.5, duration: 0.5, pitch: 60, velocity: 0.55, pressure: {keys: [{0, 0.15}, {0.5, 0.2}]}, mod: {keys: [{0, 0.4}]}},
+    {start: 2, duration: 1.5, pitch: 62, velocity: 0.55, pressure: {keys: [{0, 0.2}, {1.5, 0.5}]}, mod: {keys: [{0, 0.3}, {1.5, 1}]}},
+    {start: 3.5, duration: 0.5, pitch: 63, velocity: 0.55, pressure: {keys: [{0, 0.5}, {0.5, 0.6}]}, mod: {keys: [{0, 0.6}]}},
+    {start: 4, duration: 1, pitch: 65, velocity: 0.55, pressure: {keys: [{0, 0.6}, {1, 0.7}]}, mod: {keys: [{0, 0.6}, {1, 1}]}},
+    {start: 5, duration: 0.5, pitch: 62, velocity: 0.55, pressure: {keys: [{0, 0.7}, {0.5, 0.55}]}, mod: {keys: [{0, 0.6}]}},
+    {start: 5.5, duration: 0.5, pitch: 58, velocity: 0.55, pressure: {keys: [{0, 0.55}, {0.5, 0.45}]}, mod: {keys: [{0, 0.6}]}},
+    {start: 6, duration: 1, pitch: 60, velocity: 0.55, pressure: {keys: [{0, 0.45}, {1, 0.2}]}, mod: {keys: [{0, 0.5}, {1, 0.9}]}},
+    {start: 7, duration: 1.5, pitch: 58, velocity: 0.55, pressure: {keys: [{0, 0.2}, {1.5, 0}]}, mod: {keys: [{0, 0.4}, {1.5, 1}]}}
+  ]}
+}
+
+prefab hn_tuba_solo {
+  NoteClip: {length: 9, notes: [
+    {start: 0, duration: 1, pitch: 34, velocity: 0.6},
+    {start: 1, duration: 1, pitch: 41, velocity: 0.6, pressure: {keys: [{0, 0}, {1, 0.1}]}},
+    {start: 2, duration: 1.5, pitch: 46, velocity: 0.6, pressure: {keys: [{0, 0.1}, {1.5, 0.45}]}},
+    {start: 3.5, duration: 0.5, pitch: 45, velocity: 0.6, pressure: {keys: [{0, 0.45}, {0.5, 0.35}]}},
+    {start: 4, duration: 0.5, pitch: 43, velocity: 0.6, pressure: {keys: [{0, 0.35}, {0.5, 0.3}]}},
+    {start: 4.5, duration: 0.5, pitch: 41, velocity: 0.6, pressure: {keys: [{0, 0.3}, {0.5, 0.25}]}},
+    {start: 5, duration: 0.9, pitch: 39, velocity: 0.6, pressure: {keys: [{0, 0.25}, {0.9, 0.1}]}},
+    {start: 6, duration: 0.5, pitch: 38, velocity: 0.45},
+    {start: 6.5, duration: 0.5, pitch: 36, velocity: 0.45},
+    {start: 7, duration: 0.5, pitch: 29, velocity: 0.45},
+    {start: 7.5, duration: 1.25, pitch: 34, velocity: 0.45, pressure: {keys: [{0, 0}, {1.25, 0}]}}
+  ]}
+}
+
+prefab hn_horn_chorale {
+  NoteClip: {length: 24, notes: [
+    {start: 0, duration: 1.9, pitch: 62, velocity: 0.26},
+    {start: 2, duration: 1.9, pitch: 60, velocity: 0.26},
+    {start: 4, duration: 1.9, pitch: 62, velocity: 0.26},
+    {start: 6, duration: 3.9, pitch: 63, velocity: 0.26, pressure: {keys: [{0, 0}, {2, 0}, {3.9, 0.4}]}},
+    {start: 10, duration: 1.9, pitch: 65, velocity: 0.4, pressure: {keys: [{0, 0.05}, {1.9, 0.35}]}},
+    {start: 12, duration: 1, pitch: 67, velocity: 0.55, pressure: {keys: [{0, 0}, {1, 0.2}]}},
+    {start: 13, duration: 0.9, pitch: 69, velocity: 0.55, pressure: {keys: [{0, 0.2}, {0.9, 0.4}]}},
+    {start: 14, duration: 1.9, pitch: 70, velocity: 0.72, pressure: {keys: [{0, 0}, {1.9, 0.5}]}},
+    {start: 16, duration: 1.9, pitch: 70, velocity: 0.95, pressure: {keys: [{0, 0}, {1.9, 0.45}]}},
+    {start: 18, duration: 1.9, pitch: 69, velocity: 0.95, pressure: {keys: [{0, 0.2}, {1.9, 0.45}]}},
+    {start: 20, duration: 4, pitch: 70, velocity: 0.45, pressure: {keys: [{0, 1}, {1, 0.7}, {4, 0}]}}
+  ]}
+}
+
+prefab hn_euphonium_chorale {
+  NoteClip: {length: 24, notes: [
+    {start: 0, duration: 1.9, pitch: 58, velocity: 0.26, mod: {keys: [{0, 0.3}]}},
+    {start: 2, duration: 1.9, pitch: 57, velocity: 0.26, mod: {keys: [{0, 0.3}]}},
+    {start: 4, duration: 1.9, pitch: 58, velocity: 0.26, mod: {keys: [{0, 0.3}]}},
+    {start: 6, duration: 1.9, pitch: 55, velocity: 0.26, mod: {keys: [{0, 0.3}]}},
+    {start: 8, duration: 1.9, pitch: 58, velocity: 0.3, pressure: {keys: [{0, 0}, {1.9, 0.25}]}, mod: {keys: [{0, 0.4}]}},
+    {start: 10, duration: 1.9, pitch: 57, velocity: 0.4, pressure: {keys: [{0, 0.05}, {1.9, 0.35}]}, mod: {keys: [{0, 0.4}]}},
+    {start: 12, duration: 1.9, pitch: 62, velocity: 0.55, pressure: {keys: [{0, 0}, {1.9, 0.4}]}, mod: {keys: [{0, 0.5}]}},
+    {start: 14, duration: 1.9, pitch: 63, velocity: 0.72, pressure: {keys: [{0, 0}, {1.9, 0.5}]}, mod: {keys: [{0, 0.5}]}},
+    {start: 16, duration: 1.9, pitch: 62, velocity: 0.95, pressure: {keys: [{0, 0}, {1.9, 0.45}]}, mod: {keys: [{0, 0.5}]}},
+    {start: 18, duration: 1.9, pitch: 63, velocity: 0.95, pressure: {keys: [{0, 0.2}, {1.9, 0.45}]}, mod: {keys: [{0, 0.5}]}},
+    {start: 20, duration: 4, pitch: 62, velocity: 0.45, pressure: {keys: [{0, 1}, {1, 0.7}, {4, 0}]}, mod: {keys: [{0, 0.3}, {4, 0.8}]}}
+  ]}
+}
+
+prefab hn_trombone_chorale {
+  NoteClip: {length: 24, notes: [
+    {start: 0, duration: 3.9, pitch: 53, velocity: 0.26},
+    {start: 4, duration: 1.9, pitch: 55, velocity: 0.26},
+    {start: 6, duration: 1.9, pitch: 51, velocity: 0.26},
+    {start: 8, duration: 1.9, pitch: 55, velocity: 0.3, pressure: {keys: [{0, 0}, {1.9, 0.25}]}},
+    {start: 10, duration: 1.9, pitch: 53, velocity: 0.4, pressure: {keys: [{0, 0.05}, {1.9, 0.35}]}},
+    {start: 12, duration: 3.9, pitch: 58, velocity: 0.55, pressure: {keys: [{0, 0}, {3.9, 0.6}]}},
+    {start: 16, duration: 1.9, pitch: 58, velocity: 0.95, pressure: {keys: [{0, 0}, {1.9, 0.45}]}},
+    {start: 18, duration: 1.9, pitch: 60, velocity: 0.95, pressure: {keys: [{0, 0.2}, {1.9, 0.45}]}},
+    {start: 20, duration: 4, pitch: 58, velocity: 0.45, pressure: {keys: [{0, 1}, {1, 0.7}, {4, 0}]}}
+  ]}
+}
+
+prefab hn_bass_trombone_chorale {
+  NoteClip: {length: 24, notes: [
+    {start: 0, duration: 1.9, pitch: 46, velocity: 0.26},
+    {start: 2, duration: 1.9, pitch: 48, velocity: 0.26},
+    {start: 4, duration: 3.9, pitch: 46, velocity: 0.26},
+    {start: 8, duration: 1.9, pitch: 51, velocity: 0.3, pressure: {keys: [{0, 0}, {1.9, 0.25}]}},
+    {start: 10, duration: 1.9, pitch: 48, velocity: 0.4, pressure: {keys: [{0, 0.05}, {1.9, 0.35}]}},
+    {start: 12, duration: 3.9, pitch: 43, velocity: 0.55, pressure: {keys: [{0, 0}, {3.9, 0.6}]}},
+    {start: 16, duration: 1.9, pitch: 50, velocity: 0.95, pressure: {keys: [{0, 0}, {1.9, 0.45}]}},
+    {start: 18, duration: 1.9, pitch: 41, velocity: 0.95, pressure: {keys: [{0, 0.2}, {1.9, 0.45}]}},
+    {start: 20, duration: 4, pitch: 50, velocity: 0.45, pressure: {keys: [{0, 1}, {1, 0.7}, {4, 0}]}}
+  ]}
+}
+
+prefab hn_tuba_chorale {
+  NoteClip: {length: 24, notes: [
+    {start: 0, duration: 1.9, pitch: 34, velocity: 0.26},
+    {start: 2, duration: 1.9, pitch: 33, velocity: 0.26},
+    {start: 4, duration: 1.9, pitch: 31, velocity: 0.26},
+    {start: 6, duration: 1.9, pitch: 39, velocity: 0.26},
+    {start: 8, duration: 1.9, pitch: 36, velocity: 0.3, pressure: {keys: [{0, 0}, {1.9, 0.25}]}},
+    {start: 10, duration: 1.9, pitch: 29, velocity: 0.4, pressure: {keys: [{0, 0.05}, {1.9, 0.35}]}},
+    {start: 12, duration: 1.9, pitch: 34, velocity: 0.55, pressure: {keys: [{0, 0}, {1.9, 0.4}]}},
+    {start: 14, duration: 1.9, pitch: 27, velocity: 0.72, pressure: {keys: [{0, 0}, {1.9, 0.5}]}},
+    {start: 16, duration: 3.9, pitch: 29, velocity: 0.95, pressure: {keys: [{0, 0}, {3.9, 0.45}]}},
+    {start: 20, duration: 4, pitch: 34, velocity: 0.45, pressure: {keys: [{0, 1}, {1, 0.7}, {4, 0}]}}
+  ]}
+}
+
+hn_track_horn {
+  Track: {instrument: hn_horn, humanize: {velocity: 0.04}}
+  AudioBus: {output: hn_brass, effects: [hn_horn_tone], volume: 0.9, pan: -0.35, sends: [{bus: hn_hall, level: 0.65}]}
+  AudioMeter: {}
+  hn_solo { ClipPlacement: {clip: hn_horn_call, start: 0} }
+  hn_tutti { ClipPlacement: {clip: hn_horn_chorale, start: 48} }
+}
+
+hn_track_stopped {
+  Track: {instrument: hn_stopped, humanize: {velocity: 0.04}}
+  AudioBus: {output: hn_brass, effects: [hn_stopped_tone], volume: 0.6, pan: -0.4, sends: [{bus: hn_hall, level: 0.55}]}
+  AudioMeter: {}
+  hn_solo { ClipPlacement: {clip: hn_stopped_echo, start: 9} }
+}
+
+hn_track_trombone {
+  Track: {instrument: hn_trombone, humanize: {velocity: 0.04}}
+  AudioBus: {output: hn_brass, effects: [hn_trombone_tone], volume: 0.8, pan: 0.25, sends: [{bus: hn_hall, level: 0.4}]}
+  AudioMeter: {}
+  hn_solo { ClipPlacement: {clip: hn_trombone_solo, start: 13} }
+  hn_tutti { ClipPlacement: {clip: hn_trombone_chorale, start: 48} }
+}
+
+hn_track_bass_trombone {
+  Track: {instrument: hn_bass_trombone, humanize: {velocity: 0.04}}
+  AudioBus: {output: hn_brass, effects: [hn_bass_trombone_tone], volume: 0.8, pan: 0.45, sends: [{bus: hn_hall, level: 0.4}]}
+  AudioMeter: {}
+  hn_solo { ClipPlacement: {clip: hn_bass_trombone_solo, start: 22} }
+  hn_tutti { ClipPlacement: {clip: hn_bass_trombone_chorale, start: 48} }
+}
+
+hn_track_euphonium {
+  Track: {instrument: hn_euphonium, humanize: {velocity: 0.04}}
+  AudioBus: {output: hn_brass, effects: [hn_euphonium_tone], volume: 0.8, pan: -0.1, sends: [{bus: hn_hall, level: 0.45}]}
+  AudioMeter: {}
+  hn_solo { ClipPlacement: {clip: hn_euphonium_solo, start: 30} }
+  hn_tutti { ClipPlacement: {clip: hn_euphonium_chorale, start: 48} }
+}
+
+hn_track_tuba {
+  Track: {instrument: hn_tuba, humanize: {velocity: 0.04}}
+  AudioBus: {output: hn_brass, effects: [hn_tuba_tone], volume: 0.9, pan: 0.15, sends: [{bus: hn_hall, level: 0.4}]}
+  AudioMeter: {}
+  hn_solo { ClipPlacement: {clip: hn_tuba_solo, start: 39} }
+  hn_tutti { ClipPlacement: {clip: hn_tuba_chorale, start: 48} }
+}
+
+$ {
+  Song: {
+    title: "Horns", tempo: 80, beats_per_bar: 4, beat_unit: 4, beats: 76,
+    lanes: [
+      {name: "French Horn", bus: hn_track_horn},
+      {name: "Stopped Horn", bus: hn_track_stopped},
+      {name: "Trombone", bus: hn_track_trombone},
+      {name: "Bass Trombone", bus: hn_track_bass_trombone},
+      {name: "Euphonium", bus: hn_track_euphonium},
+      {name: "Tuba", bus: hn_track_tuba}
+    ]
+  }
+}
