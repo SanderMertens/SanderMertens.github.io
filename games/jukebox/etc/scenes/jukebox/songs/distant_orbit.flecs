@@ -5,64 +5,41 @@ box { audio { Song { Rgb: {130, 160, 255} } } }
 
 orbit_space {
   AudioBus: {output: master, kind: AudioChannelReturn, volume: reverb_level / 100, effects: [orbit_space]}
-  Reverb: {decay: 7, damping: 0.45, predelay: 0.06, size: 1, shimmer: 0.15}
-}
-
-orbit_tone {
-  Equalizer: {bands: [
-    {kind: AudioEqLowCut, frequency: 30},
-    {kind: AudioEqPeak, frequency: 280, gain: -2, q: 0.7},
-    {kind: AudioEqHighShelf, frequency: 6000, gain: 3}
-  ]}
-}
-
-orbit_glue {
-  Compressor: {threshold: -20, ratio: 1.8, attack: 0.05, release: 0.4, knee: 10, makeup: 1}
+  Reverb: {decay: 7, damping: 0.5, predelay: 0.06, size: 1}
 }
 
 orbit {
-  AudioBus: {output: master, volume: 1.3, effects: [orbit_tone, orbit_glue]}
+  AudioBus: {output: master, volume: 0.8}
   AudioMeter: {}
 }
 
-prefab orbit_harmonics {
-  Wavetable: {kind: WavetableHarmonics}
-}
-
 prefab orbit_cloud {
-  SynthSound: {seed: 59, drift: 8, free_phase: true}
-  SynthEnvelope: {attack: 3, decay: 2, sustain: 0.75, release: 4, attack_curve: 1}
-  SynthFilter: {kind: SynthLowPass, cutoff: 2600, resonance: 0.08, keytrack: 0.3}
-  SynthLfo: {rate: 0.05, random_phase: true, position: 5, amplitude: 0.1}
+  SynthSound: {seed: 59}
+  SynthEnvelope: {attack: 3, decay: 2, sustain: 0.75, release: 4}
+  SynthFilter: {kind: SynthLowPass, cutoff: 1200, resonance: 0.08}
+  SynthLfo: {rate: 0.07, random_phase: true, cutoff: 0.35, amplitude: 0.12}
   body {
-    SynthOscillator: {wave: SynthWavetable, frequency: 440, level: 0.2}
-    SynthTable: {table: orbit_harmonics, position: 2, envelope: 6}
-    SynthUnison: {voices: 3, detune: 9, width: 0.9}
+    SynthOscillator: {wave: SynthTriangle, frequency: 440, level: 0.22}
+    SynthUnison: {voices: 3, detune: 9, width: 0.85}
   }
-  air {
-    SynthOscillator: {wave: SynthSine, frequency: 880, level: 0.03}
-    SynthUnison: {voices: 2, detune: 12, width: 1}
-  }
+  air { SynthOscillator: {wave: SynthSine, frequency: 880, level: 0.035} }
 }
 
 prefab orbit_floor {
-  SynthSound: {seed: 60, drift: 3}
+  SynthSound: {}
   SynthEnvelope: {attack: 2, decay: 1, sustain: 0.8, release: 4}
-  SynthDrive: {drive: 0.25}
-  SynthFilter: {kind: SynthLowPass, cutoff: 700, keytrack: 0.5}
-  core { SynthOscillator: {wave: SynthSine, frequency: 440, level: 0.32} }
-  grain { SynthOscillator: {wave: SynthTriangle, frequency: 880, level: 0.04} }
+  SynthOscillator: {wave: SynthSine, frequency: 440, level: 0.32}
 }
 
 prefab orbit_signal {
   SynthSound: {seed: 61, level_variance: 0.04}
   SynthEnvelope: {attack: 1.8, decay: 10, curve: 0.6}
-  SynthFilter: {kind: SynthLowPass, cutoff: 7500, velocity: 1}
+  SynthFilter: {kind: SynthLowPass, cutoff: 6500}
   body {
     SynthOscillator: {wave: SynthSine, frequency: 440, level: 0.26}
     SynthUnison: {voices: 2, detune: 4, width: 0.65}
     overtone {
-      SynthOscillator: {frequency: 1232, modulation: SynthPhase, index: 1.6, velocity: 0.6}
+      SynthOscillator: {frequency: 1232, modulation: SynthPhase, index: 1.4}
       SynthEnvelope: {attack: 2.2, decay: 3.5, curve: 2}
     }
   }
@@ -73,82 +50,76 @@ prefab orbit_signal {
     SynthLfo: {rate: 0.16, random_phase: true, amplitude: 0.15}
   }
   glass {
-    SynthOscillator: {wave: SynthSine, frequency: 1848, level: 0.04}
+    SynthOscillator: {wave: SynthSine, frequency: 1848, level: 0.035}
     SynthEnvelope: {attack: 2, decay: 2.8, curve: 2}
   }
 }
 
 prefab orbit_voice {
-  SynthSound: {seed: 67, level_variance: 0.025, drift: 5}
-  SynthEnvelope: {attack: 0.5, decay: 1.5, sustain: 0.75, release: 2.5, attack_curve: 1}
-  SynthFilter: {kind: SynthComb, tune: 2, feedback: -0.7, cutoff: 3500, keytrack: 0.5, velocity: 0.6}
-  SynthFilterEnvelope: {attack: 0.08, decay: 1.2, sustain: 0.2, release: 2, amount: 0.8, curve: 2}
-  vibrato { SynthLfo: {rate: 4.6, delay: 0.7, fade: 1.5, pitch: 9} }
-  sway { SynthLfo: {rate: 0.15, random_phase: true, cutoff: 0.35} }
-  pipe {
-    SynthOscillator: {wave: SynthTriangle, frequency: 440, level: 0.45}
-    SynthUnison: {voices: 2, detune: 5, width: 0.3}
-    reed {
-      SynthOscillator: {frequency: 1320, modulation: SynthPhase, index: 0.8, velocity: 0.5}
-      SynthEnvelope: {attack: 2.2, decay: 2, sustain: 0.5, release: 6, attack_curve: 1}
-    }
+  SynthSound: {seed: 67, level_variance: 0.025}
+  SynthEnvelope: {attack: 0.8, decay: 1.2, sustain: 0.7, release: 2.5}
+  SynthFilter: {kind: SynthLowPass, cutoff: 2100, resonance: 0.12}
+  SynthFilterEnvelope: {attack: 1.5, decay: 2, sustain: 0.25, release: 2, amount: 0.6}
+  SynthLfo: {rate: 4.1, delay: 0.7, fade: 1.5, pitch: 5}
+  reed {
+    SynthOscillator: {wave: SynthTriangle, frequency: 440, level: 0.24}
+    SynthUnison: {voices: 3, detune: 6, width: 0.45}
   }
+  breath {
+    SynthOscillator: {wave: SynthSaw, frequency: 440, level: 0.045}
+    SynthLfo: {rate: 0.13, random_phase: true, amplitude: 0.18}
+  }
+  warmth { SynthOscillator: {wave: SynthSine, frequency: 220, level: 0.05} }
 }
 
-prefab orbit_star {
-  SynthSound: {seed: 71, level_variance: 0.25, drift: 4}
-  SynthFilter: {kind: SynthLowPass, cutoff: 9000, velocity: 1.5}
-  pluck {
-    SynthOscillator: {wave: SynthPluck, frequency: 440, level: 0.35}
-    SynthString: {decay: 1.6, brightness: 0.8, hardness: 0.85, velocity: 0.5}
-  }
-  glint {
-    SynthOscillator: {wave: SynthSine, frequency: 880, level: 0.06}
-    SynthEnvelope: {attack: 0.1, decay: 0.9, curve: 4}
-  }
-}
-
-orbit_pad_inst { Instrument: {sound: orbit_cloud, spread: 0.7} }
-orbit_bass_inst { Instrument: {sound: orbit_floor} }
-orbit_bells_inst { Instrument: {sound: orbit_signal, gate: false, spread: 0.5, spread_mode: InstrumentSpreadAlternate} }
 orbit_voice_inst { Instrument: {sound: orbit_voice} }
-orbit_star_inst { Instrument: {sound: orbit_star, gate: false, velocity_curve: 1.5, spread: 0.85, spread_mode: InstrumentSpreadRandom} }
+
+orbit_pad_inst { Instrument: {sound: orbit_cloud} }
+orbit_bass_inst { Instrument: {sound: orbit_floor} }
+orbit_bells_inst { Instrument: {sound: orbit_signal, gate: false} }
 
 prefab orbit_pad_notes {
   NoteClip: {length: 128, notes: [
-    {start: 0, duration: 15, pitch: 52, velocity: 0.55},
-    {start: 0, duration: 15, pitch: 59, velocity: 0.55},
-    {start: 0, duration: 15, pitch: 62, velocity: 0.55},
-    {start: 0, duration: 15, pitch: 66, velocity: 0.55},
-    {start: 16, duration: 15, pitch: 48, velocity: 0.55},
-    {start: 16, duration: 15, pitch: 55, velocity: 0.55},
-    {start: 16, duration: 15, pitch: 59, velocity: 0.55},
-    {start: 16, duration: 15, pitch: 62, velocity: 0.55},
-    {start: 32, duration: 15, pitch: 55, velocity: 0.55},
-    {start: 32, duration: 15, pitch: 57, velocity: 0.55},
-    {start: 32, duration: 15, pitch: 62, velocity: 0.55},
-    {start: 32, duration: 15, pitch: 66, velocity: 0.55},
-    {start: 48, duration: 15, pitch: 50, velocity: 0.55},
-    {start: 48, duration: 15, pitch: 57, velocity: 0.55},
-    {start: 48, duration: 15, pitch: 59, velocity: 0.55},
-    {start: 48, duration: 15, pitch: 64, velocity: 0.55},
-    {start: 64, duration: 15, pitch: 52, velocity: 0.55},
-    {start: 64, duration: 15, pitch: 55, velocity: 0.55},
-    {start: 64, duration: 15, pitch: 59, velocity: 0.55},
-    {start: 64, duration: 15, pitch: 66, velocity: 0.55},
-    {start: 80, duration: 15, pitch: 48, velocity: 0.55},
-    {start: 80, duration: 15, pitch: 55, velocity: 0.55},
-    {start: 80, duration: 15, pitch: 62, velocity: 0.55},
-    {start: 80, duration: 15, pitch: 64, velocity: 0.55},
-    {start: 96, duration: 15, pitch: 45, velocity: 0.55},
-    {start: 96, duration: 15, pitch: 52, velocity: 0.55},
-    {start: 96, duration: 15, pitch: 59, velocity: 0.55},
-    {start: 96, duration: 15, pitch: 62, velocity: 0.55},
-    {start: 112, duration: 15, pitch: 50, velocity: 0.55},
-    {start: 112, duration: 15, pitch: 57, velocity: 0.55},
-    {start: 112, duration: 15, pitch: 62, velocity: 0.55},
-    {start: 112, duration: 15, pitch: 64, velocity: 0.55}
+    {start: 0, duration: 15, pitch: 52, velocity: 0.55, pan: -0.55},
+    {start: 0, duration: 15, pitch: 59, velocity: 0.55, pan: -0.18},
+    {start: 0, duration: 15, pitch: 62, velocity: 0.55, pan: 0.18},
+    {start: 0, duration: 15, pitch: 66, velocity: 0.55, pan: 0.55},
+    {start: 16, duration: 15, pitch: 48, velocity: 0.55, pan: -0.55},
+    {start: 16, duration: 15, pitch: 55, velocity: 0.55, pan: -0.18},
+    {start: 16, duration: 15, pitch: 59, velocity: 0.55, pan: 0.18},
+    {start: 16, duration: 15, pitch: 62, velocity: 0.55, pan: 0.55},
+    {start: 32, duration: 15, pitch: 55, velocity: 0.55, pan: -0.55},
+    {start: 32, duration: 15, pitch: 57, velocity: 0.55, pan: -0.18},
+    {start: 32, duration: 15, pitch: 62, velocity: 0.55, pan: 0.18},
+    {start: 32, duration: 15, pitch: 66, velocity: 0.55, pan: 0.55},
+    {start: 48, duration: 15, pitch: 50, velocity: 0.55, pan: -0.55},
+    {start: 48, duration: 15, pitch: 57, velocity: 0.55, pan: -0.18},
+    {start: 48, duration: 15, pitch: 59, velocity: 0.55, pan: 0.18},
+    {start: 48, duration: 15, pitch: 64, velocity: 0.55, pan: 0.55},
+    {start: 64, duration: 15, pitch: 52, velocity: 0.55, pan: -0.55},
+    {start: 64, duration: 15, pitch: 55, velocity: 0.55, pan: -0.18},
+    {start: 64, duration: 15, pitch: 59, velocity: 0.55, pan: 0.18},
+    {start: 64, duration: 15, pitch: 66, velocity: 0.55, pan: 0.55},
+    {start: 80, duration: 15, pitch: 48, velocity: 0.55, pan: -0.55},
+    {start: 80, duration: 15, pitch: 55, velocity: 0.55, pan: -0.18},
+    {start: 80, duration: 15, pitch: 62, velocity: 0.55, pan: 0.18},
+    {start: 80, duration: 15, pitch: 64, velocity: 0.55, pan: 0.55},
+    {start: 96, duration: 15, pitch: 45, velocity: 0.55, pan: -0.55},
+    {start: 96, duration: 15, pitch: 52, velocity: 0.55, pan: -0.18},
+    {start: 96, duration: 15, pitch: 59, velocity: 0.55, pan: 0.18},
+    {start: 96, duration: 15, pitch: 62, velocity: 0.55, pan: 0.55},
+    {start: 112, duration: 15, pitch: 50, velocity: 0.55, pan: -0.55},
+    {start: 112, duration: 15, pitch: 57, velocity: 0.55, pan: -0.18},
+    {start: 112, duration: 15, pitch: 62, velocity: 0.55, pan: 0.18},
+    {start: 112, duration: 15, pitch: 64, velocity: 0.55, pan: 0.55}
   ]}
+}
+
+orbit_pad {
+  Track: {instrument: orbit_pad_inst}
+  AudioBus: {output: orbit, volume: 0.7, sends: [{bus: orbit_space, level: 0.65}]}
+  AudioMeter: {}
+  phrase { ClipPlacement: {clip: orbit_pad_notes, start: 0} }
 }
 
 prefab orbit_bass_notes {
@@ -164,198 +135,75 @@ prefab orbit_bass_notes {
   ]}
 }
 
-prefab orbit_bells_notes {
-  NoteClip: {length: 128, notes: [
-    {start: 5, duration: 2, pitch: 78, velocity: 0.42},
-    {start: 11.5, duration: 2, pitch: 74, velocity: 0.3},
-    {start: 21, duration: 2, pitch: 74, velocity: 0.42},
-    {start: 27.5, duration: 2, pitch: 71, velocity: 0.3},
-    {start: 37, duration: 2, pitch: 78, velocity: 0.42},
-    {start: 43.5, duration: 2, pitch: 74, velocity: 0.3},
-    {start: 53, duration: 2, pitch: 76, velocity: 0.42},
-    {start: 59.5, duration: 2, pitch: 71, velocity: 0.3},
-    {start: 69, duration: 2, pitch: 78, velocity: 0.42},
-    {start: 75.5, duration: 2, pitch: 71, velocity: 0.3},
-    {start: 85, duration: 2, pitch: 76, velocity: 0.42},
-    {start: 91.5, duration: 2, pitch: 74, velocity: 0.3},
-    {start: 101, duration: 2, pitch: 74, velocity: 0.42},
-    {start: 107.5, duration: 2, pitch: 71, velocity: 0.3},
-    {start: 117, duration: 2, pitch: 76, velocity: 0.42},
-    {start: 123.5, duration: 2, pitch: 74, velocity: 0.3}
-  ]}
-}
-
-prefab orbit_voice_notes {
-  NoteClip: {length: 128, notes: [
-    {start: 0, duration: 6, pitch: 64, velocity: 0.52, pan: -0.12, mod: {keys: [{0, 0}, {3.6, 1}, {6, 0.7}]}, bend: {keys: [{0, -1.5}, {0.6, 0}]}},
-    {start: 8, duration: 3, pitch: 66, velocity: 0.46, pan: -0.12, mod: {keys: [{0, 0}, {1.8, 1}, {3, 0.7}]}},
-    {start: 12, duration: 3, pitch: 62, velocity: 0.42, pan: -0.12, mod: {keys: [{0, 0}, {1.8, 1}, {3, 0.7}]}},
-    {start: 17, duration: 5, pitch: 64, velocity: 0.52, pan: -0.12, mod: {keys: [{0, 0}, {3, 1}, {5, 0.7}]}, bend: {keys: [{0, -1.5}, {0.6, 0}]}},
-    {start: 24, duration: 4, pitch: 59, velocity: 0.46, pan: -0.12, mod: {keys: [{0, 0}, {2.4, 1}, {4, 0.7}]}, bend: {keys: [{0, -0.6}, {0.6, 0}]}},
-    {start: 29, duration: 2, pitch: 62, velocity: 0.42, pan: -0.12, mod: {keys: [{0, 0}, {1.2, 1}, {2, 0.7}]}, bend: {keys: [{0, 0}, {1.4, 0}, {2, -2}]}},
-    {start: 32, duration: 5, pitch: 62, velocity: 0.52, pan: -0.12, mod: {keys: [{0, 0}, {3, 1}, {5, 0.7}]}, bend: {keys: [{0, -1.5}, {0.6, 0}]}},
-    {start: 39, duration: 4, pitch: 66, velocity: 0.46, pan: -0.12, mod: {keys: [{0, 0}, {2.4, 1}, {4, 0.7}]}, bend: {keys: [{0, -0.6}, {0.6, 0}]}},
-    {start: 44, duration: 3, pitch: 69, velocity: 0.42, pan: -0.12, mod: {keys: [{0, 0}, {1.8, 1}, {3, 0.7}]}},
-    {start: 49, duration: 6, pitch: 64, velocity: 0.52, pan: -0.12, mod: {keys: [{0, 0}, {3.6, 1}, {6, 0.7}]}, bend: {keys: [{0, -1.5}, {0.6, 0}]}},
-    {start: 57, duration: 3, pitch: 62, velocity: 0.46, pan: -0.12, mod: {keys: [{0, 0}, {1.8, 1}, {3, 0.7}]}},
-    {start: 61, duration: 2, pitch: 59, velocity: 0.42, pan: -0.12, mod: {keys: [{0, 0}, {1.2, 1}, {2, 0.7}]}, bend: {keys: [{0, 0}, {1.4, 0}, {2, -2}]}},
-    {start: 64, duration: 5, pitch: 67, velocity: 0.52, pan: -0.12, mod: {keys: [{0, 0}, {3, 1}, {5, 0.7}]}, bend: {keys: [{0, -1.5}, {0.6, 0}]}},
-    {start: 71, duration: 4, pitch: 66, velocity: 0.46, pan: -0.12, mod: {keys: [{0, 0}, {2.4, 1}, {4, 0.7}]}, bend: {keys: [{0, -0.6}, {0.6, 0}]}},
-    {start: 76, duration: 3, pitch: 64, velocity: 0.42, pan: -0.12, mod: {keys: [{0, 0}, {1.8, 1}, {3, 0.7}]}},
-    {start: 81, duration: 5, pitch: 64, velocity: 0.52, pan: -0.12, mod: {keys: [{0, 0}, {3, 1}, {5, 0.7}]}, bend: {keys: [{0, -1.5}, {0.6, 0}]}},
-    {start: 88, duration: 4, pitch: 67, velocity: 0.46, pan: -0.12, mod: {keys: [{0, 0}, {2.4, 1}, {4, 0.7}]}, bend: {keys: [{0, -0.6}, {0.6, 0}]}},
-    {start: 93, duration: 2, pitch: 62, velocity: 0.42, pan: -0.12, mod: {keys: [{0, 0}, {1.2, 1}, {2, 0.7}]}, bend: {keys: [{0, 0}, {1.4, 0}, {2, -2}]}},
-    {start: 96, duration: 6, pitch: 64, velocity: 0.52, pan: -0.12, mod: {keys: [{0, 0}, {3.6, 1}, {6, 0.7}]}, bend: {keys: [{0, -1.5}, {0.6, 0}]}},
-    {start: 104, duration: 3, pitch: 62, velocity: 0.46, pan: -0.12, mod: {keys: [{0, 0}, {1.8, 1}, {3, 0.7}]}},
-    {start: 108, duration: 3, pitch: 59, velocity: 0.42, pan: -0.12, mod: {keys: [{0, 0}, {1.8, 1}, {3, 0.7}]}},
-    {start: 113, duration: 5, pitch: 62, velocity: 0.52, pan: -0.12, mod: {keys: [{0, 0}, {3, 1}, {5, 0.7}]}, bend: {keys: [{0, -1.5}, {0.6, 0}]}},
-    {start: 120, duration: 3, pitch: 64, velocity: 0.46, pan: -0.12, mod: {keys: [{0, 0}, {1.8, 1}, {3, 0.7}]}},
-    {start: 124, duration: 3, pitch: 66, velocity: 0.42, pan: -0.12, mod: {keys: [{0, 0}, {1.8, 1}, {3, 0.7}]}, bend: {keys: [{0, 0}, {2.4, 0}, {3, -2}]}}
-  ]}
-}
-
-prefab orbit_star_notes {
-  NoteClip: {length: 64, notes: [
-    {start: 0.5, duration: 0.1, pitch: 91, velocity: 0.74},
-    {start: 2.5, duration: 0.1, pitch: 91, velocity: 0.58},
-    {start: 3.5, duration: 0.1, pitch: 91, velocity: 0.63},
-    {start: 4.25, duration: 0.1, pitch: 91, velocity: 0.49},
-    {start: 4.5, duration: 0.1, pitch: 76, velocity: 0.4},
-    {start: 6.25, duration: 0.1, pitch: 91, velocity: 0.64},
-    {start: 7.25, duration: 0.1, pitch: 76, velocity: 0.72},
-    {start: 7.5, duration: 0.1, pitch: 76, velocity: 0.3},
-    {start: 8.25, duration: 0.1, pitch: 76, velocity: 0.7},
-    {start: 8.5, duration: 0.1, pitch: 83, velocity: 0.38},
-    {start: 11.25, duration: 0.1, pitch: 86, velocity: 0.57},
-    {start: 13.25, duration: 0.1, pitch: 86, velocity: 0.53},
-    {start: 14, duration: 0.1, pitch: 86, velocity: 0.49},
-    {start: 14.25, duration: 0.1, pitch: 86, velocity: 0.26},
-    {start: 16.5, duration: 0.1, pitch: 78, velocity: 0.53},
-    {start: 18.5, duration: 0.1, pitch: 78, velocity: 0.78},
-    {start: 19.25, duration: 0.1, pitch: 83, velocity: 0.44},
-    {start: 21.25, duration: 0.1, pitch: 90, velocity: 0.79},
-    {start: 22, duration: 0.1, pitch: 83, velocity: 0.7},
-    {start: 22.25, duration: 0.1, pitch: 78, velocity: 0.33},
-    {start: 22.75, duration: 0.1, pitch: 90, velocity: 0.69},
-    {start: 23, duration: 0.1, pitch: 83, velocity: 0.43},
-    {start: 23.5, duration: 0.1, pitch: 76, velocity: 0.56},
-    {start: 26.5, duration: 0.1, pitch: 83, velocity: 0.55},
-    {start: 26.75, duration: 0.1, pitch: 79, velocity: 0.35},
-    {start: 28.5, duration: 0.1, pitch: 78, velocity: 0.53},
-    {start: 29.25, duration: 0.1, pitch: 86, velocity: 0.74},
-    {start: 31.75, duration: 0.1, pitch: 86, velocity: 0.8},
-    {start: 32, duration: 0.1, pitch: 79, velocity: 0.35},
-    {start: 34.25, duration: 0.1, pitch: 78, velocity: 0.37},
-    {start: 34.5, duration: 0.1, pitch: 91, velocity: 0.31},
-    {start: 36.75, duration: 0.1, pitch: 88, velocity: 0.72},
-    {start: 37.5, duration: 0.1, pitch: 78, velocity: 0.44},
-    {start: 38.25, duration: 0.1, pitch: 88, velocity: 0.52},
-    {start: 40.75, duration: 0.1, pitch: 91, velocity: 0.72},
-    {start: 41, duration: 0.1, pitch: 90, velocity: 0.3},
-    {start: 41.75, duration: 0.1, pitch: 86, velocity: 0.76},
-    {start: 42.75, duration: 0.1, pitch: 83, velocity: 0.42},
-    {start: 45.25, duration: 0.1, pitch: 83, velocity: 0.66},
-    {start: 47.25, duration: 0.1, pitch: 78, velocity: 0.54},
-    {start: 47.5, duration: 0.1, pitch: 76, velocity: 0.38},
-    {start: 48.75, duration: 0.1, pitch: 83, velocity: 0.68},
-    {start: 50.75, duration: 0.1, pitch: 91, velocity: 0.48},
-    {start: 51, duration: 0.1, pitch: 78, velocity: 0.28},
-    {start: 52.75, duration: 0.1, pitch: 78, velocity: 0.48},
-    {start: 53.75, duration: 0.1, pitch: 76, velocity: 0.38},
-    {start: 54.75, duration: 0.1, pitch: 76, velocity: 0.37},
-    {start: 55, duration: 0.1, pitch: 79, velocity: 0.27},
-    {start: 55.75, duration: 0.1, pitch: 91, velocity: 0.79},
-    {start: 58.75, duration: 0.1, pitch: 79, velocity: 0.62},
-    {start: 60.75, duration: 0.1, pitch: 88, velocity: 0.67},
-    {start: 61.5, duration: 0.1, pitch: 78, velocity: 0.57},
-    {start: 63, duration: 0.1, pitch: 79, velocity: 0.8},
-    {start: 63.25, duration: 0.1, pitch: 88, velocity: 0.43}
-  ]}
-}
-
-orbit_pad_filter {
-  AudioFilter: {cutoff: 1000, resonance: 0.1}
-}
-
-orbit_pad_chorus {
-  Chorus: {voices: 3, rate: 0.12, depth: 4, delay: 18, spread: 1, mix: 0.3}
-}
-
-orbit_pad {
-  Track: {instrument: orbit_pad_inst}
-  AudioBus: {output: orbit, volume: 1.6, effects: [orbit_pad_filter, orbit_pad_chorus], sends: [{bus: orbit_space, level: 0.55}]}
-  AudioMeter: {}
-  phrase { ClipPlacement: {clip: orbit_pad_notes, start: 0} }
-}
-
 orbit_bass {
   Track: {instrument: orbit_bass_inst}
-  AudioBus: {output: orbit, volume: 0.4, sends: [{bus: orbit_space, level: 0.12}]}
+  AudioBus: {output: orbit, volume: 0.7, sends: [{bus: orbit_space, level: 0.15}]}
   AudioMeter: {}
   phrase { ClipPlacement: {clip: orbit_bass_notes, start: 0} }
 }
 
-orbit_bells_octave {
-  PitchShifter: {semitones: 12, window: 60, mix: 0.18}
-}
-
-orbit_bells_echo {
-  Delay: {sync: 1.5, feedback: 0.4, mix: 0.25, damping: 3500, ping_pong: true}
+prefab orbit_bells_notes {
+  NoteClip: {length: 128, notes: [
+    {start: 5, duration: 2, pitch: 78, velocity: 0.42, pan: -0.4},
+    {start: 11.5, duration: 2, pitch: 74, velocity: 0.3, pan: 0.4},
+    {start: 21, duration: 2, pitch: 74, velocity: 0.42, pan: 0.4},
+    {start: 27.5, duration: 2, pitch: 71, velocity: 0.3, pan: -0.4},
+    {start: 37, duration: 2, pitch: 78, velocity: 0.42, pan: -0.4},
+    {start: 43.5, duration: 2, pitch: 74, velocity: 0.3, pan: 0.4},
+    {start: 53, duration: 2, pitch: 76, velocity: 0.42, pan: 0.4},
+    {start: 59.5, duration: 2, pitch: 71, velocity: 0.3, pan: -0.4},
+    {start: 69, duration: 2, pitch: 78, velocity: 0.42, pan: -0.4},
+    {start: 75.5, duration: 2, pitch: 71, velocity: 0.3, pan: 0.4},
+    {start: 85, duration: 2, pitch: 76, velocity: 0.42, pan: 0.4},
+    {start: 91.5, duration: 2, pitch: 74, velocity: 0.3, pan: -0.4},
+    {start: 101, duration: 2, pitch: 74, velocity: 0.42, pan: -0.4},
+    {start: 107.5, duration: 2, pitch: 71, velocity: 0.3, pan: 0.4},
+    {start: 117, duration: 2, pitch: 76, velocity: 0.42, pan: 0.4},
+    {start: 123.5, duration: 2, pitch: 74, velocity: 0.3, pan: -0.4}
+  ]}
 }
 
 orbit_bells {
-  Track: {instrument: orbit_bells_inst, humanize: {timing: 20, velocity: 0.1}}
-  AudioBus: {output: orbit, volume: 2.3, effects: [orbit_bells_octave, orbit_bells_echo], sends: [{bus: orbit_space, level: 0.45}]}
+  Track: {instrument: orbit_bells_inst}
+  AudioBus: {output: orbit, volume: 0.4, sends: [{bus: orbit_space, level: 0.45}]}
   AudioMeter: {}
   phrase { ClipPlacement: {clip: orbit_bells_notes, start: 0} }
 }
 
+prefab orbit_voice_notes {
+  NoteClip: {length: 128, notes: [
+    {start: 0, duration: 6, pitch: 64, velocity: 0.52, pan: -0.12},
+    {start: 8, duration: 3, pitch: 66, velocity: 0.46, pan: -0.12},
+    {start: 12, duration: 3, pitch: 62, velocity: 0.42, pan: -0.12},
+    {start: 17, duration: 5, pitch: 64, velocity: 0.52, pan: -0.12},
+    {start: 24, duration: 4, pitch: 59, velocity: 0.46, pan: -0.12},
+    {start: 29, duration: 2, pitch: 62, velocity: 0.42, pan: -0.12},
+    {start: 32, duration: 5, pitch: 62, velocity: 0.52, pan: -0.12},
+    {start: 39, duration: 4, pitch: 66, velocity: 0.46, pan: -0.12},
+    {start: 44, duration: 3, pitch: 69, velocity: 0.42, pan: -0.12},
+    {start: 49, duration: 6, pitch: 64, velocity: 0.52, pan: -0.12},
+    {start: 57, duration: 3, pitch: 62, velocity: 0.46, pan: -0.12},
+    {start: 61, duration: 2, pitch: 59, velocity: 0.42, pan: -0.12},
+    {start: 64, duration: 5, pitch: 67, velocity: 0.52, pan: -0.12},
+    {start: 71, duration: 4, pitch: 66, velocity: 0.46, pan: -0.12},
+    {start: 76, duration: 3, pitch: 64, velocity: 0.42, pan: -0.12},
+    {start: 81, duration: 5, pitch: 64, velocity: 0.52, pan: -0.12},
+    {start: 88, duration: 4, pitch: 67, velocity: 0.46, pan: -0.12},
+    {start: 93, duration: 2, pitch: 62, velocity: 0.42, pan: -0.12},
+    {start: 96, duration: 6, pitch: 64, velocity: 0.52, pan: -0.12},
+    {start: 104, duration: 3, pitch: 62, velocity: 0.46, pan: -0.12},
+    {start: 108, duration: 3, pitch: 59, velocity: 0.42, pan: -0.12},
+    {start: 113, duration: 5, pitch: 62, velocity: 0.52, pan: -0.12},
+    {start: 120, duration: 3, pitch: 64, velocity: 0.46, pan: -0.12},
+    {start: 124, duration: 3, pitch: 66, velocity: 0.42, pan: -0.12}
+  ]}
+}
+
 orbit_melody {
-  Track: {instrument: orbit_voice_inst, humanize: {timing: 15}}
-  AudioBus: {output: orbit, volume: 0.8, sends: [{bus: orbit_space, level: 0.4}, {bus: echo, level: 0.08}]}
+  Track: {instrument: orbit_voice_inst}
+  AudioBus: {output: orbit, volume: 0.9, sends: [{bus: orbit_space, level: 0.4}]}
   AudioMeter: {}
   phrase { ClipPlacement: {clip: orbit_voice_notes, start: 0} }
-}
-
-orbit_star_echo {
-  Delay: {sync: 0.75, feedback: 0.45, mix: 0.35, damping: 5000, ping_pong: true}
-}
-
-orbit_star_haze {
-  Reverb: {decay: 4, damping: 0.65, predelay: 0.03, size: 0.8, mix: 1}
-}
-
-orbit_stars {
-  Track: {instrument: orbit_star_inst, humanize: {timing: 25, velocity: 0.2}}
-  AudioBus: {output: orbit, volume: 0, effects: [orbit_star_echo, orbit_star_haze], sends: [{bus: orbit_space, level: 0.6}]}
-  AudioMeter: {}
-  sky { ClipPlacement: {clip: orbit_star_notes, start: 32, duration: 88, loop: true} }
-}
-
-orbit_bloom {
-  AudioMacro: {}
-  open { AudioMacroMap: {target: orbit_pad_filter, component: AudioFilter, member: "cutoff", min: 900, max: 5500, scale: AudioModOctaves} }
-  rise { AudioMacroMap: {target: orbit_space, component: Reverb, member: "shimmer", min: 0.12, max: 0.42} }
-  sky { AudioMacroMap: {target: orbit_stars, component: AudioBus, member: "volume", min: 0, max: 1.6, curve: 0.3} }
-  ring { AudioMacroMap: {target: orbit_bells_octave, component: PitchShifter, member: "mix", min: 0.1, max: 0.32} }
-}
-
-orbit_wander {
-  AudioModulator: {target: orbit_pad, component: AudioBus, member: "pan", depth: 0.3, sync: 32}
-}
-
-orbit_breathe {
-  AudioModulator: {target: orbit_bloom, component: AudioMacro, member: "value", depth: 0.06, sync: 8}
-}
-
-prefab orbit_arc {
-  AutomationClip: {target: orbit_bloom, component: AudioMacro, member: "value", length: 128,
-    curve: {kind: CurveCatmullRom, keys: [{0, 0.05}, {24, 0.2}, {48, 0.5}, {72, 0.75}, {96, 1}, {110, 0.85}, {122, 0.3}, {128, 0.05}]}}
-}
-
-orbit_lanes {
-  Track: {}
-  arc { ClipPlacement: {clip: orbit_arc, start: 0} }
 }
 
 $ {
@@ -365,8 +213,7 @@ $ {
       {name: "Pad", bus: orbit_pad},
       {name: "Bass", bus: orbit_bass},
       {name: "Bells", bus: orbit_bells},
-      {name: "Voice", bus: orbit_melody},
-      {name: "Stars", bus: orbit_stars}
+      {name: "Voice", bus: orbit_melody}
     ]
   }
 }

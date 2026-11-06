@@ -14,8 +14,6 @@ using box.widgets
 using box.audio
 
 const PANEL_W: f32 = 320
-const METER_H: f32 = 110
-const MASTER_SIDE: string[] = ["left", "right"]
 
 template SongButton : HeadlessButton {
   prop index: i32 = 0
@@ -149,81 +147,11 @@ hud {
         }
       }
 
-      meters {
-        Layout: {direction: Row, spacing: 6, padding: {8, 0, 0, 0}, v: Bottom}
-        LayoutItem: {width: {mode: Grow}}
-
-        lanes {
-          Layout: {direction: Row, spacing: 6, v: Bottom}
-
-          for i in 0..LANE_MAX {
-            if i < Song[Song].lanes.count() {
-              "lane_{i}" {
-                Layout: {direction: Column, spacing: 4, h: Center}
-                LayoutItem: {width: {mode: Fixed, value: 32}}
-
-                well {
-                  Layout: {}
-                  LayoutItem: {h: Center, width: {mode: Fixed, value: 16}, height: {mode: Fixed, value: METER_H}}
-                  Rect: {1, 1}
-                  Rgb: {30, 33, 44}
-                  Border: {radius: 3}
-
-                  level {
-                    LayoutItem: {v: Bottom, width: {mode: Grow}, height: {mode: Fixed, value: max(2, levels[i] * METER_H)}}
-                    Rect: {1, 1}
-                    Rgb: color
-                    Border: {radius: 3}
-                  }
-                }
-
-                name {
-                  Text: {value: "{Song[Song].lanes[i].name}", size: 11}
-                  Rgb: {170, 175, 195}
-                }
-              }
-            }
-          }
-        }
-
-        gap {
-          LayoutItem: {width: {mode: Grow}}
-        }
-
-        for side in 0..2 {
-          "master_{MASTER_SIDE[side]}" {
-            Layout: {direction: Column, spacing: 4, h: Center}
-            LayoutItem: {width: {mode: Fixed, value: 16}}
-
-            well {
-              Layout: {}
-              LayoutItem: {h: Center, width: {mode: Fixed, value: 10}, height: {mode: Fixed, value: METER_H}}
-              Rect: {1, 1}
-              Rgb: {30, 33, 44}
-              Border: {radius: 3}
-
-              level {
-                LayoutItem: {v: Bottom, width: {mode: Grow}, height: {mode: Fixed, value: max(2, master_level[side] * METER_H)}}
-                Rect: {1, 1}
-                Rgb: {235, 235, 240}
-                Border: {radius: 3}
-              }
-            }
-
-            name {
-              Text: {value: side == 0 ? "L" : "R", size: 11}
-              Rgb: {170, 175, 195}
-            }
-          }
-        }
-      }
-
       fx {
         Layout: {direction: Column, spacing: 8, padding: {4, 0, 0, 0}}
         LayoutItem: {width: {mode: Grow}}
 
-        Slider low_pass(label: "Low-pass", width: PANEL_W - 32, min: 20, max: 20000, step: 0, value: low_pass_cutoff, unit: " Hz")
-        Slider high_pass(label: "High-pass", width: PANEL_W - 32, min: 20, max: 20000, step: 0, value: high_pass_cutoff, unit: " Hz")
+        Slider volume(label: "Volume", width: PANEL_W - 32, min: 0, max: 100, step: 1, value: volume_level, unit: "%")
         Slider reverb(label: "Reverb", width: PANEL_W - 32, min: 0, max: 200, step: 1, value: reverb_level, unit: "%")
       }
     }
@@ -237,8 +165,7 @@ hud_view {
 async {
   while true {
     await on.change(hud.screen.panel.fx)
-    low_pass_cutoff = hud.screen.panel.fx.low_pass[Slider.mut].current
-    high_pass_cutoff = hud.screen.panel.fx.high_pass[Slider.mut].current
+    volume_level = hud.screen.panel.fx.volume[Slider.mut].current
     reverb_level = hud.screen.panel.fx.reverb[Slider.mut].current
   }
 }

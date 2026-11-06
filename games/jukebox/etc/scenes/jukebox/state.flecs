@@ -4,29 +4,29 @@ struct JukeboxSong(title: string, file: string)
 
 export const SONGS: JukeboxSong[] = [
   {"Distant Orbit", "distant_orbit"}
-  {"Starfall", "starfall"}
-  {"Voltage tide", "voltage_tide"},
+  {"Voltage tide", "voltage_tide"}
   {"Late train", "late_train"}
+  {"After the horizon", "after_the_horizon"}
+  {"After the horizon 2", "after_the_horizon_enhanced"}
   {"Drum Kit", "drum_kit"}
   {"Woodwinds", "woodwinds"}
   {"Strings", "strings"}
   {"Horns", "horns"}
   {"Trumpets", "trumpets"}
+  {"Synth Pads", "synth_pads"}
+  {"Organs", "organs"}
 ]
 
-export const LANE_MAX: i32 = 8
 export const IDLE: Rgb = {150, 155, 175}
 
 export mut song: i32 = 0
 export mut playing = false
-export mut low_pass_cutoff: f32 = 20000
-export mut high_pass_cutoff: f32 = 20
+export mut volume_level: f32 = 100
 export mut reverb_level: f32 = 100
 export mut beat: f32 = 0
 export mut song_beats: f32 = 1
 export mut loaded = false
 export mut lit = false
 export mut color: Rgb = IDLE
-export mut levels: f32[8] = {}
 export mut master_level: f32[2] = {}
 export mut glow: f32 = 0

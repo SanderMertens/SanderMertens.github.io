@@ -22,24 +22,16 @@ prefab jb_crash {
   }
 }
 
-low_pass_filter {
-  AudioFilter: {kind: SynthLowPass, cutoff: low_pass_cutoff, slope: SynthSlope24}
-}
-
-high_pass_filter {
-  AudioFilter: {kind: SynthHighPass, cutoff: high_pass_cutoff, slope: SynthSlope24}
-}
-
 box {
   audio {
     master {
-      AudioBus: {effects: [high_pass_filter, low_pass_filter]}
       AudioMeter: {}
     }
   }
 }
 
 $ {
+  AudioSettings: {master_volume: volume_level / 100}
   AudioSong: {file: "etc/scenes/jukebox/songs/{SONGS[song].file}.flecs"}
   Transport = {playing: playing}
 }
@@ -85,22 +77,6 @@ async {
       }
     } else if color.r != IDLE.r || color.g != IDLE.g || color.b != IDLE.b {
       color = IDLE
-    }
-
-    const lanes = s.lanes.count()
-    for i in 0..LANE_MAX {
-      if i < lanes {
-        const e = s.lanes[i].bus
-        if e.has(AudioMeter) {
-          const m = e[AudioMeter]
-          const rms = max(max(m.rms_left, m.rms_right), 0.00001)
-          levels[i] = clamp((20 * log10(rms) + 48) / 48, 0, 1)
-        } else {
-          levels[i] = 0
-        }
-      } else {
-        levels[i] = 0
-      }
     }
 
     const mm = box.audio.master[AudioMeter]
