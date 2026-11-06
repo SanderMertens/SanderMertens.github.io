@@ -18,7 +18,7 @@ tex_astro_mid { TexturePath: {path: "etc/scenes/astrarium/assets/astro_mid.svg",
 tex_astro_inner { TexturePath: {path: "etc/scenes/astrarium/assets/astro_inner.svg", width: 1536} }
 tex_astro_rose { TexturePath: {path: "etc/scenes/astrarium/assets/astro_rose.svg", width: 1536} }
 tex_rays { TexturePath: {path: "etc/scenes/astrarium/assets/rays.svg", width: 512} }
-tex_corner { TexturePath: {path: "etc/scenes/astrarium/assets/corner.svg", width: 128} }
+tex_frame { TexturePath: {path: "etc/scenes/astrarium/assets/frame.svg", width: 192} }
 tex_divider { TexturePath: {path: "etc/scenes/astrarium/assets/divider.svg", width: 768} }
 tex_orb_frame { TexturePath: {path: "etc/scenes/astrarium/assets/orb_frame.svg", width: 512} }
 tex_orb_gloss { TexturePath: {path: "etc/scenes/astrarium/assets/orb_gloss.svg", width: 512} }

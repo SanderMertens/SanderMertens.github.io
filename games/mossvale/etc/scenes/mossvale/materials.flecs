@@ -161,5 +161,6 @@ prefab MvBlush { Rgb: {236, 140, 130}; PbrMaterial: {roughness: 0.8} }
 
 prefab MvFlame { Rgb: {255, 190, 90}; Emissive: {strength: 6, color: {255, 140, 40}}; NoShadow }
 prefab MvGlow { Rgb: {255, 230, 160}; Emissive: {strength: 4, color: {255, 210, 130}}; NoShadow }
+prefab MvGlowFixture { Rgb: {255, 230, 160}; Emissive: {strength: 4, color: {255, 210, 130}}; LightFixture }
 prefab MvSpirit { Rgb: {170, 220, 255}; Emissive: {strength: 5, color: {140, 210, 255}}; NoShadow }
 prefab MvUnlit { Rgb: {60, 56, 50}; PbrMaterial: {roughness: 0.6} }

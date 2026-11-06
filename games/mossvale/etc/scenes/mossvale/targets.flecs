@@ -808,7 +808,7 @@ template GreatLantern : Target {
     }
     Transition: [Position: {duration: 2.5, timing_function: EaseInOut}]
     if lit {
-      paper : MvGlow { Position: {0, 0.9, 0}; Scale: {1, 1.25, 1}; Sphere: {radius: 0.9, segments: 14, smooth: true} }
+      paper : MvGlowFixture { Position: {0, 0.9, 0}; Scale: {1, 1.25, 1}; Sphere: {radius: 0.9, segments: 14, smooth: true} }
       light { Position: {0, 0.9, 0}; PointLight: {intensity: 30, range: 30, shadows: true}; Rgb: {255, 200, 130} }
     } else {
       paper : MvClothRed { Position: {0, 0.9, 0}; Scale: {1, 1.25, 1}; Sphere: {radius: 0.9, segments: 14, smooth: true} }

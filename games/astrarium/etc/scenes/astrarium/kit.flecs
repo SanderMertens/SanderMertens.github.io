@@ -16,19 +16,19 @@ fn fit_scale(w: f32, h: f32) -> f32 {
 }
 
 template ScreenCamera {
-  const s = window[Surface]
+  const s = window[SurfaceStatus]
 
   Position: {0, 0, 100}
-  Camera: {ortho: true, ortho_scale: fit_scale(s.width, s.height)}
+  Camera: {ortho: true, ortho_scale: fit_scale(s.point_width, s.point_height)}
 }
 
 template ScreenRoot {
-  const s = window[Surface]
-  const k = fit_scale(s.width, s.height)
+  const s = window[SurfaceStatus]
+  const k = fit_scale(s.point_width, s.point_height)
 
   LayoutItem: {
-    width: {mode: Fixed, value: s.width / k},
-    height: {mode: Fixed, value: s.height / k}
+    width: {mode: Fixed, value: s.point_width / k},
+    height: {mode: Fixed, value: s.point_height / k}
   }
 }
 
@@ -93,18 +93,12 @@ fn spell_tex(i: i32) -> entity {
   }
 }
 
-template CornerArt {
-  prop turn: f32 = 0
-  prop h: Align = Left
-  prop v: VAlign = Top
-  prop dx: f32 = 4
-  prop dy: f32 = -4
-
-  LayoutFloat: {h: h, v: v, anchor_h: h, anchor_v: v, x: dx, y: dy}
-  LayoutItem: {width: {mode: Fixed, value: 30}, height: {mode: Fixed, value: 30}}
-  Rotation: {0, 0, turn}
+template FrameArt {
+  LayoutFloat: {h: Left, v: Top, anchor_h: Left, anchor_v: Top, clip: true}
+  LayoutItem: {width: {mode: Grow}, height: {mode: Grow}}
   Rect: {1, 1}
-  Image: {texture: tex_corner}
+  Image: {texture: tex_frame}
+  ImageSlice: {left: 72, top: 72, right: 72, bottom: 72, scale: 0.5}
   Rgb: ui_gold
   box.spatial.SpatialIgnore
 }
@@ -162,12 +156,9 @@ template Frame {
   Rect: {1, 1}
   Image: {texture: tex_panel}
   Rgb: ui_ink
-  Border: {width: 1, radius: 5, color: {ui_gold.r * 0.55, ui_gold.g * 0.55, ui_gold.b * 0.55, 255}}
+  Border: {radius: 5}
 
-  CornerArt tl(h: Left, v: Top)
-  CornerArt tr(h: Right, v: Top, turn: 0 - PI / 2, dx: -4)
-  CornerArt bl(h: Left, v: Bottom, turn: PI / 2, dy: 4)
-  CornerArt br(h: Right, v: Bottom, turn: PI, dx: -4, dy: 4)
+  FrameArt art()
 
   if title != "" {
     Heading heading(text: title)
