@@ -18,5 +18,5 @@ template CanopyBranch {
   (IsA, CanopyBark)
   Position: {(ax + bx) / 2, (ay + by) / 2, (az + bz) / 2}
   Rotation: {math.acos(dy / length), math.atan2(dx, dz), 0}
-  Frustum: {length: length, radius_bottom: radius, radius_top: radius * 0.55, segments: 7, smooth: true}
+  Frustum: {length: length, radius_bottom: radius, radius_top: radius * 0.55, segments: 4, smooth: true}
 }

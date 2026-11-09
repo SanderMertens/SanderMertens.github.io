@@ -13,19 +13,19 @@ template CanopyRotunda {
   const windows: math.Rng = {seed: variant + 314159}
   const height = floors * 3.2
   CanopyPlinth(round: true, radius: 3.6, variant: variant) {}
-  core : CanopyFacade { Position: {0, height / 2 + 1.2, 0}; Cylinder: {radius: 2.8, length: height, segments: 24, smooth: true}; TextureTransform: {scale_x: 1.375, scale_y: floors / 8.0, offset_x: variant % 8 / 8.0, offset_y: variant % 13 / 8.0} }
+  core : CanopyFacade { Position: {0, height / 2 + 1.2, 0}; Cylinder: {radius: 2.8, length: height, segments: 12, smooth: true}; TextureTransform: {scale_x: 1.375, scale_y: floors / 8.0, offset_x: variant % 8 / 8.0, offset_y: variant % 13 / 8.0} }
   for f in 0..floors + 1 {
     const y = 1.2 + f * 3.2
     const radius = 3.8 + math.sin(f * 1.2 + variant) * 0.45
-    { (IsA, CanopyIvory); Rgb: wall; Position: {0, y, 0}; Cylinder: {radius: radius, length: 0.28, segments: 32} }
-    { (IsA, CanopyWood); Rgb: timber; Position: {0, y - 0.2, 0}; Torus: {radius: radius - 0.15, tube: 0.15, segments: 32, rings: 6} }
+    { (IsA, CanopyIvory); Rgb: wall; Position: {0, y, 0}; Cylinder: {radius: radius, length: 0.28, segments: 16} }
+    { (IsA, CanopyWood); Rgb: timber; Position: {0, y - 0.2, 0}; Torus: {radius: radius - 0.15, tube: 0.15, segments: 16, rings: 6} }
     if f < floors {
-      { (IsA, CanopyLeaf); Position: {0, y + 0.32, 0}; Tube: {radius: radius - 0.15, thickness: 0.45, length: 0.35, segments: 32} }
+      { (IsA, CanopyLeaf); Position: {0, y + 0.32, 0}; Tube: {radius: radius - 0.15, thickness: 0.45, length: 0.35, segments: 16} }
       for i in 0..8 + facade_style * 4 {
         const a = i * math.PI * 2 / (8 + facade_style * 4)
         { (IsA, CanopyWood); Rgb: timber; Position: {math.sin(a) * 2.88, y + 1.6, math.cos(a) * 2.88}; Rotation: {0, a, 0}; Box: {0.14, 2.9, 0.18} }
       }
-      { (IsA, CanopyMetal); Position: {0, y + 1.26, 0}; Torus: {radius: radius - 0.2, tube: 0.025, segments: 28, rings: 4} }
+      { (IsA, CanopyMetal); Position: {0, y + 1.26, 0}; Torus: {radius: radius - 0.2, tube: 0.025, segments: 14, rings: 4} }
       for c in 0..6 {
         const ca = c * math.PI / 3 + f
         { (IsA, CanopyLeafCard); Rgb: {72 + (f + c) % 3 * 12, 128, 56}; Position: {math.sin(ca) * (radius - 0.35), y + 0.72, math.cos(ca) * (radius - 0.35)}; Rotation: {-0.2, ca, 0}; Quad: {1.5, 0.9} }
@@ -42,7 +42,7 @@ template CanopyRotunda {
       }
     }
   }
-  roof_garden : CanopyLeaf { Position: {0, height + 1.4, 0}; Cylinder: {radius: 3.1, length: 0.15, segments: 24} }
+  roof_garden : CanopyLeaf { Position: {0, height + 1.4, 0}; Cylinder: {radius: 3.1, length: 0.15, segments: 12} }
   CanopyRoof(style: roof_style, variant: variant) { Position: {0, height + 1.5, 0} }
   CanopyDownpipe(length: height) { Position: {2.86, height + 1.2, 0} }
 }

@@ -30,8 +30,8 @@ template CanopyCourtyard {
   rear_plinth : CanopyAshlar { Position: {0, 0.55, -2.5}; Box: {4.2, 1.5, 2.4} }
   rear : CanopyIvory { Rgb: wall; Position: {0, 2.7, -2.5}; RoundedBox: {4, 3, 2.2, 0.3} }
   court_floor : CanopyPaver { Position: {0, 0.02, 1}; Box: {3.4, 0.05, 5} }
-  pool : CanopyAshlar { Position: {0, 0.16, 2.4}; Cylinder: {radius: 0.8, length: 0.3, segments: 16} }
-  pool_water : CanopyWater { Position: {0, 0.31, 2.4}; Cylinder: {radius: 0.72, length: 0.02, segments: 16} }
+  pool : CanopyAshlar { Position: {0, 0.16, 2.4}; Cylinder: {radius: 0.8, length: 0.3, segments: 8} }
+  pool_water : CanopyWater { Position: {0, 0.31, 2.4}; Cylinder: {radius: 0.72, length: 0.02, segments: 8} }
   gallery : CanopyWood { Rgb: timber; Position: {0, 4.4, 2.8}; Box: {4, 0.2, 1.8} }
   CanopyTree(height: 5.5 + variant % 3, variant: variant) { Position: {0, 0.2, -0.4} }
   for side in 0..2 {

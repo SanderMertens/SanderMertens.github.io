@@ -26,8 +26,8 @@ template CanopyBoat {
   counter {
     Position: {0, 0, 0.012}
     AngularVelocity: {-roll, 0, 0}
-    hull : CanopyWood { Position: {0, 0.2, 0}; Scale: {1, 0.4, 0.5}; Sphere: {radius: length / 2, segments: 16} }
-    gunwale : CanopyTrim { Position: {0, 0.58, 0}; Scale: {1, 1, 0.5}; Torus: {radius: length / 2 - 0.2, tube: 0.05, segments: 28, rings: 4} }
+    hull : CanopyWood { Position: {0, 0.2, 0}; Scale: {1, 0.4, 0.5}; Sphere: {radius: length / 2, segments: 8} }
+    gunwale : CanopyTrim { Position: {0, 0.58, 0}; Scale: {1, 1, 0.5}; Torus: {radius: length / 2 - 0.2, tube: 0.05, segments: 14, rings: 4} }
     floor : CanopyDeck { Position: {0, 0.52, 0}; Box: {length * 0.66, 0.05, beam * 1.2} }
     for side in 0..2 {
       const x = (side - 0.5) * length * 0.34
@@ -36,7 +36,7 @@ template CanopyBoat {
       }
     }
     CanopyAwning(width: length * 0.42, depth: beam * 1.25, stripes: 6, style: style) { Position: {0, 1.9, -beam * 0.62} }
-    lamp : CanopyLanternGlow { Position: {length * 0.42, 0.98, 0}; Sphere: {radius: 0.1, segments: 8} }
+    lamp : CanopyLanternGlow { Position: {length * 0.42, 0.98, 0}; Sphere: {radius: 0.1, segments: 4} }
     lamp_post : CanopyMetal { Position: {length * 0.42, 0.74, 0}; Box: {0.03, 0.42, 0.03} }
     seat : CanopyWood { Position: {-length * 0.1, 0.72, 0}; Box: {0.5, 0.06, beam * 0.9} }
     CanopyPerson(seed: style) { Position: {-length * 0.1, 0.5, beam * 0.14} }
@@ -53,7 +53,7 @@ template CanopyLily {
   for i in 0..6 {
     const a = i * 2.399963 + seed
     const r = 0.25 + (i % 3) * 0.3
-    { (IsA, CanopyLeaf); Rgb: {70, 128, 58}; Position: {math.sin(a) * r, 0, math.cos(a) * r}; Cylinder: {radius: 0.16 + (i % 2) * 0.07, length: 0.012, segments: 10}; TextureTransform: {scale_x: 0.3, scale_y: 0.3} }
+    { (IsA, CanopyLeaf); Rgb: {70, 128, 58}; Position: {math.sin(a) * r, 0, math.cos(a) * r}; Cylinder: {radius: 0.16 + (i % 2) * 0.07, length: 0.012, segments: 5}; TextureTransform: {scale_x: 0.3, scale_y: 0.3} }
   }
   { Position: {0.2, 0.05, 0.14}; IcoSphere: {radius: 0.06, segments: 1}; Rgb: {252, 214, 228}; PbrMaterial: {roughness: 0.8} }
 }
@@ -69,7 +69,7 @@ template CanopyBird {
     Position: {radius, 0, 0}
     Rotation: {0, 0, 0.26}
     Scale: {1.3, 1.3, 1.3}
-    body { Position: {0, 0, 0}; Scale: {0.34, 0.34, 1}; Sphere: {radius: 0.3, segments: 6}; Rgb: color; PbrMaterial: {roughness: 0.7} }
+    body { Position: {0, 0, 0}; Scale: {0.34, 0.34, 1}; Sphere: {radius: 0.3, segments: 3}; Rgb: color; PbrMaterial: {roughness: 0.7} }
     tail { Position: {0, 0, -0.42}; Box: {0.1, 0.02, 0.4}; Rgb: color; PbrMaterial: {roughness: 0.7} }
     Animator: {clip: CanopyWingFlap, time: (phase * 0.618 - math.floor(phase * 0.618)) * 0.5, speed: 0.8 + (phase * 0.37 - math.floor(phase * 0.37)) * 0.4}
     wing_l {

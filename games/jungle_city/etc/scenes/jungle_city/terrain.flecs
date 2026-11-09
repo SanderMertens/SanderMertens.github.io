@@ -10,9 +10,9 @@ template CanopyReeds {
     const a = i * 2.399963 + seed
     const r = 0.1 + (i % 5) * 0.14
     const tall = 0.9 + (i % 4) * 0.28
-    { (IsA, CanopyLime); Rgb: {126, 142, 70}; Position: {math.sin(a) * r, tall / 2, math.cos(a) * r}; Rotation: {math.sin(a * 3) * 0.08, 0, math.cos(a * 2) * 0.08}; Frustum: {radius_bottom: 0.022, radius_top: 0.008, length: tall, segments: 4} }
+    { (IsA, CanopyLime); Rgb: {126, 142, 70}; Position: {math.sin(a) * r, tall / 2, math.cos(a) * r}; Rotation: {math.sin(a * 3) * 0.08, 0, math.cos(a * 2) * 0.08}; Frustum: {radius_bottom: 0.022, radius_top: 0.008, length: tall, segments: 3} }
     if i % 3 == 0 {
-      { (IsA, CanopyBark); Position: {math.sin(a) * r, tall * 0.92, math.cos(a) * r}; Capsule: {radius: 0.032, length: 0.14, segments: 5} }
+      { (IsA, CanopyBark); Position: {math.sin(a) * r, tall * 0.92, math.cos(a) * r}; Capsule: {radius: 0.032, length: 0.14, segments: 3} }
     }
   }
 }
@@ -29,15 +29,15 @@ template CanopyTerrain {
     await next_frame()
     flowing = true
   }
-  bedrock : CanopyStrata { Position: {0, -3.1, 0}; RoundedBox: {width, 4.4, depth, 2, segments: 4}; TextureTransform: {scale_x: width / 36, scale_y: 1} }
+  bedrock : CanopyStrata { Position: {0, -3.1, 0}; RoundedBox: {width, 4.4, depth, 2, segments: 2}; TextureTransform: {scale_x: width / 36, scale_y: 1} }
   for side in 0..2 {
-    { (IsA, CanopyGround); Position: {(side - 0.5) * 2 * bank_x, -0.35, 0}; RoundedBox: {bank, 1.1, depth - 0.3, 1.2, segments: 3} }
+    { (IsA, CanopyGround); Position: {(side - 0.5) * 2 * bank_x, -0.35, 0}; RoundedBox: {bank, 1.1, depth - 0.3, 1.2, segments: 2} }
     { (IsA, CanopyAshlar); Position: {(side - 0.5) * 11.6, -0.31, 0}; Box: {1.6, 1.16, depth - 0.2} }
     { (IsA, CanopyPaver); Rgb: {150, 146, 124}; Position: {(side - 0.5) * 11.6, 0.3, 0}; Box: {1.64, 0.06, depth - 0.2} }
     for i in 0..math.floor(depth / 6) {
       const z = -depth / 2 + (i + 0.5) * depth / math.floor(depth / 6)
-      { (IsA, CanopyMetal); Position: {(side - 0.5) * 10.05, 0.05, z}; Torus: {radius: 0.08, tube: 0.015, segments: 8, rings: 4} }
-      { (IsA, CanopyTimberDark); Position: {(side - 0.5) * 10.1, 0.0, z + 1.5}; Cylinder: {radius: 0.09, length: 1, segments: 6} }
+      { (IsA, CanopyMetal); Position: {(side - 0.5) * 10.05, 0.05, z}; Torus: {radius: 0.08, tube: 0.015, segments: 4, rings: 4} }
+      { (IsA, CanopyTimberDark); Position: {(side - 0.5) * 10.1, 0.0, z + 1.5}; Cylinder: {radius: 0.09, length: 1, segments: 3} }
       if i % 4 == 2 {
         for s in 0..4 {
           { (IsA, CanopyConcrete); Position: {(side - 0.5) * (10.4 - s * 0.36), -0.2 - s * 0.14, z - 2}; Box: {0.36, 0.14, 1.4} }

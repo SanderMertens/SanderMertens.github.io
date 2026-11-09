@@ -30,6 +30,7 @@ async {
   hud_latitude = -2
   hud_north = 305
   hud_fog = 0.002
+  hud_baked = false
 }
 
 jungle_city {
@@ -89,7 +90,7 @@ main_view {
       atmosphere: true,
       environment: {source: jungle_city.sky, intensity: 0.95, yaw: 0, background: false}
     },
-    shadows: {enabled: hud.screen.options.body.shadows[Checkbox.mut].current, cascades: 3, resolution: 2048, max_distance: 620, split_lambda: 0.72},
+    shadows: {enabled: hud.screen.options.body.shadows[Checkbox.mut].current, cascades: 3, resolution: 2048, max_distance: 620, split_lambda: 0.72, min_caster_texels: 2},
     culling: {enabled: true, occlusion: true, min_dimension_px: 3},
     effects: [
       {enabled: hud.screen.options.body.gtao[Checkbox.mut].current, effect: canopy_ao},

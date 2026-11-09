@@ -23,58 +23,58 @@ st_violin_body_a {
 }
 st_violin_body_b {
   Equalizer: {bands: [
-    {kind: AudioEqHighShelf, frequency: 1000, gain: 15, q: 0.6},
-    {kind: AudioEqPeak, frequency: 2700, gain: 5, q: 1.2},
+    {kind: AudioEqHighShelf, frequency: 1000, gain: 3, q: 0.6},
+    {kind: AudioEqPeak, frequency: 2700, gain: 2.5, q: 1.2},
     {kind: AudioEqHighCut, frequency: 5500, q: 0.7},
     {kind: AudioEqHighShelf, frequency: 8000, gain: -10}
   ]}
 }
 st_violin_body_c {
   Equalizer: {bands: [
-    {kind: AudioEqPeak, frequency: 633, gain: 7, q: 18},
-    {kind: AudioEqPeak, frequency: 1039, gain: 7, q: 18},
-    {kind: AudioEqPeak, frequency: 1783, gain: 7, q: 18},
-    {kind: AudioEqPeak, frequency: 2968, gain: 7, q: 18}
+    {kind: AudioEqPeak, frequency: 633, gain: 3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 1039, gain: 3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 1783, gain: 3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 2968, gain: 3.5, q: 18}
   ]}
 }
 st_violin_body_d {
   Equalizer: {bands: [
-    {kind: AudioEqPeak, frequency: 706, gain: -7, q: 18},
-    {kind: AudioEqPeak, frequency: 1134, gain: -7, q: 18},
-    {kind: AudioEqPeak, frequency: 1886, gain: -7, q: 18},
-    {kind: AudioEqPeak, frequency: 3166, gain: -7, q: 18}
+    {kind: AudioEqPeak, frequency: 706, gain: -3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 1134, gain: -3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 1886, gain: -3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 3166, gain: -3.5, q: 18}
   ]}
 }
 st_violin_body_e {
   Equalizer: {bands: [
-    {kind: AudioEqPeak, frequency: 773, gain: 7, q: 18},
-    {kind: AudioEqPeak, frequency: 1304, gain: 7, q: 18},
-    {kind: AudioEqPeak, frequency: 2030, gain: 7, q: 18},
-    {kind: AudioEqPeak, frequency: 3546, gain: 7, q: 18}
+    {kind: AudioEqPeak, frequency: 773, gain: 3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 1304, gain: 3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 2030, gain: 3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 3546, gain: 3.5, q: 18}
   ]}
 }
 st_violin_body_f {
   Equalizer: {bands: [
-    {kind: AudioEqPeak, frequency: 807, gain: -7, q: 18},
-    {kind: AudioEqPeak, frequency: 1386, gain: -7, q: 18},
-    {kind: AudioEqPeak, frequency: 2308, gain: -7, q: 18},
-    {kind: AudioEqPeak, frequency: 3650, gain: -7, q: 18}
+    {kind: AudioEqPeak, frequency: 807, gain: -3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 1386, gain: -3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 2308, gain: -3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 3650, gain: -3.5, q: 18}
   ]}
 }
 st_violin_body_g {
   Equalizer: {bands: [
-    {kind: AudioEqPeak, frequency: 884, gain: 7, q: 18},
-    {kind: AudioEqPeak, frequency: 1479, gain: 7, q: 18},
-    {kind: AudioEqPeak, frequency: 2488, gain: 7, q: 18},
-    {kind: AudioEqPeak, frequency: 4064, gain: 7, q: 18}
+    {kind: AudioEqPeak, frequency: 884, gain: 3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 1479, gain: 3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 2488, gain: 3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 4064, gain: 3.5, q: 18}
   ]}
 }
 st_violin_body_h {
   Equalizer: {bands: [
-    {kind: AudioEqPeak, frequency: 1015, gain: -7, q: 18},
-    {kind: AudioEqPeak, frequency: 1624, gain: -7, q: 18},
-    {kind: AudioEqPeak, frequency: 2674, gain: -7, q: 18},
-    {kind: AudioEqPeak, frequency: 4395, gain: -7, q: 18}
+    {kind: AudioEqPeak, frequency: 1015, gain: -3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 1624, gain: -3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 2674, gain: -3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 4395, gain: -3.5, q: 18}
   ]}
 }
 
@@ -88,58 +88,58 @@ st_viola_body_a {
 }
 st_viola_body_b {
   Equalizer: {bands: [
-    {kind: AudioEqHighShelf, frequency: 750, gain: 14, q: 0.6},
-    {kind: AudioEqPeak, frequency: 1600, gain: 3, q: 1.5},
+    {kind: AudioEqHighShelf, frequency: 750, gain: 3, q: 0.6},
+    {kind: AudioEqPeak, frequency: 1600, gain: 2, q: 1.5},
     {kind: AudioEqHighCut, frequency: 4600, q: 0.7},
     {kind: AudioEqHighShelf, frequency: 7000, gain: -10}
   ]}
 }
 st_viola_body_c {
   Equalizer: {bands: [
-    {kind: AudioEqPeak, frequency: 475, gain: 7, q: 18},
-    {kind: AudioEqPeak, frequency: 786, gain: 7, q: 18},
-    {kind: AudioEqPeak, frequency: 1307, gain: 7, q: 18},
-    {kind: AudioEqPeak, frequency: 2096, gain: 7, q: 18}
+    {kind: AudioEqPeak, frequency: 475, gain: 3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 786, gain: 3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 1307, gain: 3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 2096, gain: 3.5, q: 18}
   ]}
 }
 st_viola_body_d {
   Equalizer: {bands: [
-    {kind: AudioEqPeak, frequency: 525, gain: -7, q: 18},
-    {kind: AudioEqPeak, frequency: 842, gain: -7, q: 18},
-    {kind: AudioEqPeak, frequency: 1374, gain: -7, q: 18},
-    {kind: AudioEqPeak, frequency: 2296, gain: -7, q: 18}
+    {kind: AudioEqPeak, frequency: 525, gain: -3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 842, gain: -3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 1374, gain: -3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 2296, gain: -3.5, q: 18}
   ]}
 }
 st_viola_body_e {
   Equalizer: {bands: [
-    {kind: AudioEqPeak, frequency: 556, gain: 7, q: 18},
-    {kind: AudioEqPeak, frequency: 902, gain: 7, q: 18},
-    {kind: AudioEqPeak, frequency: 1567, gain: 7, q: 18},
-    {kind: AudioEqPeak, frequency: 2571, gain: 7, q: 18}
+    {kind: AudioEqPeak, frequency: 556, gain: 3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 902, gain: 3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 1567, gain: 3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 2571, gain: 3.5, q: 18}
   ]}
 }
 st_viola_body_f {
   Equalizer: {bands: [
-    {kind: AudioEqPeak, frequency: 628, gain: -7, q: 18},
-    {kind: AudioEqPeak, frequency: 1037, gain: -7, q: 18},
-    {kind: AudioEqPeak, frequency: 1622, gain: -7, q: 18},
-    {kind: AudioEqPeak, frequency: 2751, gain: -7, q: 18}
+    {kind: AudioEqPeak, frequency: 628, gain: -3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 1037, gain: -3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 1622, gain: -3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 2751, gain: -3.5, q: 18}
   ]}
 }
 st_viola_body_g {
   Equalizer: {bands: [
-    {kind: AudioEqPeak, frequency: 685, gain: 7, q: 18},
-    {kind: AudioEqPeak, frequency: 1090, gain: 7, q: 18},
-    {kind: AudioEqPeak, frequency: 1739, gain: 7, q: 18},
-    {kind: AudioEqPeak, frequency: 2914, gain: 7, q: 18}
+    {kind: AudioEqPeak, frequency: 685, gain: 3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 1090, gain: 3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 1739, gain: 3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 2914, gain: 3.5, q: 18}
   ]}
 }
 st_viola_body_h {
   Equalizer: {bands: [
-    {kind: AudioEqPeak, frequency: 706, gain: -7, q: 18},
-    {kind: AudioEqPeak, frequency: 1160, gain: -7, q: 18},
-    {kind: AudioEqPeak, frequency: 1910, gain: -7, q: 18},
-    {kind: AudioEqPeak, frequency: 3094, gain: -7, q: 18}
+    {kind: AudioEqPeak, frequency: 706, gain: -3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 1160, gain: -3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 1910, gain: -3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 3094, gain: -3.5, q: 18}
   ]}
 }
 
@@ -153,58 +153,58 @@ st_cello_body_a {
 }
 st_cello_body_b {
   Equalizer: {bands: [
-    {kind: AudioEqHighShelf, frequency: 500, gain: 12, q: 0.6},
-    {kind: AudioEqPeak, frequency: 1700, gain: 3, q: 1.2},
+    {kind: AudioEqHighShelf, frequency: 500, gain: 3, q: 0.6},
+    {kind: AudioEqPeak, frequency: 1700, gain: 2, q: 1.2},
     {kind: AudioEqHighCut, frequency: 3800, q: 0.7},
     {kind: AudioEqHighShelf, frequency: 6000, gain: -10}
   ]}
 }
 st_cello_body_c {
   Equalizer: {bands: [
-    {kind: AudioEqPeak, frequency: 234, gain: 7, q: 18},
-    {kind: AudioEqPeak, frequency: 422, gain: 7, q: 18},
-    {kind: AudioEqPeak, frequency: 683, gain: 7, q: 18},
-    {kind: AudioEqPeak, frequency: 1175, gain: 7, q: 18}
+    {kind: AudioEqPeak, frequency: 234, gain: 3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 422, gain: 3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 683, gain: 3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 1175, gain: 3.5, q: 18}
   ]}
 }
 st_cello_body_d {
   Equalizer: {bands: [
-    {kind: AudioEqPeak, frequency: 272, gain: -7, q: 18},
-    {kind: AudioEqPeak, frequency: 453, gain: -7, q: 18},
-    {kind: AudioEqPeak, frequency: 791, gain: -7, q: 18},
-    {kind: AudioEqPeak, frequency: 1335, gain: -7, q: 18}
+    {kind: AudioEqPeak, frequency: 272, gain: -3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 453, gain: -3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 791, gain: -3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 1335, gain: -3.5, q: 18}
   ]}
 }
 st_cello_body_e {
   Equalizer: {bands: [
-    {kind: AudioEqPeak, frequency: 286, gain: 7, q: 18},
-    {kind: AudioEqPeak, frequency: 486, gain: 7, q: 18},
-    {kind: AudioEqPeak, frequency: 844, gain: 7, q: 18},
-    {kind: AudioEqPeak, frequency: 1491, gain: 7, q: 18}
+    {kind: AudioEqPeak, frequency: 286, gain: 3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 486, gain: 3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 844, gain: 3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 1491, gain: 3.5, q: 18}
   ]}
 }
 st_cello_body_f {
   Equalizer: {bands: [
-    {kind: AudioEqPeak, frequency: 319, gain: -7, q: 18},
-    {kind: AudioEqPeak, frequency: 532, gain: -7, q: 18},
-    {kind: AudioEqPeak, frequency: 901, gain: -7, q: 18},
-    {kind: AudioEqPeak, frequency: 1535, gain: -7, q: 18}
+    {kind: AudioEqPeak, frequency: 319, gain: -3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 532, gain: -3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 901, gain: -3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 1535, gain: -3.5, q: 18}
   ]}
 }
 st_cello_body_g {
   Equalizer: {bands: [
-    {kind: AudioEqPeak, frequency: 333, gain: 7, q: 18},
-    {kind: AudioEqPeak, frequency: 573, gain: 7, q: 18},
-    {kind: AudioEqPeak, frequency: 1029, gain: 7, q: 18},
-    {kind: AudioEqPeak, frequency: 1774, gain: 7, q: 18}
+    {kind: AudioEqPeak, frequency: 333, gain: 3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 573, gain: 3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 1029, gain: 3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 1774, gain: 3.5, q: 18}
   ]}
 }
 st_cello_body_h {
   Equalizer: {bands: [
-    {kind: AudioEqPeak, frequency: 364, gain: -7, q: 18},
-    {kind: AudioEqPeak, frequency: 631, gain: -7, q: 18},
-    {kind: AudioEqPeak, frequency: 1084, gain: -7, q: 18},
-    {kind: AudioEqPeak, frequency: 1859, gain: -7, q: 18}
+    {kind: AudioEqPeak, frequency: 364, gain: -3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 631, gain: -3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 1084, gain: -3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 1859, gain: -3.5, q: 18}
   ]}
 }
 
@@ -218,7 +218,7 @@ st_bass_body_a {
 }
 st_bass_body_b {
   Equalizer: {bands: [
-    {kind: AudioEqHighShelf, frequency: 260, gain: 11, q: 0.6},
+    {kind: AudioEqHighShelf, frequency: 260, gain: 3, q: 0.6},
     {kind: AudioEqPeak, frequency: 800, gain: 2, q: 1.5},
     {kind: AudioEqHighCut, frequency: 2400, q: 0.7},
     {kind: AudioEqHighShelf, frequency: 4000, gain: -10}
@@ -226,50 +226,50 @@ st_bass_body_b {
 }
 st_bass_body_c {
   Equalizer: {bands: [
-    {kind: AudioEqPeak, frequency: 117, gain: 7, q: 18},
-    {kind: AudioEqPeak, frequency: 210, gain: 7, q: 18},
-    {kind: AudioEqPeak, frequency: 380, gain: 7, q: 18},
-    {kind: AudioEqPeak, frequency: 668, gain: 7, q: 18}
+    {kind: AudioEqPeak, frequency: 117, gain: 3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 210, gain: 3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 380, gain: 3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 668, gain: 3.5, q: 18}
   ]}
 }
 st_bass_body_d {
   Equalizer: {bands: [
-    {kind: AudioEqPeak, frequency: 128, gain: -7, q: 18},
-    {kind: AudioEqPeak, frequency: 232, gain: -7, q: 18},
-    {kind: AudioEqPeak, frequency: 414, gain: -7, q: 18},
-    {kind: AudioEqPeak, frequency: 767, gain: -7, q: 18}
+    {kind: AudioEqPeak, frequency: 128, gain: -3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 232, gain: -3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 414, gain: -3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 767, gain: -3.5, q: 18}
   ]}
 }
 st_bass_body_e {
   Equalizer: {bands: [
-    {kind: AudioEqPeak, frequency: 143, gain: 7, q: 18},
-    {kind: AudioEqPeak, frequency: 255, gain: 7, q: 18},
-    {kind: AudioEqPeak, frequency: 470, gain: 7, q: 18},
-    {kind: AudioEqPeak, frequency: 838, gain: 7, q: 18}
+    {kind: AudioEqPeak, frequency: 143, gain: 3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 255, gain: 3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 470, gain: 3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 838, gain: 3.5, q: 18}
   ]}
 }
 st_bass_body_f {
   Equalizer: {bands: [
-    {kind: AudioEqPeak, frequency: 163, gain: -7, q: 18},
-    {kind: AudioEqPeak, frequency: 295, gain: -7, q: 18},
-    {kind: AudioEqPeak, frequency: 493, gain: -7, q: 18},
-    {kind: AudioEqPeak, frequency: 910, gain: -7, q: 18}
+    {kind: AudioEqPeak, frequency: 163, gain: -3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 295, gain: -3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 493, gain: -3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 910, gain: -3.5, q: 18}
   ]}
 }
 st_bass_body_g {
   Equalizer: {bands: [
-    {kind: AudioEqPeak, frequency: 176, gain: 7, q: 18},
-    {kind: AudioEqPeak, frequency: 324, gain: 7, q: 18},
-    {kind: AudioEqPeak, frequency: 544, gain: 7, q: 18},
-    {kind: AudioEqPeak, frequency: 1010, gain: 7, q: 18}
+    {kind: AudioEqPeak, frequency: 176, gain: 3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 324, gain: 3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 544, gain: 3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 1010, gain: 3.5, q: 18}
   ]}
 }
 st_bass_body_h {
   Equalizer: {bands: [
-    {kind: AudioEqPeak, frequency: 199, gain: -7, q: 18},
-    {kind: AudioEqPeak, frequency: 342, gain: -7, q: 18},
-    {kind: AudioEqPeak, frequency: 613, gain: -7, q: 18},
-    {kind: AudioEqPeak, frequency: 1115, gain: -7, q: 18}
+    {kind: AudioEqPeak, frequency: 199, gain: -3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 342, gain: -3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 613, gain: -3.5, q: 18},
+    {kind: AudioEqPeak, frequency: 1115, gain: -3.5, q: 18}
   ]}
 }
 
@@ -315,15 +315,14 @@ prefab st_violin_sound {
   SynthFilterEnvelope: {attack: 0.09, decay: 0.35, sustain: 0.7, release: 0.3, amount: 0.8, velocity: 0.6}
   SynthPitchEnvelope: {amount: -0.12, decay: 0.07, curve: 3}
   SynthLfo: {rate: 5.8, delay: 0.16, fade: 0.4, random_phase: true, pitch: 22, amplitude: 0.05, cutoff: 0.04}
-  bow_speed { SynthLfo: {rate: 0.55, random_phase: true, amplitude: 0.06, cutoff: 0.08} }
-  string { SynthOscillator: {wave: SynthSaw, frequency: 440, level: 0.5} }
-  hair { SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, level: 0.025} }
-  scratch {
-    SynthOscillator: {wave: SynthNoise, level: 0.04}
-    SynthEnvelope: {attack: 0.003, decay: 0.06, curve: 3}
-    accent { SynthModRoute: {source: SynthSourceVelocity, target: SynthTargetLevel, amount: 2.5} }
+  bow_speed { SynthLfo: {rate: 0.55, random_phase: true, cutoff: 0.04} }
+  string {
+    SynthOscillator: {wave: SynthBowed, frequency: 440, level: 0.5}
+    SynthBow: {pressure: 0.4, speed: 0.55, position: 0.11, brightness: 0.55, noise: 0.12, velocity: 0.5}
   }
-  swell_level { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetLevel, amount: 0.8} }
+  swell_bow { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetBowPressure, amount: 0.35} }
+  swell_speed { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetBowSpeed, amount: 0.3} }
+  bow_wander { SynthModRoute: {source: SynthSourceLfo2, target: SynthTargetBowSpeed, amount: 0.04} }
   swell_tone { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetCutoff, amount: 1.2} }
 }
 
@@ -335,15 +334,14 @@ prefab st_viola_sound {
   SynthFilterEnvelope: {attack: 0.1, decay: 0.4, sustain: 0.7, release: 0.3, amount: 0.8, velocity: 0.6}
   SynthPitchEnvelope: {amount: -0.12, decay: 0.08, curve: 3}
   SynthLfo: {rate: 5.5, delay: 0.18, fade: 0.45, random_phase: true, pitch: 20, amplitude: 0.05, cutoff: 0.04}
-  bow_speed { SynthLfo: {rate: 0.5, random_phase: true, amplitude: 0.06, cutoff: 0.08} }
-  string { SynthOscillator: {wave: SynthSaw, frequency: 261.63, level: 0.5} }
-  hair { SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, level: 0.025} }
-  scratch {
-    SynthOscillator: {wave: SynthNoise, level: 0.035}
-    SynthEnvelope: {attack: 0.003, decay: 0.07, curve: 3}
-    accent { SynthModRoute: {source: SynthSourceVelocity, target: SynthTargetLevel, amount: 2.5} }
+  bow_speed { SynthLfo: {rate: 0.5, random_phase: true, cutoff: 0.04} }
+  string {
+    SynthOscillator: {wave: SynthBowed, frequency: 261.63, level: 0.5}
+    SynthBow: {pressure: 0.42, speed: 0.55, position: 0.12, brightness: 0.5, noise: 0.12, velocity: 0.5}
   }
-  swell_level { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetLevel, amount: 0.8} }
+  swell_bow { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetBowPressure, amount: 0.35} }
+  swell_speed { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetBowSpeed, amount: 0.3} }
+  bow_wander { SynthModRoute: {source: SynthSourceLfo2, target: SynthTargetBowSpeed, amount: 0.04} }
   swell_tone { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetCutoff, amount: 1.2} }
 }
 
@@ -355,15 +353,14 @@ prefab st_cello_sound {
   SynthFilterEnvelope: {attack: 0.12, decay: 0.45, sustain: 0.7, release: 0.35, amount: 0.8, velocity: 0.6}
   SynthPitchEnvelope: {amount: -0.12, decay: 0.09, curve: 3}
   SynthLfo: {rate: 5.3, delay: 0.2, fade: 0.5, random_phase: true, pitch: 18, amplitude: 0.05, cutoff: 0.04}
-  bow_speed { SynthLfo: {rate: 0.45, random_phase: true, amplitude: 0.06, cutoff: 0.08} }
-  string { SynthOscillator: {wave: SynthSaw, frequency: 130.81, level: 0.5} }
-  hair { SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, level: 0.02} }
-  scratch {
-    SynthOscillator: {wave: SynthNoise, level: 0.03}
-    SynthEnvelope: {attack: 0.004, decay: 0.08, curve: 3}
-    accent { SynthModRoute: {source: SynthSourceVelocity, target: SynthTargetLevel, amount: 2.5} }
+  bow_speed { SynthLfo: {rate: 0.45, random_phase: true, cutoff: 0.04} }
+  string {
+    SynthOscillator: {wave: SynthBowed, frequency: 130.81, level: 0.5}
+    SynthBow: {pressure: 0.45, speed: 0.55, position: 0.13, brightness: 0.45, noise: 0.1, velocity: 0.5}
   }
-  swell_level { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetLevel, amount: 0.8} }
+  swell_bow { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetBowPressure, amount: 0.35} }
+  swell_speed { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetBowSpeed, amount: 0.3} }
+  bow_wander { SynthModRoute: {source: SynthSourceLfo2, target: SynthTargetBowSpeed, amount: 0.04} }
   swell_tone { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetCutoff, amount: 1.2} }
 }
 
@@ -375,15 +372,14 @@ prefab st_bass_sound {
   SynthFilterEnvelope: {attack: 0.16, decay: 0.5, sustain: 0.7, release: 0.4, amount: 0.8, velocity: 0.6}
   SynthPitchEnvelope: {amount: -0.12, decay: 0.1, curve: 3}
   SynthLfo: {rate: 5, delay: 0.25, fade: 0.55, random_phase: true, pitch: 12, amplitude: 0.05, cutoff: 0.04}
-  bow_speed { SynthLfo: {rate: 0.4, random_phase: true, amplitude: 0.06, cutoff: 0.08} }
-  string { SynthOscillator: {wave: SynthSaw, frequency: 65.41, level: 0.5} }
-  hair { SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, level: 0.02} }
-  scratch {
-    SynthOscillator: {wave: SynthNoise, level: 0.03}
-    SynthEnvelope: {attack: 0.005, decay: 0.09, curve: 3}
-    accent { SynthModRoute: {source: SynthSourceVelocity, target: SynthTargetLevel, amount: 2.5} }
+  bow_speed { SynthLfo: {rate: 0.4, random_phase: true, cutoff: 0.04} }
+  string {
+    SynthOscillator: {wave: SynthBowed, frequency: 65.41, level: 0.5}
+    SynthBow: {pressure: 0.5, speed: 0.55, position: 0.14, brightness: 0.35, noise: 0.1, velocity: 0.5}
   }
-  swell_level { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetLevel, amount: 0.8} }
+  swell_bow { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetBowPressure, amount: 0.35} }
+  swell_speed { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetBowSpeed, amount: 0.3} }
+  bow_wander { SynthModRoute: {source: SynthSourceLfo2, target: SynthTargetBowSpeed, amount: 0.04} }
   swell_tone { SynthModRoute: {source: SynthSourcePressure, target: SynthTargetCutoff, amount: 1.2} }
 }
 

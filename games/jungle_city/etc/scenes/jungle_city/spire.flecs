@@ -13,16 +13,16 @@ template CanopySpire {
   const windows: math.Rng = {seed: variant + 314159}
   const height = floors * 3.2 + 4
   CanopyPlinth(round: true, radius: 3.7, variant: variant) {}
-  core : CanopyFacade { Position: {0, height / 2 + 1.2, 0}; Frustum: {radius_bottom: 2.9, radius_top: 1.8, length: height, segments: 16, smooth: true}; TextureTransform: {scale_x: 1, scale_y: floors / 8.0, offset_x: variant % 8 / 8.0, offset_y: variant % 13 / 8.0} }
+  core : CanopyFacade { Position: {0, height / 2 + 1.2, 0}; Frustum: {radius_bottom: 2.9, radius_top: 1.8, length: height, segments: 8, smooth: true}; TextureTransform: {scale_x: 1, scale_y: floors / 8.0, offset_x: variant % 8 / 8.0, offset_y: variant % 13 / 8.0} }
   for i in 0..8 + facade_style * 4 {
     const a = i * math.PI * 2 / (8 + facade_style * 4)
     { (IsA, CanopyWood); Rgb: timber; Position: {math.sin(a) * 2.4, height / 2 + 1.2, math.cos(a) * 2.4}; Rotation: {-math.sin(a) * 0.04, a, math.cos(a) * 0.04}; Box: {0.22, height, 0.3} }
   }
   for f in 0..3 {
     const y = 4.4 + f * (height - 3.2) / 2
-    { (IsA, CanopyIvory); Rgb: wall; Position: {0, y, 0}; Cylinder: {radius: 4.3 - f * 0.3, length: 0.35, segments: 8} }
-    { (IsA, CanopyLeaf); Position: {0, y + 0.35, 0}; Tube: {radius: 4.05 - f * 0.3, thickness: 0.6, length: 0.3, segments: 16} }
-    { (IsA, CanopyMetal); Position: {0, y + 1, 0}; Torus: {radius: 4.2 - f * 0.3, tube: 0.025, segments: 16, rings: 4} }
+    { (IsA, CanopyIvory); Rgb: wall; Position: {0, y, 0}; Cylinder: {radius: 4.3 - f * 0.3, length: 0.35, segments: 4} }
+    { (IsA, CanopyLeaf); Position: {0, y + 0.35, 0}; Tube: {radius: 4.05 - f * 0.3, thickness: 0.6, length: 0.3, segments: 8} }
+    { (IsA, CanopyMetal); Position: {0, y + 1, 0}; Torus: {radius: 4.2 - f * 0.3, tube: 0.025, segments: 8, rings: 4} }
     for i in 0..4 {
       const a = i * math.PI / 2
       { Position: {math.sin(a) * (4.3 - f * 0.3), y + 0.3, math.cos(a) * (4.3 - f * 0.3)}; Rotation: {0, a, 0}; CanopyVine(length: 2.8, phase: variant) {} }
@@ -32,9 +32,9 @@ template CanopySpire {
     }
   }
   if roof_style == 3 {
-    crown : CanopyWood { Position: {0, height + 2.7, 0}; Frustum: {radius_bottom: 2, radius_top: 4.6, length: 1.4, segments: 12} }
-    solar_canopy : CanopySolar { Position: {0, height + 3.45, 0}; Cylinder: {radius: 4.65, length: 0.14, segments: 12} }
-    rim : CanopyIvory { Position: {0, height + 3.48, 0}; Torus: {radius: 4.65, tube: 0.1, segments: 12, rings: 6} }
+    crown : CanopyWood { Position: {0, height + 2.7, 0}; Frustum: {radius_bottom: 2, radius_top: 4.6, length: 1.4, segments: 6} }
+    solar_canopy : CanopySolar { Position: {0, height + 3.45, 0}; Cylinder: {radius: 4.65, length: 0.14, segments: 6} }
+    rim : CanopyIvory { Position: {0, height + 3.48, 0}; Torus: {radius: 4.65, tube: 0.1, segments: 6, rings: 6} }
     for i in 0..6 {
       const a = i * math.PI / 3
       { (IsA, CanopyIvory); Rgb: wall; Position: {math.sin(a) * 2.3, height + 3.55, math.cos(a) * 2.3}; Rotation: {0, a, 0}; Box: {0.06, 0.05, 4.5} }

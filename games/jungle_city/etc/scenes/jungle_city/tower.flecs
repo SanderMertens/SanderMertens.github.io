@@ -13,11 +13,11 @@ template CanopyTower {
   const windows: math.Rng = {seed: variant + 314159}
   const height = floors * 3.2
   CanopyPlinth(width: 8, depth: 8, variant: variant) {}
-  shell : CanopyFacade { Position: {0, height / 2 + 1.2, 0}; RoundedBox: {6.2, height, 6.2, 0.2, segments: 2}; TextureTransform: {scale_x: 0.5, scale_y: floors / 8.0, offset_x: variant % 8 / 8.0, offset_y: variant % 13 / 8.0} }
+  shell : CanopyFacade { Position: {0, height / 2 + 1.2, 0}; RoundedBox: {6.2, height, 6.2, 0.2, segments: 1}; TextureTransform: {scale_x: 0.5, scale_y: floors / 8.0, offset_x: variant % 8 / 8.0, offset_y: variant % 13 / 8.0} }
   for f in 0..floors {
     const y = 1.2 + f * 3.2
     const w = 8.8 - f * 0.23
-    { (IsA, CanopyIvory); Rgb: wall; Position: {0, y, 0}; RoundedBox: {w, 0.34, w, 0.7, segments: 4} }
+    { (IsA, CanopyIvory); Rgb: wall; Position: {0, y, 0}; RoundedBox: {w, 0.34, w, 0.7, segments: 2} }
     { (IsA, CanopyWood); Rgb: timber; Position: {0, y - 0.22, 0}; RoundedBox: {w - 0.25, 0.12, w - 0.25, 0.5} }
     for side in 0..4 {
       {

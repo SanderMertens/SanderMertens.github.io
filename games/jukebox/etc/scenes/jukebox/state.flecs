@@ -4,10 +4,8 @@ struct JukeboxSong(title: string, file: string)
 
 export const SONGS: JukeboxSong[] = [
   {"Distant Orbit", "distant_orbit"}
-  {"Voltage tide", "voltage_tide"}
   {"Late train", "late_train"}
   {"After the horizon", "after_the_horizon"}
-  {"After the horizon 2", "after_the_horizon_enhanced"}
   {"Drum Kit", "drum_kit"}
   {"Woodwinds", "woodwinds"}
   {"Strings", "strings"}

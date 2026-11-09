@@ -17,7 +17,7 @@ template CanopyBroadPlant {
   for i in 0..5 {
     const a = i * 2.399963 + seed
     const stem = size * (0.5 + (i % 3) * 0.18)
-    { (IsA, CanopyJade); Position: {math.sin(a) * stem * 0.2, stem / 2, math.cos(a) * stem * 0.2}; Rotation: {math.cos(a) * 0.4, 0, -math.sin(a) * 0.4}; Cylinder: {radius: 0.022 * size, length: stem * 1.05, segments: 5} }
+    { (IsA, CanopyJade); Position: {math.sin(a) * stem * 0.2, stem / 2, math.cos(a) * stem * 0.2}; Rotation: {math.cos(a) * 0.4, 0, -math.sin(a) * 0.4}; Cylinder: {radius: 0.022 * size, length: stem * 1.05, segments: 3} }
     { (IsA, CanopyBigLeaf); Position: {math.sin(a) * stem * 0.4, stem, math.cos(a) * stem * 0.4}; Rotation: {0.25, a, 0}; Scale: {size * 2.1, size * 1.15, size * 1.15} }
   }
 }
@@ -25,7 +25,7 @@ template CanopyBroadPlant {
 template CanopyBanana {
   prop height: f32 = 3
   prop seed: f32 = 0
-  { (IsA, CanopyLime); Rgb: {96, 128, 62}; Position: {0, height * 0.32, 0}; Frustum: {radius_bottom: height * 0.05, radius_top: height * 0.028, length: height * 0.64, segments: 8} }
+  { (IsA, CanopyLime); Rgb: {96, 128, 62}; Position: {0, height * 0.32, 0}; Frustum: {radius_bottom: height * 0.05, radius_top: height * 0.028, length: height * 0.64, segments: 4} }
   for i in 0..7 {
     const a = i * 2.399963 + seed
     { (IsA, CanopyBigLeaf); Rgb: {98, 152, 58}; Position: {0, height * 0.62, 0}; Rotation: {-0.28 + (i % 3) * 0.2, a, 0}; Scale: {height * 0.8, height * 0.62, height * 0.62} }
@@ -39,7 +39,7 @@ template CanopyBamboo {
     const a = i * 2.399963 + seed
     const r = 0.14 + (i % 3) * 0.17
     const tall = height * (0.72 + (i % 4) * 0.1)
-    { (IsA, CanopyLime); Rgb: {132, 158, 72}; Position: {math.sin(a) * r, tall / 2, math.cos(a) * r}; Rotation: {math.cos(a) * 0.05, 0, -math.sin(a) * 0.05}; Cylinder: {radius: 0.05, length: tall, segments: 6} }
+    { (IsA, CanopyLime); Rgb: {132, 158, 72}; Position: {math.sin(a) * r, tall / 2, math.cos(a) * r}; Rotation: {math.cos(a) * 0.05, 0, -math.sin(a) * 0.05}; Cylinder: {radius: 0.05, length: tall, segments: 3} }
     { (IsA, CanopyLeafCard); Rgb: {92, 148, 56}; Position: {math.sin(a) * r, tall * 0.84, math.cos(a) * r}; Rotation: {0, a, 0}; Quad: {height * 0.32, height * 0.38} }
   }
 }

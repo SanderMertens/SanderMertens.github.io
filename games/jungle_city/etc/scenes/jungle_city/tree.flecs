@@ -3,73 +3,6 @@ using box.transform
 using box.geometry
 using box.material
 
-prefab CanopyRoundShape {
-  Path2D: {
-    start: {1, 0},
-    segments: [
-      {kind: CatmullRom, end: {0.7071, 0.7071}},
-      {kind: CatmullRom, end: {0, 1}},
-      {kind: CatmullRom, end: {-0.7071, 0.7071}},
-      {kind: CatmullRom, end: {-1, 0}},
-      {kind: CatmullRom, end: {-0.7071, -0.7071}},
-      {kind: CatmullRom, end: {0, -1}},
-      {kind: CatmullRom, end: {0.7071, -0.7071}}
-    ],
-    closed: true
-  }
-}
-prefab CanopyRoundProfile { Profile2D: {outer: CanopyRoundShape} }
-prefab CanopyPalmPath0 {
-  Path3D: {
-    start: {0, 0, 0},
-    segments: [
-      {kind: CatmullRom, end: {-0.004, 0.3, 0}},
-      {kind: CatmullRom, end: {-0.018, 0.62, 0}},
-      {kind: CatmullRom, end: {-0.04, 0.92, 0}}
-    ]
-  }
-}
-prefab CanopyPalmPath1 {
-  Path3D: {
-    start: {0, 0, 0},
-    segments: [
-      {kind: CatmullRom, end: {-0.002, 0.3, 0}},
-      {kind: CatmullRom, end: {-0.009, 0.62, 0}},
-      {kind: CatmullRom, end: {-0.02, 0.92, 0}}
-    ]
-  }
-}
-prefab CanopyPalmPath2 {
-  Path3D: {
-    start: {0, 0, 0},
-    segments: [
-      {kind: CatmullRom, end: {0, 0.3, 0}},
-      {kind: CatmullRom, end: {0, 0.62, 0}},
-      {kind: CatmullRom, end: {0, 0.92, 0}}
-    ]
-  }
-}
-prefab CanopyPalmPath3 {
-  Path3D: {
-    start: {0, 0, 0},
-    segments: [
-      {kind: CatmullRom, end: {0.002, 0.3, 0}},
-      {kind: CatmullRom, end: {0.009, 0.62, 0}},
-      {kind: CatmullRom, end: {0.02, 0.92, 0}}
-    ]
-  }
-}
-prefab CanopyPalmPath4 {
-  Path3D: {
-    start: {0, 0, 0},
-    segments: [
-      {kind: CatmullRom, end: {0.004, 0.3, 0}},
-      {kind: CatmullRom, end: {0.018, 0.62, 0}},
-      {kind: CatmullRom, end: {0.04, 0.92, 0}}
-    ]
-  }
-}
-
 template CanopyCrownLobe {
   prop rx: f32 = 1
   prop ry: f32 = 0.8
@@ -79,7 +12,7 @@ template CanopyCrownLobe {
   prop seed: f32 = 0
   prop tint: Rgb = {64, 118, 54}
   prop blossom: bool = false
-  filler : CanopyCrownCore { Scale: {rx * 0.5, ry * 0.5, rz * 0.5}; IcoSphere: {radius: 1, segments: 1, smooth: true} }
+
   for i in 0..count {
     const up = 1 - 2 * (i + 0.5) / count
     const flat = math.sqrt(1 - up * up)
@@ -106,15 +39,24 @@ template CanopyTree {
   if kind < 2 {
     const bucket: i32 = math.clamp(math.round(raw_lean / height / 0.02) + 2, 0, 4)
     const lean = (bucket - 2) * 0.02 * height
-    trunk : CanopyBark {
-      Position: {0, 0, 0}
-      Scale: {height, height, height}
-      Sweep: {
-        path: match bucket { 0: CanopyPalmPath0; 1: CanopyPalmPath1; 2: CanopyPalmPath2; 3: CanopyPalmPath3; _: CanopyPalmPath4 },
-        profile: CanopyRoundProfile, scale: {0.0246, 0.0246}, taper: 0.38, rings: 20
+    const side = (bucket - 2) * 0.5 * height
+    const ys = [0, 0.3, 0.62, 0.92]
+    const xs = [0, 0.004, 0.018, 0.04]
+    for k in 0..3 {
+      const ax = xs[k] * side
+      const bx = xs[k + 1] * side
+      const ay = ys[k] * height
+      const by = ys[k + 1] * height
+      const dx = bx - ax
+      const dy = by - ay
+      const length = math.sqrt(dx * dx + dy * dy)
+      { (IsA, CanopyBark)
+        Position: {(ax + bx) / 2, (ay + by) / 2, 0}
+        Rotation: {math.acos(dy / length), math.atan2(dx, 0), 0}
+        Frustum: {length: length, radius_bottom: height * 0.0246 * (1 - 0.62 * ys[k] / 0.92), radius_top: height * 0.0246 * (1 - 0.62 * ys[k + 1] / 0.92), segments: 4, smooth: true}
+        TextureMapping: {mode: MappingUv}
+        TextureTransform: {scale_x: 1, scale_y: 5 * (ys[k + 1] - ys[k]) / 0.92, offset_y: 5 * (0.92 - ys[k + 1]) / 0.92}
       }
-      TextureMapping: {mode: MappingUv}
-      TextureTransform: {scale_x: 1, scale_y: 5}
     }
     for i in 0..4 {
       const a = i * math.PI / 2 + rng.f(0.6)
