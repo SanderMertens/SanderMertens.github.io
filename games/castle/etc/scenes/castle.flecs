@@ -39,7 +39,7 @@ using state
 using assets
 
 $ {
-  Scene: {environment: true, aerial_perspective: true, blend_modes: true, transmission: true, texture_blend: true, triplanar: true, sheen: true, clear_coat: true, diffuse_transmission: true}
+  Scene: {texture_blend: true}
   AmbientLight: {sky: {150, 170, 200}, ground: {90, 80, 60}, intensity: 0.35}
 }
 
@@ -83,7 +83,6 @@ view {
   bloom { Bloom: {intensity: 0.12, threshold: 1.2, threshold_softness: 0.5} }
   exposure { AutoExposure: {min_log_luma: -10.8, exposure_compensation: 0.4} }
   film { Tonemap: {auto_exposure: exposure, operator_: TonyMcMapface} }
-  edges { Smaa: {} }
 
   View: {
     camera: camera.arm.eye,
@@ -96,13 +95,13 @@ view {
     },
     shadows: {
       enabled: true,
-      cascades: 4,
-      resolution: 2048,
+      cascades: 2,
+      resolution: 1024,
       max_distance: 200,
       split_lambda: 0.7,
       depth_bias: 2,
       normal_offset: 2,
-      filter_size: 3,
+      filter_size: 1,
       fade: 0.2,
       blend: 0.1
     },
@@ -112,7 +111,6 @@ view {
       {effect: sky},
       {effect: bloom},
       {effect: film},
-      {effect: edges}
     ]
   }
 }
