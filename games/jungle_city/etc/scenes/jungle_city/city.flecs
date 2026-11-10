@@ -23,8 +23,6 @@ using flecs.script
 using box.transform
 using box.geometry
 using box.material
-using box.camera
-using box.controllers
 
 assets {
   @tree ChildOf
@@ -43,7 +41,6 @@ assets {
     prop midrise: f32 = 0.4
     const width = columns * spacing + 32
     const depth = rows * spacing + 20
-    const extent = math.sqrt(width * width + depth * depth)
     const plaza_radius = 11
     const civic_z = (rows - 2 - (rows - 1) / 2.0) * spacing + spacing / 2
     CanopyTerrain terrain(width: width, depth: depth, seed: seed)
@@ -56,11 +53,5 @@ assets {
     }
     CanopyCivicSquare(spacing: spacing, radius: plaza_radius) { Position: {0, 0, civic_z} }
     CanopyLife(width: width, depth: depth, seed: seed) {}
-    camera {
-      Position: {-extent * 0.63, extent * 0.37, extent * 0.76}
-      Rotation: {-0.285, -0.69, 0}
-      Camera: {fov: 43, near_: 0.5, far_: extent * 5}
-      CameraController: {speed: 30}
-    }
   }
 }

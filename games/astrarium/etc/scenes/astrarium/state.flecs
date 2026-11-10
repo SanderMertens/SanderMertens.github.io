@@ -3,224 +3,226 @@ using flecs.script.math
 using box.material
 using box.app
 
-export const HUD_TOP: f32 = 74
-export const HUD_BOTTOM: f32 = 150
-export const STAGE_Y: f32 = (HUD_BOTTOM - HUD_TOP) / 2
+state {
+  export const HUD_TOP: f32 = 74
+  export const HUD_BOTTOM: f32 = 150
+  export const STAGE_Y: f32 = (HUD_BOTTOM - HUD_TOP) / 2
 
-export const SCREEN_TITLE: i32 = 0
-export const SCREEN_ATLAS: i32 = 1
-export const SCREEN_ARMORY: i32 = 2
-export const SCREEN_RITES: i32 = 3
+  export const SCREEN_TITLE: i32 = 0
+  export const SCREEN_ATLAS: i32 = 1
+  export const SCREEN_ARMORY: i32 = 2
+  export const SCREEN_RITES: i32 = 3
 
-export mut screen: i32 = SCREEN_TITLE
-export mut title_go = false
-export mut hud_go = false
+  export mut screen: i32 = SCREEN_TITLE
+  export mut title_go = false
+  export mut hud_go = false
 
-export mut ui_gold: Rgb = {232, 199, 122}
-export mut ui_pale: Rgb = {255, 238, 196}
-export mut ui_dim: Rgb = {122, 104, 68}
-export mut ui_ink: Rgb = {13, 17, 38}
-export mut ui_text: Rgb = {214, 216, 228}
-export mut ui_muted: Rgb = {140, 146, 172}
+  export mut ui_gold: Rgb = {232, 199, 122}
+  export mut ui_pale: Rgb = {255, 238, 196}
+  export mut ui_dim: Rgb = {122, 104, 68}
+  export mut ui_ink: Rgb = {13, 17, 38}
+  export mut ui_text: Rgb = {214, 216, 228}
+  export mut ui_muted: Rgb = {140, 146, 172}
 
-export mut rite_aura: f32 = 1
-export mut rite_dust: f32 = 1
-export mut rite_clock: f32 = 1
+  export mut rite_aura: f32 = 1
+  export mut rite_dust: f32 = 1
+  export mut rite_clock: f32 = 1
 
-event Navigate(screen: i32)
-event Cast(spell: i32)
-event Cooldown(spell: i32, seconds: f32)
-event SelectStar(star: entity)
-event HoldStarted(serial: i32, until: f64)
-event Awaken()
-event Realign()
-event Equip(item: entity)
-event Metal(index: i32)
-event StatsChanged()
-event HoverChanged()
-event HoverLeft(item: entity)
-event BannerShown(serial: i32, until: f64)
-event AegisRaised(serial: i32, until: f64)
+  event Navigate(screen: i32)
+  event Cast(spell: i32)
+  event Cooldown(spell: i32, seconds: f32)
+  event SelectStar(star: entity)
+  event HoldStarted(serial: i32, until: f64)
+  event Awaken()
+  event Realign()
+  event Equip(item: entity)
+  event Metal(index: i32)
+  event StatsChanged()
+  event HoverChanged()
+  event HoverLeft(item: entity)
+  event BannerShown(serial: i32, until: f64)
+  event AegisRaised(serial: i32, until: f64)
 
-export const STAT_MIGHT: i32 = 0
-export const STAT_WARD: i32 = 1
-export const STAT_HASTE: i32 = 2
-export const STAT_AETHER: i32 = 3
+  export const STAT_MIGHT: i32 = 0
+  export const STAT_WARD: i32 = 1
+  export const STAT_HASTE: i32 = 2
+  export const STAT_AETHER: i32 = 3
 
-export mut hero_hp: f32 = 148
-export mut hero_hp_max: f32 = 240
-export mut hero_mp: f32 = 170
-export mut hero_mp_max: f32 = 260
-export mut hero_level: i32 = 23
-export mut hero_xp: f32 = 310
-export mut hero_points: i32 = 3
-export mut hero_dust: i32 = 12480
+  export mut hero_hp: f32 = 148
+  export mut hero_hp_max: f32 = 240
+  export mut hero_mp: f32 = 170
+  export mut hero_mp_max: f32 = 260
+  export mut hero_level: i32 = 23
+  export mut hero_xp: f32 = 310
+  export mut hero_points: i32 = 3
+  export mut hero_dust: i32 = 12480
 
-export mut stat_might: i32 = 42
-export mut stat_ward: i32 = 31
-export mut stat_haste: i32 = 24
-export mut stat_aether: i32 = 37
+  export mut stat_might: i32 = 42
+  export mut stat_ward: i32 = 31
+  export mut stat_haste: i32 = 24
+  export mut stat_aether: i32 = 37
 
-export mut spell_cooling: bool[6] = {}
-export mut spell_hover: i32 = -1
-export mut aegis_on = false
-export mut aegis_serial: i32 = 0
+  export mut spell_cooling: bool[6] = {}
+  export mut spell_hover: i32 = -1
+  export mut aegis_on = false
+  export mut aegis_serial: i32 = 0
 
-export mut banner_text: string = ""
-export mut banner_sub: string = ""
-export mut banner_on = false
-export mut banner_serial: i32 = 0
+  export mut banner_text: string = ""
+  export mut banner_sub: string = ""
+  export mut banner_on = false
+  export mut banner_serial: i32 = 0
 
-fn xp_needed(level: i32) -> f32 {
-  320 + level * 12
-}
-
-fn spell_name(i: i32) -> string {
-  match i { 0: "Cinder Lance"; 1: "Tidal Mend"; 2: "Thorn Aegis"; 3: "Veilstep"; 4: "Starfall"; _: "Blood Pact" }
-}
-
-fn spell_desc(i: i32) -> string {
-  match i {
-    0: "A spear of cinders. Quick to throw, quick to forget."
-    1: "Calls the far tide through your veins. Restores 60 vitality."
-    2: "Briars of light circle you. Vitality no longer ebbs for a while."
-    3: "Step between two heartbeats. Trains the hand, costs little."
-    4: "Pull the sky down. The heavens answer, and so does your purse."
-    _: "Spend your blood as if it were aether. Grants 90 aether."
+  fn xp_needed(level: i32) -> f32 {
+    320 + level * 12
   }
-}
 
-fn spell_cost(i: i32) -> f32 {
-  match i { 0: 18; 1: 46; 2: 34; 3: 12; 4: 110; _: 0 }
-}
+  fn spell_name(i: i32) -> string {
+    match i { 0: "Cinder Lance"; 1: "Tidal Mend"; 2: "Thorn Aegis"; 3: "Veilstep"; 4: "Starfall"; _: "Blood Pact" }
+  }
 
-fn spell_blood(i: i32) -> f32 {
-  match i { 5: 44; _: 0 }
-}
-
-fn spell_cooldown(i: i32) -> f32 {
-  match i { 0: 1.6; 1: 7; 2: 11; 3: 3; 4: 16; _: 5 }
-}
-
-fn spell_xp(i: i32) -> f32 {
-  match i { 0: 32; 1: 20; 2: 26; 3: 16; 4: 150; _: 14 }
-}
-
-fn stat_name(i: i32) -> string {
-  match i { 0: "Might"; 1: "Ward"; 2: "Haste"; _: "Aether" }
-}
-
-fn haste_scale(haste: i32) -> f32 {
-  1 / (1 + haste * 0.006)
-}
-
-export mut atlas_awake: bool[28] = [
-  true, true, false, true, false, false, false,
-  true, true, false, false, false, false, false,
-  true, false, false, false, false, false, false,
-  false, false, false, false, false, false, false
-]
-export mut atlas_sel: entity = 0
-export mut atlas_fresh: i32 = -1
-export mut atlas_holding = false
-export mut atlas_hold_serial: i32 = 0
-export mut atlas_count: i32[4] = [3, 2, 1, 0]
-
-export const HOLD_SECONDS: f32 = 0.75
-
-export mut spell_afford: bool[6] = [true, true, true, true, true, true]
-export mut fx_cast: i32 = 0
-export mut fx_cast_serial: i32 = 0
-export mut fx_level_serial: i32 = 0
-
-fn band_name(b: i32) -> string {
-  match b { 0: "The Pyre"; 1: "The Tide"; 2: "The Thorn"; _: "The Veil" }
-}
-
-fn band_r(b: i32) -> i32 {
-  match b { 0: 255; 1: 92; 2: 110; _: 190 }
-}
-
-fn band_g(b: i32) -> i32 {
-  match b { 0: 128; 1: 190; 2: 236; _: 146 }
-}
-
-fn band_b(b: i32) -> i32 {
-  match b { 0: 66; 1: 255; 2: 160; _: 255 }
-}
-
-export const SLOT_BLADE: i32 = 0
-export const SLOT_RELIC: i32 = 1
-export const SLOT_CROWN: i32 = 2
-export const SLOT_BAND: i32 = 3
-
-export const RARE_COMMON: i32 = 0
-export const RARE_RARE: i32 = 1
-export const RARE_EPIC: i32 = 2
-export const RARE_LEGEND: i32 = 3
-
-export mut eq: entity[4] = {}
-export mut armory_filter: i32 = -1
-export mut armory_hover: entity = 0
-export mut armory_hovering = false
-export mut armory_tip: entity = 0
-export mut armory_tip_on = false
-export mut preview: i32[4] = {}
-export mut relic_model: i32 = 0
-export mut relic_r: i32 = 200
-export mut relic_g: i32 = 200
-export mut relic_b: i32 = 210
-export mut relic_serial: i32 = 0
-export mut relic_name: string = ""
-export mut relic_line: string = ""
-export mut star_bonus: i32[4] = [7, 6, 0, 7]
-export mut rite_metal: i32 = 0
-export mut rite_names = true
-export mut rite_drift = true
-
-fn rarity_name(r: i32) -> string {
-  match r { 0: "Common"; 1: "Rare"; 2: "Epic"; _: "Legendary" }
-}
-
-fn rarity_r(r: i32) -> i32 {
-  match r { 0: 158; 1: 86; 2: 186; _: 255 }
-}
-
-fn rarity_g(r: i32) -> i32 {
-  match r { 0: 164; 1: 170; 2: 112; _: 162 }
-}
-
-fn rarity_b(r: i32) -> i32 {
-  match r { 0: 178; 1: 255; 2: 255; _: 62 }
-}
-
-fn slot_name(s: i32) -> string {
-  match s { 0: "Blade"; 1: "Relic"; 2: "Crown"; _: "Band" }
-}
-
-proc show_banner(title: string, sub: string) {
-  banner_text = title
-  banner_sub = sub
-  banner_on = true
-  banner_serial += 1
-  emit BannerShown(serial: banner_serial, until: AppStatus[AppStatus].elapsed + 2.8)
-}
-
-proc check_afford() {
-  for i in 0..6 {
-    const can = hero_mp >= spell_cost(i) && hero_hp > spell_blood(i)
-    if spell_afford[i] != can {
-      spell_afford[i] = can
+  fn spell_desc(i: i32) -> string {
+    match i {
+      0: "A spear of cinders. Quick to throw, quick to forget."
+      1: "Calls the far tide through your veins. Restores 60 vitality."
+      2: "Briars of light circle you. Vitality no longer ebbs for a while."
+      3: "Step between two heartbeats. Trains the hand, costs little."
+      4: "Pull the sky down. The heavens answer, and so does your purse."
+      _: "Spend your blood as if it were aether. Grants 90 aether."
     }
   }
-}
 
-proc check_level() {
-  while hero_xp >= xp_needed(hero_level) {
-    hero_xp -= xp_needed(hero_level)
-    hero_level += 1
-    hero_points += 1
-    show_banner("Level {hero_level}", "A new star point turns in your palm")
-    fx_level_serial += 1
+  fn spell_cost(i: i32) -> f32 {
+    match i { 0: 18; 1: 46; 2: 34; 3: 12; 4: 110; _: 0 }
+  }
+
+  fn spell_blood(i: i32) -> f32 {
+    match i { 5: 44; _: 0 }
+  }
+
+  fn spell_cooldown(i: i32) -> f32 {
+    match i { 0: 1.6; 1: 7; 2: 11; 3: 3; 4: 16; _: 5 }
+  }
+
+  fn spell_xp(i: i32) -> f32 {
+    match i { 0: 32; 1: 20; 2: 26; 3: 16; 4: 150; _: 14 }
+  }
+
+  fn stat_name(i: i32) -> string {
+    match i { 0: "Might"; 1: "Ward"; 2: "Haste"; _: "Aether" }
+  }
+
+  fn haste_scale(haste: i32) -> f32 {
+    1 / (1 + haste * 0.006)
+  }
+
+  export mut atlas_awake: bool[28] = [
+    true, true, false, true, false, false, false,
+    true, true, false, false, false, false, false,
+    true, false, false, false, false, false, false,
+    false, false, false, false, false, false, false
+  ]
+  export mut atlas_sel: entity = 0
+  export mut atlas_fresh: i32 = -1
+  export mut atlas_holding = false
+  export mut atlas_hold_serial: i32 = 0
+  export mut atlas_count: i32[4] = [3, 2, 1, 0]
+
+  export const HOLD_SECONDS: f32 = 0.75
+
+  export mut spell_afford: bool[6] = [true, true, true, true, true, true]
+  export mut fx_cast: i32 = 0
+  export mut fx_cast_serial: i32 = 0
+  export mut fx_level_serial: i32 = 0
+
+  fn band_name(b: i32) -> string {
+    match b { 0: "The Pyre"; 1: "The Tide"; 2: "The Thorn"; _: "The Veil" }
+  }
+
+  fn band_r(b: i32) -> i32 {
+    match b { 0: 255; 1: 92; 2: 110; _: 190 }
+  }
+
+  fn band_g(b: i32) -> i32 {
+    match b { 0: 128; 1: 190; 2: 236; _: 146 }
+  }
+
+  fn band_b(b: i32) -> i32 {
+    match b { 0: 66; 1: 255; 2: 160; _: 255 }
+  }
+
+  export const SLOT_BLADE: i32 = 0
+  export const SLOT_RELIC: i32 = 1
+  export const SLOT_CROWN: i32 = 2
+  export const SLOT_BAND: i32 = 3
+
+  export const RARE_COMMON: i32 = 0
+  export const RARE_RARE: i32 = 1
+  export const RARE_EPIC: i32 = 2
+  export const RARE_LEGEND: i32 = 3
+
+  export mut eq: entity[4] = {}
+  export mut armory_filter: i32 = -1
+  export mut armory_hover: entity = 0
+  export mut armory_hovering = false
+  export mut armory_tip: entity = 0
+  export mut armory_tip_on = false
+  export mut preview: i32[4] = {}
+  export mut relic_model: i32 = 0
+  export mut relic_r: i32 = 200
+  export mut relic_g: i32 = 200
+  export mut relic_b: i32 = 210
+  export mut relic_serial: i32 = 0
+  export mut relic_name: string = ""
+  export mut relic_line: string = ""
+  export mut star_bonus: i32[4] = [7, 6, 0, 7]
+  export mut rite_metal: i32 = 0
+  export mut rite_names = true
+  export mut rite_drift = true
+
+  fn rarity_name(r: i32) -> string {
+    match r { 0: "Common"; 1: "Rare"; 2: "Epic"; _: "Legendary" }
+  }
+
+  fn rarity_r(r: i32) -> i32 {
+    match r { 0: 158; 1: 86; 2: 186; _: 255 }
+  }
+
+  fn rarity_g(r: i32) -> i32 {
+    match r { 0: 164; 1: 170; 2: 112; _: 162 }
+  }
+
+  fn rarity_b(r: i32) -> i32 {
+    match r { 0: 178; 1: 255; 2: 255; _: 62 }
+  }
+
+  fn slot_name(s: i32) -> string {
+    match s { 0: "Blade"; 1: "Relic"; 2: "Crown"; _: "Band" }
+  }
+
+  proc show_banner(title: string, sub: string) {
+    banner_text = title
+    banner_sub = sub
+    banner_on = true
+    banner_serial += 1
+    emit BannerShown(serial: banner_serial, until: AppStatus[AppStatus].elapsed + 2.8)
+  }
+
+  proc check_afford() {
+    for i in 0..6 {
+      const can = hero_mp >= spell_cost(i) && hero_hp > spell_blood(i)
+      if spell_afford[i] != can {
+        spell_afford[i] = can
+      }
+    }
+  }
+
+  proc check_level() {
+    while hero_xp >= xp_needed(hero_level) {
+      hero_xp -= xp_needed(hero_level)
+      hero_level += 1
+      hero_points += 1
+      show_banner("Level {hero_level}", "A new star point turns in your palm")
+      fx_level_serial += 1
+    }
   }
 }

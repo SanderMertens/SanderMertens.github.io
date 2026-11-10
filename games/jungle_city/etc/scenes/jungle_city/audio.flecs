@@ -4,203 +4,207 @@ using box.transform
 using box.audio
 using box.widgets
 
-export mut canopy_width: f32 = 0
-export mut canopy_depth: f32 = 0
-export mut canopy_daylight: f32 = 1
-export mut canopy_altitude: f32 = 0
-export mut canopy_listener: entity = 0
+state {
+  export mut canopy_width: f32 = 0
+  export mut canopy_depth: f32 = 0
+  export mut canopy_daylight: f32 = 1
+  export mut canopy_altitude: f32 = 0
+  export mut canopy_listener: entity = 0
 
-canopy_verb {
-  AudioBus: {output: master, kind: AudioChannelReturn, effects: [canopy_verb]}
-  Reverb: {decay: 1.9, damping: 0.55, predelay: 0.03, size: 0.75}
-}
-canopy_bed { AudioBus: {output: master, volume: 0.8} }
-canopy_water { AudioBus: {output: master, kind: AudioChannelSfx, volume: 0.85, sends: [{bus: canopy_verb, level: 0.1}]} }
-canopy_far {
-  AudioBus: {output: master, effects: [canopy_far], sends: [{bus: canopy_verb, level: 0.45}]}
-  AudioFilter: {kind: SynthLowPass, cutoff: 3800}
-}
-canopy_wild { AudioBus: {output: master, kind: AudioChannelSfx, volume: 1.6, sends: [{bus: canopy_verb, level: 0.3}]} }
-
-fn canopy_hash(i: f64) -> f64 {
-  const v = sin(i * 12.9898 + 4.1414) * 43758.5453
-  v - floor(v)
-}
-
-fn canopy_day(h: f64) -> f64 {
-  clamp((h - 5.5) / 1.5, 0, 1) * clamp((18.5 - h) / 2, 0, 1)
-}
-
-prefab CanopyCicadas {
-  AudioOutput: {bus: canopy_bed}
-  SynthSound: {seed: 62, drift: 20}
-  SynthEnvelope: {attack: 0.01, sustain: 1, hold: 59.98, release: 0.01}
-  SynthFilter: {kind: SynthBandPass, cutoff: 5200, resonance: 0.5}
-  buzz {
-    SynthOscillator: {wave: SynthTriangle, frequency: 4900, level: 0.2}
-    SynthUnison: {voices: 3, detune: 35, width: 0}
+  fn canopy_hash(i: f64) -> f64 {
+    const v = sin(i * 12.9898 + 4.1414) * 43758.5453
+    v - floor(v)
   }
-  hiss { SynthOscillator: {wave: SynthNoise, level: 0.14} }
-  pulse { SynthLfo: {wave: SynthLfoTriangle, rate: 41, random_phase: true, amplitude: 0.75} }
-  swell { SynthLfo: {wave: SynthLfoSine, rate: 0.045, random_phase: true, amplitude: 0.9} }
-}
 
-prefab CanopyCrickets {
-  AudioOutput: {bus: canopy_bed}
-  SynthSound: {seed: 63, drift: 8}
-  SynthEnvelope: {attack: 0.01, sustain: 1, hold: 59.98, release: 0.01}
-  SynthFilter: {kind: SynthBandPass, cutoff: 4200, resonance: 0.6}
-  near { SynthOscillator: {wave: SynthSine, frequency: 4300, level: 0.2} }
-  far {
-    SynthOscillator: {wave: SynthSine, frequency: 3750, level: 0.14}
-    SynthUnison: {voices: 4, detune: 60, width: 0}
+  fn canopy_day(h: f64) -> f64 {
+    clamp((h - 5.5) / 1.5, 0, 1) * clamp((18.5 - h) / 2, 0, 1)
   }
-  chirp { SynthLfo: {wave: SynthLfoSquare, rate: 3.1, random_phase: true, amplitude: 0.9} }
-  trill { SynthLfo: {wave: SynthLfoTriangle, rate: 27, random_phase: true, amplitude: 0.6} }
 }
 
-prefab CanopySpill {
-  AudioOutput: {bus: canopy_water}
-  SynthSound: {seed: 71}
-  SynthEnvelope: {attack: 0.01, sustain: 1, hold: 59.98, release: 0.01}
-  SynthFilter: {kind: SynthBandPass, cutoff: 2000, resonance: 0.15}
-  pour { SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, level: 0.5} }
-  splash { SynthOscillator: {wave: SynthNoise, level: 0.15} }
-  babble { SynthLfo: {wave: SynthLfoTriangle, rate: 2.7, random_phase: true, cutoff: 0.35, amplitude: 0.2} }
-}
-
-prefab CanopySluice {
-  AudioOutput: {bus: canopy_water}
-  SynthSound: {seed: 72}
-  SynthEnvelope: {attack: 0.01, sustain: 1, hold: 59.98, release: 0.01}
-  SynthFilter: {kind: SynthBandPass, cutoff: 1500, resonance: 0.2}
-  jet { SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, level: 0.6} }
-  splash { SynthOscillator: {wave: SynthNoise, level: 0.2} }
-  churn { SynthLfo: {wave: SynthLfoTriangle, rate: 0.6, random_phase: true, cutoff: 0.3, amplitude: 0.15} }
-}
-
-prefab CanopyFountain {
-  AudioOutput: {bus: canopy_water}
-  SynthSound: {seed: 73}
-  SynthEnvelope: {attack: 0.01, sustain: 1, hold: 59.98, release: 0.01}
-  SynthFilter: {kind: SynthHighPass, cutoff: 1300, resonance: 0.1}
-  spray { SynthOscillator: {wave: SynthNoise, level: 0.45} }
-  patter { SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, level: 0.35} }
-  flutter { SynthLfo: {wave: SynthLfoTriangle, rate: 7.5, amplitude: 0.18} }
-}
-
-prefab CanopyTrickle {
-  AudioOutput: {bus: canopy_water}
-  SynthSound: {seed: 74}
-  SynthEnvelope: {attack: 0.01, sustain: 1, hold: 59.98, release: 0.01}
-  SynthFilter: {kind: SynthBandPass, cutoff: 2200, resonance: 0.3}
-  pour { SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, level: 0.5} }
-  gurgle { SynthLfo: {wave: SynthLfoTriangle, rate: 3.3, random_phase: true, cutoff: 0.5} }
-}
-
-prefab CanopyWhistle {
-  AudioOutput: {bus: canopy_wild}
-  AudioSpatial: {min_distance: 5, max_distance: 130, cutoff: 2500}
-  SynthSound: {seed: 81, pitch_variance: 0.14, level_variance: 0.2}
-  SynthEnvelope: {attack: 0.012, decay: 0.05, sustain: 0.7, hold: 0.1, release: 0.07}
-  tone { SynthOscillator: {wave: SynthSine, frequency: 2100, frequency_end: 2850, sweep: 0.14, level: 0.3} }
-  over { SynthOscillator: {wave: SynthSine, frequency: 4200, frequency_end: 5700, sweep: 0.14, level: 0.04} }
-  warble { SynthLfo: {wave: SynthLfoSine, rate: 22, pitch: 35} }
-}
-
-prefab CanopyParrot {
-  AudioOutput: {bus: canopy_wild}
-  AudioSpatial: {min_distance: 6, max_distance: 160, cutoff: 1800}
-  SynthSound: {seed: 82, pitch_variance: 0.12, level_variance: 0.2}
-  SynthEnvelope: {attack: 0.006, decay: 0.05, sustain: 0.65, hold: 0.13, release: 0.07}
-  SynthDrive: {drive: 0.45}
-  SynthFilter: {kind: SynthFormant, vowel: 0.2, resonance: 0.45}
-  SynthFilterEnvelope: {attack: 0.02, decay: 0.2, vowel: 1.6}
-  squawk { SynthOscillator: {wave: SynthSaw, frequency: 1150, frequency_end: 860, sweep: 0.2, level: 0.5} }
-  rasp { SynthOscillator: {wave: SynthNoise, level: 0.18} }
-  grit { SynthLfo: {wave: SynthLfoRandom, rate: 60, pitch: 90} }
-}
-
-prefab CanopyToucan {
-  AudioOutput: {bus: canopy_wild}
-  AudioSpatial: {min_distance: 5, max_distance: 130, cutoff: 1500}
-  SynthSound: {seed: 83, pitch_variance: 0.05, level_variance: 0.15}
-  SynthEnvelope: {attack: 0.008, decay: 0.04, sustain: 0.7, hold: 0.14, release: 0.05}
-  SynthFilter: {kind: SynthBandPass, cutoff: 1250, resonance: 0.4}
-  croak { SynthOscillator: {wave: SynthSquare, frequency: 520, frequency_end: 470, sweep: 0.2, level: 0.45} }
-  rattle { SynthLfo: {wave: SynthLfoSquare, rate: 34, amplitude: 0.85} }
-}
-
-prefab CanopyDove {
-  AudioOutput: {bus: canopy_wild}
-  AudioSpatial: {min_distance: 4, max_distance: 110, cutoff: 1200}
-  SynthSound: {seed: 84, pitch_variance: 0.04, level_variance: 0.15}
-  SynthEnvelope: {attack: 0.06, decay: 0.08, sustain: 0.7, hold: 0.22, release: 0.2}
-  SynthFilter: {kind: SynthLowPass, cutoff: 1400}
-  hoo { SynthOscillator: {wave: SynthSine, frequency: 640, frequency_end: 560, sweep: 0.4, level: 0.4} }
-  breath { SynthOscillator: {wave: SynthTriangle, frequency: 1280, frequency_end: 1120, sweep: 0.4, level: 0.06} }
-}
-
-prefab CanopyTreeFrog {
-  AudioOutput: {bus: canopy_wild}
-  AudioSpatial: {min_distance: 3, max_distance: 80, cutoff: 2500}
-  SynthSound: {seed: 86, pitch_variance: 0.08, level_variance: 0.25}
-  SynthEnvelope: {attack: 0.004, decay: 0.07}
-  peep { SynthOscillator: {wave: SynthSine, frequency: 2350, frequency_end: 2950, sweep: 0.05, level: 0.3} }
-}
-
-prefab CanopyCroaker {
-  AudioOutput: {bus: canopy_wild}
-  AudioSpatial: {min_distance: 3, max_distance: 90, cutoff: 900}
-  SynthSound: {seed: 87, pitch_variance: 0.1, level_variance: 0.2}
-  SynthEnvelope: {attack: 0.01, decay: 0.05, sustain: 0.6, hold: 0.16, release: 0.06}
-  SynthFilter: {kind: SynthBandPass, cutoff: 650, resonance: 0.45}
-  throat { SynthOscillator: {wave: SynthSaw, frequency: 150, frequency_end: 125, sweep: 0.25, level: 0.6} }
-  rattle { SynthLfo: {wave: SynthLfoSquare, rate: 28, amplitude: 0.8} }
-}
-
-template CanopySoundscape {
-  prop width: f32 = 200
-  prop depth: f32 = 170
-  prop civic_z: f32 = 0
-  prop radius: f32 = 11
-  prop height: f32 = 4.52
-  spill {
-    Position: {0, -2.4, depth / 2 + 0.6}
-    AudioSource: {sound: CanopySpill, loop: true, volume: 0.3}
-    AudioSpatial: {min_distance: 4, max_distance: 80, cutoff: 900}
+assets {
+  canopy_verb {
+    AudioBus: {output: master, kind: AudioChannelReturn, effects: [canopy_verb]}
+    Reverb: {decay: 1.9, damping: 0.55, predelay: 0.03, size: 0.75}
   }
-  sluice {
-    Position: {0, 0.2, -depth / 2 + 1.8}
-    AudioSource: {sound: CanopySluice, loop: true, volume: 0.6}
-    AudioSpatial: {min_distance: 4, max_distance: 80, cutoff: 700}
+  canopy_bed { AudioBus: {output: master, volume: 0.8} }
+  canopy_water { AudioBus: {output: master, kind: AudioChannelSfx, volume: 0.85, sends: [{bus: canopy_verb, level: 0.1}]} }
+  canopy_far {
+    AudioBus: {output: master, effects: [canopy_far], sends: [{bus: canopy_verb, level: 0.45}]}
+    AudioFilter: {kind: SynthLowPass, cutoff: 3800}
   }
-  fountain {
-    Position: {0, height + 2.9, civic_z}
-    AudioSource: {sound: CanopyFountain, loop: true, volume: 0.45}
-    AudioSpatial: {min_distance: 3, max_distance: 90, cutoff: 700}
-  }
-  for side in 0..2 {
-    {
-      Position: {(side - 0.5) * 10.2, height - 1, civic_z + radius + 0.6}
-      AudioSource: {sound: CanopyTrickle, loop: true, volume: 0.3}
-      AudioSpatial: {min_distance: 2, max_distance: 60, cutoff: 800}
+  canopy_wild { AudioBus: {output: master, kind: AudioChannelSfx, volume: 1.6, sends: [{bus: canopy_verb, level: 0.3}]} }
+
+  prefab CanopyCicadas {
+    AudioOutput: {bus: canopy_bed}
+    SynthSound: {seed: 62, drift: 20}
+    SynthEnvelope: {attack: 0.01, sustain: 1, hold: 59.98, release: 0.01}
+    SynthFilter: {kind: SynthBandPass, cutoff: 5200, resonance: 0.5}
+    buzz {
+      SynthOscillator: {wave: SynthTriangle, frequency: 4900, level: 0.2}
+      SynthUnison: {voices: 3, detune: 35, width: 0}
     }
+    hiss { SynthOscillator: {wave: SynthNoise, level: 0.14} }
+    pulse { SynthLfo: {wave: SynthLfoTriangle, rate: 41, random_phase: true, amplitude: 0.75} }
+    swell { SynthLfo: {wave: SynthLfoSine, rate: 0.045, random_phase: true, amplitude: 0.9} }
   }
-  for gx in 0..4 {
-    for gz in 0..4 {
-      const k = gx * 4 + gz
-      const x = ((gx + 0.5) / 4 - 0.5) * width + (canopy_hash(k * 3.1) - 0.5) * width / 6
-      const z = ((gz + 0.5) / 4 - 0.5) * depth + (canopy_hash(k * 5.7) - 0.5) * depth / 6
+
+  prefab CanopyCrickets {
+    AudioOutput: {bus: canopy_bed}
+    SynthSound: {seed: 63, drift: 8}
+    SynthEnvelope: {attack: 0.01, sustain: 1, hold: 59.98, release: 0.01}
+    SynthFilter: {kind: SynthBandPass, cutoff: 4200, resonance: 0.6}
+    near { SynthOscillator: {wave: SynthSine, frequency: 4300, level: 0.2} }
+    far {
+      SynthOscillator: {wave: SynthSine, frequency: 3750, level: 0.14}
+      SynthUnison: {voices: 4, detune: 60, width: 0}
+    }
+    chirp { SynthLfo: {wave: SynthLfoSquare, rate: 3.1, random_phase: true, amplitude: 0.9} }
+    trill { SynthLfo: {wave: SynthLfoTriangle, rate: 27, random_phase: true, amplitude: 0.6} }
+  }
+
+  prefab CanopySpill {
+    AudioOutput: {bus: canopy_water}
+    SynthSound: {seed: 71}
+    SynthEnvelope: {attack: 0.01, sustain: 1, hold: 59.98, release: 0.01}
+    SynthFilter: {kind: SynthBandPass, cutoff: 2000, resonance: 0.15}
+    pour { SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, level: 0.5} }
+    splash { SynthOscillator: {wave: SynthNoise, level: 0.15} }
+    babble { SynthLfo: {wave: SynthLfoTriangle, rate: 2.7, random_phase: true, cutoff: 0.35, amplitude: 0.2} }
+  }
+
+  prefab CanopySluice {
+    AudioOutput: {bus: canopy_water}
+    SynthSound: {seed: 72}
+    SynthEnvelope: {attack: 0.01, sustain: 1, hold: 59.98, release: 0.01}
+    SynthFilter: {kind: SynthBandPass, cutoff: 1500, resonance: 0.2}
+    jet { SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, level: 0.6} }
+    splash { SynthOscillator: {wave: SynthNoise, level: 0.2} }
+    churn { SynthLfo: {wave: SynthLfoTriangle, rate: 0.6, random_phase: true, cutoff: 0.3, amplitude: 0.15} }
+  }
+
+  prefab CanopyFountain {
+    AudioOutput: {bus: canopy_water}
+    SynthSound: {seed: 73}
+    SynthEnvelope: {attack: 0.01, sustain: 1, hold: 59.98, release: 0.01}
+    SynthFilter: {kind: SynthHighPass, cutoff: 1300, resonance: 0.1}
+    spray { SynthOscillator: {wave: SynthNoise, level: 0.45} }
+    patter { SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, level: 0.35} }
+    flutter { SynthLfo: {wave: SynthLfoTriangle, rate: 7.5, amplitude: 0.18} }
+  }
+
+  prefab CanopyTrickle {
+    AudioOutput: {bus: canopy_water}
+    SynthSound: {seed: 74}
+    SynthEnvelope: {attack: 0.01, sustain: 1, hold: 59.98, release: 0.01}
+    SynthFilter: {kind: SynthBandPass, cutoff: 2200, resonance: 0.3}
+    pour { SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, level: 0.5} }
+    gurgle { SynthLfo: {wave: SynthLfoTriangle, rate: 3.3, random_phase: true, cutoff: 0.5} }
+  }
+
+  prefab CanopyWhistle {
+    AudioOutput: {bus: canopy_wild}
+    AudioSpatial: {min_distance: 5, max_distance: 130, cutoff: 2500}
+    SynthSound: {seed: 81, pitch_variance: 0.14, level_variance: 0.2}
+    SynthEnvelope: {attack: 0.012, decay: 0.05, sustain: 0.7, hold: 0.1, release: 0.07}
+    tone { SynthOscillator: {wave: SynthSine, frequency: 2100, frequency_end: 2850, sweep: 0.14, level: 0.3} }
+    over { SynthOscillator: {wave: SynthSine, frequency: 4200, frequency_end: 5700, sweep: 0.14, level: 0.04} }
+    warble { SynthLfo: {wave: SynthLfoSine, rate: 22, pitch: 35} }
+  }
+
+  prefab CanopyParrot {
+    AudioOutput: {bus: canopy_wild}
+    AudioSpatial: {min_distance: 6, max_distance: 160, cutoff: 1800}
+    SynthSound: {seed: 82, pitch_variance: 0.12, level_variance: 0.2}
+    SynthEnvelope: {attack: 0.006, decay: 0.05, sustain: 0.65, hold: 0.13, release: 0.07}
+    SynthDrive: {drive: 0.45}
+    SynthFilter: {kind: SynthFormant, vowel: 0.2, resonance: 0.45}
+    SynthFilterEnvelope: {attack: 0.02, decay: 0.2, vowel: 1.6}
+    squawk { SynthOscillator: {wave: SynthSaw, frequency: 1150, frequency_end: 860, sweep: 0.2, level: 0.5} }
+    rasp { SynthOscillator: {wave: SynthNoise, level: 0.18} }
+    grit { SynthLfo: {wave: SynthLfoRandom, rate: 60, pitch: 90} }
+  }
+
+  prefab CanopyToucan {
+    AudioOutput: {bus: canopy_wild}
+    AudioSpatial: {min_distance: 5, max_distance: 130, cutoff: 1500}
+    SynthSound: {seed: 83, pitch_variance: 0.05, level_variance: 0.15}
+    SynthEnvelope: {attack: 0.008, decay: 0.04, sustain: 0.7, hold: 0.14, release: 0.05}
+    SynthFilter: {kind: SynthBandPass, cutoff: 1250, resonance: 0.4}
+    croak { SynthOscillator: {wave: SynthSquare, frequency: 520, frequency_end: 470, sweep: 0.2, level: 0.45} }
+    rattle { SynthLfo: {wave: SynthLfoSquare, rate: 34, amplitude: 0.85} }
+  }
+
+  prefab CanopyDove {
+    AudioOutput: {bus: canopy_wild}
+    AudioSpatial: {min_distance: 4, max_distance: 110, cutoff: 1200}
+    SynthSound: {seed: 84, pitch_variance: 0.04, level_variance: 0.15}
+    SynthEnvelope: {attack: 0.06, decay: 0.08, sustain: 0.7, hold: 0.22, release: 0.2}
+    SynthFilter: {kind: SynthLowPass, cutoff: 1400}
+    hoo { SynthOscillator: {wave: SynthSine, frequency: 640, frequency_end: 560, sweep: 0.4, level: 0.4} }
+    breath { SynthOscillator: {wave: SynthTriangle, frequency: 1280, frequency_end: 1120, sweep: 0.4, level: 0.06} }
+  }
+
+  prefab CanopyTreeFrog {
+    AudioOutput: {bus: canopy_wild}
+    AudioSpatial: {min_distance: 3, max_distance: 80, cutoff: 2500}
+    SynthSound: {seed: 86, pitch_variance: 0.08, level_variance: 0.25}
+    SynthEnvelope: {attack: 0.004, decay: 0.07}
+    peep { SynthOscillator: {wave: SynthSine, frequency: 2350, frequency_end: 2950, sweep: 0.05, level: 0.3} }
+  }
+
+  prefab CanopyCroaker {
+    AudioOutput: {bus: canopy_wild}
+    AudioSpatial: {min_distance: 3, max_distance: 90, cutoff: 900}
+    SynthSound: {seed: 87, pitch_variance: 0.1, level_variance: 0.2}
+    SynthEnvelope: {attack: 0.01, decay: 0.05, sustain: 0.6, hold: 0.16, release: 0.06}
+    SynthFilter: {kind: SynthBandPass, cutoff: 650, resonance: 0.45}
+    throat { SynthOscillator: {wave: SynthSaw, frequency: 150, frequency_end: 125, sweep: 0.25, level: 0.6} }
+    rattle { SynthLfo: {wave: SynthLfoSquare, rate: 28, amplitude: 0.8} }
+  }
+
+  template CanopySoundscape {
+    prop width: f32 = 200
+    prop depth: f32 = 170
+    prop civic_z: f32 = 0
+    prop radius: f32 = 11
+    prop height: f32 = 4.52
+    spill {
+      Position: {0, -2.4, depth / 2 + 0.6}
+      AudioSource: {sound: CanopySpill, loop: true, volume: 0.3}
+      AudioSpatial: {min_distance: 4, max_distance: 80, cutoff: 900}
+    }
+    sluice {
+      Position: {0, 0.2, -depth / 2 + 1.8}
+      AudioSource: {sound: CanopySluice, loop: true, volume: 0.6}
+      AudioSpatial: {min_distance: 4, max_distance: 80, cutoff: 700}
+    }
+    fountain {
+      Position: {0, height + 2.9, civic_z}
+      AudioSource: {sound: CanopyFountain, loop: true, volume: 0.45}
+      AudioSpatial: {min_distance: 3, max_distance: 90, cutoff: 700}
+    }
+    for side in 0..2 {
       {
-        Position: {x, 8 + canopy_hash(k * 1.7) * 6, z}
-        AudioSource: {sound: CanopyCicadas, loop: true, volume: 0.6 * canopy_daylight}
-        AudioSpatial: {min_distance: 6, max_distance: 75, cutoff: 2500}
+        Position: {(side - 0.5) * 10.2, height - 1, civic_z + radius + 0.6}
+        AudioSource: {sound: CanopyTrickle, loop: true, volume: 0.3}
+        AudioSpatial: {min_distance: 2, max_distance: 60, cutoff: 800}
       }
-      {
-        Position: {x + (canopy_hash(k * 2.3) - 0.5) * 20, 0.4, z + (canopy_hash(k * 4.3) - 0.5) * 20}
-        AudioSource: {sound: CanopyCrickets, loop: true, volume: 0.9 * (1 - canopy_daylight)}
-        AudioSpatial: {min_distance: 4, max_distance: 55, cutoff: 2500}
+    }
+    for gx in 0..4 {
+      for gz in 0..4 {
+        const k = gx * 4 + gz
+        const x = ((gx + 0.5) / 4 - 0.5) * width + (state.canopy_hash(k * 3.1) - 0.5) * width / 6
+        const z = ((gz + 0.5) / 4 - 0.5) * depth + (state.canopy_hash(k * 5.7) - 0.5) * depth / 6
+        {
+          Position: {x, 8 + state.canopy_hash(k * 1.7) * 6, z}
+          AudioSource: {sound: CanopyCicadas, loop: true, volume: 0.6 * state.canopy_daylight}
+          AudioSpatial: {min_distance: 6, max_distance: 75, cutoff: 2500}
+        }
+        {
+          Position: {x + (state.canopy_hash(k * 2.3) - 0.5) * 20, 0.4, z + (state.canopy_hash(k * 4.3) - 0.5) * 20}
+          AudioSource: {sound: CanopyCrickets, loop: true, volume: 0.9 * (1 - state.canopy_daylight)}
+          AudioSpatial: {min_distance: 4, max_distance: 55, cutoff: 2500}
+        }
       }
     }
   }
@@ -208,7 +212,7 @@ template CanopySoundscape {
 
 async {
   while true {
-    canopy_daylight = canopy_day(hud.screen.options.body.hour[Slider.mut].current)
+    state.canopy_daylight = state.canopy_day(hud.screen.options.body.hour[Slider.mut].current)
     await delay(0.5)
   }
 }
@@ -216,53 +220,56 @@ async {
 async {
   while true {
     await delay(0.1)
-    if canopy_listener != 0 {
-      canopy_altitude = clamp((canopy_listener[WorldTransform].m.v[13] - 20) / 60, 0, 1)
+    if state.canopy_listener != 0 {
+      state.canopy_altitude = clamp((state.canopy_listener[WorldTransform].m.v[13] - 20) / 60, 0, 1)
     }
   }
 }
 
-canopy_far_cicadas {
-  AudioOutput: {bus: canopy_far}
-  AudioSource: {sound: CanopyCicadas, loop: true, volume: 0.14 * canopy_daylight * canopy_altitude}
-}
-canopy_far_crickets {
-  AudioOutput: {bus: canopy_far}
-  AudioSource: {sound: CanopyCrickets, loop: true, volume: 0.09 * (1 - canopy_daylight) * canopy_altitude}
+jungle_city {
+  canopy_far_cicadas {
+    AudioOutput: {bus: assets.canopy_far}
+    AudioSource: {sound: assets.CanopyCicadas, loop: true, volume: 0.14 * state.canopy_daylight * state.canopy_altitude}
+  }
+  canopy_far_crickets {
+    AudioOutput: {bus: assets.canopy_far}
+    AudioSource: {sound: assets.CanopyCrickets, loop: true, volume: 0.09 * (1 - state.canopy_daylight) * state.canopy_altitude}
+  }
+
 }
 
 async {
   mut n: f64 = 1
   while true {
     n += 1
-    await delay(0.4 + canopy_hash(n * 3.7) * 1.4)
-    if canopy_hash(n * 1.9) < canopy_daylight {
-      const x = (canopy_hash(n * 5.3) - 0.5) * canopy_width
-      const y = 7 + canopy_hash(n * 2.3) * 22
-      const z = (canopy_hash(n * 7.1) - 0.5) * canopy_depth
-      const pick = canopy_hash(n * 9.7)
+    await delay(0.4 + state.canopy_hash(n * 3.7) * 1.4)
+    if state.canopy_hash(n * 1.9) < state.canopy_daylight {
+      const x = (state.canopy_hash(n * 5.3) - 0.5) * state.canopy_width
+      const y = 7 + state.canopy_hash(n * 2.3) * 22
+      const z = (state.canopy_hash(n * 7.1) - 0.5) * state.canopy_depth
+      const pick = state.canopy_hash(n * 9.7)
       if pick < 0.4 {
-        const notes = 2 + floor(canopy_hash(n * 4.1) * 3)
+        const notes = 2 + floor(state.canopy_hash(n * 4.1) * 3)
         for i in 0..notes {
-          const w = box.audio.play_at(CanopyWhistle, {x, y, z}, 0.7 - i * 0.08)
-          await delay(0.2 + canopy_hash(n + i * 0.37) * 0.12)
+          const w = box.audio.play_at(assets.CanopyWhistle, {x, y, z}, 0.7 - i * 0.08)
+          await delay(0.2 + state.canopy_hash(n + i * 0.37) * 0.12)
         }
       } else if pick < 0.65 {
-        const calls = 1 + floor(canopy_hash(n * 6.6) * 3)
+        const calls = 1 + floor(state.canopy_hash(n * 6.6) * 3)
         for i in 0..calls {
-          const p = box.audio.play_at(CanopyParrot, {x, y, z}, 0.55)
-          await delay(0.3 + canopy_hash(n + i * 0.71) * 0.25)
+          const p = box.audio.play_at(assets.CanopyParrot, {x, y, z}, 0.55)
+          await delay(0.3 + state.canopy_hash(n + i * 0.71) * 0.25)
         }
       } else if pick < 0.85 {
-        const calls = 3 + floor(canopy_hash(n * 8.8) * 4)
+        const calls = 3 + floor(state.canopy_hash(n * 8.8) * 4)
         for i in 0..calls {
-          const t = box.audio.play_at(CanopyToucan, {x, y, z}, 0.5)
-          await delay(0.36 + canopy_hash(n + i * 0.53) * 0.08)
+          const t = box.audio.play_at(assets.CanopyToucan, {x, y, z}, 0.5)
+          await delay(0.36 + state.canopy_hash(n + i * 0.53) * 0.08)
         }
       } else {
-        const d = box.audio.play_at(CanopyDove, {x, y, z}, 0.6)
+        const d = box.audio.play_at(assets.CanopyDove, {x, y, z}, 0.6)
         await delay(0.75)
-        const e = box.audio.play_at(CanopyDove, {x, y, z}, 0.5)
+        const e = box.audio.play_at(assets.CanopyDove, {x, y, z}, 0.5)
       }
     }
   }
@@ -272,20 +279,20 @@ async {
   mut n: f64 = 1
   while true {
     n += 1
-    await delay(0.15 + canopy_hash(n * 4.9) * 0.6)
-    if canopy_hash(n * 2.1) < 1 - canopy_daylight {
-      const x = (canopy_hash(n * 6.1) - 0.5) * canopy_width
-      const z = (canopy_hash(n * 3.3) - 0.5) * canopy_depth
-      if canopy_hash(n * 7.7) < 0.65 {
-        const y = 2 + canopy_hash(n * 8.3) * 10
-        const peeps = 2 + floor(canopy_hash(n * 5.5) * 4)
+    await delay(0.15 + state.canopy_hash(n * 4.9) * 0.6)
+    if state.canopy_hash(n * 2.1) < 1 - state.canopy_daylight {
+      const x = (state.canopy_hash(n * 6.1) - 0.5) * state.canopy_width
+      const z = (state.canopy_hash(n * 3.3) - 0.5) * state.canopy_depth
+      if state.canopy_hash(n * 7.7) < 0.65 {
+        const y = 2 + state.canopy_hash(n * 8.3) * 10
+        const peeps = 2 + floor(state.canopy_hash(n * 5.5) * 4)
         for i in 0..peeps {
-          const p = box.audio.play_at(CanopyTreeFrog, {x, y, z}, 0.8)
-          await delay(0.12 + canopy_hash(n + i * 0.29) * 0.05)
+          const p = box.audio.play_at(assets.CanopyTreeFrog, {x, y, z}, 0.8)
+          await delay(0.12 + state.canopy_hash(n + i * 0.29) * 0.05)
         }
       } else {
-        const cx = (canopy_hash(n * 9.1) - 0.5) * 9
-        const c = box.audio.play_at(CanopyCroaker, {cx, -0.3, z}, 0.9)
+        const cx = (state.canopy_hash(n * 9.1) - 0.5) * 9
+        const c = box.audio.play_at(assets.CanopyCroaker, {cx, -0.3, z}, 0.9)
       }
     }
   }

@@ -6,6 +6,8 @@ using box.light
 using box.geometry
 using box.material
 using box.particle
+using state
+using assets
 
 mossvale {
   ground : MvGrassGround { Position: {0, -0.5, 0}; Box: {GROUND_SPAN, 1, GROUND_SPAN} }
@@ -90,11 +92,11 @@ mossvale {
 
   square_detail {
     Position: {SQ_X, 0, SQ_Z}
-    band_w : MvStone { Position: {-7.6, 0.061, 0}; Box: {6.8, 0.01, 1.0}; TextureTransform: {6.8 / TILE_FLAGS, 1 / TILE_FLAGS, 0, 0} }
-    band_e : MvStone { Position: {7.6, 0.061, 0}; Box: {6.8, 0.01, 1.0}; TextureTransform: {6.8 / TILE_FLAGS, 1 / TILE_FLAGS, 0, 0} }
-    band_n : MvStone { Position: {0, 0.061, -4.7}; Box: {1.0, 0.01, 3.0}; TextureTransform: {1 / TILE_FLAGS, 3 / TILE_FLAGS, 0, 0} }
-    band_s : MvStone { Position: {0, 0.061, 4.7}; Box: {1.0, 0.01, 3.0}; TextureTransform: {1 / TILE_FLAGS, 3 / TILE_FLAGS, 0, 0} }
-    ring_a : MvStone { Position: {0, 0.062, 0}; Tube: {length: 0.01, radius: 4.6, thickness: 0.45, segments: 48}; TextureTransform: {9.2 * PI / TILE_FLAGS, 0.45 / TILE_FLAGS, 0, 0} }
+    band_w : MvStone { Position: {-7.6, 0.061, 0}; Box: {6.8, 0.01, 1.0}; TextureMapping: {mode: MappingWorld, size: TILE_FLAGS} }
+    band_e : MvStone { Position: {7.6, 0.061, 0}; Box: {6.8, 0.01, 1.0}; TextureMapping: {mode: MappingWorld, size: TILE_FLAGS} }
+    band_n : MvStone { Position: {0, 0.061, -4.7}; Box: {1.0, 0.01, 3.0}; TextureMapping: {mode: MappingWorld, size: TILE_FLAGS} }
+    band_s : MvStone { Position: {0, 0.061, 4.7}; Box: {1.0, 0.01, 3.0}; TextureMapping: {mode: MappingWorld, size: TILE_FLAGS} }
+    ring_a : MvStone { Position: {0, 0.062, 0}; Tube: {length: 0.01, radius: 4.6, thickness: 0.45, segments: 48}; TextureMapping: {mode: MappingWorld, size: TILE_FLAGS} }
   }
 
   road_edges {
@@ -344,158 +346,158 @@ mossvale {
     Tower watch(x: -30, z: 86)
     Signpost sign_s { Position: {7.8, 0, 30.0} }
   }
-}
 
-targets {
-  Hearth hearth(id: 0, q: Q_HEARTH, sp: SP_SPARK, x: -5.0, z: 18.8, hint: "The hearth needs fire. Choose Spark with 1.")
+  targets {
+    Hearth hearth(id: 0, q: Q_HEARTH, sp: SP_SPARK, x: -5.0, z: 18.8, hint: "The hearth needs fire. Choose Spark with 1.")
 
-  const lx = [-9.0, 10.6, -9.0, 10.6, -5.0, 2.6]
-  const lz = [-4.0, -4.0, -13.8, -13.8, -14.4, -14.4]
-  for i in 0..6 {
-    LampPost "lamp_{i}"(id: 1 + i, q: Q_LAMPS, sp: SP_SPARK, x: lx[i], z: lz[i], rot: atan2(lz[i] - SQ_Z, lx[i] - SQ_X) + 3.14, hint: "The lamp's wick wants a flame.")
+    const lx = [-9.0, 10.6, -9.0, 10.6, -5.0, 2.6]
+    const lz = [-4.0, -4.0, -13.8, -13.8, -14.4, -14.4]
+    for i in 0..6 {
+      LampPost "lamp_{i}"(id: 1 + i, q: Q_LAMPS, sp: SP_SPARK, x: lx[i], z: lz[i], rot: atan2(lz[i] - SQ_Z, lx[i] - SQ_X) + 3.14, hint: "The lamp's wick wants a flame.")
+    }
+
+    Oven oven(id: 7, q: Q_BREAD, sp: SP_SPARK, x: 11.4, z: -19.4, r: 2.4, hint: "The oven is cold. It needs fire.")
+
+    Weed weed_0(id: 8, q: Q_WEEDS, sp: SP_SPARK, x: -37.2, z: 26.4, hint: "These thorns are too tough to pull. Burn them!")
+    Weed weed_1(id: 9, q: Q_WEEDS, sp: SP_SPARK, x: -26.6, z: 26.6, hint: "These thorns are too tough to pull. Burn them!")
+    Weed weed_2(id: 10, q: Q_WEEDS, sp: SP_SPARK, x: -37.4, z: 17.6, hint: "These thorns are too tough to pull. Burn them!")
+    Weed weed_3(id: 11, q: Q_WEEDS, sp: SP_SPARK, x: -32.4, z: 26.8, hint: "These thorns are too tough to pull. Burn them!")
+    Weed weed_4(id: 12, q: Q_WEEDS, sp: SP_SPARK, x: -26.8, z: 17.4, hint: "These thorns are too tough to pull. Burn them!")
+
+    for i in 0..6 {
+      HerbBed "herb_{i}"(id: 13 + i, q: Q_HERBS, sp: SP_SPLASH, x: -35.2 + (i % 3) * 3.6, z: 20.0 + floor(i / 3) * 4.0, r: 1.9, hint: "The herbs are parched. They need water, not that!")
+    }
+
+    HayFire fire_0(id: 19, q: Q_FIRE, sp: SP_SPLASH, x: 22.4, z: 5.6, hint: "Water! Fire needs water!")
+    HayFire fire_1(id: 20, q: Q_FIRE, sp: SP_SPLASH, x: 26.6, z: 5.4, hint: "Water! Fire needs water!")
+    HayFire fire_2(id: 21, q: Q_FIRE, sp: SP_SPLASH, x: 28.4, z: 9.4, hint: "Water! Fire needs water!")
+    HayFire fire_3(id: 22, q: Q_FIRE, sp: SP_SPLASH, x: 23.8, z: 9.8, hint: "Water! Fire needs water!")
+
+    for i in 0..8 {
+      CropPatch "crop_{i}"(id: 23 + i, q: Q_FIELDS, sp: SP_SPLASH, x: 44 + (i % 4) * 7, z: 9 + floor(i / 4) * 7, r: 2.8, hint: "The soil is cracked and dry. It wants rain.")
+    }
+
+    MillTarget mill(id: 31, q: Q_MILL, sp: SP_GUST, x: 80, z: -18, r: 4, hint: "The sails need wind to turn.")
+    Crow crow_0(gy: 1.8, id: 32, q: Q_MILL, sp: SP_GUST, x: 42, z: -23, hint: "The crow just stares at you. Blow it away!")
+    Crow crow_1(gy: 1.8, id: 33, q: Q_MILL, sp: SP_GUST, x: 47.5, z: -26.5, hint: "The crow just stares at you. Blow it away!")
+    Crow crow_2(gy: 1.8, id: 34, q: Q_MILL, sp: SP_GUST, x: 52.5, z: -23, hint: "The crow just stares at you. Blow it away!")
+    Crow crow_3(gy: 1.8, id: 35, q: Q_MILL, sp: SP_GUST, x: 57, z: -26, hint: "The crow just stares at you. Blow it away!")
+    Crow crow_4(gy: 1.8, id: 36, q: Q_MILL, sp: SP_GUST, x: 39, z: -27, hint: "The crow just stares at you. Blow it away!")
+
+    Laundry line_0(id: 37, q: Q_LAUNDRY, sp: SP_GUST, x: 74, z: 20, hint: "Careful with the laundry! A breeze would dry it.")
+    Laundry line_1(id: 38, q: Q_LAUNDRY, sp: SP_GUST, x: 80, z: 20, hint: "Careful with the laundry! A breeze would dry it.")
+    Laundry line_2(id: 39, q: Q_LAUNDRY, sp: SP_GUST, x: 86, z: 20, hint: "Careful with the laundry! A breeze would dry it.")
+    Laundry line_3(id: 40, q: Q_LAUNDRY, sp: SP_GUST, x: 77, z: 25.5, hint: "Careful with the laundry! A breeze would dry it.")
+    Laundry line_4(id: 41, q: Q_LAUNDRY, sp: SP_GUST, x: 83, z: 25.5, hint: "Careful with the laundry! A breeze would dry it.")
+
+    FogBank fog_0(id: 42, q: Q_FOG, sp: SP_GUST, x: road_x(-32.5), z: -32.5, w: 7, r: 3.5, hint: "A thick, cold fog. A strong wind might clear it.")
+    FogBank fog_1(id: 43, q: Q_FOG, sp: SP_GUST, x: road_x(-36), z: -36, w: 7, r: 3.5, hint: "A thick, cold fog. A strong wind might clear it.")
+    FogBank fog_2(id: 44, q: Q_FOG, sp: SP_GUST, x: road_x(-39.5), z: -39.5, w: 7, r: 3.5, hint: "A thick, cold fog. A strong wind might clear it.")
+
+    CampTarget campfire(id: 45, q: Q_CAMP, sp: SP_SPARK, x: -21, z: -56, hint: "Gareth's campfire is cold and dead.")
+    LeafPile leaves_0(id: 46, q: Q_CAMP, sp: SP_GUST, x: -27, z: -58, hint: "Burning the leaves would burn the logs too. Blow them away!")
+    LeafPile leaves_1(id: 47, q: Q_CAMP, sp: SP_GUST, x: -13, z: -64, hint: "Burning the leaves would burn the logs too. Blow them away!")
+    LeafPile leaves_2(id: 48, q: Q_CAMP, sp: SP_GUST, x: -25, z: -52.5, hint: "Burning the leaves would burn the logs too. Blow them away!")
+    LeafPile leaves_3(id: 49, q: Q_CAMP, sp: SP_GUST, x: -13.5, z: -54, hint: "Burning the leaves would burn the logs too. Blow them away!")
+
+    Brazier brazier_0(id: 50, q: Q_TRIAL, sp: SP_SPARK, x: 12.5, z: -80, hint: "A spirit brazier. It hungers for flame.")
+    Brazier brazier_1(id: 51, q: Q_TRIAL, sp: SP_SPARK, x: 23.5, z: -80, hint: "A spirit brazier. It hungers for flame.")
+    Brazier brazier_2(id: 52, q: Q_TRIAL, sp: SP_SPARK, x: 18, z: -85.5, hint: "A spirit brazier. It hungers for flame.")
+    Brazier brazier_3(id: 53, q: Q_TRIAL, sp: SP_SPARK, x: 18, z: -74.5, hint: "A spirit brazier. It hungers for flame.")
+
+    for i in 0..6 {
+      const a = i * 1.047 + 0.3
+      Sapling "sapling_{i}"(id: 54 + i, q: Q_GROVE, sp: SP_BLOOM, x: 36 + cos(a) * 4.2, z: -58 + sin(a) * 4.2, r: 1.8, hint: "Only a burnt stump. New life must be coaxed from it.")
+    }
+
+    Pumpkin pumpkin(id: 60, q: Q_PUMPKIN, sp: SP_BLOOM, lv: 3, x: 70, z: 25, r: 2.6, hint: "Maud's pumpkin needs to GROW.")
+
+    VineBridge bridge(id: 61, q: Q_BRIDGE, sp: SP_BLOOM, x: river_x(road_z(-42)), z: road_z(-42), r: 5, hint: "The old bridge is broken. Something green and strong could span the gap.")
+
+    LilyPad lily_0(id: 62, q: Q_LILY, sp: SP_BLOOM, x: -67, z: 7.2, r: 1.8, hint: "A sleeping lily bud, waiting for spring.")
+    LilyPad lily_1(id: 63, q: Q_LILY, sp: SP_BLOOM, x: -71, z: 8, r: 1.8, hint: "A sleeping lily bud, waiting for spring.")
+    LilyPad lily_2(id: 64, q: Q_LILY, sp: SP_BLOOM, x: -75.5, z: 7.5, r: 1.8, hint: "A sleeping lily bud, waiting for spring.")
+    LilyPad lily_3(id: 65, q: Q_LILY, sp: SP_BLOOM, x: -78.5, z: 6, r: 1.8, hint: "A sleeping lily bud, waiting for spring.")
+    LilyPad lily_4(id: 66, q: Q_LILY, sp: SP_BLOOM, x: -82.5, z: 3, r: 1.8, hint: "A sleeping lily bud, waiting for spring.")
+
+    Floe floe_0(id: 67, q: Q_ISLE, sp: SP_FROST, x: -58.8, z: -7.2, r: 2.2, hint: "Deep water. If only it were solid...")
+    Floe floe_1(id: 68, q: Q_ISLE, sp: SP_FROST, x: -62.1, z: -7.4, r: 2.2, hint: "Deep water. If only it were solid...")
+    Floe floe_2(id: 69, q: Q_ISLE, sp: SP_FROST, x: -65.3, z: -7.6, r: 2.2, hint: "Deep water. If only it were solid...")
+    Floe floe_3(id: 70, q: Q_ISLE, sp: SP_FROST, x: -68.4, z: -7.8, r: 2.2, hint: "Deep water. If only it were solid...")
+    Beacon beacon(id: 71, q: Q_ISLE, sp: SP_SPARK, x: -73.2, z: -6.2, hint: "The old signal beacon. It needs a flame.")
+
+    LemonadeBarrel lemon_0(id: 72, q: Q_DRINKS, sp: SP_FROST, x: -3.4, z: 3.6, r: 1.3, hint: "Warm lemonade. It needs to be chilled.")
+    LemonadeBarrel lemon_1(id: 73, q: Q_DRINKS, sp: SP_FROST, x: -1.8, z: 3.9, r: 1.3, hint: "Warm lemonade. It needs to be chilled.")
+    LemonadeBarrel lemon_2(id: 74, q: Q_DRINKS, sp: SP_FROST, x: 5.0, z: 3.8, r: 1.3, hint: "Warm lemonade. It needs to be chilled.")
+
+    Boulder boulder_0(id: 75, q: Q_ROCKS, sp: SP_LIFT, x: road_x(33), z: 33, to_x: road_x(33) + 6.5, to_z: 32, r: 2.6, hint: "A boulder far too heavy to push. If only you could lift it...")
+    Boulder boulder_1(id: 76, q: Q_ROCKS, sp: SP_LIFT, x: road_x(36.5), z: 36.5, to_x: road_x(36.5) - 6.5, to_z: 36, r: 2.6, hint: "A boulder far too heavy to push. If only you could lift it...")
+    Boulder boulder_2(id: 77, q: Q_ROCKS, sp: SP_LIFT, x: road_x(40), z: 40, to_x: road_x(40) + 6.5, to_z: 40.5, r: 2.6, hint: "A boulder far too heavy to push. If only you could lift it...")
+
+    MineLamp mine_lamp_0(id: 78, q: Q_MINE, sp: SP_SPARK, x: 22.5, z: 64, hint: "A miner's lamp, unlit.")
+    MineLamp mine_lamp_1(id: 79, q: Q_MINE, sp: SP_SPARK, x: 24.5, z: 57.5, hint: "A miner's lamp, unlit.")
+    MineLamp mine_lamp_2(id: 80, q: Q_MINE, sp: SP_SPARK, x: 35.5, z: 57.5, hint: "A miner's lamp, unlit.")
+    MineLamp mine_lamp_3(id: 81, q: Q_MINE, sp: SP_SPARK, x: 37.5, z: 64, hint: "A miner's lamp, unlit.")
+    MineLamp mine_lamp_4(id: 82, q: Q_MINE, sp: SP_SPARK, x: 30, z: 67, hint: "A miner's lamp, unlit.")
+
+    Sheep sheep_0(id: 83, q: Q_SHEEP, sp: SP_LIFT, x: -31, z: 70, to_x: -18.5, to_z: 54.5, hint: "The sheep won't budge. Maybe it would like to fly?")
+    Sheep sheep_1(id: 84, q: Q_SHEEP, sp: SP_LIFT, x: -5, z: 80, to_x: -15, to_z: 57.5, hint: "The sheep won't budge. Maybe it would like to fly?")
+    Sheep sheep_2(id: 85, q: Q_SHEEP, sp: SP_LIFT, x: 12, z: 52, to_x: -13, to_z: 54, hint: "The sheep won't budge. Maybe it would like to fly?")
+    Sheep sheep_3(id: 86, q: Q_SHEEP, sp: SP_LIFT, x: -36, z: 48, to_x: -19, to_z: 58, hint: "The sheep won't budge. Maybe it would like to fly?")
+    Sheep sheep_4(id: 87, q: Q_SHEEP, sp: SP_LIFT, x: 50, z: 50, to_x: -13.5, to_z: 58.5, hint: "The sheep won't budge. Maybe it would like to fly?")
+
+    RoofCat cat(id: 88, q: Q_CAT, sp: SP_LIFT, x: 0.6, y: 6.0, gy: 6.6, z: 19.65, to_x: 2.8, to_z: 15.8, r: 3, hint: "The cat is stuck up there. It needs a gentle lift down.")
+
+    Planter planter_0(id: 89, q: Q_FESTIVAL, sp: SP_BLOOM, x: SQ_X + 4.6, z: SQ_Z + 3.3, r: 1.6, hint: "An empty planter, waiting for flowers.")
+    Planter planter_1(id: 90, q: Q_FESTIVAL, sp: SP_BLOOM, x: SQ_X - 4.6, z: SQ_Z + 3.3, r: 1.6, hint: "An empty planter, waiting for flowers.")
+    Planter planter_2(id: 91, q: Q_FESTIVAL, sp: SP_BLOOM, x: SQ_X - 4.6, z: SQ_Z - 3.3, r: 1.6, hint: "An empty planter, waiting for flowers.")
+    Planter planter_3(id: 92, q: Q_FESTIVAL, sp: SP_BLOOM, x: SQ_X + 4.6, z: SQ_Z - 3.3, r: 1.6, hint: "An empty planter, waiting for flowers.")
+    Fountain fountain(id: 93, q: Q_FESTIVAL, sp: SP_SPLASH, x: SQ_X, z: SQ_Z, r: 3.2, hint: "The fountain is dry. It needs water.")
+    IceSculpture sculpture(id: 94, q: Q_FESTIVAL, sp: SP_FROST, x: -12.4, z: -14.4, r: 1.8, hint: "Elder Bram wanted an ice swan here.")
+    GreatLantern great_lantern(id: 95, q: Q_FESTIVAL, sp: SP_LIFT, x: 6.8, z: -14.0, lit_id: 96, r: 2.8, hint: "The Great Lantern must be raised high first.")
+    assets.Target great_lantern_wick(id: 96, q: Q_FESTIVAL, sp: SP_SPARK, x: 6.8, z: -14.0, r: 2.8, req: 95, gy: 5.4, hint: "Raise the Great Lantern with Lift before lighting it.")
   }
 
-  Oven oven(id: 7, q: Q_BREAD, sp: SP_SPARK, x: 11.4, z: -19.4, r: 2.4, hint: "The oven is cold. It needs fire.")
-
-  Weed weed_0(id: 8, q: Q_WEEDS, sp: SP_SPARK, x: -37.2, z: 26.4, hint: "These thorns are too tough to pull. Burn them!")
-  Weed weed_1(id: 9, q: Q_WEEDS, sp: SP_SPARK, x: -26.6, z: 26.6, hint: "These thorns are too tough to pull. Burn them!")
-  Weed weed_2(id: 10, q: Q_WEEDS, sp: SP_SPARK, x: -37.4, z: 17.6, hint: "These thorns are too tough to pull. Burn them!")
-  Weed weed_3(id: 11, q: Q_WEEDS, sp: SP_SPARK, x: -32.4, z: 26.8, hint: "These thorns are too tough to pull. Burn them!")
-  Weed weed_4(id: 12, q: Q_WEEDS, sp: SP_SPARK, x: -26.8, z: 17.4, hint: "These thorns are too tough to pull. Burn them!")
-
-  for i in 0..6 {
-    HerbBed "herb_{i}"(id: 13 + i, q: Q_HERBS, sp: SP_SPLASH, x: -35.2 + (i % 3) * 3.6, z: 20.0 + floor(i / 3) * 4.0, r: 1.9, hint: "The herbs are parched. They need water, not that!")
+  side_quests {
+    for i in 0..6 {
+      const a = i * 1.047
+      FairyShroom "shroom_{i}"(id: 97 + i, q: Q_FAIRY, sp: SP_BLOOM, x: -78 + cos(a) * 4, z: 44 + sin(a) * 4, r: 1.6, hint: "A wilted fairy mushroom. It needs to grow again.")
+    }
+    fairy_floor : MvMeadow { Position: {-78, 0.019, 44}; Cylinder: {length: 0.01, radius: 5.5, segments: 32}; Rgb: {120, 170, 90}; TextureTransform: {11 / TILE_GRASS, 11 / TILE_GRASS, 0, 0} }
+    Weed tower_thorn_0(id: 103, q: Q_TOWER, sp: SP_SPARK, x: -22, z: 66, hint: "Thornweed chokes the path. Burn it!")
+    Weed tower_thorn_1(id: 104, q: Q_TOWER, sp: SP_SPARK, x: -22.5, z: 73, hint: "Thornweed chokes the path. Burn it!")
+    Weed tower_thorn_2(id: 105, q: Q_TOWER, sp: SP_SPARK, x: -25, z: 79, hint: "Thornweed chokes the path. Burn it!")
+    Beacon tower_beacon(id: 106, q: Q_TOWER, sp: SP_SPARK, x: -26, z: 83, hint: "The watchtower beacon. It needs a flame.")
   }
 
-  HayFire fire_0(id: 19, q: Q_FIRE, sp: SP_SPLASH, x: 22.4, z: 5.6, hint: "Water! Fire needs water!")
-  HayFire fire_1(id: 20, q: Q_FIRE, sp: SP_SPLASH, x: 26.6, z: 5.4, hint: "Water! Fire needs water!")
-  HayFire fire_2(id: 21, q: Q_FIRE, sp: SP_SPLASH, x: 28.4, z: 9.4, hint: "Water! Fire needs water!")
-  HayFire fire_3(id: 22, q: Q_FIRE, sp: SP_SPLASH, x: 23.8, z: 9.8, hint: "Water! Fire needs water!")
-
-  for i in 0..8 {
-    CropPatch "crop_{i}"(id: 23 + i, q: Q_FIELDS, sp: SP_SPLASH, x: 44 + (i % 4) * 7, z: 9 + floor(i / 4) * 7, r: 2.8, hint: "The soil is cracked and dry. It wants rain.")
+  wisps {
+    const mx = [-26, 27, 4, -38, 93, 58, 91, 38, -36, 6, 44, -6, -88, -90, -73, -52, -38, 48, 60, 4]
+    const mz = [30, -24, 26, -21, -28, 27, 4, -25, -70, -90, -82, -48, 20, -28, -11.5, -40, 88, 60, 88, 92]
+    for i in 0..20 {
+      Wisp "wisp_{i}"(i: i, x: mx[i], z: mz[i])
+    }
   }
 
-  MillTarget mill(id: 31, q: Q_MILL, sp: SP_GUST, x: 80, z: -18, r: 4, hint: "The sails need wind to turn.")
-  Crow crow_0(gy: 1.8, id: 32, q: Q_MILL, sp: SP_GUST, x: 42, z: -23, hint: "The crow just stares at you. Blow it away!")
-  Crow crow_1(gy: 1.8, id: 33, q: Q_MILL, sp: SP_GUST, x: 47.5, z: -26.5, hint: "The crow just stares at you. Blow it away!")
-  Crow crow_2(gy: 1.8, id: 34, q: Q_MILL, sp: SP_GUST, x: 52.5, z: -23, hint: "The crow just stares at you. Blow it away!")
-  Crow crow_3(gy: 1.8, id: 35, q: Q_MILL, sp: SP_GUST, x: 57, z: -26, hint: "The crow just stares at you. Blow it away!")
-  Crow crow_4(gy: 1.8, id: 36, q: Q_MILL, sp: SP_GUST, x: 39, z: -27, hint: "The crow just stares at you. Blow it away!")
+  npcs {
+    Npc elder(id: N_ELDER, x: -7.6, z: -15.2, face: 0.3)
+    Npc pella(id: N_PELLA, x: 10.4, z: -15.6, face: -0.3)
+    Npc mira(id: N_MIRA, x: -23.6, z: 15.4, face: -0.6)
+    Npc dorn(id: N_DORN, x: 21.2, z: 3.4, face: 0.4)
+    Npc rosa(id: N_ROSA, x: -0.6, z: 3.5, face: 0.2)
+    Npc tam(id: N_TAM, x: 4.6, z: 15.6, face: -0.3)
+    Npc oswin(id: N_OSWIN, x: 47, z: -8.5, face: 0.3)
+    Npc maud(id: N_MAUD, x: 78.5, z: 11, face: -1.5)
+    Npc gareth(id: N_GARETH, x: -17, z: -59, face: 0)
+    Npc fennick(id: N_FENNICK, x: 15, z: -71, face: 0.3)
+    Npc lou(id: N_LOU, x: -55.5, z: 6.5, face: -1.4)
+    Npc gruff(id: N_GRUFF, x: 18, z: 63, face: 0.5)
+    Npc ada(id: N_ADA, x: -16, z: 49.5, face: 0.2)
 
-  Laundry line_0(id: 37, q: Q_LAUNDRY, sp: SP_GUST, x: 74, z: 20, hint: "Careful with the laundry! A breeze would dry it.")
-  Laundry line_1(id: 38, q: Q_LAUNDRY, sp: SP_GUST, x: 80, z: 20, hint: "Careful with the laundry! A breeze would dry it.")
-  Laundry line_2(id: 39, q: Q_LAUNDRY, sp: SP_GUST, x: 86, z: 20, hint: "Careful with the laundry! A breeze would dry it.")
-  Laundry line_3(id: 40, q: Q_LAUNDRY, sp: SP_GUST, x: 77, z: 25.5, hint: "Careful with the laundry! A breeze would dry it.")
-  Laundry line_4(id: 41, q: Q_LAUNDRY, sp: SP_GUST, x: 83, z: 25.5, hint: "Careful with the laundry! A breeze would dry it.")
-
-  FogBank fog_0(id: 42, q: Q_FOG, sp: SP_GUST, x: road_x(-32.5), z: -32.5, w: 7, r: 3.5, hint: "A thick, cold fog. A strong wind might clear it.")
-  FogBank fog_1(id: 43, q: Q_FOG, sp: SP_GUST, x: road_x(-36), z: -36, w: 7, r: 3.5, hint: "A thick, cold fog. A strong wind might clear it.")
-  FogBank fog_2(id: 44, q: Q_FOG, sp: SP_GUST, x: road_x(-39.5), z: -39.5, w: 7, r: 3.5, hint: "A thick, cold fog. A strong wind might clear it.")
-
-  CampTarget campfire(id: 45, q: Q_CAMP, sp: SP_SPARK, x: -21, z: -56, hint: "Gareth's campfire is cold and dead.")
-  LeafPile leaves_0(id: 46, q: Q_CAMP, sp: SP_GUST, x: -27, z: -58, hint: "Burning the leaves would burn the logs too. Blow them away!")
-  LeafPile leaves_1(id: 47, q: Q_CAMP, sp: SP_GUST, x: -13, z: -64, hint: "Burning the leaves would burn the logs too. Blow them away!")
-  LeafPile leaves_2(id: 48, q: Q_CAMP, sp: SP_GUST, x: -25, z: -52.5, hint: "Burning the leaves would burn the logs too. Blow them away!")
-  LeafPile leaves_3(id: 49, q: Q_CAMP, sp: SP_GUST, x: -13.5, z: -54, hint: "Burning the leaves would burn the logs too. Blow them away!")
-
-  Brazier brazier_0(id: 50, q: Q_TRIAL, sp: SP_SPARK, x: 12.5, z: -80, hint: "A spirit brazier. It hungers for flame.")
-  Brazier brazier_1(id: 51, q: Q_TRIAL, sp: SP_SPARK, x: 23.5, z: -80, hint: "A spirit brazier. It hungers for flame.")
-  Brazier brazier_2(id: 52, q: Q_TRIAL, sp: SP_SPARK, x: 18, z: -85.5, hint: "A spirit brazier. It hungers for flame.")
-  Brazier brazier_3(id: 53, q: Q_TRIAL, sp: SP_SPARK, x: 18, z: -74.5, hint: "A spirit brazier. It hungers for flame.")
-
-  for i in 0..6 {
-    const a = i * 1.047 + 0.3
-    Sapling "sapling_{i}"(id: 54 + i, q: Q_GROVE, sp: SP_BLOOM, x: 36 + cos(a) * 4.2, z: -58 + sin(a) * 4.2, r: 1.8, hint: "Only a burnt stump. New life must be coaxed from it.")
+    Villager walker_a(seed: 0.1, x0: -34, z0: -0.4, x1: -14, z1: 0.4, period: 9)
+    Villager walker_b(seed: 0.4, x0: 12, z0: 1.2, x1: 30, z1: 1.6, period: 10)
+    Villager walker_c(seed: 0.7, x0: -24, z0: 14.4, x1: -2, z1: 14.4, period: 11)
+    Villager walker_d(seed: 0.9, x0: 40, z0: 2.5, x1: 70, z1: 3, period: 14)
   }
-
-  Pumpkin pumpkin(id: 60, q: Q_PUMPKIN, sp: SP_BLOOM, lv: 3, x: 70, z: 25, r: 2.6, hint: "Maud's pumpkin needs to GROW.")
-
-  VineBridge bridge(id: 61, q: Q_BRIDGE, sp: SP_BLOOM, x: river_x(road_z(-42)), z: road_z(-42), r: 5, hint: "The old bridge is broken. Something green and strong could span the gap.")
-
-  LilyPad lily_0(id: 62, q: Q_LILY, sp: SP_BLOOM, x: -67, z: 7.2, r: 1.8, hint: "A sleeping lily bud, waiting for spring.")
-  LilyPad lily_1(id: 63, q: Q_LILY, sp: SP_BLOOM, x: -71, z: 8, r: 1.8, hint: "A sleeping lily bud, waiting for spring.")
-  LilyPad lily_2(id: 64, q: Q_LILY, sp: SP_BLOOM, x: -75.5, z: 7.5, r: 1.8, hint: "A sleeping lily bud, waiting for spring.")
-  LilyPad lily_3(id: 65, q: Q_LILY, sp: SP_BLOOM, x: -78.5, z: 6, r: 1.8, hint: "A sleeping lily bud, waiting for spring.")
-  LilyPad lily_4(id: 66, q: Q_LILY, sp: SP_BLOOM, x: -82.5, z: 3, r: 1.8, hint: "A sleeping lily bud, waiting for spring.")
-
-  Floe floe_0(id: 67, q: Q_ISLE, sp: SP_FROST, x: -58.8, z: -7.2, r: 2.2, hint: "Deep water. If only it were solid...")
-  Floe floe_1(id: 68, q: Q_ISLE, sp: SP_FROST, x: -62.1, z: -7.4, r: 2.2, hint: "Deep water. If only it were solid...")
-  Floe floe_2(id: 69, q: Q_ISLE, sp: SP_FROST, x: -65.3, z: -7.6, r: 2.2, hint: "Deep water. If only it were solid...")
-  Floe floe_3(id: 70, q: Q_ISLE, sp: SP_FROST, x: -68.4, z: -7.8, r: 2.2, hint: "Deep water. If only it were solid...")
-  Beacon beacon(id: 71, q: Q_ISLE, sp: SP_SPARK, x: -73.2, z: -6.2, hint: "The old signal beacon. It needs a flame.")
-
-  LemonadeBarrel lemon_0(id: 72, q: Q_DRINKS, sp: SP_FROST, x: -3.4, z: 3.6, r: 1.3, hint: "Warm lemonade. It needs to be chilled.")
-  LemonadeBarrel lemon_1(id: 73, q: Q_DRINKS, sp: SP_FROST, x: -1.8, z: 3.9, r: 1.3, hint: "Warm lemonade. It needs to be chilled.")
-  LemonadeBarrel lemon_2(id: 74, q: Q_DRINKS, sp: SP_FROST, x: 5.0, z: 3.8, r: 1.3, hint: "Warm lemonade. It needs to be chilled.")
-
-  Boulder boulder_0(id: 75, q: Q_ROCKS, sp: SP_LIFT, x: road_x(33), z: 33, to_x: road_x(33) + 6.5, to_z: 32, r: 2.6, hint: "A boulder far too heavy to push. If only you could lift it...")
-  Boulder boulder_1(id: 76, q: Q_ROCKS, sp: SP_LIFT, x: road_x(36.5), z: 36.5, to_x: road_x(36.5) - 6.5, to_z: 36, r: 2.6, hint: "A boulder far too heavy to push. If only you could lift it...")
-  Boulder boulder_2(id: 77, q: Q_ROCKS, sp: SP_LIFT, x: road_x(40), z: 40, to_x: road_x(40) + 6.5, to_z: 40.5, r: 2.6, hint: "A boulder far too heavy to push. If only you could lift it...")
-
-  MineLamp mine_lamp_0(id: 78, q: Q_MINE, sp: SP_SPARK, x: 22.5, z: 64, hint: "A miner's lamp, unlit.")
-  MineLamp mine_lamp_1(id: 79, q: Q_MINE, sp: SP_SPARK, x: 24.5, z: 57.5, hint: "A miner's lamp, unlit.")
-  MineLamp mine_lamp_2(id: 80, q: Q_MINE, sp: SP_SPARK, x: 35.5, z: 57.5, hint: "A miner's lamp, unlit.")
-  MineLamp mine_lamp_3(id: 81, q: Q_MINE, sp: SP_SPARK, x: 37.5, z: 64, hint: "A miner's lamp, unlit.")
-  MineLamp mine_lamp_4(id: 82, q: Q_MINE, sp: SP_SPARK, x: 30, z: 67, hint: "A miner's lamp, unlit.")
-
-  Sheep sheep_0(id: 83, q: Q_SHEEP, sp: SP_LIFT, x: -31, z: 70, to_x: -18.5, to_z: 54.5, hint: "The sheep won't budge. Maybe it would like to fly?")
-  Sheep sheep_1(id: 84, q: Q_SHEEP, sp: SP_LIFT, x: -5, z: 80, to_x: -15, to_z: 57.5, hint: "The sheep won't budge. Maybe it would like to fly?")
-  Sheep sheep_2(id: 85, q: Q_SHEEP, sp: SP_LIFT, x: 12, z: 52, to_x: -13, to_z: 54, hint: "The sheep won't budge. Maybe it would like to fly?")
-  Sheep sheep_3(id: 86, q: Q_SHEEP, sp: SP_LIFT, x: -36, z: 48, to_x: -19, to_z: 58, hint: "The sheep won't budge. Maybe it would like to fly?")
-  Sheep sheep_4(id: 87, q: Q_SHEEP, sp: SP_LIFT, x: 50, z: 50, to_x: -13.5, to_z: 58.5, hint: "The sheep won't budge. Maybe it would like to fly?")
-
-  RoofCat cat(id: 88, q: Q_CAT, sp: SP_LIFT, x: 0.6, y: 6.0, gy: 6.6, z: 19.65, to_x: 2.8, to_z: 15.8, r: 3, hint: "The cat is stuck up there. It needs a gentle lift down.")
-
-  Planter planter_0(id: 89, q: Q_FESTIVAL, sp: SP_BLOOM, x: SQ_X + 4.6, z: SQ_Z + 3.3, r: 1.6, hint: "An empty planter, waiting for flowers.")
-  Planter planter_1(id: 90, q: Q_FESTIVAL, sp: SP_BLOOM, x: SQ_X - 4.6, z: SQ_Z + 3.3, r: 1.6, hint: "An empty planter, waiting for flowers.")
-  Planter planter_2(id: 91, q: Q_FESTIVAL, sp: SP_BLOOM, x: SQ_X - 4.6, z: SQ_Z - 3.3, r: 1.6, hint: "An empty planter, waiting for flowers.")
-  Planter planter_3(id: 92, q: Q_FESTIVAL, sp: SP_BLOOM, x: SQ_X + 4.6, z: SQ_Z - 3.3, r: 1.6, hint: "An empty planter, waiting for flowers.")
-  Fountain fountain(id: 93, q: Q_FESTIVAL, sp: SP_SPLASH, x: SQ_X, z: SQ_Z, r: 3.2, hint: "The fountain is dry. It needs water.")
-  IceSculpture sculpture(id: 94, q: Q_FESTIVAL, sp: SP_FROST, x: -12.4, z: -14.4, r: 1.8, hint: "Elder Bram wanted an ice swan here.")
-  GreatLantern great_lantern(id: 95, q: Q_FESTIVAL, sp: SP_LIFT, x: 6.8, z: -14.0, lit_id: 96, r: 2.8, hint: "The Great Lantern must be raised high first.")
-  Target great_lantern_wick(id: 96, q: Q_FESTIVAL, sp: SP_SPARK, x: 6.8, z: -14.0, r: 2.8, req: 95, gy: 5.4, hint: "Raise the Great Lantern with Lift before lighting it.")
-}
-
-side_quests {
-  for i in 0..6 {
-    const a = i * 1.047
-    FairyShroom "shroom_{i}"(id: 97 + i, q: Q_FAIRY, sp: SP_BLOOM, x: -78 + cos(a) * 4, z: 44 + sin(a) * 4, r: 1.6, hint: "A wilted fairy mushroom. It needs to grow again.")
-  }
-  fairy_floor : MvMeadow { Position: {-78, 0.019, 44}; Cylinder: {length: 0.01, radius: 5.5, segments: 32}; Rgb: {120, 170, 90}; TextureTransform: {11 / TILE_GRASS, 11 / TILE_GRASS, 0, 0} }
-  Weed tower_thorn_0(id: 103, q: Q_TOWER, sp: SP_SPARK, x: -22, z: 66, hint: "Thornweed chokes the path. Burn it!")
-  Weed tower_thorn_1(id: 104, q: Q_TOWER, sp: SP_SPARK, x: -22.5, z: 73, hint: "Thornweed chokes the path. Burn it!")
-  Weed tower_thorn_2(id: 105, q: Q_TOWER, sp: SP_SPARK, x: -25, z: 79, hint: "Thornweed chokes the path. Burn it!")
-  Beacon tower_beacon(id: 106, q: Q_TOWER, sp: SP_SPARK, x: -26, z: 83, hint: "The watchtower beacon. It needs a flame.")
-}
-
-wisps {
-  const mx = [-26, 27, 4, -38, 93, 58, 91, 38, -36, 6, 44, -6, -88, -90, -73, -52, -38, 48, 60, 4]
-  const mz = [30, -24, 26, -21, -28, 27, 4, -25, -70, -90, -82, -48, 20, -28, -11.5, -40, 88, 60, 88, 92]
-  for i in 0..20 {
-    Wisp "wisp_{i}"(i: i, x: mx[i], z: mz[i])
-  }
-}
-
-npcs {
-  Npc elder(id: N_ELDER, x: -7.6, z: -15.2, face: 0.3)
-  Npc pella(id: N_PELLA, x: 10.4, z: -15.6, face: -0.3)
-  Npc mira(id: N_MIRA, x: -23.6, z: 15.4, face: -0.6)
-  Npc dorn(id: N_DORN, x: 21.2, z: 3.4, face: 0.4)
-  Npc rosa(id: N_ROSA, x: -0.6, z: 3.5, face: 0.2)
-  Npc tam(id: N_TAM, x: 4.6, z: 15.6, face: -0.3)
-  Npc oswin(id: N_OSWIN, x: 47, z: -8.5, face: 0.3)
-  Npc maud(id: N_MAUD, x: 78.5, z: 11, face: -1.5)
-  Npc gareth(id: N_GARETH, x: -17, z: -59, face: 0)
-  Npc fennick(id: N_FENNICK, x: 15, z: -71, face: 0.3)
-  Npc lou(id: N_LOU, x: -55.5, z: 6.5, face: -1.4)
-  Npc gruff(id: N_GRUFF, x: 18, z: 63, face: 0.5)
-  Npc ada(id: N_ADA, x: -16, z: 49.5, face: 0.2)
-
-  Villager walker_a(seed: 0.1, x0: -34, z0: -0.4, x1: -14, z1: 0.4, period: 9)
-  Villager walker_b(seed: 0.4, x0: 12, z0: 1.2, x1: 30, z1: 1.6, period: 10)
-  Villager walker_c(seed: 0.7, x0: -24, z0: 14.4, x1: -2, z1: 14.4, period: 11)
-  Villager walker_d(seed: 0.9, x0: 40, z0: 2.5, x1: 70, z1: 3, period: 14)
 }
 
 async {

@@ -16,88 +16,113 @@ using box.controllers
 using box.atmosphere
 using box.layout
 using box.widgets
+using assets
 
 window { Surface: {width: 1600, height: 1100, vsync: true} }
-canopy_ao { Gtao: {radius: 1.3, final_value_power: 1.7} }
-canopy_bloom { Bloom: {intensity: 0.1, threshold: 1.35, threshold_softness: 0.45} }
-canopy_exposure { AutoExposure: {min_log_luma: -10.8, exposure_compensation: 0.55, max_exposure: 18} }
-canopy_tonemap { Tonemap: {auto_exposure: canopy_exposure, operator_: TonyMcMapface} }
-canopy_aa { Smaa: {} }
 
 async {
-  hud_hour = 9.3
-  hud_day_of_year = 120
-  hud_latitude = -2
-  hud_north = 305
-  hud_fog = 0.002
-  hud_baked = false
+  state.hud_hour = 9.3
+  state.hud_day_of_year = 120
+  state.hud_latitude = -2
+  state.hud_north = 305
+  state.hud_fog = 0.002
+  state.hud_baked = false
 }
 
-jungle_city {
-  Scene: {}
-  sun {
-    DirectionalLight: {intensity: 2.6 * math.PI}
-    Rgb: {255, 244, 222}
-    LightCookie: {texture: canopy_tex_clouds, size: 360, height: 140, threshold: 0.3, softness: 0.15, strength: 0.45, velocity: {2.4, 0.9}}
+camera {
+  const width = 15 * 17 + 32
+  const depth = 15 * 17 + 20
+  const extent = math.sqrt(width * width + depth * depth)
+  Position: {-extent * 0.63, extent * 0.37, extent * 0.76}
+  Rotation: {-0.285, -0.69, 0}
+  Camera: {fov: 43, near_: 0.5, far_: extent * 5}
+  CameraController: {speed: 30}
+}
+
+sky {
+  DirectionalLight: {intensity: 2.6 * math.PI}
+  Rgb: {255, 244, 222}
+  LightCookie: {texture: canopy_tex_clouds, size: 360, height: 140, threshold: 0.3, softness: 0.15, strength: 0.45, velocity: {2.4, 0.9}}
+  Atmosphere: {
+    sun: sky,
+    units_per_km: 520,
+    rayleigh: {scale_height: 8, scattering_scale: 2.5},
+    mie: {scale_height: 1.6, anisotropy: 0.78, scattering_scale: 2.6, tint: {238, 244, 232}},
+    ozone_scale: 2.6,
+    ground_albedo: {40, 70, 58},
+    sun_disk_intensity: 10,
+    sun_radius: 0.75
   }
-  sky {
-    Atmosphere: {
-      sun: sun,
-      units_per_km: 520,
-      rayleigh: {scale_height: 8, scattering_scale: 2.5},
-      mie: {scale_height: 1.6, anisotropy: 0.78, scattering_scale: 2.6, tint: {238, 244, 232}},
-      ozone_scale: 2.6,
-      ground_albedo: {40, 70, 58},
-      sun_disk_intensity: 10,
-      sun_radius: 0.75
-    }
-    TimeOfDay: {
-      hour: hud.screen.options.body.hour[Slider.mut].current,
-      day_of_year: hud.screen.options.body.day_of_year[Slider.mut].current,
-      latitude: hud.screen.options.body.latitude[Slider.mut].current,
-      north: hud.screen.options.body.north[Slider.mut].current,
-      sun: sun
-    }
-    HeightFog: {
-      density: hud.screen.options.body.fog[Slider.mut].current,
-      falloff: 0.09,
-      base_height: 0,
-      max_opacity: 0.26,
-      atmosphere: sky
-    }
+  TimeOfDay: {
+    hour: hud.screen.options.body.hour[Slider.mut].current,
+    day_of_year: hud.screen.options.body.day_of_year[Slider.mut].current,
+    latitude: hud.screen.options.body.latitude[Slider.mut].current,
+    north: hud.screen.options.body.north[Slider.mut].current,
+    sun: sky
+  }
+  HeightFog: {
+    density: hud.screen.options.body.fog[Slider.mut].current,
+    falloff: 0.09,
+    base_height: 0,
+    max_opacity: 0.26,
+    atmosphere: sky
+  }
+}
+
+$ {
+  Scene: {
+    baked: true, 
+    reflections: false, 
+    cookies: false, 
+    environment: false, 
+    aerial_perspective: false, 
+    alpha_cutout: true, 
+    blend_modes: false, 
+    transmission: true, 
+    texture_blend: false, 
+    triplanar: false, 
+    clear_coat: false, 
+    diffuse_transmission: false
   }
   ReflectionBake: {resolution: 128, budget_ms: 2, scene_probe: true, scene_probe_height: 28, environment: sky}
   LightBake: {environment: sky, probe_spacing: 12, bounds_padding: 0.3, bounces: 0, capture_size: 32, budget_ms: 8, compute: hud.screen.options.body.baked[Checkbox.mut].current}
-  assets.JungleCity city(rows: 15, columns: 15, spacing: 17, seed: 17) { camera {} }
+}
+
+jungle_city {
+  JungleCity city(rows: 15, columns: 15, spacing: 17, seed: 17)
   CanopyWaterFx water(depth: 15 * 17 + 20, seed: 17, civic_z: (15 - 2 - (15 - 1) / 2.0) * 17 + 17 / 2.0, radius: 11, height: 4.52)
   CanopySoundscape soundscape(width: 15 * 17 + 32, depth: 15 * 17 + 20, civic_z: (15 - 2 - (15 - 1) / 2.0) * 17 + 17 / 2.0, radius: 11, height: 4.52)
 }
 
 async {
-  canopy_width = 15 * 17 + 32
-  canopy_depth = 15 * 17 + 20
-  canopy_listener = jungle_city.city.camera
+  state.canopy_width = 15 * 17 + 32
+  state.canopy_depth = 15 * 17 + 20
+  state.canopy_listener = camera
 }
 
-main_view {
+view {
+  gtao { Gtao: {radius: 1.3, final_value_power: 1.7} }
+  bloom { Bloom: {intensity: 0.1, threshold: 1.35, threshold_softness: 0.45} }
+  exposure { AutoExposure: {min_log_luma: -10.8, exposure_compensation: 0.55, max_exposure: 18} }
+  tonemap { Tonemap: {auto_exposure: exposure, operator_: TonyMcMapface} }
+
   View: {
-    camera: jungle_city.city.camera,
+    camera: camera,
     clear: {enabled: true, color: {60, 72, 72, 255}},
     lighting: {
       enabled: true,
       baked: hud.screen.options.body.baked[Checkbox.mut].current,
       reflections: true,
       atmosphere: true,
-      environment: {source: jungle_city.sky, intensity: 0.95, yaw: 0, background: false}
+      environment: {source: sky, intensity: 0.95, yaw: 0, background: false}
     },
     shadows: {enabled: hud.screen.options.body.shadows[Checkbox.mut].current, cascades: 3, resolution: 2048, max_distance: 620, split_lambda: 0.72, min_caster_texels: 2},
     culling: {enabled: true, occlusion: true, min_dimension_px: 3},
     effects: [
-      {enabled: hud.screen.options.body.gtao[Checkbox.mut].current, effect: canopy_ao},
-      {enabled: true, effect: jungle_city.sky},
-      {enabled: true, effect: canopy_bloom},
-      {enabled: true, effect: canopy_tonemap},
-      {enabled: true, effect: canopy_aa}
+      {enabled: hud.screen.options.body.gtao[Checkbox.mut].current, effect: gtao},
+      {enabled: true, effect: sky},
+      {enabled: true, effect: bloom},
+      {enabled: true, effect: tonemap},
     ]
   }
 }

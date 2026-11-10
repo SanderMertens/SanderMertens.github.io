@@ -1,164 +1,166 @@
 using flecs.script
 using flecs.script.math
 
-export const SW_MAIN: i32 = 0
-export const SW_CABIN: i32 = 1
-export const SW_PANEL: i32 = 2
-export const SW_HUD: i32 = 3
-export const SW_HOLO: i32 = 4
-export const SW_SHUTTER: i32 = 5
-export const SW_FUEL_A: i32 = 6
-export const SW_FUEL_B: i32 = 7
-export const SW_COOL: i32 = 8
-export const SW_NAV: i32 = 9
-export const SW_COMMS: i32 = 10
-export const SW_SHIELD: i32 = 11
-export const SW_GYRO: i32 = 12
-export const SW_FANS: i32 = 13
-export const SW_BEACON: i32 = 14
-export const SW_HEAT: i32 = 15
-export const SW_SPARE_A: i32 = 16
-export const SW_SPARE_B: i32 = 17
-export const SW_SPARE_C: i32 = 18
-export const SW_SPARE_D: i32 = 19
-export const SW_COUNT: i32 = 24
+state {
+  export const SW_MAIN: i32 = 0
+  export const SW_CABIN: i32 = 1
+  export const SW_PANEL: i32 = 2
+  export const SW_HUD: i32 = 3
+  export const SW_HOLO: i32 = 4
+  export const SW_SHUTTER: i32 = 5
+  export const SW_FUEL_A: i32 = 6
+  export const SW_FUEL_B: i32 = 7
+  export const SW_COOL: i32 = 8
+  export const SW_NAV: i32 = 9
+  export const SW_COMMS: i32 = 10
+  export const SW_SHIELD: i32 = 11
+  export const SW_GYRO: i32 = 12
+  export const SW_FANS: i32 = 13
+  export const SW_BEACON: i32 = 14
+  export const SW_HEAT: i32 = 15
+  export const SW_SPARE_A: i32 = 16
+  export const SW_SPARE_B: i32 = 17
+  export const SW_SPARE_C: i32 = 18
+  export const SW_SPARE_D: i32 = 19
+  export const SW_COUNT: i32 = 24
 
-export const KN_DIM: i32 = 0
-export const KN_TUNE: i32 = 1
-export const KN_RANGE: i32 = 2
-export const KN_GAIN: i32 = 3
-export const KN_THROTTLE: i32 = 4
-export const KN_JUMP: i32 = 5
-export const KN_COUNT: i32 = 8
+  export const KN_DIM: i32 = 0
+  export const KN_TUNE: i32 = 1
+  export const KN_RANGE: i32 = 2
+  export const KN_GAIN: i32 = 3
+  export const KN_THROTTLE: i32 = 4
+  export const KN_JUMP: i32 = 5
+  export const KN_COUNT: i32 = 8
 
-event Flipped(sig: i32)
-event PickCourse(dest: i32)
-event Whack()
+  event Flipped(sig: i32)
+  event PickCourse(dest: i32)
+  event Whack()
 
-export mut sw: bool[24] = {}
-export mut kn: f32[8] = {}
+  export mut sw: bool[24] = {}
+  export mut kn: f32[8] = {}
 
-export const STAGE_COLD: i32 = 0
-export const STAGE_BUS: i32 = 1
-export const STAGE_READY: i32 = 2
-export const STAGE_PLOTTED: i32 = 3
-export const STAGE_CHARGING: i32 = 4
-export const STAGE_TUNNEL: i32 = 5
+  export const STAGE_COLD: i32 = 0
+  export const STAGE_BUS: i32 = 1
+  export const STAGE_READY: i32 = 2
+  export const STAGE_PLOTTED: i32 = 3
+  export const STAGE_CHARGING: i32 = 4
+  export const STAGE_TUNNEL: i32 = 5
 
-export mut crt_nav: bool = false
-export mut crt_sys: bool = false
-export mut crt_com: bool = false
-export mut boot_lines: i32 = 0
-export mut com_shown: i32 = 0
-export mut stage: i32 = STAGE_COLD
-export mut bus: bool = false
-export mut flood: f32 = 0
-export mut reactor: f32 = 0
-export mut reactor_on: bool = false
-export mut igniting: bool = false
-export mut lamp_test: bool = false
-export mut fault: bool = false
-export mut caution_lit: bool = false
-export mut blink: bool = false
-export mut slow_blink: bool = false
+  export mut crt_nav: bool = false
+  export mut crt_sys: bool = false
+  export mut crt_com: bool = false
+  export mut boot_lines: i32 = 0
+  export mut com_shown: i32 = 0
+  export mut stage: i32 = STAGE_COLD
+  export mut bus: bool = false
+  export mut flood: f32 = 0
+  export mut reactor: f32 = 0
+  export mut reactor_on: bool = false
+  export mut igniting: bool = false
+  export mut lamp_test: bool = false
+  export mut fault: bool = false
+  export mut caution_lit: bool = false
+  export mut blink: bool = false
+  export mut slow_blink: bool = false
 
-export mut clock: f32 = 0
-export mut dt: f32 = 0.016
+  export mut clock: f32 = 0
+  export mut dt: f32 = 0.016
 
-export mut eng_rpm: f32 = 0
-export mut eng_temp: f32 = 0
-export mut fuel_a: f32 = 0.82
-export mut fuel_b: f32 = 0.34
-export mut bus_volts: f32 = 0
-export mut hull_temp: f32 = 0.18
-export mut coolant: f32 = 0.9
-export mut trip_units: i32 = 47912
+  export mut eng_rpm: f32 = 0
+  export mut eng_temp: f32 = 0
+  export mut fuel_a: f32 = 0.82
+  export mut fuel_b: f32 = 0.34
+  export mut bus_volts: f32 = 0
+  export mut hull_temp: f32 = 0.18
+  export mut coolant: f32 = 0.9
+  export mut trip_units: i32 = 47912
 
-export const DEST_ORO: i32 = 0
-export const DEST_NAUR: i32 = 1
-export const DEST_CINDER: i32 = 2
+  export const DEST_ORO: i32 = 0
+  export const DEST_NAUR: i32 = 1
+  export const DEST_CINDER: i32 = 2
 
-export mut here: i32 = DEST_ORO
-export mut course: i32 = -1
-export mut plot: f32 = 0
+  export mut here: i32 = DEST_ORO
+  export mut course: i32 = -1
+  export mut plot: f32 = 0
 
-export mut warp: bool = false
-export mut in_tunnel: bool = false
-export mut tunnel_on: bool = false
-export mut scroll: f32 = 0
-export mut spark_serial: i32 = 0
-export mut smoke: bool = false
-export mut view: i32 = 0
-export mut help_on: bool = true
-export mut look_yaw: f32 = 0
-export mut look_pitch: f32 = 0
-export mut jump_level: f32 = 0
-export mut tunnel: f32 = 0
-export mut flash: f32 = 0
-export mut shake: f32 = 0
+  export mut warp: bool = false
+  export mut in_tunnel: bool = false
+  export mut tunnel_on: bool = false
+  export mut scroll: f32 = 0
+  export mut spark_serial: i32 = 0
+  export mut smoke: bool = false
+  export mut view: i32 = 0
+  export mut help_on: bool = true
+  export mut look_yaw: f32 = 0
+  export mut look_pitch: f32 = 0
+  export mut jump_level: f32 = 0
+  export mut tunnel: f32 = 0
+  export mut flash: f32 = 0
+  export mut shake: f32 = 0
 
-export const STARS_REST: i32 = 0
-export const STARS_STREAK: i32 = 1
-export const STARS_HIDDEN: i32 = 2
-export const STARS_SNAP: i32 = 3
-export mut star_mode: i32 = STARS_REST
+  export const STARS_REST: i32 = 0
+  export const STARS_STREAK: i32 = 1
+  export const STARS_HIDDEN: i32 = 2
+  export const STARS_SNAP: i32 = 3
+  export mut star_mode: i32 = STARS_REST
 
-export mut eye_x: f32 = -0.38
-export mut eye_y: f32 = 1.36
-export mut eye_z: f32 = 0.12
-export mut eye_pitch: f32 = -0.22
-export mut eye_yaw: f32 = -0.06
-export mut eye_roll: f32 = 0
-export mut eye_fov: f32 = 70
-export mut fov_want: f32 = 70
+  export mut eye_x: f32 = -0.38
+  export mut eye_y: f32 = 1.36
+  export mut eye_z: f32 = 0.12
+  export mut eye_pitch: f32 = -0.22
+  export mut eye_yaw: f32 = -0.06
+  export mut eye_roll: f32 = 0
+  export mut eye_fov: f32 = 70
+  export mut fov_want: f32 = 70
 
-export mut attitude_pitch: f32 = 0
-export mut attitude_roll: f32 = 0
-export mut attitude_yaw: f32 = 0
+  export mut attitude_pitch: f32 = 0
+  export mut attitude_roll: f32 = 0
+  export mut attitude_yaw: f32 = 0
 
-fn bool_f(b: bool) -> f32 {
-  b ? 1 : 0
-}
-
-fn has_bit(mask: i32, i: i32) -> bool {
-  (mask >> i) % 2 == 1
-}
-
-fn dest_name(i: i32) -> string {
-  match i { 0: "ORO BASIN"; 1: "VEIL OF NAUR"; _: "CINDER YARD" }
-}
-
-fn dest_code(i: i32) -> string {
-  match i { 0: "ORO-4"; 1: "NAU-7"; _: "CIN-2" }
-}
-
-fn radio_signal(t: f32) -> f32 {
-  1 - min(abs(t - 0.62) * 9, 1)
-}
-
-fn breaker_name(i: i32) -> string {
-  match i {
-    0: "GALLEY"
-    1: "O2 PMP"
-    2: "SCRUB"
-    3: "AFT LT"
-    4: "FWD LT"
-    5: "WINCH"
-    6: "SCOPE"
-    7: "ASSAY"
-    8: "CARGO"
-    9: "HOIST"
-    10: "BILGE"
-    _: "TOLL XP"
+  fn bool_f(b: bool) -> f32 {
+    b ? 1 : 0
   }
-}
 
-fn help_text(s: i32) -> string {
-  match s {
-    0: "SPACE next step  |  click the red guard, then the switch  |  1-6 views  |  right drag look  |  H hide"
-    1: "SPACE next step  |  hold IGNITE on the center stack  |  1-6 views  |  right drag look  |  H hide"
-    2: "SPACE next step  |  pick a destination on the nav scope or the hologram  |  WASD fly  |  H hide"
-    3: "SPACE next step  |  drag the red JUMP handle toward you  |  H hide"
-    _: "H hide"
+  fn has_bit(mask: i32, i: i32) -> bool {
+    (mask >> i) % 2 == 1
+  }
+
+  fn dest_name(i: i32) -> string {
+    match i { 0: "ORO BASIN"; 1: "VEIL OF NAUR"; _: "CINDER YARD" }
+  }
+
+  fn dest_code(i: i32) -> string {
+    match i { 0: "ORO-4"; 1: "NAU-7"; _: "CIN-2" }
+  }
+
+  fn radio_signal(t: f32) -> f32 {
+    1 - min(abs(t - 0.62) * 9, 1)
+  }
+
+  fn breaker_name(i: i32) -> string {
+    match i {
+      0: "GALLEY"
+      1: "O2 PMP"
+      2: "SCRUB"
+      3: "AFT LT"
+      4: "FWD LT"
+      5: "WINCH"
+      6: "SCOPE"
+      7: "ASSAY"
+      8: "CARGO"
+      9: "HOIST"
+      10: "BILGE"
+      _: "TOLL XP"
+    }
+  }
+
+  fn help_text(s: i32) -> string {
+    match s {
+      0: "SPACE next step  |  click the red guard, then the switch  |  1-6 views  |  right drag look  |  H hide"
+      1: "SPACE next step  |  hold IGNITE on the center stack  |  1-6 views  |  right drag look  |  H hide"
+      2: "SPACE next step  |  pick a destination on the nav scope or the hologram  |  WASD fly  |  H hide"
+      3: "SPACE next step  |  drag the red JUMP handle toward you  |  H hide"
+      _: "H hide"
+    }
   }
 }

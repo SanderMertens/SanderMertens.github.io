@@ -1,628 +1,632 @@
 using flecs.script
 using flecs.script.math
+using state
+using assets
 
-event StartGame()
-event Ending()
+state {
+  event StartGame()
+  event Ending()
 
-export mut regen_boost = false
-export mut ending_t: f64 = 0
-export mut started_at: f64 = 0
-export mut finished_at: f64 = 0
+  export mut regen_boost = false
+  export mut ending_t: f64 = 0
+  export mut started_at: f64 = 0
+  export mut finished_at: f64 = 0
 
-fn quest_name(q: i32) -> string {
-  match q {
-    0: "A Cold Hearth"
-    1: "Lamps of the Square"
-    2: "Bread for Mossvale"
-    3: "Thorns in the Garden"
-    4: "Thirsty Herbs"
-    5: "Fire at the Smithy!"
-    6: "Parched Fields"
-    7: "Windmill Woes"
-    8: "Granny's Washing"
-    9: "The Fogbound Road"
-    10: "The Woodcutter's Camp"
-    11: "The Hermit's Trial"
-    12: "The Scorched Grove"
-    13: "The Prize Pumpkin"
-    14: "The Broken Bridge"
-    15: "No Bites Today"
-    16: "The Stargazer's Isle"
-    17: "Cold Drinks"
-    18: "Rockslide"
-    19: "The Dark Mine"
-    20: "Lost Sheep"
-    21: "Biscuit on the Roof"
-    22: "The Festival of Lights"
-    23: "Wisps of the Valley"
-    24: "The Fairy Ring"
-    25: "The Old Watchtower"
-    _: ""
-  }
-}
-
-fn quest_giver(q: i32) -> i32 {
-  match q {
-    1, 22: 0
-    2: 1
-    3, 4, 23, 24: 2
-    5: 3
-    6, 7: 6
-    8, 13: 7
-    10: 8
-    11, 12: 9
-    15, 16: 10
-    17: 4
-    19: 11
-    20, 25: 12
-    21: 5
-    _: -1
-  }
-}
-
-fn quest_turnin(q: i32) -> i32 {
-  match q {
-    0, 9, 14, 16, 18: -1
-    _: quest_giver(q)
-  }
-}
-
-fn quest_need(q: i32) -> i32 {
-  match q {
-    0: 1
-    1: 6
-    2: 4
-    3: 5
-    4: 6
-    5: 4
-    6: 8
-    7: 6
-    8: 5
-    9: 3
-    10: 5
-    11: 4
-    12: 6
-    13: 1
-    14: 1
-    15: 5
-    16: 5
-    17: 3
-    18: 3
-    19: 5
-    20: 5
-    21: 1
-    22: 8
-    23: 20
-    24: 6
-    25: 4
-    _: 1
-  }
-}
-
-fn quest_goal(q: i32) -> string {
-  match q {
-    0: "Light the hearth by your cottage"
-    1: "Lamps lit"
-    2: "Oven lit, loaves delivered"
-    3: "Thornweed burned"
-    4: "Herb beds watered"
-    5: "Fires put out"
-    6: "Crop patches watered"
-    7: "Mill turning, crows shooed"
-    8: "Washing dried"
-    9: "Fog banks cleared"
-    10: "Fire lit, logs uncovered"
-    11: "Braziers lit"
-    12: "Saplings regrown"
-    13: "Pumpkin grown"
-    14: "Bridge regrown"
-    15: "Lily pads bloomed"
-    16: "Ice path frozen, beacon lit"
-    17: "Barrels chilled"
-    18: "Boulders lifted"
-    19: "Mine lamps lit"
-    20: "Sheep returned"
-    21: "Cat rescued"
-    22: "Festival preparations"
-    23: "Wisps gathered"
-    24: "Mushrooms revived"
-    25: "Thorns burned, beacon lit"
-    _: ""
-  }
-}
-
-fn quest_where(q: i32) -> string {
-  match q {
-    0: "Spark the stone hearth east of your cottage door."
-    1: "Six lamps ring the village square."
-    2: "Pella's oven stands beside the bakery, on the north side of the square."
-    3: "Mira's garden lies at the west end of the south lane, by the river."
-    4: "The herb beds are inside Mira's garden fence."
-    5: "The burning haystacks are in the yard beside the smithy, east along the main street."
-    6: "Oswin's fields lie south of the east road."
-    7: "The windmill stands north-east of the farm; crows sit in the wheat."
-    8: "Granny Maud's washing lines are behind her cottage, far east."
-    9: "Fog chokes the road north into Whisperwood."
-    10: "Gareth's camp is west of the forest road."
-    11: "The stone circle lies at the north end of the forest road."
-    12: "The burnt grove is east of the forest road."
-    13: "The pumpkin grows in Maud's patch, south-east of the farm."
-    14: "The broken bridge spans the river on the west road."
-    15: "Lily buds wait in the shallows along the lake's south shore."
-    16: "Freeze floes from the east shore to the island, then light the beacon."
-    17: "The lemonade barrels stand outside the Sleepy Toad inn."
-    18: "Boulders block the road south into the hills."
-    19: "Lamps line the track to Gruff's mine, in the quarry."
-    20: "Sheep are scattered across the southern hills. The pen is west of the road."
-    21: "Biscuit sits on the roof of Tam's house, on the south lane."
-    22: "Planters and fountain in the square, ice swan by the hall, lantern by the bakery."
-    23: "Glowing wisps drift in every corner of the valley."
-    24: "The fairy ring lies in the meadow south-west of Mirror Lake."
-    25: "The watchtower stands in the south-west hills, beyond the sheep pen."
-    _: ""
-  }
-}
-
-fn line(k: i32) -> string {
-  match k {
-    10110: "Ah, Wren! Up early, I see. And your hearth is crackling. Good, good."
-    10111: "Old Thistlewood left you his cottage and his staff. Mossvale needs a mage again, and I think it's you."
-    10112: "The six lamps around the square went out in last night's wind. Nobody can reach them without a ladder."
-    10113: "Light all six with your Spark, would you? Click where you aim, or press Space to cast at the nearest one."
-    10120: "Six lamps around the square, Wren. Spark each one."
-    10121: "If your staff runs dry, just wait a moment. Mana returns on its own."
-    10130: "Look at that! The square hasn't glowed like this since Thistlewood's day."
-    10131: "Folk have noticed. Pella at the bakery was asking for you, and Mira the herbalist too."
-    10132: "Go and see them. A village mage is a busy mage!"
-
-    10210: "Oh, thank the stars, a mage! My oven won't catch. The flue is damp from the rain."
-    10211: "Could you light it for me? It's the big stone oven just east of the bakery."
-    10212: "Once the loaves are out, take one each to Dorn the smith, Rosa at the inn, and little Tam."
-    10220: "Light the oven, then bring a loaf to Dorn, Rosa and Tam. They're all near the square."
-    10230: "All delivered? You're a marvel! Here, a sticky bun for the road."
-    10231: "Mossvale feels warmer with a mage about."
-
-    10310: "You must be Wren. I'm Mira. I keep the herb garden by the river road."
-    10311: "Thornweed has crept in. Pull it and it bites, leave it and it strangles everything."
-    10312: "Burn the five clumps with Spark. Carefully! In return, I'll teach you something useful."
-    10320: "Five clumps of thornweed around my garden. Burn them with Spark."
-    10330: "Every last thorn! Now, as I promised."
-    10331: "Thistlewood taught me a little water-weaving once. Hold your staff like so, and think of rain."
-    10332: "That's it: SPLASH. Press 2 to choose it. Water is the gentlest magic, and the most useful."
-
-    10410: "My herb beds are bone dry. The well rope snapped last week."
-    10411: "Water all six beds with your new Splash, would you?"
-    10420: "Six herb beds inside the fence, Wren. Splash each one."
-    10430: "Listen to them drink! Feverfew, mint, moonwort... all saved."
-    10431: "Hm? Do you smell smoke? Something's burning near the smithy!"
-
-    10510: "WREN! Over here! Sparks from my forge caught the haystacks in the smithy yard!"
-    10511: "Four of them are burning. Douse them before it spreads to the roofs!"
-    10520: "The haystacks in the smithy yard! Splash them!"
-    10530: "Phew. You saved half the village from a very bad morning."
-    10531: "Farmer Oswin was asking for help too. His fields east of the village are drying out. Follow the east road."
-
-    10610: "So you're the new mage. Folk say you can pull water out of thin air."
-    10611: "Not a drop of rain in three weeks. My crops are wilting where they stand."
-    10612: "Eight patches south of the road. Water every one, and I'll teach you a trick of my own."
-    10620: "Eight crop patches south of the road. Splash 'em good."
-    10630: "Will you look at that. Green as springtime!"
-    10631: "My granddad was a weather-witch. He taught me one charm before he passed: GUST."
-    10632: "Press 3 to choose it. Wind is good for more than you'd think."
-
-    10710: "With Gust you could help with the windmill. Not a breath of wind and the stones sit idle."
-    10711: "And crows got into the wheat north of the house. Five of them, fat as pigeons."
-    10712: "Get the sails turning and blow those crows to next week."
-    10720: "Spin the windmill and shoo off the five crows in the wheat."
-    10730: "Ha! The mill's grinding and the crows are gone. A fine morning's work."
-    10731: "The forest road north has been choked by fog for weeks. Strange fog. Your wind might shift it."
-
-    10810: "Hello, dearie. My washing got soaked in that one cloudburst and it just won't dry."
-    10811: "Five lines of it behind the cottage. Give it a puff of wind? Gently, mind!"
-    10820: "Five washing lines, dear. A nice breeze is all they need."
-    10830: "Dry as a biscuit and smelling of sunshine! Thank you, dear."
-    10831: "If you ever learn a growing spell, come back. My pumpkin refuses to grow for the harvest fair."
-
-    11010: "Well met! That fog had me stuck in these woods for weeks."
-    11011: "My campfire's gone out, and the logs I cut are buried under leaves. Four piles of them."
-    11012: "Light my fire, and blow the leaves off my logs. Don't burn them, mind!"
-    11020: "Campfire's out, and four leaf piles to blow away."
-    11030: "There's a proper fire! And my logs, dry as kindling."
-    11031: "Going deeper into the woods? Look for old Fennick at the stone circle. Peculiar fellow. But wise."
-
-    11110: "Hmm. Another of Thistlewood's. You have his eyebrows."
-    11111: "The spirits of this wood are cold. Their four braziers have gone dark."
-    11112: "Light them all, and I'll know you're ready for the green magic."
-    11120: "Four braziers around the circle. Light them."
-    11130: "The spirits are warm again. Hmm. Well done."
-    11131: "Now hold out your staff. Feel the sap rising in the wood? That is BLOOM."
-    11132: "Press 4 to choose it. Things grow where you point it. Use it kindly."
-
-    11210: "Lightning burned a grove east of the road last summer. Six young trees, now stumps."
-    11211: "Bloom them back to life. The forest will remember it."
-    11220: "Six burnt stumps in the grove east of the road. Bloom them."
-    11230: "Young birches. They'll be tall by the time you're old and grumpy like me."
-    11231: "Go on. The village will have more uses for you."
-
-    11310: "Is that green magic I smell on you? Oh, how wonderful!"
-    11311: "My pumpkin for the harvest fair is no bigger than a turnip!"
-    11312: "Give it a few good Blooms. Three should do it, I think."
-    11320: "My little pumpkin needs three good Blooms, dear."
-    11330: "Look at the size of it! I'll win the fair for certain. You're a treasure."
-
-    11510: "Eh? A mage? Took you lot long enough to fix that bridge."
-    11511: "The fish have gone. No lily pads in the shallows means no shade, no bugs, no fish."
-    11512: "Bloom five lily pads along the south shore and maybe I'll have supper tonight."
-    11520: "Five lily pads along the south shore of the lake."
-    11530: "Ripples! The fish are back. Haven't seen that in a year."
-    11531: "Here's a secret my mother taught me. When the lake freezes, the fish sleep sound. FROST, she called it."
-    11532: "Press 5 to choose it. Cold as the bottom of the lake in winter."
-
-    11610: "See that island? The old stargazer's tower. Nobody's set foot there since he passed."
-    11611: "His beacon's been dark for years. Freeze a path of ice across the water and light it."
-    11612: "They say his books are still in that tower. Might be something in there for a young mage."
-    11620: "Freeze a path of ice floes out to the island, then light the beacon."
-
-    11710: "Wren, love! It's so hot the lemonade's practically soup."
-    11711: "Three barrels outside the inn. Could you chill them with that frosty magic?"
-    11720: "Three lemonade barrels outside the inn. A touch of Frost each."
-    11730: "Ice cold! The whole village will be queuing at my door."
-    11731: "Your drinks are on the house. Forever."
-
-    11910: "Hrmph. The road's clear? About time."
-    11911: "My mine's dark as a dragon's gullet. The lamps on the track all blew out in the slide."
-    11912: "Light all five and I'll get back to digging."
-    11920: "Five lamps along the mine track. Light 'em."
-    11930: "Ha! Bright as noon. You're alright, for a wand-waver."
-
-    12010: "Oh, you must be the mage! The rockslide scared my flock. Five sheep scattered over the hills."
-    12011: "They're too frightened to come down. Could you... float them back to the pen?"
-    12012: "Gently! Sheep don't like flying any more than I would."
-    12020: "Five lost sheep in the hills. Lift them back to the pen."
-    12030: "All five, safe and fluffy! You're a wonder, Wren."
-
-    12110: "Wren! WREN! Biscuit is stuck on our roof AGAIN!"
-    12111: "He's been yowling all day. Can you lift him down? Please please please?"
-    12120: "Biscuit is on our roof! Lift him down!"
-    12130: "BISCUIT! You're back! Thank you Wren, you're the best mage EVER."
-
-    12210: "Wren. Look at what you've done for Mossvale. Fields green, roads open, lamps bright."
-    12211: "Tonight is the Festival of Lights, and we want it to be the finest in a hundred years."
-    12212: "Bloom the four planters, fill the fountain, and carve an ice swan beside the hall."
-    12213: "Then Lift the Great Lantern by the bakery, light it, and come back to me."
-    12220: "Four planters, the fountain, the ice swan, and the Great Lantern: raise it, then light it."
-    12230: "Mossvale has its mage again, Wren. Thistlewood would be proud."
-    12231: "Now then. Let the Festival of Lights begin!"
-
-    12310: "One more thing, Wren. Have you seen the little lights drifting about? Wisps."
-    12311: "Twenty of them, scattered across the whole valley. Each one you gather deepens your mana."
-    12312: "Find them all and I'll brew you something special."
-    12320: "Twenty wisps across the valley. Just walk into them to gather them."
-    12330: "All twenty! Your mana shines like a lantern. Here, drink this."
-    12331: "Starwater tea. Your mana will flow back twice as fast from now on."
-
-    12410: "Now that you know Bloom, there's something I've wanted to ask."
-    12411: "An old fairy ring grows in the meadow south-west of Mirror Lake. Its mushrooms have all wilted."
-    12412: "Bloom all six back to health, and the fair folk might smile on Mossvale again."
-    12420: "Six wilted mushrooms in the fairy ring, south-west of Mirror Lake."
-    12430: "You did it! I felt the ring wake up from here. The whole meadow smells of honey."
-    12431: "The fair folk leave gifts, they say. Your mana feels deeper already, doesn't it?"
-
-    12510: "Before the rockslide, my father kept a beacon burning on the old watchtower."
-    12511: "Thornweed has choked the path, and the fire's long dead."
-    12512: "Burn away the three thorn clumps and light the beacon, so the shepherds can find their way home at dusk."
-    12520: "Burn the thorns on the watchtower path and light its beacon."
-    12530: "I can see it from here, burning bright! Thank you, Wren."
-    12531: "Father would have liked you. He always said a light on the hill is a light in the heart."
-
-    20030: "Bread from Pella? Still warm! You're a good sort, Wren."
-    20040: "Ooh, Pella's honey loaf! My guests will fight over it."
-    20050: "Bread!! Thank you! Mum says I can't eat it all at once. I'm going to."
-
-    30000: "Mossvale is a quiet place. Quieter than it should be, since Thistlewood passed."
-    30001: "Keep an eye out for anyone who needs a hand."
-    30010: "Fresh bread every morning, if the oven behaves!"
-    30020: "Every plant has a use, Wren. Even thornweed, if you're desperate."
-    30030: "Anvil, hammer, fire. Simple tools for a simple smith."
-    30040: "The Sleepy Toad is always open. Well, nearly always."
-    30050: "When I grow up I'm going to be a mage too. Or a dragon."
-    30060: "Rain's coming one day. I can feel it in my knees."
-    30070: "Mind the washing, dearie."
-    30080: "These woods give good timber, if you ask them nicely."
-    30090: "The spirits speak, if you listen. Mostly about the weather."
-    30100: "Fish bite at dawn. Or they used to."
-    30110: "Rock and dark and gold, that's a miner's life."
-    30120: "Count the sheep, then count them again. That's shepherding."
-    _: ""
-  }
-}
-
-fn delivery_npc(n: i32) -> bool {
-  n == N_DORN || n == N_ROSA || n == N_TAM
-}
-
-proc refresh() {
-  mut m: i32[16] = {}
-  for q in 0..QUESTS {
-    const g = quest_giver(q)
-    const t = quest_turnin(q)
-    if qs[q] == QS_OPEN && g >= 0 && m[g] == 0 {
-      m[g] = 1
-    }
-    if qs[q] == QS_RETURN && t >= 0 {
-      m[t] = 2
+  fn quest_name(q: i32) -> string {
+    match q {
+      0: "A Cold Hearth"
+      1: "Lamps of the Square"
+      2: "Bread for Mossvale"
+      3: "Thorns in the Garden"
+      4: "Thirsty Herbs"
+      5: "Fire at the Smithy!"
+      6: "Parched Fields"
+      7: "Windmill Woes"
+      8: "Granny's Washing"
+      9: "The Fogbound Road"
+      10: "The Woodcutter's Camp"
+      11: "The Hermit's Trial"
+      12: "The Scorched Grove"
+      13: "The Prize Pumpkin"
+      14: "The Broken Bridge"
+      15: "No Bites Today"
+      16: "The Stargazer's Isle"
+      17: "Cold Drinks"
+      18: "Rockslide"
+      19: "The Dark Mine"
+      20: "Lost Sheep"
+      21: "Biscuit on the Roof"
+      22: "The Festival of Lights"
+      23: "Wisps of the Valley"
+      24: "The Fairy Ring"
+      25: "The Old Watchtower"
+      _: ""
     }
   }
-  if qs[Q_BREAD] == QS_ACTIVE && ts[7] > 0 {
-    for n in 0..NPCS {
-      if delivery_npc(n) && !delivered[n] && m[n] == 0 {
-        m[n] = 1
-      }
+
+  fn quest_giver(q: i32) -> i32 {
+    match q {
+      1, 22: 0
+      2: 1
+      3, 4, 23, 24: 2
+      5: 3
+      6, 7: 6
+      8, 13: 7
+      10: 8
+      11, 12: 9
+      15, 16: 10
+      17: 4
+      19: 11
+      20, 25: 12
+      21: 5
+      _: -1
     }
   }
-  npc_mark = m
 
-  mut tt: string[4] = {}
-  mut tsub: string[4] = {}
-  mut count: i32 = 0
-  for i in 0..QUESTS {
-    const q = QUESTS - 1 - i
-    if count < 4 && (qs[q] == QS_ACTIVE || qs[q] == QS_RETURN) {
-      tt[count] = quest_name(q)
-      if qs[q] == QS_RETURN {
-        tsub[count] = "Return to {npc_name(quest_turnin(q))}"
-      } else if quest_need(q) > 1 {
-        tsub[count] = "{quest_goal(q)}: {qp[q]} of {quest_need(q)}"
-      } else {
-        tsub[count] = quest_where(q)
-      }
-      count += 1
+  fn quest_turnin(q: i32) -> i32 {
+    match q {
+      0, 9, 14, 16, 18: -1
+      _: quest_giver(q)
     }
   }
-  for i in 0..QUESTS {
-    const q = QUESTS - 1 - i
-    if count < 4 && qs[q] == QS_OPEN && quest_giver(q) >= 0 {
-      tt[count] = quest_name(q)
-      tsub[count] = "Talk to {npc_name(quest_giver(q))}"
-      count += 1
+
+  fn quest_need(q: i32) -> i32 {
+    match q {
+      0: 1
+      1: 6
+      2: 4
+      3: 5
+      4: 6
+      5: 4
+      6: 8
+      7: 6
+      8: 5
+      9: 3
+      10: 5
+      11: 4
+      12: 6
+      13: 1
+      14: 1
+      15: 5
+      16: 5
+      17: 3
+      18: 3
+      19: 5
+      20: 5
+      21: 1
+      22: 8
+      23: 20
+      24: 6
+      25: 4
+      _: 1
     }
   }
-  track_t = tt
-  track_s = tsub
-  track_n = count
-}
 
-proc find_objective() {
-  mut q: i32 = -1
-  for i in 0..QUESTS {
-    const k = QUESTS - 1 - i
-    if q < 0 && k != Q_MOTES && (qs[k] == QS_ACTIVE || qs[k] == QS_RETURN) {
-      q = k
+  fn quest_goal(q: i32) -> string {
+    match q {
+      0: "Light the hearth by your cottage"
+      1: "Lamps lit"
+      2: "Oven lit, loaves delivered"
+      3: "Thornweed burned"
+      4: "Herb beds watered"
+      5: "Fires put out"
+      6: "Crop patches watered"
+      7: "Mill turning, crows shooed"
+      8: "Washing dried"
+      9: "Fog banks cleared"
+      10: "Fire lit, logs uncovered"
+      11: "Braziers lit"
+      12: "Saplings regrown"
+      13: "Pumpkin grown"
+      14: "Bridge regrown"
+      15: "Lily pads bloomed"
+      16: "Ice path frozen, beacon lit"
+      17: "Barrels chilled"
+      18: "Boulders lifted"
+      19: "Mine lamps lit"
+      20: "Sheep returned"
+      21: "Cat rescued"
+      22: "Festival preparations"
+      23: "Wisps gathered"
+      24: "Mushrooms revived"
+      25: "Thorns burned, beacon lit"
+      _: ""
     }
   }
-  for i in 0..QUESTS {
-    const k = QUESTS - 1 - i
-    if q < 0 && k != Q_MOTES && qs[k] == QS_OPEN && quest_giver(k) >= 0 {
-      q = k
+
+  fn quest_where(q: i32) -> string {
+    match q {
+      0: "Spark the stone hearth east of your cottage door."
+      1: "Six lamps ring the village square."
+      2: "Pella's oven stands beside the bakery, on the north side of the square."
+      3: "Mira's garden lies at the west end of the south lane, by the river."
+      4: "The herb beds are inside Mira's garden fence."
+      5: "The burning haystacks are in the yard beside the smithy, east along the main street."
+      6: "Oswin's fields lie south of the east road."
+      7: "The windmill stands north-east of the farm; crows sit in the wheat."
+      8: "Granny Maud's washing lines are behind her cottage, far east."
+      9: "Fog chokes the road north into Whisperwood."
+      10: "Gareth's camp is west of the forest road."
+      11: "The stone circle lies at the north end of the forest road."
+      12: "The burnt grove is east of the forest road."
+      13: "The pumpkin grows in Maud's patch, south-east of the farm."
+      14: "The broken bridge spans the river on the west road."
+      15: "Lily buds wait in the shallows along the lake's south shore."
+      16: "Freeze floes from the east shore to the island, then light the beacon."
+      17: "The lemonade barrels stand outside the Sleepy Toad inn."
+      18: "Boulders block the road south into the hills."
+      19: "Lamps line the track to Gruff's mine, in the quarry."
+      20: "Sheep are scattered across the southern hills. The pen is west of the road."
+      21: "Biscuit sits on the roof of Tam's house, on the south lane."
+      22: "Planters and fountain in the square, ice swan by the hall, lantern by the bakery."
+      23: "Glowing wisps drift in every corner of the valley."
+      24: "The fairy ring lies in the meadow south-west of Mirror Lake."
+      25: "The watchtower stands in the south-west hills, beyond the sheep pen."
+      _: ""
     }
   }
-  mut on = false
-  mut npc = false
-  mut bx: f32 = 0
-  mut bz: f32 = 0
-  if q >= 0 {
-    if qs[q] == QS_RETURN {
-      on = true
-      npc = true
-      bx = npc_x[quest_turnin(q)]
-      bz = npc_z[quest_turnin(q)]
-    } else if qs[q] == QS_OPEN {
-      on = true
-      npc = true
-      bx = npc_x[quest_giver(q)]
-      bz = npc_z[quest_giver(q)]
-    } else if q == Q_BREAD && ts[7] > 0 {
-      mut best: f64 = 1e9
-      for n in 0..NPCS {
-        if delivery_npc(n) && !delivered[n] {
-          const d = dist2(px, pz, npc_x[n], npc_z[n])
-          if d < best {
-            best = d
-            on = true
-            npc = true
-            bx = npc_x[n]
-            bz = npc_z[n]
-          }
-        }
-      }
-    } else {
-      mut best: f64 = 1e9
-      for t in 0..TARGETS {
-        if t_on[t] && t_q[t] == q && ts[t] < t_lv[t] && (t_req[t] < 0 || ts[t_req[t]] >= t_lv[t_req[t]]) {
-          const d = dist2(px, pz, t_x[t], t_z[t])
-          if d < best {
-            best = d
-            on = true
-            bx = t_x[t]
-            bz = t_z[t]
-          }
-        }
-      }
+
+  fn line(k: i32) -> string {
+    match k {
+      10110: "Ah, Wren! Up early, I see. And your hearth is crackling. Good, good."
+      10111: "Old Thistlewood left you his cottage and his staff. Mossvale needs a mage again, and I think it's you."
+      10112: "The six lamps around the square went out in last night's wind. Nobody can reach them without a ladder."
+      10113: "Light all six with your Spark, would you? Click where you aim, or press Space to cast at the nearest one."
+      10120: "Six lamps around the square, Wren. Spark each one."
+      10121: "If your staff runs dry, just wait a moment. Mana returns on its own."
+      10130: "Look at that! The square hasn't glowed like this since Thistlewood's day."
+      10131: "Folk have noticed. Pella at the bakery was asking for you, and Mira the herbalist too."
+      10132: "Go and see them. A village mage is a busy mage!"
+
+      10210: "Oh, thank the stars, a mage! My oven won't catch. The flue is damp from the rain."
+      10211: "Could you light it for me? It's the big stone oven just east of the bakery."
+      10212: "Once the loaves are out, take one each to Dorn the smith, Rosa at the inn, and little Tam."
+      10220: "Light the oven, then bring a loaf to Dorn, Rosa and Tam. They're all near the square."
+      10230: "All delivered? You're a marvel! Here, a sticky bun for the road."
+      10231: "Mossvale feels warmer with a mage about."
+
+      10310: "You must be Wren. I'm Mira. I keep the herb garden by the river road."
+      10311: "Thornweed has crept in. Pull it and it bites, leave it and it strangles everything."
+      10312: "Burn the five clumps with Spark. Carefully! In return, I'll teach you something useful."
+      10320: "Five clumps of thornweed around my garden. Burn them with Spark."
+      10330: "Every last thorn! Now, as I promised."
+      10331: "Thistlewood taught me a little water-weaving once. Hold your staff like so, and think of rain."
+      10332: "That's it: SPLASH. Press 2 to choose it. Water is the gentlest magic, and the most useful."
+
+      10410: "My herb beds are bone dry. The well rope snapped last week."
+      10411: "Water all six beds with your new Splash, would you?"
+      10420: "Six herb beds inside the fence, Wren. Splash each one."
+      10430: "Listen to them drink! Feverfew, mint, moonwort... all saved."
+      10431: "Hm? Do you smell smoke? Something's burning near the smithy!"
+
+      10510: "WREN! Over here! Sparks from my forge caught the haystacks in the smithy yard!"
+      10511: "Four of them are burning. Douse them before it spreads to the roofs!"
+      10520: "The haystacks in the smithy yard! Splash them!"
+      10530: "Phew. You saved half the village from a very bad morning."
+      10531: "Farmer Oswin was asking for help too. His fields east of the village are drying out. Follow the east road."
+
+      10610: "So you're the new mage. Folk say you can pull water out of thin air."
+      10611: "Not a drop of rain in three weeks. My crops are wilting where they stand."
+      10612: "Eight patches south of the road. Water every one, and I'll teach you a trick of my own."
+      10620: "Eight crop patches south of the road. Splash 'em good."
+      10630: "Will you look at that. Green as springtime!"
+      10631: "My granddad was a weather-witch. He taught me one charm before he passed: GUST."
+      10632: "Press 3 to choose it. Wind is good for more than you'd think."
+
+      10710: "With Gust you could help with the windmill. Not a breath of wind and the stones sit idle."
+      10711: "And crows got into the wheat north of the house. Five of them, fat as pigeons."
+      10712: "Get the sails turning and blow those crows to next week."
+      10720: "Spin the windmill and shoo off the five crows in the wheat."
+      10730: "Ha! The mill's grinding and the crows are gone. A fine morning's work."
+      10731: "The forest road north has been choked by fog for weeks. Strange fog. Your wind might shift it."
+
+      10810: "Hello, dearie. My washing got soaked in that one cloudburst and it just won't dry."
+      10811: "Five lines of it behind the cottage. Give it a puff of wind? Gently, mind!"
+      10820: "Five washing lines, dear. A nice breeze is all they need."
+      10830: "Dry as a biscuit and smelling of sunshine! Thank you, dear."
+      10831: "If you ever learn a growing spell, come back. My pumpkin refuses to grow for the harvest fair."
+
+      11010: "Well met! That fog had me stuck in these woods for weeks."
+      11011: "My campfire's gone out, and the logs I cut are buried under leaves. Four piles of them."
+      11012: "Light my fire, and blow the leaves off my logs. Don't burn them, mind!"
+      11020: "Campfire's out, and four leaf piles to blow away."
+      11030: "There's a proper fire! And my logs, dry as kindling."
+      11031: "Going deeper into the woods? Look for old Fennick at the stone circle. Peculiar fellow. But wise."
+
+      11110: "Hmm. Another of Thistlewood's. You have his eyebrows."
+      11111: "The spirits of this wood are cold. Their four braziers have gone dark."
+      11112: "Light them all, and I'll know you're ready for the green magic."
+      11120: "Four braziers around the circle. Light them."
+      11130: "The spirits are warm again. Hmm. Well done."
+      11131: "Now hold out your staff. Feel the sap rising in the wood? That is BLOOM."
+      11132: "Press 4 to choose it. Things grow where you point it. Use it kindly."
+
+      11210: "Lightning burned a grove east of the road last summer. Six young trees, now stumps."
+      11211: "Bloom them back to life. The forest will remember it."
+      11220: "Six burnt stumps in the grove east of the road. Bloom them."
+      11230: "Young birches. They'll be tall by the time you're old and grumpy like me."
+      11231: "Go on. The village will have more uses for you."
+
+      11310: "Is that green magic I smell on you? Oh, how wonderful!"
+      11311: "My pumpkin for the harvest fair is no bigger than a turnip!"
+      11312: "Give it a few good Blooms. Three should do it, I think."
+      11320: "My little pumpkin needs three good Blooms, dear."
+      11330: "Look at the size of it! I'll win the fair for certain. You're a treasure."
+
+      11510: "Eh? A mage? Took you lot long enough to fix that bridge."
+      11511: "The fish have gone. No lily pads in the shallows means no shade, no bugs, no fish."
+      11512: "Bloom five lily pads along the south shore and maybe I'll have supper tonight."
+      11520: "Five lily pads along the south shore of the lake."
+      11530: "Ripples! The fish are back. Haven't seen that in a year."
+      11531: "Here's a secret my mother taught me. When the lake freezes, the fish sleep sound. FROST, she called it."
+      11532: "Press 5 to choose it. Cold as the bottom of the lake in winter."
+
+      11610: "See that island? The old stargazer's tower. Nobody's set foot there since he passed."
+      11611: "His beacon's been dark for years. Freeze a path of ice across the water and light it."
+      11612: "They say his books are still in that tower. Might be something in there for a young mage."
+      11620: "Freeze a path of ice floes out to the island, then light the beacon."
+
+      11710: "Wren, love! It's so hot the lemonade's practically soup."
+      11711: "Three barrels outside the inn. Could you chill them with that frosty magic?"
+      11720: "Three lemonade barrels outside the inn. A touch of Frost each."
+      11730: "Ice cold! The whole village will be queuing at my door."
+      11731: "Your drinks are on the house. Forever."
+
+      11910: "Hrmph. The road's clear? About time."
+      11911: "My mine's dark as a dragon's gullet. The lamps on the track all blew out in the slide."
+      11912: "Light all five and I'll get back to digging."
+      11920: "Five lamps along the mine track. Light 'em."
+      11930: "Ha! Bright as noon. You're alright, for a wand-waver."
+
+      12010: "Oh, you must be the mage! The rockslide scared my flock. Five sheep scattered over the hills."
+      12011: "They're too frightened to come down. Could you... float them back to the pen?"
+      12012: "Gently! Sheep don't like flying any more than I would."
+      12020: "Five lost sheep in the hills. Lift them back to the pen."
+      12030: "All five, safe and fluffy! You're a wonder, Wren."
+
+      12110: "Wren! WREN! Biscuit is stuck on our roof AGAIN!"
+      12111: "He's been yowling all day. Can you lift him down? Please please please?"
+      12120: "Biscuit is on our roof! Lift him down!"
+      12130: "BISCUIT! You're back! Thank you Wren, you're the best mage EVER."
+
+      12210: "Wren. Look at what you've done for Mossvale. Fields green, roads open, lamps bright."
+      12211: "Tonight is the Festival of Lights, and we want it to be the finest in a hundred years."
+      12212: "Bloom the four planters, fill the fountain, and carve an ice swan beside the hall."
+      12213: "Then Lift the Great Lantern by the bakery, light it, and come back to me."
+      12220: "Four planters, the fountain, the ice swan, and the Great Lantern: raise it, then light it."
+      12230: "Mossvale has its mage again, Wren. Thistlewood would be proud."
+      12231: "Now then. Let the Festival of Lights begin!"
+
+      12310: "One more thing, Wren. Have you seen the little lights drifting about? Wisps."
+      12311: "Twenty of them, scattered across the whole valley. Each one you gather deepens your mana."
+      12312: "Find them all and I'll brew you something special."
+      12320: "Twenty wisps across the valley. Just walk into them to gather them."
+      12330: "All twenty! Your mana shines like a lantern. Here, drink this."
+      12331: "Starwater tea. Your mana will flow back twice as fast from now on."
+
+      12410: "Now that you know Bloom, there's something I've wanted to ask."
+      12411: "An old fairy ring grows in the meadow south-west of Mirror Lake. Its mushrooms have all wilted."
+      12412: "Bloom all six back to health, and the fair folk might smile on Mossvale again."
+      12420: "Six wilted mushrooms in the fairy ring, south-west of Mirror Lake."
+      12430: "You did it! I felt the ring wake up from here. The whole meadow smells of honey."
+      12431: "The fair folk leave gifts, they say. Your mana feels deeper already, doesn't it?"
+
+      12510: "Before the rockslide, my father kept a beacon burning on the old watchtower."
+      12511: "Thornweed has choked the path, and the fire's long dead."
+      12512: "Burn away the three thorn clumps and light the beacon, so the shepherds can find their way home at dusk."
+      12520: "Burn the thorns on the watchtower path and light its beacon."
+      12530: "I can see it from here, burning bright! Thank you, Wren."
+      12531: "Father would have liked you. He always said a light on the hill is a light in the heart."
+
+      20030: "Bread from Pella? Still warm! You're a good sort, Wren."
+      20040: "Ooh, Pella's honey loaf! My guests will fight over it."
+      20050: "Bread!! Thank you! Mum says I can't eat it all at once. I'm going to."
+
+      30000: "Mossvale is a quiet place. Quieter than it should be, since Thistlewood passed."
+      30001: "Keep an eye out for anyone who needs a hand."
+      30010: "Fresh bread every morning, if the oven behaves!"
+      30020: "Every plant has a use, Wren. Even thornweed, if you're desperate."
+      30030: "Anvil, hammer, fire. Simple tools for a simple smith."
+      30040: "The Sleepy Toad is always open. Well, nearly always."
+      30050: "When I grow up I'm going to be a mage too. Or a dragon."
+      30060: "Rain's coming one day. I can feel it in my knees."
+      30070: "Mind the washing, dearie."
+      30080: "These woods give good timber, if you ask them nicely."
+      30090: "The spirits speak, if you listen. Mostly about the weather."
+      30100: "Fish bite at dawn. Or they used to."
+      30110: "Rock and dark and gold, that's a miner's life."
+      30120: "Count the sheep, then count them again. That's shepherding."
+      _: ""
     }
   }
-  if obj_on != on {
-    obj_on = on
-  }
-  if abs(obj_x - bx) > 0.01 || abs(obj_z - bz) > 0.01 {
-    obj_x = bx
-    obj_z = bz
-  }
-  if obj_q != q {
-    obj_q = q
-  }
-  if obj_npc != npc {
-    obj_npc = npc
-  }
-}
 
-proc learn(sp: i32) {
-  known[sp] = true
-  spell = sp
-  emit Learn(sp: sp)
-  announce("New spell: {spell_name(sp)}", "Press {sp} to choose it. {spell_blurb(sp)}")
-}
-
-proc open_quest(q: i32) {
-  if qs[q] == QS_LOCKED {
-    if quest_giver(q) < 0 {
-      qs[q] = QS_ACTIVE
-      say("New task: {quest_name(q)}. {quest_where(q)}")
-    } else {
-      qs[q] = QS_OPEN
-    }
-  }
-}
-
-proc complete(q: i32) {
-  qs[q] = QS_DONE
-  if q != Q_MOTES {
-    done_count += 1
-  }
-  hour_goal = min(18.4, 8.5 + done_count * 0.45)
-  emit QuestDone(q: q)
-  announce("Task complete", quest_name(q))
-
-  if q == Q_HEARTH {
-    open_quest(Q_LAMPS)
-    say("Elder Bram is waving at you from the square. Walk up to him and press E to talk.")
-  } else if q == Q_LAMPS {
-    open_quest(Q_BREAD)
-    open_quest(Q_WEEDS)
-  } else if q == Q_WEEDS {
-    learn(SP_SPLASH)
-    open_quest(Q_HERBS)
-  } else if q == Q_HERBS {
-    open_quest(Q_FIRE)
-    open_quest(Q_MOTES)
-  } else if q == Q_FIRE {
-    open_quest(Q_FIELDS)
-  } else if q == Q_FIELDS {
-    learn(SP_GUST)
-    open_quest(Q_MILL)
-    open_quest(Q_LAUNDRY)
-    open_quest(Q_FOG)
-  } else if q == Q_FOG {
-    open_quest(Q_CAMP)
-    open_quest(Q_TRIAL)
-    announce("The Fogbound Road is clear", "Whisperwood lies open to the north.")
-  } else if q == Q_TRIAL {
-    learn(SP_BLOOM)
-    open_quest(Q_FAIRY)
-    open_quest(Q_GROVE)
-    open_quest(Q_PUMPKIN)
-    open_quest(Q_BRIDGE)
-  } else if q == Q_BRIDGE {
-    open_quest(Q_LILY)
-    announce("The bridge is whole again", "The road west leads to Mirror Lake.")
-  } else if q == Q_LILY {
-    learn(SP_FROST)
-    open_quest(Q_ISLE)
-    open_quest(Q_DRINKS)
-  } else if q == Q_ISLE {
-    learn(SP_LIFT)
-    open_quest(Q_ROCKS)
-    open_quest(Q_CAT)
-    say("Inside the stargazer's tower you find a dusty tome. Its last page teaches LIFT.")
-  } else if q == Q_ROCKS {
-    open_quest(Q_MINE)
-    open_quest(Q_SHEEP)
-    announce("The southern road is open", "The Stonecrag hills lie beyond.")
-  } else if q == Q_SHEEP {
-    open_quest(Q_TOWER)
-  } else if q == Q_FAIRY {
-    mana_max += 20
-    mana = mana_max
-  } else if q == Q_MOTES {
-    regen_boost = true
-  } else if q == Q_FESTIVAL {
-    emit Ending()
+  fn delivery_npc(n: i32) -> bool {
+    n == N_DORN || n == N_ROSA || n == N_TAM
   }
 
-  mut all = true
-  for i in 0..22 {
-    if qs[i] != QS_DONE {
-      all = false
-    }
-  }
-  if all && qs[Q_FESTIVAL] == QS_LOCKED {
-    open_quest(Q_FESTIVAL)
-    say("Elder Bram has something important to ask you. Return to the village square.")
-  }
-}
-
-proc goal_met(q: i32) {
-  if quest_turnin(q) >= 0 {
-    qs[q] = QS_RETURN
-    say("{quest_name(q)}: done! Return to {npc_name(quest_turnin(q))}.")
-  } else {
-    complete(q)
-  }
-}
-
-proc pick_topic(n: i32) {
-  mut t: i32 = 3000 + n
-  mut found = false
-  for q in 0..QUESTS {
-    if quest_turnin(q) == n && qs[q] == QS_RETURN {
-      t = 1000 + q * 10 + 3
-      found = true
-      break
-    }
-  }
-  if !found && qs[Q_BREAD] == QS_ACTIVE && ts[7] > 0 && delivery_npc(n) && !delivered[n] {
-    t = 2000 + n
-    found = true
-  }
-  if !found {
+  proc refresh() {
+    mut m: i32[16] = {}
     for q in 0..QUESTS {
-      if quest_giver(q) == n && qs[q] == QS_OPEN {
-        t = 1000 + q * 10 + 1
+      const g = quest_giver(q)
+      const t = quest_turnin(q)
+      if qs[q] == QS_OPEN && g >= 0 && m[g] == 0 {
+        m[g] = 1
+      }
+      if qs[q] == QS_RETURN && t >= 0 {
+        m[t] = 2
+      }
+    }
+    if qs[Q_BREAD] == QS_ACTIVE && ts[7] > 0 {
+      for n in 0..NPCS {
+        if delivery_npc(n) && !delivered[n] && m[n] == 0 {
+          m[n] = 1
+        }
+      }
+    }
+    npc_mark = m
+
+    mut tt: string[4] = {}
+    mut tsub: string[4] = {}
+    mut count: i32 = 0
+    for i in 0..QUESTS {
+      const q = QUESTS - 1 - i
+      if count < 4 && (qs[q] == QS_ACTIVE || qs[q] == QS_RETURN) {
+        tt[count] = quest_name(q)
+        if qs[q] == QS_RETURN {
+          tsub[count] = "Return to {npc_name(quest_turnin(q))}"
+        } else if quest_need(q) > 1 {
+          tsub[count] = "{quest_goal(q)}: {qp[q]} of {quest_need(q)}"
+        } else {
+          tsub[count] = quest_where(q)
+        }
+        count += 1
+      }
+    }
+    for i in 0..QUESTS {
+      const q = QUESTS - 1 - i
+      if count < 4 && qs[q] == QS_OPEN && quest_giver(q) >= 0 {
+        tt[count] = quest_name(q)
+        tsub[count] = "Talk to {npc_name(quest_giver(q))}"
+        count += 1
+      }
+    }
+    track_t = tt
+    track_s = tsub
+    track_n = count
+  }
+
+  proc find_objective() {
+    mut q: i32 = -1
+    for i in 0..QUESTS {
+      const k = QUESTS - 1 - i
+      if q < 0 && k != Q_MOTES && (qs[k] == QS_ACTIVE || qs[k] == QS_RETURN) {
+        q = k
+      }
+    }
+    for i in 0..QUESTS {
+      const k = QUESTS - 1 - i
+      if q < 0 && k != Q_MOTES && qs[k] == QS_OPEN && quest_giver(k) >= 0 {
+        q = k
+      }
+    }
+    mut on = false
+    mut npc = false
+    mut bx: f32 = 0
+    mut bz: f32 = 0
+    if q >= 0 {
+      if qs[q] == QS_RETURN {
+        on = true
+        npc = true
+        bx = npc_x[quest_turnin(q)]
+        bz = npc_z[quest_turnin(q)]
+      } else if qs[q] == QS_OPEN {
+        on = true
+        npc = true
+        bx = npc_x[quest_giver(q)]
+        bz = npc_z[quest_giver(q)]
+      } else if q == Q_BREAD && ts[7] > 0 {
+        mut best: f64 = 1e9
+        for n in 0..NPCS {
+          if delivery_npc(n) && !delivered[n] {
+            const d = dist2(px, pz, npc_x[n], npc_z[n])
+            if d < best {
+              best = d
+              on = true
+              npc = true
+              bx = npc_x[n]
+              bz = npc_z[n]
+            }
+          }
+        }
+      } else {
+        mut best: f64 = 1e9
+        for t in 0..TARGETS {
+          if t_on[t] && t_q[t] == q && ts[t] < t_lv[t] && (t_req[t] < 0 || ts[t_req[t]] >= t_lv[t_req[t]]) {
+            const d = dist2(px, pz, t_x[t], t_z[t])
+            if d < best {
+              best = d
+              on = true
+              bx = t_x[t]
+              bz = t_z[t]
+            }
+          }
+        }
+      }
+    }
+    if obj_on != on {
+      obj_on = on
+    }
+    if abs(obj_x - bx) > 0.01 || abs(obj_z - bz) > 0.01 {
+      obj_x = bx
+      obj_z = bz
+    }
+    if obj_q != q {
+      obj_q = q
+    }
+    if obj_npc != npc {
+      obj_npc = npc
+    }
+  }
+
+  proc learn(sp: i32) {
+    known[sp] = true
+    spell = sp
+    emit Learn(sp: sp)
+    announce("New spell: {spell_name(sp)}", "Press {sp} to choose it. {spell_blurb(sp)}")
+  }
+
+  proc open_quest(q: i32) {
+    if qs[q] == QS_LOCKED {
+      if quest_giver(q) < 0 {
+        qs[q] = QS_ACTIVE
+        say("New task: {quest_name(q)}. {quest_where(q)}")
+      } else {
+        qs[q] = QS_OPEN
+      }
+    }
+  }
+
+  proc complete(q: i32) {
+    qs[q] = QS_DONE
+    if q != Q_MOTES {
+      done_count += 1
+    }
+    hour_goal = min(18.4, 8.5 + done_count * 0.45)
+    emit QuestDone(q: q)
+    announce("Task complete", quest_name(q))
+
+    if q == Q_HEARTH {
+      open_quest(Q_LAMPS)
+      say("Elder Bram is waving at you from the square. Walk up to him and press E to talk.")
+    } else if q == Q_LAMPS {
+      open_quest(Q_BREAD)
+      open_quest(Q_WEEDS)
+    } else if q == Q_WEEDS {
+      learn(SP_SPLASH)
+      open_quest(Q_HERBS)
+    } else if q == Q_HERBS {
+      open_quest(Q_FIRE)
+      open_quest(Q_MOTES)
+    } else if q == Q_FIRE {
+      open_quest(Q_FIELDS)
+    } else if q == Q_FIELDS {
+      learn(SP_GUST)
+      open_quest(Q_MILL)
+      open_quest(Q_LAUNDRY)
+      open_quest(Q_FOG)
+    } else if q == Q_FOG {
+      open_quest(Q_CAMP)
+      open_quest(Q_TRIAL)
+      announce("The Fogbound Road is clear", "Whisperwood lies open to the north.")
+    } else if q == Q_TRIAL {
+      learn(SP_BLOOM)
+      open_quest(Q_FAIRY)
+      open_quest(Q_GROVE)
+      open_quest(Q_PUMPKIN)
+      open_quest(Q_BRIDGE)
+    } else if q == Q_BRIDGE {
+      open_quest(Q_LILY)
+      announce("The bridge is whole again", "The road west leads to Mirror Lake.")
+    } else if q == Q_LILY {
+      learn(SP_FROST)
+      open_quest(Q_ISLE)
+      open_quest(Q_DRINKS)
+    } else if q == Q_ISLE {
+      learn(SP_LIFT)
+      open_quest(Q_ROCKS)
+      open_quest(Q_CAT)
+      say("Inside the stargazer's tower you find a dusty tome. Its last page teaches LIFT.")
+    } else if q == Q_ROCKS {
+      open_quest(Q_MINE)
+      open_quest(Q_SHEEP)
+      announce("The southern road is open", "The Stonecrag hills lie beyond.")
+    } else if q == Q_SHEEP {
+      open_quest(Q_TOWER)
+    } else if q == Q_FAIRY {
+      mana_max += 20
+      mana = mana_max
+    } else if q == Q_MOTES {
+      regen_boost = true
+    } else if q == Q_FESTIVAL {
+      emit Ending()
+    }
+
+    mut all = true
+    for i in 0..22 {
+      if qs[i] != QS_DONE {
+        all = false
+      }
+    }
+    if all && qs[Q_FESTIVAL] == QS_LOCKED {
+      open_quest(Q_FESTIVAL)
+      say("Elder Bram has something important to ask you. Return to the village square.")
+    }
+  }
+
+  proc goal_met(q: i32) {
+    if quest_turnin(q) >= 0 {
+      qs[q] = QS_RETURN
+      say("{quest_name(q)}: done! Return to {npc_name(quest_turnin(q))}.")
+    } else {
+      complete(q)
+    }
+  }
+
+  proc pick_topic(n: i32) {
+    mut t: i32 = 3000 + n
+    mut found = false
+    for q in 0..QUESTS {
+      if quest_turnin(q) == n && qs[q] == QS_RETURN {
+        t = 1000 + q * 10 + 3
         found = true
         break
       }
     }
-  }
-  if !found {
-    for q in 0..QUESTS {
-      if quest_giver(q) == n && qs[q] == QS_ACTIVE {
-        t = 1000 + q * 10 + 2
-        break
+    if !found && qs[Q_BREAD] == QS_ACTIVE && ts[7] > 0 && delivery_npc(n) && !delivered[n] {
+      t = 2000 + n
+      found = true
+    }
+    if !found {
+      for q in 0..QUESTS {
+        if quest_giver(q) == n && qs[q] == QS_OPEN {
+          t = 1000 + q * 10 + 1
+          found = true
+          break
+        }
       }
     }
+    if !found {
+      for q in 0..QUESTS {
+        if quest_giver(q) == n && qs[q] == QS_ACTIVE {
+          t = 1000 + q * 10 + 2
+          break
+        }
+      }
+    }
+    talk_topic = t
   }
-  talk_topic = t
-}
 
-proc finish_topic(n: i32, t: i32) {
-  if t >= 1000 && t < 2000 {
-    const q = floor((t - 1000) / 10)
-    const kind = t % 10
-    if kind == 1 && qs[q] == QS_OPEN {
-      qs[q] = QS_ACTIVE
-      say("New task: {quest_name(q)}. {quest_where(q)}")
-      if qp[q] >= quest_need(q) {
-        goal_met(q)
+  proc finish_topic(n: i32, t: i32) {
+    if t >= 1000 && t < 2000 {
+      const q = floor((t - 1000) / 10)
+      const kind = t % 10
+      if kind == 1 && qs[q] == QS_OPEN {
+        qs[q] = QS_ACTIVE
+        say("New task: {quest_name(q)}. {quest_where(q)}")
+        if qp[q] >= quest_need(q) {
+          goal_met(q)
+        }
+      } else if kind == 3 && qs[q] == QS_RETURN {
+        complete(q)
       }
-    } else if kind == 3 && qs[q] == QS_RETURN {
-      complete(q)
+    } else if t >= 2000 && t < 3000 {
+      if !delivered[n] {
+        delivered[n] = true
+        emit Progress(q: Q_BREAD, id: -1)
+      }
     }
-  } else if t >= 2000 && t < 3000 {
-    if !delivered[n] {
-      delivered[n] = true
-      emit Progress(q: Q_BREAD, id: -1)
-    }
+    refresh()
   }
-  refresh()
 }
 
 async {

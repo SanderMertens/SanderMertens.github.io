@@ -2,6 +2,24 @@ using flecs.script
 using flecs.script.math
 using box.app
 using box.ui
+using state
+using assets
+
+assets {
+  template CastKey {
+    prop action: entity = 0
+    prop index: i32 = 0
+
+    async {
+      while true {
+        await on.pressed(action)
+        if screen != SCREEN_TITLE {
+          emit Cast(spell: index)
+        }
+      }
+    }
+  }
+}
 
 async {
   while true {
@@ -13,22 +31,24 @@ async {
   }
 }
 
-actions {
-  Next { box.input.Action: {description: "Next page"}; box.input.Binding: {key: E} }
-  Prev { box.input.Action: {description: "Previous page"}; box.input.Binding: {key: Q} }
-  Back { box.input.Action: {description: "Return to the title"}; box.input.Binding: {key: Escape} }
-  Enter { box.input.Action: {description: "Open the atlas"}; box.input.Binding: {key: Enter} }
-  Cast1 { box.input.Action: {description: "Cast the first spell"}; box.input.Binding: {key: Num1} }
-  Cast2 { box.input.Action: {description: "Cast the second spell"}; box.input.Binding: {key: Num2} }
-  Cast3 { box.input.Action: {description: "Cast the third spell"}; box.input.Binding: {key: Num3} }
-  Cast4 { box.input.Action: {description: "Cast the fourth spell"}; box.input.Binding: {key: Num4} }
-  Cast5 { box.input.Action: {description: "Cast the fifth spell"}; box.input.Binding: {key: Num5} }
-  Cast6 { box.input.Action: {description: "Cast the sixth spell"}; box.input.Binding: {key: Num6} }
+state {
+  actions {
+    Next { box.input.Action: {description: "Next page"}; box.input.Binding: {key: E} }
+    Prev { box.input.Action: {description: "Previous page"}; box.input.Binding: {key: Q} }
+    Back { box.input.Action: {description: "Return to the title"}; box.input.Binding: {key: Escape} }
+    Enter { box.input.Action: {description: "Open the atlas"}; box.input.Binding: {key: Enter} }
+    Cast1 { box.input.Action: {description: "Cast the first spell"}; box.input.Binding: {key: Num1} }
+    Cast2 { box.input.Action: {description: "Cast the second spell"}; box.input.Binding: {key: Num2} }
+    Cast3 { box.input.Action: {description: "Cast the third spell"}; box.input.Binding: {key: Num3} }
+    Cast4 { box.input.Action: {description: "Cast the fourth spell"}; box.input.Binding: {key: Num4} }
+    Cast5 { box.input.Action: {description: "Cast the fifth spell"}; box.input.Binding: {key: Num5} }
+    Cast6 { box.input.Action: {description: "Cast the sixth spell"}; box.input.Binding: {key: Num6} }
+  }
 }
 
 async {
   while true {
-    await on.pressed(actions.Next)
+    await on.pressed(state.actions.Next)
     if screen != SCREEN_TITLE {
       screen = screen % 3 + 1
     }
@@ -37,7 +57,7 @@ async {
 
 async {
   while true {
-    await on.pressed(actions.Prev)
+    await on.pressed(state.actions.Prev)
     if screen != SCREEN_TITLE {
       screen = (screen + 1) % 3 + 1
     }
@@ -46,14 +66,14 @@ async {
 
 async {
   while true {
-    await on.pressed(actions.Back)
+    await on.pressed(state.actions.Back)
     screen = SCREEN_TITLE
   }
 }
 
 async {
   while true {
-    await on.pressed(actions.Enter)
+    await on.pressed(state.actions.Enter)
     const focused = FocusStatus[FocusStatus].focused
     if screen == SCREEN_TITLE && (focused == 0 || !focused?[TitleEntry]) {
       emit Navigate(screen: SCREEN_ATLAS)
@@ -61,25 +81,13 @@ async {
   }
 }
 
-template CastKey {
-  prop action: entity = 0
-  prop index: i32 = 0
-
-  async {
-    while true {
-      await on.pressed(action)
-      if screen != SCREEN_TITLE {
-        emit Cast(spell: index)
-      }
-    }
+state {
+  cast_keys {
+    CastKey k1(action: actions.Cast1, index: 0)
+    CastKey k2(action: actions.Cast2, index: 1)
+    CastKey k3(action: actions.Cast3, index: 2)
+    CastKey k4(action: actions.Cast4, index: 3)
+    CastKey k5(action: actions.Cast5, index: 4)
+    CastKey k6(action: actions.Cast6, index: 5)
   }
-}
-
-cast_keys {
-  CastKey k1(action: actions.Cast1, index: 0)
-  CastKey k2(action: actions.Cast2, index: 1)
-  CastKey k3(action: actions.Cast3, index: 2)
-  CastKey k4(action: actions.Cast4, index: 3)
-  CastKey k5(action: actions.Cast5, index: 4)
-  CastKey k6(action: actions.Cast6, index: 5)
 }

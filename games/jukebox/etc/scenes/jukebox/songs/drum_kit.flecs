@@ -2,378 +2,380 @@ using box.audio
 using box.material
 
 box { audio { Song { Rgb: {255, 150, 60} } } }
+assets {
 
-dk_room {
-  AudioBus: {output: master, kind: AudioChannelReturn, volume: 0.3, effects: [dk_room]}
-  Reverb: {decay: 0.9, damping: 0.55, predelay: 0.008, size: 0.35}
-}
-dk_drum_eq {
-  Equalizer: {bands: [
-    {kind: AudioEqLowCut, frequency: 30},
-    {kind: AudioEqPeak, frequency: 400, gain: -2, q: 1}
-  ]}
-}
-dk_drum_glue { Compressor: {threshold: -14, ratio: 3, attack: 0.02, release: 0.12, knee: 6, makeup: 1.3} }
-dk_drums {
-  AudioBus: {output: master, volume: 0.65, effects: [dk_drum_eq, dk_drum_glue]}
-  AudioMeter: {}
-}
-
-prefab dk_kick_sound {
-  SynthSound: {seed: 1}
-  SynthDrive: {drive: 0.4}
-  SynthFilter: {kind: SynthLowPass, cutoff: 7000}
-  body {
-    SynthOscillator: {wave: SynthSine, frequency: 50, level: 0.95}
-    SynthEnvelope: {attack: 0.001, decay: 0.5, curve: 3}
-    SynthPitchEnvelope: {amount: 30, decay: 0.06, curve: 6}
+  dk_room {
+    AudioBus: {output: master, kind: AudioChannelReturn, volume: 0.3, effects: [dk_room]}
+    Reverb: {decay: 0.9, damping: 0.55, predelay: 0.008, size: 0.35}
   }
-  click {
-    SynthOscillator: {wave: SynthNoise, level: 0.3}
-    SynthEnvelope: {attack: 0.0005, decay: 0.006, curve: 3}
+  dk_drum_eq {
+    Equalizer: {bands: [
+      {kind: AudioEqLowCut, frequency: 30},
+      {kind: AudioEqPeak, frequency: 400, gain: -2, q: 1}
+    ]}
   }
-}
-
-prefab dk_snare_sound {
-  SynthSound: {seed: 2, level_variance: 0.04}
-  SynthDrive: {drive: 0.3}
-  SynthFilter: {kind: SynthHighPass, cutoff: 150}
-  head {
-    SynthOscillator: {wave: SynthSine, frequency: 185, level: 0.6}
-    SynthEnvelope: {attack: 0.001, decay: 0.13, curve: 4}
-    SynthPitchEnvelope: {amount: 7, decay: 0.03, curve: 4}
+  dk_drum_glue { Compressor: {threshold: -14, ratio: 3, attack: 0.02, release: 0.12, knee: 6, makeup: 1.3} }
+  dk_drums {
+    AudioBus: {output: master, volume: 0.65, effects: [dk_drum_eq, dk_drum_glue]}
+    AudioMeter: {}
   }
-  ring {
-    SynthOscillator: {wave: SynthSine, frequency: 330, level: 0.25}
-    SynthEnvelope: {attack: 0.001, decay: 0.07, curve: 4}
-    SynthPitchEnvelope: {amount: 5, decay: 0.02, curve: 4}
+
+  prefab dk_kick_sound {
+    SynthSound: {seed: 1}
+    SynthDrive: {drive: 0.4}
+    SynthFilter: {kind: SynthLowPass, cutoff: 7000}
+    body {
+      SynthOscillator: {wave: SynthSine, frequency: 50, level: 0.95}
+      SynthEnvelope: {attack: 0.001, decay: 0.5, curve: 3}
+      SynthPitchEnvelope: {amount: 30, decay: 0.06, curve: 6}
+    }
+    click {
+      SynthOscillator: {wave: SynthNoise, level: 0.3}
+      SynthEnvelope: {attack: 0.0005, decay: 0.006, curve: 3}
+    }
   }
-  wires {
-    SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, level: 0.5}
-    SynthEnvelope: {attack: 0.001, decay: 0.24, curve: 5}
+
+  prefab dk_snare_sound {
+    SynthSound: {seed: 2, level_variance: 0.04}
+    SynthDrive: {drive: 0.3}
+    SynthFilter: {kind: SynthHighPass, cutoff: 150}
+    head {
+      SynthOscillator: {wave: SynthSine, frequency: 185, level: 0.6}
+      SynthEnvelope: {attack: 0.001, decay: 0.13, curve: 4}
+      SynthPitchEnvelope: {amount: 7, decay: 0.03, curve: 4}
+    }
+    ring {
+      SynthOscillator: {wave: SynthSine, frequency: 330, level: 0.25}
+      SynthEnvelope: {attack: 0.001, decay: 0.07, curve: 4}
+      SynthPitchEnvelope: {amount: 5, decay: 0.02, curve: 4}
+    }
+    wires {
+      SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, level: 0.5}
+      SynthEnvelope: {attack: 0.001, decay: 0.24, curve: 5}
+    }
   }
-}
 
-prefab dk_hat_sound {
-  SynthSound: {seed: 3, level_variance: 0.08}
-  SynthEnvelope: {attack: 0.0005, decay: 0.05, curve: 5}
-  SynthFilter: {kind: SynthHighPass, cutoff: 7000, resonance: 0.2, slope: SynthSlope24}
-  m1 { SynthOscillator: {wave: SynthSquare, frequency: 205.3, level: 0.2} }
-  m2 { SynthOscillator: {wave: SynthSquare, frequency: 304.4, level: 0.2} }
-  m3 { SynthOscillator: {wave: SynthSquare, frequency: 369.6, level: 0.2} }
-  m4 { SynthOscillator: {wave: SynthSquare, frequency: 522.7, level: 0.2} }
-  m5 { SynthOscillator: {wave: SynthSquare, frequency: 540, level: 0.2} }
-  m6 { SynthOscillator: {wave: SynthSquare, frequency: 800, level: 0.2} }
-  air { SynthOscillator: {wave: SynthNoise, level: 0.35} }
-}
-
-prefab dk_open_hat_sound {
-  SynthSound: {seed: 4, level_variance: 0.05}
-  SynthEnvelope: {attack: 0.001, decay: 0.42, curve: 3}
-  SynthFilter: {kind: SynthHighPass, cutoff: 7000, resonance: 0.2, slope: SynthSlope24}
-  m1 { SynthOscillator: {wave: SynthSquare, frequency: 205.3, level: 0.2} }
-  m2 { SynthOscillator: {wave: SynthSquare, frequency: 304.4, level: 0.2} }
-  m3 { SynthOscillator: {wave: SynthSquare, frequency: 369.6, level: 0.2} }
-  m4 { SynthOscillator: {wave: SynthSquare, frequency: 522.7, level: 0.2} }
-  m5 { SynthOscillator: {wave: SynthSquare, frequency: 540, level: 0.2} }
-  m6 { SynthOscillator: {wave: SynthSquare, frequency: 800, level: 0.2} }
-  air { SynthOscillator: {wave: SynthNoise, level: 0.35} }
-}
-
-prefab dk_clap_sound {
-  SynthSound: {seed: 5, level_variance: 0.05}
-  SynthFilter: {kind: SynthBandPass, cutoff: 1200, resonance: 0.3}
-  hand1 {
-    SynthOscillator: {wave: SynthNoise, level: 1.3}
-    SynthEnvelope: {attack: 0.0005, decay: 0.009, curve: 4}
+  prefab dk_hat_sound {
+    SynthSound: {seed: 3, level_variance: 0.08}
+    SynthEnvelope: {attack: 0.0005, decay: 0.05, curve: 5}
+    SynthFilter: {kind: SynthHighPass, cutoff: 7000, resonance: 0.2, slope: SynthSlope24}
+    m1 { SynthOscillator: {wave: SynthSquare, frequency: 205.3, level: 0.2} }
+    m2 { SynthOscillator: {wave: SynthSquare, frequency: 304.4, level: 0.2} }
+    m3 { SynthOscillator: {wave: SynthSquare, frequency: 369.6, level: 0.2} }
+    m4 { SynthOscillator: {wave: SynthSquare, frequency: 522.7, level: 0.2} }
+    m5 { SynthOscillator: {wave: SynthSquare, frequency: 540, level: 0.2} }
+    m6 { SynthOscillator: {wave: SynthSquare, frequency: 800, level: 0.2} }
+    air { SynthOscillator: {wave: SynthNoise, level: 0.35} }
   }
-  hand2 {
-    SynthOscillator: {wave: SynthNoise, level: 1.2}
-    SynthEnvelope: {attack: 0.011, attack_curve: -16, decay: 0.009, curve: 4}
+
+  prefab dk_open_hat_sound {
+    SynthSound: {seed: 4, level_variance: 0.05}
+    SynthEnvelope: {attack: 0.001, decay: 0.42, curve: 3}
+    SynthFilter: {kind: SynthHighPass, cutoff: 7000, resonance: 0.2, slope: SynthSlope24}
+    m1 { SynthOscillator: {wave: SynthSquare, frequency: 205.3, level: 0.2} }
+    m2 { SynthOscillator: {wave: SynthSquare, frequency: 304.4, level: 0.2} }
+    m3 { SynthOscillator: {wave: SynthSquare, frequency: 369.6, level: 0.2} }
+    m4 { SynthOscillator: {wave: SynthSquare, frequency: 522.7, level: 0.2} }
+    m5 { SynthOscillator: {wave: SynthSquare, frequency: 540, level: 0.2} }
+    m6 { SynthOscillator: {wave: SynthSquare, frequency: 800, level: 0.2} }
+    air { SynthOscillator: {wave: SynthNoise, level: 0.35} }
   }
-  hand3 {
-    SynthOscillator: {wave: SynthNoise, level: 1.2}
-    SynthEnvelope: {attack: 0.021, attack_curve: -16, decay: 0.009, curve: 4}
+
+  prefab dk_clap_sound {
+    SynthSound: {seed: 5, level_variance: 0.05}
+    SynthFilter: {kind: SynthBandPass, cutoff: 1200, resonance: 0.3}
+    hand1 {
+      SynthOscillator: {wave: SynthNoise, level: 1.3}
+      SynthEnvelope: {attack: 0.0005, decay: 0.009, curve: 4}
+    }
+    hand2 {
+      SynthOscillator: {wave: SynthNoise, level: 1.2}
+      SynthEnvelope: {attack: 0.011, attack_curve: -16, decay: 0.009, curve: 4}
+    }
+    hand3 {
+      SynthOscillator: {wave: SynthNoise, level: 1.2}
+      SynthEnvelope: {attack: 0.021, attack_curve: -16, decay: 0.009, curve: 4}
+    }
+    tail {
+      SynthOscillator: {wave: SynthNoise, level: 1.1}
+      SynthEnvelope: {attack: 0.031, attack_curve: -16, decay: 0.2, curve: 4}
+      SynthUnison: {voices: 2, detune: 0, width: 0.5}
+    }
   }
-  tail {
-    SynthOscillator: {wave: SynthNoise, level: 1.1}
-    SynthEnvelope: {attack: 0.031, attack_curve: -16, decay: 0.2, curve: 4}
-    SynthUnison: {voices: 2, detune: 0, width: 0.5}
+
+  prefab dk_tom_sound {
+    SynthSound: {seed: 6, level_variance: 0.04}
+    SynthDrive: {drive: 0.3}
+    SynthFilter: {kind: SynthLowPass, cutoff: 4500}
+    head {
+      SynthOscillator: {wave: SynthSine, frequency: 110, level: 0.8}
+      SynthEnvelope: {attack: 0.001, decay: 0.55, curve: 3.5, key_scale: 0.5}
+      SynthPitchEnvelope: {amount: 5, decay: 0.12, curve: 3}
+    }
+    mode {
+      SynthOscillator: {wave: SynthSine, frequency: 175, level: 0.22}
+      SynthEnvelope: {attack: 0.001, decay: 0.18, curve: 4, key_scale: 0.5}
+      SynthPitchEnvelope: {amount: 5, decay: 0.08, curve: 3}
+    }
+    stick {
+      SynthOscillator: {wave: SynthNoise, level: 0.3}
+      SynthEnvelope: {attack: 0.0005, decay: 0.012, curve: 3}
+    }
   }
-}
 
-prefab dk_tom_sound {
-  SynthSound: {seed: 6, level_variance: 0.04}
-  SynthDrive: {drive: 0.3}
-  SynthFilter: {kind: SynthLowPass, cutoff: 4500}
-  head {
-    SynthOscillator: {wave: SynthSine, frequency: 110, level: 0.8}
-    SynthEnvelope: {attack: 0.001, decay: 0.55, curve: 3.5, key_scale: 0.5}
-    SynthPitchEnvelope: {amount: 5, decay: 0.12, curve: 3}
+  prefab dk_ride_sound {
+    SynthSound: {seed: 7, level_variance: 0.05}
+    SynthEnvelope: {attack: 0.001, decay: 2.4, curve: 4}
+    SynthFilter: {kind: SynthHighPass, cutoff: 2500}
+    m1 { SynthOscillator: {wave: SynthSquare, frequency: 287, level: 0.1} }
+    m2 { SynthOscillator: {wave: SynthSquare, frequency: 431, level: 0.1} }
+    m3 { SynthOscillator: {wave: SynthSquare, frequency: 513, level: 0.1} }
+    m4 { SynthOscillator: {wave: SynthSquare, frequency: 653, level: 0.1} }
+    m5 { SynthOscillator: {wave: SynthSquare, frequency: 769, level: 0.1} }
+    m6 { SynthOscillator: {wave: SynthSquare, frequency: 1021, level: 0.1} }
+    ping {
+      SynthOscillator: {wave: SynthSine, frequency: 3100, level: 0.3}
+      SynthEnvelope: {attack: 0.001, decay: 0.35, curve: 3}
+      bell { SynthOscillator: {frequency: 4371, modulation: SynthPhase, index: 2.2} }
+    }
   }
-  mode {
-    SynthOscillator: {wave: SynthSine, frequency: 175, level: 0.22}
-    SynthEnvelope: {attack: 0.001, decay: 0.18, curve: 4, key_scale: 0.5}
-    SynthPitchEnvelope: {amount: 5, decay: 0.08, curve: 3}
+
+  prefab dk_crash_sound {
+    SynthSound: {seed: 8, level_variance: 0.04}
+    SynthEnvelope: {attack: 0.002, decay: 2.8, curve: 3}
+    SynthFilter: {kind: SynthHighPass, cutoff: 2200}
+    m1 { SynthOscillator: {wave: SynthSquare, frequency: 245, level: 0.09} }
+    m2 { SynthOscillator: {wave: SynthSquare, frequency: 367, level: 0.09} }
+    m3 { SynthOscillator: {wave: SynthSquare, frequency: 459, level: 0.09} }
+    m4 { SynthOscillator: {wave: SynthSquare, frequency: 611, level: 0.09} }
+    m5 { SynthOscillator: {wave: SynthSquare, frequency: 692, level: 0.09} }
+    wash {
+      SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, level: 0.6}
+      SynthUnison: {voices: 3, detune: 0, width: 0.9}
+    }
+    splash {
+      SynthOscillator: {wave: SynthNoise, level: 0.6}
+      SynthEnvelope: {attack: 0.001, decay: 0.18, curve: 4}
+      SynthUnison: {voices: 2, detune: 0, width: 0.7}
+    }
   }
-  stick {
-    SynthOscillator: {wave: SynthNoise, level: 0.3}
-    SynthEnvelope: {attack: 0.0005, decay: 0.012, curve: 3}
+
+  dk_kick_inst { Instrument: {sound: dk_kick_sound, root: 36, gate: false} }
+  dk_snare_inst { Instrument: {sound: dk_snare_sound, root: 38, gate: false} }
+  dk_hat_inst { Instrument: {sound: dk_hat_sound, root: 42, gate: false, spread: 0.15, spread_mode: InstrumentSpreadRandom} }
+  dk_open_hat_inst { Instrument: {sound: dk_open_hat_sound, root: 46, gate: false} }
+  dk_clap_inst { Instrument: {sound: dk_clap_sound, root: 39, gate: false} }
+  dk_tom_inst { Instrument: {sound: dk_tom_sound, root: 45, gate: false, spread: 0.7} }
+  dk_ride_inst { Instrument: {sound: dk_ride_sound, root: 51, gate: false} }
+  dk_crash_inst { Instrument: {sound: dk_crash_sound, root: 49, gate: false} }
+
+  prefab dk_kick_four {
+    NoteClip: {length: 4, notes: [
+      {start: 0, duration: 0.25, pitch: 36},
+      {start: 1, duration: 0.25, pitch: 36},
+      {start: 2, duration: 0.25, pitch: 36},
+      {start: 3, duration: 0.25, pitch: 36}
+    ]}
   }
-}
 
-prefab dk_ride_sound {
-  SynthSound: {seed: 7, level_variance: 0.05}
-  SynthEnvelope: {attack: 0.001, decay: 2.4, curve: 4}
-  SynthFilter: {kind: SynthHighPass, cutoff: 2500}
-  m1 { SynthOscillator: {wave: SynthSquare, frequency: 287, level: 0.1} }
-  m2 { SynthOscillator: {wave: SynthSquare, frequency: 431, level: 0.1} }
-  m3 { SynthOscillator: {wave: SynthSquare, frequency: 513, level: 0.1} }
-  m4 { SynthOscillator: {wave: SynthSquare, frequency: 653, level: 0.1} }
-  m5 { SynthOscillator: {wave: SynthSquare, frequency: 769, level: 0.1} }
-  m6 { SynthOscillator: {wave: SynthSquare, frequency: 1021, level: 0.1} }
-  ping {
-    SynthOscillator: {wave: SynthSine, frequency: 3100, level: 0.3}
-    SynthEnvelope: {attack: 0.001, decay: 0.35, curve: 3}
-    bell { SynthOscillator: {frequency: 4371, modulation: SynthPhase, index: 2.2} }
+  prefab dk_kick_turn {
+    NoteClip: {length: 4, notes: [
+      {start: 0, duration: 0.25, pitch: 36},
+      {start: 1, duration: 0.25, pitch: 36},
+      {start: 2, duration: 0.25, pitch: 36},
+      {start: 2.75, duration: 0.25, pitch: 36, velocity: 0.7}
+    ]}
   }
-}
 
-prefab dk_crash_sound {
-  SynthSound: {seed: 8, level_variance: 0.04}
-  SynthEnvelope: {attack: 0.002, decay: 2.8, curve: 3}
-  SynthFilter: {kind: SynthHighPass, cutoff: 2200}
-  m1 { SynthOscillator: {wave: SynthSquare, frequency: 245, level: 0.09} }
-  m2 { SynthOscillator: {wave: SynthSquare, frequency: 367, level: 0.09} }
-  m3 { SynthOscillator: {wave: SynthSquare, frequency: 459, level: 0.09} }
-  m4 { SynthOscillator: {wave: SynthSquare, frequency: 611, level: 0.09} }
-  m5 { SynthOscillator: {wave: SynthSquare, frequency: 692, level: 0.09} }
-  wash {
-    SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, level: 0.6}
-    SynthUnison: {voices: 3, detune: 0, width: 0.9}
+  prefab dk_snare_solo {
+    NoteClip: {length: 4, notes: [
+      {start: 1, duration: 0.25, pitch: 38},
+      {start: 3, duration: 0.25, pitch: 38}
+    ]}
   }
-  splash {
-    SynthOscillator: {wave: SynthNoise, level: 0.6}
-    SynthEnvelope: {attack: 0.001, decay: 0.18, curve: 4}
-    SynthUnison: {voices: 2, detune: 0, width: 0.7}
+
+  prefab dk_snare_groove {
+    NoteClip: {length: 4, notes: [
+      {start: 1, duration: 0.25, pitch: 38},
+      {start: 1.75, duration: 0.25, pitch: 38, velocity: 0.35},
+      {start: 3, duration: 0.25, pitch: 38},
+      {start: 3.5, duration: 0.25, pitch: 38, velocity: 0.3}
+    ]}
   }
-}
 
-dk_kick_inst { Instrument: {sound: dk_kick_sound, root: 36, gate: false} }
-dk_snare_inst { Instrument: {sound: dk_snare_sound, root: 38, gate: false} }
-dk_hat_inst { Instrument: {sound: dk_hat_sound, root: 42, gate: false, spread: 0.15, spread_mode: InstrumentSpreadRandom} }
-dk_open_hat_inst { Instrument: {sound: dk_open_hat_sound, root: 46, gate: false} }
-dk_clap_inst { Instrument: {sound: dk_clap_sound, root: 39, gate: false} }
-dk_tom_inst { Instrument: {sound: dk_tom_sound, root: 45, gate: false, spread: 0.7} }
-dk_ride_inst { Instrument: {sound: dk_ride_sound, root: 51, gate: false} }
-dk_crash_inst { Instrument: {sound: dk_crash_sound, root: 49, gate: false} }
+  prefab dk_snare_fill {
+    NoteClip: {length: 4, notes: [
+      {start: 1, duration: 0.25, pitch: 38},
+      {start: 2, duration: 0.25, pitch: 38, velocity: 0.55},
+      {start: 2.25, duration: 0.25, pitch: 38, velocity: 0.6},
+      {start: 2.5, duration: 0.25, pitch: 38, velocity: 0.7},
+      {start: 2.75, duration: 0.25, pitch: 38, velocity: 0.75},
+      {start: 3, duration: 0.25, pitch: 38, velocity: 0.85},
+      {start: 3.25, duration: 0.25, pitch: 38, velocity: 0.9},
+      {start: 3.5, duration: 0.25, pitch: 38, velocity: 0.95},
+      {start: 3.75, duration: 0.25, pitch: 38, velocity: 1}
+    ]}
+  }
 
-prefab dk_kick_four {
-  NoteClip: {length: 4, notes: [
-    {start: 0, duration: 0.25, pitch: 36},
-    {start: 1, duration: 0.25, pitch: 36},
-    {start: 2, duration: 0.25, pitch: 36},
-    {start: 3, duration: 0.25, pitch: 36}
-  ]}
-}
+  prefab dk_hat_sixteenths {
+    NoteClip: {length: 4, notes: [
+      {start: 0, duration: 0.1, pitch: 42, velocity: 0.8},
+      {start: 0.25, duration: 0.1, pitch: 42, velocity: 0.45},
+      {start: 0.75, duration: 0.1, pitch: 42, velocity: 0.45},
+      {start: 1, duration: 0.1, pitch: 42, velocity: 0.8},
+      {start: 1.25, duration: 0.1, pitch: 42, velocity: 0.45},
+      {start: 1.75, duration: 0.1, pitch: 42, velocity: 0.45},
+      {start: 2, duration: 0.1, pitch: 42, velocity: 0.8},
+      {start: 2.25, duration: 0.1, pitch: 42, velocity: 0.45},
+      {start: 2.75, duration: 0.1, pitch: 42, velocity: 0.45},
+      {start: 3, duration: 0.1, pitch: 42, velocity: 0.8},
+      {start: 3.25, duration: 0.1, pitch: 42, velocity: 0.45},
+      {start: 3.75, duration: 0.1, pitch: 42, velocity: 0.45}
+    ]}
+  }
 
-prefab dk_kick_turn {
-  NoteClip: {length: 4, notes: [
-    {start: 0, duration: 0.25, pitch: 36},
-    {start: 1, duration: 0.25, pitch: 36},
-    {start: 2, duration: 0.25, pitch: 36},
-    {start: 2.75, duration: 0.25, pitch: 36, velocity: 0.7}
-  ]}
-}
+  prefab dk_open_hat_offbeats {
+    NoteClip: {length: 4, notes: [
+      {start: 0.5, duration: 0.25, pitch: 46, velocity: 0.75},
+      {start: 1.5, duration: 0.25, pitch: 46, velocity: 0.75},
+      {start: 2.5, duration: 0.25, pitch: 46, velocity: 0.75},
+      {start: 3.5, duration: 0.25, pitch: 46, velocity: 0.75}
+    ]}
+  }
 
-prefab dk_snare_solo {
-  NoteClip: {length: 4, notes: [
-    {start: 1, duration: 0.25, pitch: 38},
-    {start: 3, duration: 0.25, pitch: 38}
-  ]}
-}
+  prefab dk_clap_backbeat {
+    NoteClip: {length: 4, notes: [
+      {start: 1, duration: 0.25, pitch: 39},
+      {start: 3, duration: 0.25, pitch: 39}
+    ]}
+  }
 
-prefab dk_snare_groove {
-  NoteClip: {length: 4, notes: [
-    {start: 1, duration: 0.25, pitch: 38},
-    {start: 1.75, duration: 0.25, pitch: 38, velocity: 0.35},
-    {start: 3, duration: 0.25, pitch: 38},
-    {start: 3.5, duration: 0.25, pitch: 38, velocity: 0.3}
-  ]}
-}
+  prefab dk_tom_solo {
+    NoteClip: {length: 4, notes: [
+      {start: 0, duration: 0.25, pitch: 50},
+      {start: 1, duration: 0.25, pitch: 47},
+      {start: 2, duration: 0.25, pitch: 43},
+      {start: 3, duration: 0.25, pitch: 40}
+    ]}
+  }
 
-prefab dk_snare_fill {
-  NoteClip: {length: 4, notes: [
-    {start: 1, duration: 0.25, pitch: 38},
-    {start: 2, duration: 0.25, pitch: 38, velocity: 0.55},
-    {start: 2.25, duration: 0.25, pitch: 38, velocity: 0.6},
-    {start: 2.5, duration: 0.25, pitch: 38, velocity: 0.7},
-    {start: 2.75, duration: 0.25, pitch: 38, velocity: 0.75},
-    {start: 3, duration: 0.25, pitch: 38, velocity: 0.85},
-    {start: 3.25, duration: 0.25, pitch: 38, velocity: 0.9},
-    {start: 3.5, duration: 0.25, pitch: 38, velocity: 0.95},
-    {start: 3.75, duration: 0.25, pitch: 38, velocity: 1}
-  ]}
-}
+  prefab dk_tom_fill {
+    NoteClip: {length: 4, notes: [
+      {start: 2, duration: 0.25, pitch: 50, velocity: 0.85},
+      {start: 2.25, duration: 0.25, pitch: 50, velocity: 0.7},
+      {start: 2.5, duration: 0.25, pitch: 47, velocity: 0.85},
+      {start: 2.75, duration: 0.25, pitch: 47, velocity: 0.7},
+      {start: 3, duration: 0.25, pitch: 43, velocity: 0.9},
+      {start: 3.25, duration: 0.25, pitch: 43, velocity: 0.75},
+      {start: 3.5, duration: 0.25, pitch: 40, velocity: 0.95},
+      {start: 3.75, duration: 0.25, pitch: 40, velocity: 0.85}
+    ]}
+  }
 
-prefab dk_hat_sixteenths {
-  NoteClip: {length: 4, notes: [
-    {start: 0, duration: 0.1, pitch: 42, velocity: 0.8},
-    {start: 0.25, duration: 0.1, pitch: 42, velocity: 0.45},
-    {start: 0.75, duration: 0.1, pitch: 42, velocity: 0.45},
-    {start: 1, duration: 0.1, pitch: 42, velocity: 0.8},
-    {start: 1.25, duration: 0.1, pitch: 42, velocity: 0.45},
-    {start: 1.75, duration: 0.1, pitch: 42, velocity: 0.45},
-    {start: 2, duration: 0.1, pitch: 42, velocity: 0.8},
-    {start: 2.25, duration: 0.1, pitch: 42, velocity: 0.45},
-    {start: 2.75, duration: 0.1, pitch: 42, velocity: 0.45},
-    {start: 3, duration: 0.1, pitch: 42, velocity: 0.8},
-    {start: 3.25, duration: 0.1, pitch: 42, velocity: 0.45},
-    {start: 3.75, duration: 0.1, pitch: 42, velocity: 0.45}
-  ]}
-}
+  prefab dk_ride_eighths {
+    NoteClip: {length: 4, notes: [
+      {start: 0, duration: 0.25, pitch: 51, velocity: 0.85},
+      {start: 0.5, duration: 0.25, pitch: 51, velocity: 0.55},
+      {start: 1, duration: 0.25, pitch: 51, velocity: 0.8},
+      {start: 1.5, duration: 0.25, pitch: 51, velocity: 0.55},
+      {start: 2, duration: 0.25, pitch: 51, velocity: 0.85},
+      {start: 2.5, duration: 0.25, pitch: 51, velocity: 0.55},
+      {start: 3, duration: 0.25, pitch: 51, velocity: 0.8},
+      {start: 3.5, duration: 0.25, pitch: 51, velocity: 0.55}
+    ]}
+  }
 
-prefab dk_open_hat_offbeats {
-  NoteClip: {length: 4, notes: [
-    {start: 0.5, duration: 0.25, pitch: 46, velocity: 0.75},
-    {start: 1.5, duration: 0.25, pitch: 46, velocity: 0.75},
-    {start: 2.5, duration: 0.25, pitch: 46, velocity: 0.75},
-    {start: 3.5, duration: 0.25, pitch: 46, velocity: 0.75}
-  ]}
-}
+  prefab dk_crash_hit {
+    NoteClip: {length: 4, notes: [
+      {start: 0, duration: 0.25, pitch: 49}
+    ]}
+  }
 
-prefab dk_clap_backbeat {
-  NoteClip: {length: 4, notes: [
-    {start: 1, duration: 0.25, pitch: 39},
-    {start: 3, duration: 0.25, pitch: 39}
-  ]}
-}
+  dk_track_kick {
+    Track: {instrument: dk_kick_inst}
+    AudioBus: {output: dk_drums, volume: 0.95}
+    AudioMeter: {}
+    solo { ClipPlacement: {clip: dk_kick_four, start: 0} }
+    groove { ClipPlacement: {clip: dk_kick_four, start: 28, duration: 12, loop: true} }
+    turn { ClipPlacement: {clip: dk_kick_turn, start: 40} }
+    groove_2 { ClipPlacement: {clip: dk_kick_four, start: 44, duration: 14, loop: true} }
+    end { ClipPlacement: {clip: dk_kick_four, start: 60, duration: 1} }
+  }
 
-prefab dk_tom_solo {
-  NoteClip: {length: 4, notes: [
-    {start: 0, duration: 0.25, pitch: 50},
-    {start: 1, duration: 0.25, pitch: 47},
-    {start: 2, duration: 0.25, pitch: 43},
-    {start: 3, duration: 0.25, pitch: 40}
-  ]}
-}
+  dk_track_snare {
+    Track: {instrument: dk_snare_inst, humanize: {velocity: 0.08}}
+    AudioBus: {output: dk_drums, volume: 0.7, sends: [{bus: dk_room, level: 0.25}]}
+    AudioMeter: {}
+    solo { ClipPlacement: {clip: dk_snare_solo, start: 4} }
+    groove { ClipPlacement: {clip: dk_snare_groove, start: 28, duration: 12, loop: true} }
+    fill { ClipPlacement: {clip: dk_snare_fill, start: 40} }
+    groove_2 { ClipPlacement: {clip: dk_snare_groove, start: 44, duration: 12, loop: true} }
+    pickup { ClipPlacement: {clip: dk_snare_solo, start: 56, duration: 2} }
+  }
 
-prefab dk_tom_fill {
-  NoteClip: {length: 4, notes: [
-    {start: 2, duration: 0.25, pitch: 50, velocity: 0.85},
-    {start: 2.25, duration: 0.25, pitch: 50, velocity: 0.7},
-    {start: 2.5, duration: 0.25, pitch: 47, velocity: 0.85},
-    {start: 2.75, duration: 0.25, pitch: 47, velocity: 0.7},
-    {start: 3, duration: 0.25, pitch: 43, velocity: 0.9},
-    {start: 3.25, duration: 0.25, pitch: 43, velocity: 0.75},
-    {start: 3.5, duration: 0.25, pitch: 40, velocity: 0.95},
-    {start: 3.75, duration: 0.25, pitch: 40, velocity: 0.85}
-  ]}
-}
+  dk_track_hat {
+    Track: {instrument: dk_hat_inst, swing: 0.1, swing_grid: TrackSwing16, humanize: {timing: 3, velocity: 0.12}}
+    AudioBus: {output: dk_drums, volume: 0.9}
+    AudioMeter: {}
+    solo { ClipPlacement: {clip: dk_hat_sixteenths, start: 8} }
+    groove { ClipPlacement: {clip: dk_hat_sixteenths, start: 28, duration: 16, loop: true} }
+  }
 
-prefab dk_ride_eighths {
-  NoteClip: {length: 4, notes: [
-    {start: 0, duration: 0.25, pitch: 51, velocity: 0.85},
-    {start: 0.5, duration: 0.25, pitch: 51, velocity: 0.55},
-    {start: 1, duration: 0.25, pitch: 51, velocity: 0.8},
-    {start: 1.5, duration: 0.25, pitch: 51, velocity: 0.55},
-    {start: 2, duration: 0.25, pitch: 51, velocity: 0.85},
-    {start: 2.5, duration: 0.25, pitch: 51, velocity: 0.55},
-    {start: 3, duration: 0.25, pitch: 51, velocity: 0.8},
-    {start: 3.5, duration: 0.25, pitch: 51, velocity: 0.55}
-  ]}
-}
+  dk_track_open_hat {
+    Track: {instrument: dk_open_hat_inst, humanize: {velocity: 0.1}}
+    AudioBus: {output: dk_drums, volume: 0.75, pan: 0.2}
+    AudioMeter: {}
+    solo { ClipPlacement: {clip: dk_open_hat_offbeats, start: 8} }
+    groove { ClipPlacement: {clip: dk_open_hat_offbeats, start: 36, duration: 8, loop: true} }
+  }
 
-prefab dk_crash_hit {
-  NoteClip: {length: 4, notes: [
-    {start: 0, duration: 0.25, pitch: 49}
-  ]}
-}
+  dk_track_clap {
+    Track: {instrument: dk_clap_inst}
+    AudioBus: {output: dk_drums, volume: 1.0, sends: [{bus: dk_room, level: 0.35}]}
+    AudioMeter: {}
+    solo { ClipPlacement: {clip: dk_clap_backbeat, start: 12} }
+    groove { ClipPlacement: {clip: dk_clap_backbeat, start: 44, duration: 12, loop: true} }
+  }
 
-dk_track_kick {
-  Track: {instrument: dk_kick_inst}
-  AudioBus: {output: dk_drums, volume: 0.95}
-  AudioMeter: {}
-  solo { ClipPlacement: {clip: dk_kick_four, start: 0} }
-  groove { ClipPlacement: {clip: dk_kick_four, start: 28, duration: 12, loop: true} }
-  turn { ClipPlacement: {clip: dk_kick_turn, start: 40} }
-  groove_2 { ClipPlacement: {clip: dk_kick_four, start: 44, duration: 14, loop: true} }
-  end { ClipPlacement: {clip: dk_kick_four, start: 60, duration: 1} }
-}
+  dk_track_tom {
+    Track: {instrument: dk_tom_inst}
+    AudioBus: {output: dk_drums, volume: 0.8, sends: [{bus: dk_room, level: 0.3}]}
+    AudioMeter: {}
+    solo { ClipPlacement: {clip: dk_tom_solo, start: 16} }
+    fill { ClipPlacement: {clip: dk_tom_fill, start: 56} }
+  }
 
-dk_track_snare {
-  Track: {instrument: dk_snare_inst, humanize: {velocity: 0.08}}
-  AudioBus: {output: dk_drums, volume: 0.7, sends: [{bus: dk_room, level: 0.25}]}
-  AudioMeter: {}
-  solo { ClipPlacement: {clip: dk_snare_solo, start: 4} }
-  groove { ClipPlacement: {clip: dk_snare_groove, start: 28, duration: 12, loop: true} }
-  fill { ClipPlacement: {clip: dk_snare_fill, start: 40} }
-  groove_2 { ClipPlacement: {clip: dk_snare_groove, start: 44, duration: 12, loop: true} }
-  pickup { ClipPlacement: {clip: dk_snare_solo, start: 56, duration: 2} }
-}
+  dk_track_ride {
+    Track: {instrument: dk_ride_inst, humanize: {timing: 2, velocity: 0.08}}
+    AudioBus: {output: dk_drums, volume: 0.6, pan: 0.3}
+    AudioMeter: {}
+    solo { ClipPlacement: {clip: dk_ride_eighths, start: 20} }
+    groove { ClipPlacement: {clip: dk_ride_eighths, start: 44, duration: 12, loop: true} }
+  }
 
-dk_track_hat {
-  Track: {instrument: dk_hat_inst, swing: 0.1, swing_grid: TrackSwing16, humanize: {timing: 3, velocity: 0.12}}
-  AudioBus: {output: dk_drums, volume: 0.9}
-  AudioMeter: {}
-  solo { ClipPlacement: {clip: dk_hat_sixteenths, start: 8} }
-  groove { ClipPlacement: {clip: dk_hat_sixteenths, start: 28, duration: 16, loop: true} }
-}
+  dk_track_crash {
+    Track: {instrument: dk_crash_inst}
+    AudioBus: {output: dk_drums, volume: 0.55, pan: -0.3, sends: [{bus: dk_room, level: 0.2}]}
+    AudioMeter: {}
+    solo { ClipPlacement: {clip: dk_crash_hit, start: 24} }
+    verse { ClipPlacement: {clip: dk_crash_hit, start: 28} }
+    chorus { ClipPlacement: {clip: dk_crash_hit, start: 44} }
+    end { ClipPlacement: {clip: dk_crash_hit, start: 60} }
+  }
 
-dk_track_open_hat {
-  Track: {instrument: dk_open_hat_inst, humanize: {velocity: 0.1}}
-  AudioBus: {output: dk_drums, volume: 0.75, pan: 0.2}
-  AudioMeter: {}
-  solo { ClipPlacement: {clip: dk_open_hat_offbeats, start: 8} }
-  groove { ClipPlacement: {clip: dk_open_hat_offbeats, start: 36, duration: 8, loop: true} }
-}
-
-dk_track_clap {
-  Track: {instrument: dk_clap_inst}
-  AudioBus: {output: dk_drums, volume: 1.0, sends: [{bus: dk_room, level: 0.35}]}
-  AudioMeter: {}
-  solo { ClipPlacement: {clip: dk_clap_backbeat, start: 12} }
-  groove { ClipPlacement: {clip: dk_clap_backbeat, start: 44, duration: 12, loop: true} }
-}
-
-dk_track_tom {
-  Track: {instrument: dk_tom_inst}
-  AudioBus: {output: dk_drums, volume: 0.8, sends: [{bus: dk_room, level: 0.3}]}
-  AudioMeter: {}
-  solo { ClipPlacement: {clip: dk_tom_solo, start: 16} }
-  fill { ClipPlacement: {clip: dk_tom_fill, start: 56} }
-}
-
-dk_track_ride {
-  Track: {instrument: dk_ride_inst, humanize: {timing: 2, velocity: 0.08}}
-  AudioBus: {output: dk_drums, volume: 0.6, pan: 0.3}
-  AudioMeter: {}
-  solo { ClipPlacement: {clip: dk_ride_eighths, start: 20} }
-  groove { ClipPlacement: {clip: dk_ride_eighths, start: 44, duration: 12, loop: true} }
-}
-
-dk_track_crash {
-  Track: {instrument: dk_crash_inst}
-  AudioBus: {output: dk_drums, volume: 0.55, pan: -0.3, sends: [{bus: dk_room, level: 0.2}]}
-  AudioMeter: {}
-  solo { ClipPlacement: {clip: dk_crash_hit, start: 24} }
-  verse { ClipPlacement: {clip: dk_crash_hit, start: 28} }
-  chorus { ClipPlacement: {clip: dk_crash_hit, start: 44} }
-  end { ClipPlacement: {clip: dk_crash_hit, start: 60} }
-}
-
-$ {
-  Song: {
-    title: "Drum Kit", tempo: 120, beats_per_bar: 4, beat_unit: 4, beats: 64,
-    lanes: [
-      {name: "Kick", bus: dk_track_kick},
-      {name: "Snare", bus: dk_track_snare},
-      {name: "Closed Hat", bus: dk_track_hat},
-      {name: "Open Hat", bus: dk_track_open_hat},
-      {name: "Clap", bus: dk_track_clap},
-      {name: "Toms", bus: dk_track_tom},
-      {name: "Ride", bus: dk_track_ride},
-      {name: "Crash", bus: dk_track_crash}
-    ]
+  $ {
+    Song: {
+      title: "Drum Kit", tempo: 120, beats_per_bar: 4, beat_unit: 4, beats: 64,
+      lanes: [
+        {name: "Kick", bus: dk_track_kick},
+        {name: "Snare", bus: dk_track_snare},
+        {name: "Closed Hat", bus: dk_track_hat},
+        {name: "Open Hat", bus: dk_track_open_hat},
+        {name: "Clap", bus: dk_track_clap},
+        {name: "Toms", bus: dk_track_tom},
+        {name: "Ride", bus: dk_track_ride},
+        {name: "Crash", bus: dk_track_crash}
+      ]
+    }
   }
 }

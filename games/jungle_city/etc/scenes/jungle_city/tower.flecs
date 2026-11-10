@@ -3,47 +3,49 @@ using box.transform
 using box.geometry
 using box.material
 
-template CanopyTower {
-  prop floors: i32 = 5
-  prop variant: i32 = 0
-  prop wall: Rgb = {226, 235, 211}
-  prop timber: Rgb = {143, 91, 48}
-  prop roof_style: i32 = 0
-  prop facade_style: i32 = 0
-  const windows: math.Rng = {seed: variant + 314159}
-  const height = floors * 3.2
-  CanopyPlinth(width: 8, depth: 8, variant: variant) {}
-  shell : CanopyFacade { Position: {0, height / 2 + 1.2, 0}; RoundedBox: {6.2, height, 6.2, 0.2, segments: 1}; TextureTransform: {scale_x: 0.5, scale_y: floors / 8.0, offset_x: variant % 8 / 8.0, offset_y: variant % 13 / 8.0} }
-  for f in 0..floors {
-    const y = 1.2 + f * 3.2
-    const w = 8.8 - f * 0.23
-    { (IsA, CanopyIvory); Rgb: wall; Position: {0, y, 0}; RoundedBox: {w, 0.34, w, 0.7, segments: 2} }
-    { (IsA, CanopyWood); Rgb: timber; Position: {0, y - 0.22, 0}; RoundedBox: {w - 0.25, 0.12, w - 0.25, 0.5} }
-    for side in 0..4 {
-      {
-        Rotation: {0, side * math.PI / 2, 0}
-        { (IsA, CanopyIvory); Rgb: wall; Position: {0, y + 0.34, w / 2 - 0.28}; RoundedBox: {w - 1.4, 0.5, 0.5, 0.12} }
-        { (IsA, CanopyLeaf); Position: {0, y + 0.65, w / 2 - 0.28}; RoundedBox: {w - 1.5, 0.35, 0.65, 0.16} }
-        for c in 0..3 {
-          { (IsA, CanopyLeafCard); Rgb: {72 + (f + c) % 3 * 12, 128, 56}; Position: {(c - 1) * (w - 2.6) / 2.4, y + 0.98, w / 2 - 0.28}; Rotation: {-0.2, f + c, 0}; Quad: {1.5, 0.9} }
+assets {
+  template CanopyTower {
+    prop floors: i32 = 5
+    prop variant: i32 = 0
+    prop wall: Rgb = {226, 235, 211}
+    prop timber: Rgb = {143, 91, 48}
+    prop roof_style: i32 = 0
+    prop facade_style: i32 = 0
+    const windows: math.Rng = {seed: variant + 314159}
+    const height = floors * 3.2
+    CanopyPlinth(width: 8, depth: 8, variant: variant) {}
+    shell : CanopyFacade { Position: {0, height / 2 + 1.2, 0}; RoundedBox: {6.2, height, 6.2, 0.2, segments: 1}; TextureTransform: {scale_x: 0.5, scale_y: floors / 8.0, offset_x: variant % 8 / 8.0, offset_y: variant % 13 / 8.0} }
+    for f in 0..floors {
+      const y = 1.2 + f * 3.2
+      const w = 8.8 - f * 0.23
+      { (IsA, CanopyIvory); Rgb: wall; Position: {0, y, 0}; RoundedBox: {w, 0.34, w, 0.7, segments: 2} }
+      { (IsA, CanopyWood); Rgb: timber; Position: {0, y - 0.22, 0}; RoundedBox: {w - 0.25, 0.12, w - 0.25, 0.5} }
+      for side in 0..4 {
+        {
+          Rotation: {0, side * math.PI / 2, 0}
+          { (IsA, CanopyIvory); Rgb: wall; Position: {0, y + 0.34, w / 2 - 0.28}; RoundedBox: {w - 1.4, 0.5, 0.5, 0.12} }
+          { (IsA, CanopyLeaf); Position: {0, y + 0.65, w / 2 - 0.28}; RoundedBox: {w - 1.5, 0.35, 0.65, 0.16} }
+          for c in 0..3 {
+            { (IsA, CanopyLeafCard); Rgb: {72 + (f + c) % 3 * 12, 128, 56}; Position: {(c - 1) * (w - 2.6) / 2.4, y + 0.98, w / 2 - 0.28}; Rotation: {-0.2, f + c, 0}; Quad: {1.5, 0.9} }
+          }
+          for j in 0..4 + facade_style * 3 {
+            { (IsA, CanopyWood); Rgb: timber; Position: {-2.8 + j * 5.6 / (3 + facade_style * 3), y + 1.65, 3.17}; Box: {0.13, 2.7, 0.22} }
+          }
+          { (IsA, CanopyMetal); Position: {0, y + 1.42, w / 2 - 0.1}; Box: {w - 1.2, 0.04, 0.04} }
+          for p in 0..2 {
+            { (IsA, CanopyMetal); Position: {(p - 0.5) * (w - 1.3), y + 0.95, w / 2 - 0.1}; Box: {0.04, 0.95, 0.04} }
+          }
+          if windows.f(1) > 0.4 {
+            CanopyBalconyProp(kind: windows.u(5), seed: variant + f + side) { Position: {windows.f(2.4) - 1.2, y + 0.17, 3.5} }
+          }
+          CanopyVine(length: 1.3 + (f + side + variant) % 3 * 0.6, phase: side) { Position: {-w * 0.28, y + 0.68, w / 2 + 0.04} }
         }
-        for j in 0..4 + facade_style * 3 {
-          { (IsA, CanopyWood); Rgb: timber; Position: {-2.8 + j * 5.6 / (3 + facade_style * 3), y + 1.65, 3.17}; Box: {0.13, 2.7, 0.22} }
-        }
-        { (IsA, CanopyMetal); Position: {0, y + 1.42, w / 2 - 0.1}; Box: {w - 1.2, 0.04, 0.04} }
-        for p in 0..2 {
-          { (IsA, CanopyMetal); Position: {(p - 0.5) * (w - 1.3), y + 0.95, w / 2 - 0.1}; Box: {0.04, 0.95, 0.04} }
-        }
-        if windows.f(1) > 0.4 {
-          CanopyBalconyProp(kind: windows.u(5), seed: variant + f + side) { Position: {windows.f(2.4) - 1.2, y + 0.17, 3.5} }
-        }
-        CanopyVine(length: 1.3 + (f + side + variant) % 3 * 0.6, phase: side) { Position: {-w * 0.28, y + 0.68, w / 2 + 0.04} }
       }
     }
+    { (IsA, CanopyIvory); Rgb: wall; Position: {0, height + 1.2, 0}; RoundedBox: {7.5, 0.35, 7.5, 0.6} }
+    { (IsA, CanopyLeaf); Position: {0, height + 1.42, 0}; RoundedBox: {6.8, 0.16, 6.8, 0.5} }
+    CanopyRoof(style: roof_style, variant: variant) { Position: {0, height + 1.5, 0} }
+    CanopyDownpipe(length: height) { Position: {3.14, height + 1.2, 3.14} }
+    CanopyDownpipe(length: height) { Position: {-3.14, height + 1.2, -3.14} }
   }
-  { (IsA, CanopyIvory); Rgb: wall; Position: {0, height + 1.2, 0}; RoundedBox: {7.5, 0.35, 7.5, 0.6} }
-  { (IsA, CanopyLeaf); Position: {0, height + 1.42, 0}; RoundedBox: {6.8, 0.16, 6.8, 0.5} }
-  CanopyRoof(style: roof_style, variant: variant) { Position: {0, height + 1.5, 0} }
-  CanopyDownpipe(length: height) { Position: {3.14, height + 1.2, 3.14} }
-  CanopyDownpipe(length: height) { Position: {-3.14, height + 1.2, -3.14} }
 }

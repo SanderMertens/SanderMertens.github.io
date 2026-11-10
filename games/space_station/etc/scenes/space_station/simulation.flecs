@@ -2,77 +2,80 @@ include state
 
 using flecs.script
 using flecs.script.math
+using state
 
-proc st_step() {
-  st_beat += 1
+state {
+  proc st_step() {
+    st_beat += 1
 
-  const people = st_residents + st_visitors
-  const ratio = st_power_ratio
-  const crowded = people > st_life_cap * ratio
+    const people = st_residents + st_visitors
+    const ratio = st_power_ratio
+    const crowded = people > st_life_cap * ratio
 
-  const air_drain = people * 0.1 + st_modules * 0.02
-  const leak = crowded ? people * 0.1 : 0
-  st_air = clamp(st_air + st_air_rate * ratio - air_drain - leak, 0, 100)
+    const air_drain = people * 0.1 + st_modules * 0.02
+    const leak = crowded ? people * 0.1 : 0
+    st_air = clamp(st_air + st_air_rate * ratio - air_drain - leak, 0, 100)
 
-  st_food = clamp(st_food + st_food_rate * ratio - people * 0.05, 0, max(st_storage - st_goods, 0))
+    st_food = clamp(st_food + st_food_rate * ratio - people * 0.05, 0, max(st_storage - st_goods, 0))
 
-  const rent = st_residents * 0.5
-  const net = rent + st_visitor_spend - st_upkeep_total
-  st_income = net
-  st_credits += net
+    const rent = st_residents * 0.5
+    const net = rent + st_visitor_spend - st_upkeep_total
+    st_income = net
+    st_credits += net
 
-  const comfy = st_residents < st_housing && st_food > 2 && st_air > 30 && !crowded && ratio >= 0.6
-  if comfy {
-    st_growth += 0.05 + st_residents * 0.003
-    if st_growth >= 1 {
-      st_growth -= 1
-      st_residents += 1
-    }
-  }
-
-  const starving = st_food <= 0
-  const choking = st_air <= 5
-  const press_food = starving ? 0.12 : 0
-  const press_air = choking ? 0.25 : 0
-  const press_life = crowded ? 0.04 : 0
-  const press_home = st_residents > st_housing ? 0.08 : 0
-  const pressure = press_food + press_air + press_life + press_home
-  if pressure > 0 {
-    st_decline += pressure
-    if st_decline >= 1 {
-      st_decline -= 1
-      st_residents = max(st_residents - 1, 0)
-      if starving {
-        st_notify("A resident left: the station has run out of food.", 6)
-      } else if choking {
-        st_notify("A resident left: the air is running out.", 6)
-      } else if crowded {
-        st_notify("A resident left: life support is overloaded.", 6)
-      } else {
-        st_notify("A resident left: there is not enough housing.", 6)
+    const comfy = st_residents < st_housing && st_food > 2 && st_air > 30 && !crowded && ratio >= 0.6
+    if comfy {
+      st_growth += 0.05 + st_residents * 0.003
+      if st_growth >= 1 {
+        st_growth -= 1
+        st_residents += 1
       }
     }
-  } else {
-    st_decline = 0
-  }
 
-  if st_rank < 1 && st_residents >= 20 {
-    st_rank = 1
-    st_notify("Promoted to Outpost! Next goal: 50 residents.", 8)
-  } else if st_rank == 1 && st_residents >= 50 {
-    st_rank = 2
-    st_notify("Promoted to Colony! Next goal: 100 residents and 20000 credits.", 8)
-  } else if st_rank == 2 && st_residents >= 100 && st_credits >= 20000 {
-    st_rank = 3
-    st_notify("Promoted to Starport! You won. The station is yours to keep growing.", 15)
-  }
+    const starving = st_food <= 0
+    const choking = st_air <= 5
+    const press_food = starving ? 0.12 : 0
+    const press_air = choking ? 0.25 : 0
+    const press_life = crowded ? 0.04 : 0
+    const press_home = st_residents > st_housing ? 0.08 : 0
+    const pressure = press_food + press_air + press_life + press_home
+    if pressure > 0 {
+      st_decline += pressure
+      if st_decline >= 1 {
+        st_decline -= 1
+        st_residents = max(st_residents - 1, 0)
+        if starving {
+          st_notify("A resident left: the station has run out of food.", 6)
+        } else if choking {
+          st_notify("A resident left: the air is running out.", 6)
+        } else if crowded {
+          st_notify("A resident left: life support is overloaded.", 6)
+        } else {
+          st_notify("A resident left: there is not enough housing.", 6)
+        }
+      }
+    } else {
+      st_decline = 0
+    }
 
-  if st_residents <= 0 {
-    st_lost = true
-    st_notify("Everyone has left the station.", 9999)
-  } else if st_credits < -1500 {
-    st_lost = true
-    st_notify("The station is bankrupt.", 9999)
+    if st_rank < 1 && st_residents >= 20 {
+      st_rank = 1
+      st_notify("Promoted to Outpost! Next goal: 50 residents.", 8)
+    } else if st_rank == 1 && st_residents >= 50 {
+      st_rank = 2
+      st_notify("Promoted to Colony! Next goal: 100 residents and 20000 credits.", 8)
+    } else if st_rank == 2 && st_residents >= 100 && st_credits >= 20000 {
+      st_rank = 3
+      st_notify("Promoted to Starport! You won. The station is yours to keep growing.", 15)
+    }
+
+    if st_residents <= 0 {
+      st_lost = true
+      st_notify("Everyone has left the station.", 9999)
+    } else if st_credits < -1500 {
+      st_lost = true
+      st_notify("The station is bankrupt.", 9999)
+    }
   }
 }
 
@@ -89,18 +92,22 @@ async {
   }
 }
 
-template StationAlertTimer {
-  prop seq: i32 = 0
-  prop seconds: f64 = 0
+assets {
+  template StationAlertTimer {
+    prop seq: i32 = 0
+    prop seconds: f64 = 0
 
-  async {
-    await delay(seconds)
-    st_alert = ""
+    async {
+      await delay(seconds)
+      st_alert = ""
+    }
+  }
+
+  template StationAlertClock {
+    StationAlertTimer timer(seq: st_alert_seq, seconds: st_alert_seconds)
   }
 }
 
-template StationAlertClock {
-  StationAlertTimer timer(seq: st_alert_seq, seconds: st_alert_seconds)
+state {
+  assets.StationAlertClock station_alert_clock()
 }
-
-StationAlertClock station_alert_clock()

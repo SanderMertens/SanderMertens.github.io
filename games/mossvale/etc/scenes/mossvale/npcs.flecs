@@ -5,283 +5,287 @@ using box.transition
 using box.light
 using box.geometry
 using box.material
+using state
+using assets
 
-template QuestMark {
-  prop kind: i32 = 0
-  mut up = false
-  Position: {0, up ? 3.35 : 3.1, 0}
-  Rotation: {-0.55, 0, 0}
-  Scale: {1.6, 1.6, 1.6}
-  Transition: [Position: {duration: 0.7, timing_function: EaseInOut}]
-  if kind == 1 {
-    bar : MvGold { Position: {0, 0.35, 0}; Capsule: {length: 0.35, radius: 0.11, segments: 8}; Emissive: {strength: 1.2, color: {255, 200, 80}} }
-    dot : MvGold { Position: {0, -0.12, 0}; Sphere: {radius: 0.12, segments: 8}; Emissive: {strength: 1.2, color: {255, 200, 80}} }
-  } else if kind == 2 {
-    hook { Position: {0, 0.42, 0}; Rotation: {HALF_PI, 0, 0}; Torus: {radius: 0.2, tube: 0.08, segments: 16, rings: 6}; Rgb: {120, 200, 255}; Emissive: {strength: 1.5, color: {120, 200, 255}} }
-    stem { Position: {0, 0.12, 0}; Capsule: {length: 0.08, radius: 0.08, segments: 8}; Rgb: {120, 200, 255}; Emissive: {strength: 1.5, color: {120, 200, 255}} }
-    dot { Position: {0, -0.15, 0}; Sphere: {radius: 0.1, segments: 8}; Rgb: {120, 200, 255}; Emissive: {strength: 1.5, color: {120, 200, 255}} }
-  }
-  async {
-    while true {
-      up = !up
-      await delay(0.7)
+assets {
+  template QuestMark {
+    prop kind: i32 = 0
+    mut up = false
+    Position: {0, up ? 3.35 : 3.1, 0}
+    Rotation: {-0.55, 0, 0}
+    Scale: {1.6, 1.6, 1.6}
+    Transition: [Position: {duration: 0.7, timing_function: EaseInOut}]
+    if kind == 1 {
+      bar : MvGold { Position: {0, 0.35, 0}; Capsule: {length: 0.35, radius: 0.11, segments: 8}; Emissive: {strength: 1.2, color: {255, 200, 80}} }
+      dot : MvGold { Position: {0, -0.12, 0}; Sphere: {radius: 0.12, segments: 8}; Emissive: {strength: 1.2, color: {255, 200, 80}} }
+    } else if kind == 2 {
+      hook { Position: {0, 0.42, 0}; Rotation: {HALF_PI, 0, 0}; Torus: {radius: 0.2, tube: 0.08, segments: 16, rings: 6}; Rgb: {120, 200, 255}; Emissive: {strength: 1.5, color: {120, 200, 255}} }
+      stem { Position: {0, 0.12, 0}; Capsule: {length: 0.08, radius: 0.08, segments: 8}; Rgb: {120, 200, 255}; Emissive: {strength: 1.5, color: {120, 200, 255}} }
+      dot { Position: {0, -0.15, 0}; Sphere: {radius: 0.1, segments: 8}; Rgb: {120, 200, 255}; Emissive: {strength: 1.5, color: {120, 200, 255}} }
     }
-  }
-}
-
-template Npc {
-  prop id: i32 = 0
-  prop x: f32 = 0
-  prop z: f32 = 0
-  prop face: f32 = 0
-
-  mut yaw: f32 = 0
-  mut nod = false
-  mut breath = false
-
-  const kid = id == N_TAM
-  const sc = kid ? 0.68 : 1.0
-  const outfit: Rgb = match id {
-    0: {70, 104, 70}
-    1: {176, 60, 52}
-    2: {96, 140, 84}
-    3: {96, 70, 52}
-    4: {196, 96, 120}
-    5: {70, 110, 190}
-    6: {120, 92, 60}
-    7: {120, 80, 140}
-    8: {170, 50, 46}
-    9: {130, 128, 120}
-    10: {220, 186, 60}
-    11: {70, 66, 70}
-    _: {80, 120, 180}
-  }
-  const hair: Rgb = match id {
-    0: {236, 232, 224}
-    1: {120, 70, 40}
-    2: {90, 50, 30}
-    3: {40, 30, 26}
-    4: {226, 190, 110}
-    5: {170, 100, 50}
-    6: {130, 100, 70}
-    7: {200, 200, 206}
-    8: {150, 80, 40}
-    9: {210, 210, 214}
-    10: {190, 190, 190}
-    11: {70, 60, 56}
-    _: {190, 140, 80}
-  }
-  const skin = match id { 3: 2; 6: 1; 8: 1; 11: 1; 12: 1; _: 0 }
-  const hat = match id { 1: 4; 5: 3; 6: 1; 7: 4; 8: 3; 9: 2; 10: 6; 11: 5; 12: 1; _: 0 }
-  const beard = id == 0 || id == 3 || id == 6 || id == 8 || id == 9 || id == 10 || id == 11
-  const apron = id == 1 || id == 3 || id == 4
-  const dress = id == 1 || id == 2 || id == 4 || id == 7 || id == 12
-
-  Position: {x, 0, z}
-  Rotation: {0, yaw, 0}
-  Transition: [Rotation: {duration: 0.45, timing_function: EaseOut}]
-
-  const sk: Rgb = match skin { 0: {236, 190, 156}; 1: {200, 148, 108}; _: {144, 100, 72} }
-  const trim: Rgb = {outfit.r * 0.62, outfit.g * 0.62, outfit.b * 0.62}
-  const pants: Rgb = fract(id * 0.37) > 0.5 ? {78, 62, 50} : {58, 58, 72}
-
-  body {
-    Scale: {sc, sc * (breath ? 1.025 : 1), sc}
-    Transition: [Scale: {duration: 1.1, timing_function: EaseInOut}]
-    leg_a : MvDark { Position: {-0.15, 0.45, 0}; Capsule: {length: 0.6, radius: 0.1, segments: 8, smooth: true}; Rgb: pants }
-    leg_b : MvDark { Position: {0.15, 0.45, 0}; Capsule: {length: 0.6, radius: 0.1, segments: 8, smooth: true}; Rgb: pants }
-    shoe_a : MvLeather { Position: {-0.15, 0.08, 0.05}; RoundedBox: {0.2, 0.16, 0.32, 0.07, segments: 2} }
-    shoe_b : MvLeather { Position: {0.15, 0.08, 0.05}; RoundedBox: {0.2, 0.16, 0.32, 0.07, segments: 2} }
-    if dress {
-      skirt : MvCloth { Position: {0, 0.12, 0}; Lathe: {profile: MvSkirtShape, segments: 16, rings: 10}; Rgb: outfit; TextureTransform: {3, 1, 0, 0} }
-      skirt_hem { Position: {0, 0.15, 0}; Torus: {radius: 0.505, tube: 0.025, segments: 18, rings: 4}; Rgb: trim; PbrMaterial: {roughness: 0.9} }
-    }
-    torso : MvCloth { Position: {0, 0.88, 0}; Scale: {1, 0.95, 0.9}; Lathe: {profile: MvTunicShape, segments: 16, rings: 10}; Rgb: outfit; TextureTransform: {3, 1, 0, 0} }
-    collar { Position: {0, 1.66, 0}; Torus: {radius: 0.13, tube: 0.04, segments: 12, rings: 4}; Rgb: trim; PbrMaterial: {roughness: 0.9} }
-    if !dress {
-      hem : MvCloth { Position: {0, 0.9, 0}; Torus: {radius: 0.35, tube: 0.03, segments: 16, rings: 4}; Rgb: trim }
-    }
-    for k in 0..3 {
-      "button_{k}" : MvBrass { Position: {0, 1.18 + k * 0.14, 0.31 - k * 0.015}; Sphere: {radius: 0.025, segments: 6} }
-    }
-    if apron {
-      apron_ : MvCloth { Position: {0, 0.85, 0.3}; Rotation: {-0.06, 0, 0}; RoundedBox: {0.52, 0.95, 0.03, 0.012, segments: 1}; Rgb: {240, 232, 214} }
-      apron_bib : MvCloth { Position: {0, 1.32, 0.3}; RoundedBox: {0.32, 0.3, 0.03, 0.012, segments: 1}; Rgb: {240, 232, 214} }
-      pocket : MvCloth { Position: {0, 0.72, 0.325}; Box: {0.24, 0.16, 0.01}; Rgb: {214, 204, 184} }
-    }
-    belt : MvLeather { Position: {0, 1.02, 0}; Scale: {1, 1, 0.9}; Torus: {radius: 0.355, tube: 0.04, segments: 16, rings: 4} }
-    buckle : MvBrass { Position: {0, 1.02, 0.33}; Box: {0.09, 0.08, 0.03} }
-    arm_a {
-      Position: {-0.37, 1.55, 0}
-      Rotation: {nod ? -0.5 : 0, 0, 0.15}
-      Transition: [Rotation: {duration: 0.3}]
-      sleeve : MvCloth { Position: {0, -0.27, 0}; Capsule: {length: 0.38, radius: 0.09, segments: 8, smooth: true}; Rgb: outfit }
-      cuff { Position: {0, -0.5, 0}; Cylinder: {length: 0.06, radius: 0.095, segments: 8}; Rgb: trim; PbrMaterial: {roughness: 0.9} }
-      hand : MvSkin { Position: {0, -0.6, 0}; Sphere: {radius: 0.085, segments: 10, smooth: true}; Rgb: sk }
-    }
-    arm_b {
-      Position: {0.37, 1.55, 0}
-      Rotation: {0, 0, -0.15}
-      sleeve : MvCloth { Position: {0, -0.27, 0}; Capsule: {length: 0.38, radius: 0.09, segments: 8, smooth: true}; Rgb: outfit }
-      cuff { Position: {0, -0.5, 0}; Cylinder: {length: 0.06, radius: 0.095, segments: 8}; Rgb: trim; PbrMaterial: {roughness: 0.9} }
-      hand : MvSkin { Position: {0, -0.6, 0}; Sphere: {radius: 0.085, segments: 10, smooth: true}; Rgb: sk }
-    }
-    head {
-      Position: {0, 1.98, 0}
-      Rotation: {nod ? 0.12 : -0.04, 0, nod ? 0.06 : 0}
-      Transition: [Rotation: {duration: 0.3}]
-      neck : MvSkin { Position: {0, -0.26, 0}; Cylinder: {length: 0.14, radius: 0.09, segments: 8}; Rgb: sk }
-      face_ : MvSkin { Position: {0, 0, 0}; Sphere: {radius: 0.28, segments: 16, smooth: true}; Rgb: sk }
-      nose : MvSkin { Position: {0, -0.03, 0.27}; Scale: {1, 1, 1.1}; Sphere: {radius: match id { 0: 0.065; 6: 0.07; 11: 0.07; _: 0.05 }, segments: 8, smooth: true}; Rgb: {sk.r * 0.97, sk.g * 0.9, sk.b * 0.88} }
-      ear_a : MvSkin { Position: {-0.27, 0, 0}; Scale: {0.5, 1, 0.8}; Sphere: {radius: 0.07, segments: 6, smooth: true}; Rgb: sk }
-      ear_b : MvSkin { Position: {0.27, 0, 0}; Scale: {0.5, 1, 0.8}; Sphere: {radius: 0.07, segments: 6, smooth: true}; Rgb: sk }
-      cheek_a : MvBlush { Position: {-0.15, -0.07, 0.21}; Scale: {1, 0.6, 0.4}; Sphere: {radius: 0.055, segments: 8, smooth: true} }
-      cheek_b : MvBlush { Position: {0.15, -0.07, 0.21}; Scale: {1, 0.6, 0.4}; Sphere: {radius: 0.055, segments: 8, smooth: true} }
-      eye_a : MvDark { Position: {-0.1, 0.04, 0.245}; Scale: {0.8, 1.1, 0.6}; Sphere: {radius: 0.04, segments: 8, smooth: true}; PbrMaterial: {roughness: 0.2} }
-      eye_b : MvDark { Position: {0.1, 0.04, 0.245}; Scale: {0.8, 1.1, 0.6}; Sphere: {radius: 0.04, segments: 8, smooth: true}; PbrMaterial: {roughness: 0.2} }
-      brow_a { Position: {-0.1, 0.12, 0.25}; Rotation: {0, 0, 0.12}; Box: {0.1, 0.022, 0.02}; Rgb: {hair.r * 0.8, hair.g * 0.8, hair.b * 0.8}; PbrMaterial: {roughness: 1} }
-      brow_b { Position: {0.1, 0.12, 0.25}; Rotation: {0, 0, -0.12}; Box: {0.1, 0.022, 0.02}; Rgb: {hair.r * 0.8, hair.g * 0.8, hair.b * 0.8}; PbrMaterial: {roughness: 1} }
-      if !beard {
-        smile : MvDark { Position: {0, -0.12, 0.24}; Rotation: {HALF_PI + 0.3, 0, 0}; TorusShell: {radius: 0.05, tube: 0.009, ring_start: 0.5, ring_end: 2.64, tube_start: 0, tube_end: 6.283, segments: 8, rings: 3}; Rgb: {120, 50, 50} }
+    async {
+      while true {
+        up = !up
+        await delay(0.7)
       }
-      if id != 0 && id != 3 {
-        hair_ { Position: {0, 0.05, -0.04}; Scale: {1.04, 1.05, 1.02}; HemiSphere: {radius: 0.31, segments: 14, smooth: true}; Rgb: hair; PbrMaterial: {roughness: 0.85} }
-        if dress {
-          bun { Position: {0, 0.12, -0.3}; Sphere: {radius: 0.14, segments: 10, smooth: true}; Rgb: hair; PbrMaterial: {roughness: 0.85} }
-          back_hair { Position: {0, -0.12, -0.13}; Scale: {1.05, 0.9, 0.75}; Sphere: {radius: 0.27, segments: 12, smooth: true}; Rgb: hair; PbrMaterial: {roughness: 0.85} }
+    }
+  }
+
+  template Npc {
+    prop id: i32 = 0
+    prop x: f32 = 0
+    prop z: f32 = 0
+    prop face: f32 = 0
+
+    mut yaw: f32 = 0
+    mut nod = false
+    mut breath = false
+
+    const kid = id == N_TAM
+    const sc = kid ? 0.68 : 1.0
+    const outfit: Rgb = match id {
+      0: {70, 104, 70}
+      1: {176, 60, 52}
+      2: {96, 140, 84}
+      3: {96, 70, 52}
+      4: {196, 96, 120}
+      5: {70, 110, 190}
+      6: {120, 92, 60}
+      7: {120, 80, 140}
+      8: {170, 50, 46}
+      9: {130, 128, 120}
+      10: {220, 186, 60}
+      11: {70, 66, 70}
+      _: {80, 120, 180}
+    }
+    const hair: Rgb = match id {
+      0: {236, 232, 224}
+      1: {120, 70, 40}
+      2: {90, 50, 30}
+      3: {40, 30, 26}
+      4: {226, 190, 110}
+      5: {170, 100, 50}
+      6: {130, 100, 70}
+      7: {200, 200, 206}
+      8: {150, 80, 40}
+      9: {210, 210, 214}
+      10: {190, 190, 190}
+      11: {70, 60, 56}
+      _: {190, 140, 80}
+    }
+    const skin = match id { 3: 2; 6: 1; 8: 1; 11: 1; 12: 1; _: 0 }
+    const hat = match id { 1: 4; 5: 3; 6: 1; 7: 4; 8: 3; 9: 2; 10: 6; 11: 5; 12: 1; _: 0 }
+    const beard = id == 0 || id == 3 || id == 6 || id == 8 || id == 9 || id == 10 || id == 11
+    const apron = id == 1 || id == 3 || id == 4
+    const dress = id == 1 || id == 2 || id == 4 || id == 7 || id == 12
+
+    Position: {x, 0, z}
+    Rotation: {0, yaw, 0}
+    Transition: [Rotation: {duration: 0.45, timing_function: EaseOut}]
+
+    const sk: Rgb = match skin { 0: {236, 190, 156}; 1: {200, 148, 108}; _: {144, 100, 72} }
+    const trim: Rgb = {outfit.r * 0.62, outfit.g * 0.62, outfit.b * 0.62}
+    const pants: Rgb = fract(id * 0.37) > 0.5 ? {78, 62, 50} : {58, 58, 72}
+
+    body {
+      Scale: {sc, sc * (breath ? 1.025 : 1), sc}
+      Transition: [Scale: {duration: 1.1, timing_function: EaseInOut}]
+      leg_a : MvDark { Position: {-0.15, 0.45, 0}; Capsule: {length: 0.6, radius: 0.1, segments: 8, smooth: true}; Rgb: pants }
+      leg_b : MvDark { Position: {0.15, 0.45, 0}; Capsule: {length: 0.6, radius: 0.1, segments: 8, smooth: true}; Rgb: pants }
+      shoe_a : MvLeather { Position: {-0.15, 0.08, 0.05}; RoundedBox: {0.2, 0.16, 0.32, 0.07, segments: 2} }
+      shoe_b : MvLeather { Position: {0.15, 0.08, 0.05}; RoundedBox: {0.2, 0.16, 0.32, 0.07, segments: 2} }
+      if dress {
+        skirt : MvCloth { Position: {0, 0.12, 0}; Lathe: {profile: MvSkirtShape, segments: 16, rings: 10}; Rgb: outfit; TextureTransform: {3, 1, 0, 0} }
+        skirt_hem { Position: {0, 0.15, 0}; Torus: {radius: 0.505, tube: 0.025, segments: 18, rings: 4}; Rgb: trim; PbrMaterial: {roughness: 0.9} }
+      }
+      torso : MvCloth { Position: {0, 0.88, 0}; Scale: {1, 0.95, 0.9}; Lathe: {profile: MvTunicShape, segments: 16, rings: 10}; Rgb: outfit; TextureTransform: {3, 1, 0, 0} }
+      collar { Position: {0, 1.66, 0}; Torus: {radius: 0.13, tube: 0.04, segments: 12, rings: 4}; Rgb: trim; PbrMaterial: {roughness: 0.9} }
+      if !dress {
+        hem : MvCloth { Position: {0, 0.9, 0}; Torus: {radius: 0.35, tube: 0.03, segments: 16, rings: 4}; Rgb: trim }
+      }
+      for k in 0..3 {
+        "button_{k}" : MvBrass { Position: {0, 1.18 + k * 0.14, 0.31 - k * 0.015}; Sphere: {radius: 0.025, segments: 6} }
+      }
+      if apron {
+        apron_ : MvCloth { Position: {0, 0.85, 0.3}; Rotation: {-0.06, 0, 0}; RoundedBox: {0.52, 0.95, 0.03, 0.012, segments: 1}; Rgb: {240, 232, 214} }
+        apron_bib : MvCloth { Position: {0, 1.32, 0.3}; RoundedBox: {0.32, 0.3, 0.03, 0.012, segments: 1}; Rgb: {240, 232, 214} }
+        pocket : MvCloth { Position: {0, 0.72, 0.325}; Box: {0.24, 0.16, 0.01}; Rgb: {214, 204, 184} }
+      }
+      belt : MvLeather { Position: {0, 1.02, 0}; Scale: {1, 1, 0.9}; Torus: {radius: 0.355, tube: 0.04, segments: 16, rings: 4} }
+      buckle : MvBrass { Position: {0, 1.02, 0.33}; Box: {0.09, 0.08, 0.03} }
+      arm_a {
+        Position: {-0.37, 1.55, 0}
+        Rotation: {nod ? -0.5 : 0, 0, 0.15}
+        Transition: [Rotation: {duration: 0.3}]
+        sleeve : MvCloth { Position: {0, -0.27, 0}; Capsule: {length: 0.38, radius: 0.09, segments: 8, smooth: true}; Rgb: outfit }
+        cuff { Position: {0, -0.5, 0}; Cylinder: {length: 0.06, radius: 0.095, segments: 8}; Rgb: trim; PbrMaterial: {roughness: 0.9} }
+        hand : MvSkin { Position: {0, -0.6, 0}; Sphere: {radius: 0.085, segments: 10, smooth: true}; Rgb: sk }
+      }
+      arm_b {
+        Position: {0.37, 1.55, 0}
+        Rotation: {0, 0, -0.15}
+        sleeve : MvCloth { Position: {0, -0.27, 0}; Capsule: {length: 0.38, radius: 0.09, segments: 8, smooth: true}; Rgb: outfit }
+        cuff { Position: {0, -0.5, 0}; Cylinder: {length: 0.06, radius: 0.095, segments: 8}; Rgb: trim; PbrMaterial: {roughness: 0.9} }
+        hand : MvSkin { Position: {0, -0.6, 0}; Sphere: {radius: 0.085, segments: 10, smooth: true}; Rgb: sk }
+      }
+      head {
+        Position: {0, 1.98, 0}
+        Rotation: {nod ? 0.12 : -0.04, 0, nod ? 0.06 : 0}
+        Transition: [Rotation: {duration: 0.3}]
+        neck : MvSkin { Position: {0, -0.26, 0}; Cylinder: {length: 0.14, radius: 0.09, segments: 8}; Rgb: sk }
+        face_ : MvSkin { Position: {0, 0, 0}; Sphere: {radius: 0.28, segments: 16, smooth: true}; Rgb: sk }
+        nose : MvSkin { Position: {0, -0.03, 0.27}; Scale: {1, 1, 1.1}; Sphere: {radius: match id { 0: 0.065; 6: 0.07; 11: 0.07; _: 0.05 }, segments: 8, smooth: true}; Rgb: {sk.r * 0.97, sk.g * 0.9, sk.b * 0.88} }
+        ear_a : MvSkin { Position: {-0.27, 0, 0}; Scale: {0.5, 1, 0.8}; Sphere: {radius: 0.07, segments: 6, smooth: true}; Rgb: sk }
+        ear_b : MvSkin { Position: {0.27, 0, 0}; Scale: {0.5, 1, 0.8}; Sphere: {radius: 0.07, segments: 6, smooth: true}; Rgb: sk }
+        cheek_a : MvBlush { Position: {-0.15, -0.07, 0.21}; Scale: {1, 0.6, 0.4}; Sphere: {radius: 0.055, segments: 8, smooth: true} }
+        cheek_b : MvBlush { Position: {0.15, -0.07, 0.21}; Scale: {1, 0.6, 0.4}; Sphere: {radius: 0.055, segments: 8, smooth: true} }
+        eye_a : MvDark { Position: {-0.1, 0.04, 0.245}; Scale: {0.8, 1.1, 0.6}; Sphere: {radius: 0.04, segments: 8, smooth: true}; PbrMaterial: {roughness: 0.2} }
+        eye_b : MvDark { Position: {0.1, 0.04, 0.245}; Scale: {0.8, 1.1, 0.6}; Sphere: {radius: 0.04, segments: 8, smooth: true}; PbrMaterial: {roughness: 0.2} }
+        brow_a { Position: {-0.1, 0.12, 0.25}; Rotation: {0, 0, 0.12}; Box: {0.1, 0.022, 0.02}; Rgb: {hair.r * 0.8, hair.g * 0.8, hair.b * 0.8}; PbrMaterial: {roughness: 1} }
+        brow_b { Position: {0.1, 0.12, 0.25}; Rotation: {0, 0, -0.12}; Box: {0.1, 0.022, 0.02}; Rgb: {hair.r * 0.8, hair.g * 0.8, hair.b * 0.8}; PbrMaterial: {roughness: 1} }
+        if !beard {
+          smile : MvDark { Position: {0, -0.12, 0.24}; Rotation: {HALF_PI + 0.3, 0, 0}; TorusShell: {radius: 0.05, tube: 0.009, ring_start: 0.5, ring_end: 2.64, tube_start: 0, tube_end: 6.283, segments: 8, rings: 3}; Rgb: {120, 50, 50} }
         }
-      } else {
-        fringe_a { Position: {-0.22, -0.02, -0.08}; Scale: {0.6, 0.9, 1.1}; Sphere: {radius: 0.14, segments: 10, smooth: true}; Rgb: hair; PbrMaterial: {roughness: 0.9} }
-        fringe_b { Position: {0.22, -0.02, -0.08}; Scale: {0.6, 0.9, 1.1}; Sphere: {radius: 0.14, segments: 10, smooth: true}; Rgb: hair; PbrMaterial: {roughness: 0.9} }
+        if id != 0 && id != 3 {
+          hair_ { Position: {0, 0.05, -0.04}; Scale: {1.04, 1.05, 1.02}; HemiSphere: {radius: 0.31, segments: 14, smooth: true}; Rgb: hair; PbrMaterial: {roughness: 0.85} }
+          if dress {
+            bun { Position: {0, 0.12, -0.3}; Sphere: {radius: 0.14, segments: 10, smooth: true}; Rgb: hair; PbrMaterial: {roughness: 0.85} }
+            back_hair { Position: {0, -0.12, -0.13}; Scale: {1.05, 0.9, 0.75}; Sphere: {radius: 0.27, segments: 12, smooth: true}; Rgb: hair; PbrMaterial: {roughness: 0.85} }
+          }
+        } else {
+          fringe_a { Position: {-0.22, -0.02, -0.08}; Scale: {0.6, 0.9, 1.1}; Sphere: {radius: 0.14, segments: 10, smooth: true}; Rgb: hair; PbrMaterial: {roughness: 0.9} }
+          fringe_b { Position: {0.22, -0.02, -0.08}; Scale: {0.6, 0.9, 1.1}; Sphere: {radius: 0.14, segments: 10, smooth: true}; Rgb: hair; PbrMaterial: {roughness: 0.9} }
+        }
+        if beard {
+          beard_ { Position: {0, -0.2, 0.13}; Scale: {1.05, 1.35, 0.8}; Sphere: {radius: 0.2, segments: 12, smooth: true}; Rgb: hair; PbrMaterial: {roughness: 1} }
+          stache_a { Position: {-0.06, -0.08, 0.26}; Rotation: {0, 0, 0.4}; Scale: {1.4, 0.6, 0.7}; Sphere: {radius: 0.06, segments: 8, smooth: true}; Rgb: hair; PbrMaterial: {roughness: 1} }
+          stache_b { Position: {0.06, -0.08, 0.26}; Rotation: {0, 0, -0.4}; Scale: {1.4, 0.6, 0.7}; Sphere: {radius: 0.06, segments: 8, smooth: true}; Rgb: hair; PbrMaterial: {roughness: 1} }
+        }
+        if hat == 1 {
+          brim : MvHay { Position: {0, 0.16, 0}; Scale: {1.3, 1, 1.3}; Lathe: {profile: MvBrimShape, segments: 18, rings: 6}; TextureTransform: {4, 1, 0, 0} }
+          crown : MvHay { Position: {0, 0.3, 0}; Frustum: {length: 0.26, radius_bottom: 0.3, radius_top: 0.25, segments: 14, smooth: true}; TextureTransform: {4, 1, 0, 0} }
+          hat_band : MvClothRed { Position: {0, 0.21, 0}; Cylinder: {length: 0.07, radius: 0.305, segments: 14}; Rgb: trim }
+        } else if hat == 2 {
+          hood : MvCloth { Position: {0, 0.03, -0.04}; Scale: {1.12, 1.18, 1.12}; HemiSphere: {radius: 0.35, segments: 14, smooth: true}; Rgb: outfit }
+          hood_rim : MvCloth { Position: {0, 0.0, 0.1}; Rotation: {HALF_PI - 0.25, 0, 0}; Scale: {1.05, 1.2, 1}; Torus: {radius: 0.3, tube: 0.05, segments: 14, rings: 4}; Rgb: trim }
+        } else if hat == 3 {
+          cap : MvCloth { Position: {0, 0.18, -0.02}; Scale: {1.12, 0.55, 1.12}; Sphere: {radius: 0.3, segments: 14, smooth: true}; Rgb: {66, 64, 74} }
+          visor : MvCloth { Position: {0, 0.15, 0.27}; Rotation: {-0.25, 0, 0}; Scale: {1, 1, 0.6}; Cylinder: {length: 0.035, radius: 0.22, segments: 12}; Rgb: {56, 54, 62} }
+        } else if hat == 4 {
+          scarf : MvCloth { Position: {0, 0.07, -0.04}; Scale: {1.08, 1.0, 1.08}; HemiSphere: {radius: 0.33, segments: 14, smooth: true}; Rgb: {244, 234, 214} }
+          knot : MvCloth { Position: {0, -0.12, -0.3}; Sphere: {radius: 0.08, segments: 8, smooth: true}; Rgb: {244, 234, 214} }
+        } else if hat == 5 {
+          helmet : MvBrass { Position: {0, 0.1, 0}; Scale: {1.05, 1, 1.05}; HemiSphere: {radius: 0.34, segments: 14, smooth: true} }
+          helmet_rim : MvBrass { Position: {0, 0.1, 0}; Torus: {radius: 0.36, tube: 0.03, segments: 16, rings: 4} }
+          lamp : MvGlow { Position: {0, 0.28, 0.3}; Rotation: {HALF_PI, 0, 0}; Cylinder: {length: 0.1, radius: 0.08, segments: 10} }
+          lamp_case : MvBrass { Position: {0, 0.28, 0.25}; Rotation: {HALF_PI, 0, 0}; Cylinder: {length: 0.08, radius: 0.1, segments: 10} }
+        } else if hat == 6 {
+          brim : MvClothYellow { Position: {0, 0.15, 0}; Rotation: {-0.12, 0, 0}; Scale: {1.15, 1, 1.15}; Lathe: {profile: MvBrimShape, segments: 18, rings: 6} }
+          crown : MvClothYellow { Position: {0, 0.2, 0}; Scale: {1, 0.85, 1}; HemiSphere: {radius: 0.3, segments: 14, smooth: true} }
+        }
       }
-      if beard {
-        beard_ { Position: {0, -0.2, 0.13}; Scale: {1.05, 1.35, 0.8}; Sphere: {radius: 0.2, segments: 12, smooth: true}; Rgb: hair; PbrMaterial: {roughness: 1} }
-        stache_a { Position: {-0.06, -0.08, 0.26}; Rotation: {0, 0, 0.4}; Scale: {1.4, 0.6, 0.7}; Sphere: {radius: 0.06, segments: 8, smooth: true}; Rgb: hair; PbrMaterial: {roughness: 1} }
-        stache_b { Position: {0.06, -0.08, 0.26}; Rotation: {0, 0, -0.4}; Scale: {1.4, 0.6, 0.7}; Sphere: {radius: 0.06, segments: 8, smooth: true}; Rgb: hair; PbrMaterial: {roughness: 1} }
+      if id == 0 || id == 9 {
+        cane : MvTimber { Position: {0.52, 0.9, 0.15}; Cylinder: {length: 1.8, radius: 0.04, segments: 6} }
+        cane_knob : MvTimber { Position: {0.52, 1.82, 0.15}; Sphere: {radius: 0.07, segments: 8, smooth: true} }
       }
-      if hat == 1 {
-        brim : MvHay { Position: {0, 0.16, 0}; Scale: {1.3, 1, 1.3}; Lathe: {profile: MvBrimShape, segments: 18, rings: 6}; TextureTransform: {4, 1, 0, 0} }
-        crown : MvHay { Position: {0, 0.3, 0}; Frustum: {length: 0.26, radius_bottom: 0.3, radius_top: 0.25, segments: 14, smooth: true}; TextureTransform: {4, 1, 0, 0} }
-        hat_band : MvClothRed { Position: {0, 0.21, 0}; Cylinder: {length: 0.07, radius: 0.305, segments: 14}; Rgb: trim }
-      } else if hat == 2 {
-        hood : MvCloth { Position: {0, 0.03, -0.04}; Scale: {1.12, 1.18, 1.12}; HemiSphere: {radius: 0.35, segments: 14, smooth: true}; Rgb: outfit }
-        hood_rim : MvCloth { Position: {0, 0.0, 0.1}; Rotation: {HALF_PI - 0.25, 0, 0}; Scale: {1.05, 1.2, 1}; Torus: {radius: 0.3, tube: 0.05, segments: 14, rings: 4}; Rgb: trim }
-      } else if hat == 3 {
-        cap : MvCloth { Position: {0, 0.18, -0.02}; Scale: {1.12, 0.55, 1.12}; Sphere: {radius: 0.3, segments: 14, smooth: true}; Rgb: {66, 64, 74} }
-        visor : MvCloth { Position: {0, 0.15, 0.27}; Rotation: {-0.25, 0, 0}; Scale: {1, 1, 0.6}; Cylinder: {length: 0.035, radius: 0.22, segments: 12}; Rgb: {56, 54, 62} }
-      } else if hat == 4 {
-        scarf : MvCloth { Position: {0, 0.07, -0.04}; Scale: {1.08, 1.0, 1.08}; HemiSphere: {radius: 0.33, segments: 14, smooth: true}; Rgb: {244, 234, 214} }
-        knot : MvCloth { Position: {0, -0.12, -0.3}; Sphere: {radius: 0.08, segments: 8, smooth: true}; Rgb: {244, 234, 214} }
-      } else if hat == 5 {
-        helmet : MvBrass { Position: {0, 0.1, 0}; Scale: {1.05, 1, 1.05}; HemiSphere: {radius: 0.34, segments: 14, smooth: true} }
-        helmet_rim : MvBrass { Position: {0, 0.1, 0}; Torus: {radius: 0.36, tube: 0.03, segments: 16, rings: 4} }
-        lamp : MvGlow { Position: {0, 0.28, 0.3}; Rotation: {HALF_PI, 0, 0}; Cylinder: {length: 0.1, radius: 0.08, segments: 10} }
-        lamp_case : MvBrass { Position: {0, 0.28, 0.25}; Rotation: {HALF_PI, 0, 0}; Cylinder: {length: 0.08, radius: 0.1, segments: 10} }
-      } else if hat == 6 {
-        brim : MvClothYellow { Position: {0, 0.15, 0}; Rotation: {-0.12, 0, 0}; Scale: {1.15, 1, 1.15}; Lathe: {profile: MvBrimShape, segments: 18, rings: 6} }
-        crown : MvClothYellow { Position: {0, 0.2, 0}; Scale: {1, 0.85, 1}; HemiSphere: {radius: 0.3, segments: 14, smooth: true} }
-      }
-    }
-    if id == 0 || id == 9 {
-      cane : MvTimber { Position: {0.52, 0.9, 0.15}; Cylinder: {length: 1.8, radius: 0.04, segments: 6} }
-      cane_knob : MvTimber { Position: {0.52, 1.82, 0.15}; Sphere: {radius: 0.07, segments: 8, smooth: true} }
-    }
-    if id == 12 {
-      crook : MvTimber { Position: {0.52, 1.1, 0.15}; Cylinder: {length: 2.2, radius: 0.04, segments: 6} }
-      crook_top : MvTimber { Position: {0.37, 2.2, 0.15}; Rotation: {HALF_PI, 0, 0}; TorusShell: {radius: 0.15, tube: 0.04, ring_start: 3.14, ring_end: 6.283, tube_start: 0, tube_end: 6.283, segments: 10, rings: 4} }
-    }
-  }
-
-  if npc_mark[id] == 1 {
-    QuestMark mark(kind: 1)
-  } else if npc_mark[id] == 2 {
-    QuestMark mark(kind: 2)
-  }
-
-  async {
-    await delay(fract(id * 0.37) * 1.2)
-    while true {
-      breath = !breath
-      await delay(1.2)
-    }
-  }
-
-  async {
-    npc_x[id] = x
-    npc_z[id] = z
-    yaw = face
-    block_disc(x, z, 0.55)
-    while true {
-      await delay(0.25)
-      const d = dist2(px, pz, x, z)
-      if talk_npc == id {
-        nod = !nod
-      } else {
-        nod = false
-      }
-      if d < 7 * 7 {
-        yaw = atan2(px - x, pz - z)
-      } else {
-        yaw = face
+      if id == 12 {
+        crook : MvTimber { Position: {0.52, 1.1, 0.15}; Cylinder: {length: 2.2, radius: 0.04, segments: 6} }
+        crook_top : MvTimber { Position: {0.37, 2.2, 0.15}; Rotation: {HALF_PI, 0, 0}; TorusShell: {radius: 0.15, tube: 0.04, ring_start: 3.14, ring_end: 6.283, tube_start: 0, tube_end: 6.283, segments: 10, rings: 4} }
       }
     }
-  }
-}
 
-template Villager {
-  prop seed: f32 = 0
-  prop x0: f32 = 0
-  prop z0: f32 = 0
-  prop x1: f32 = 0
-  prop z1: f32 = 0
-  prop period: f32 = 10
+    if npc_mark[id] == 1 {
+      QuestMark mark(kind: 1)
+    } else if npc_mark[id] == 2 {
+      QuestMark mark(kind: 2)
+    }
 
-  mut back = false
-  mut step = false
+    async {
+      await delay(fract(id * 0.37) * 1.2)
+      while true {
+        breath = !breath
+        await delay(1.2)
+      }
+    }
 
-  const yaw = atan2(x1 - x0, z1 - z0)
-  const outfit: Rgb = match floor(fract(seed * 7.7) * 5) {
-    0: {150, 70, 60}
-    1: {80, 120, 80}
-    2: {80, 100, 160}
-    3: {170, 140, 90}
-    _: {120, 90, 130}
-  }
-
-  Position: back ? {x0, 0, z0} : {x1, 0, z1}
-  Rotation: {0, back ? yaw + PI : yaw, 0}
-  Transition: [Position: {duration: period}]
-
-  bob {
-    Position: {0, step ? 0.08 : 0, 0}
-    Transition: [Position: {duration: 0.25}]
-    leg_a : MvDark { Position: {-0.14, 0.45, 0}; Capsule: {length: 0.6, radius: 0.09, segments: 8, smooth: true}; Rgb: {70, 60, 56} }
-    leg_b : MvDark { Position: {0.14, 0.45, 0}; Capsule: {length: 0.6, radius: 0.09, segments: 8, smooth: true}; Rgb: {70, 60, 56} }
-    shoe_a : MvLeather { Position: {-0.14, 0.08, 0.05}; RoundedBox: {0.18, 0.15, 0.3, 0.06, segments: 2} }
-    shoe_b : MvLeather { Position: {0.14, 0.08, 0.05}; RoundedBox: {0.18, 0.15, 0.3, 0.06, segments: 2} }
-    torso : MvCloth { Position: {0, 0.86, 0}; Scale: {0.92, 0.95, 0.85}; Lathe: {profile: MvTunicShape, segments: 14, rings: 8}; Rgb: outfit }
-    belt : MvLeather { Position: {0, 1.0, 0}; Scale: {0.92, 1, 0.8}; Torus: {radius: 0.36, tube: 0.035, segments: 14, rings: 4} }
-    arm_a : MvCloth { Position: {-0.35, 1.3, 0}; Rotation: {step ? 0.3 : -0.3, 0, 0.12}; Transition: [Rotation: {duration: 0.25}]; Capsule: {length: 0.4, radius: 0.085, segments: 8, smooth: true}; Rgb: outfit }
-    arm_b : MvCloth { Position: {0.35, 1.3, 0}; Rotation: {step ? -0.3 : 0.3, 0, -0.12}; Transition: [Rotation: {duration: 0.25}]; Capsule: {length: 0.4, radius: 0.085, segments: 8, smooth: true}; Rgb: outfit }
-    head : MvSkin { Position: {0, 1.92, 0}; Sphere: {radius: 0.26, segments: 14, smooth: true} }
-    eye_a : MvDark { Position: {-0.09, 1.95, 0.225}; Sphere: {radius: 0.035, segments: 6, smooth: true} }
-    eye_b : MvDark { Position: {0.09, 1.95, 0.225}; Sphere: {radius: 0.035, segments: 6, smooth: true} }
-    hair_ { Position: {0, 1.97, -0.03}; HemiSphere: {radius: 0.28, segments: 12, smooth: true}; Rgb: {100 + fract(seed * 9) * 80, 70 + fract(seed * 9) * 40, 40}; PbrMaterial: {roughness: 0.9} }
-    basket : MvHay { Position: {0.42, 0.95, 0.1}; Frustum: {length: 0.22, radius_bottom: 0.14, radius_top: 0.2, segments: 10}; Rgb: {190, 150, 90} }
-  }
-
-  async {
-    await delay(fract(seed * 3.1) * 2 + 0.1)
-    while true {
-      back = !back
-      await delay(period)
+    async {
+      npc_x[id] = x
+      npc_z[id] = z
+      yaw = face
+      block_disc(x, z, 0.55)
+      while true {
+        await delay(0.25)
+        const d = dist2(px, pz, x, z)
+        if talk_npc == id {
+          nod = !nod
+        } else {
+          nod = false
+        }
+        if d < 7 * 7 {
+          yaw = atan2(px - x, pz - z)
+        } else {
+          yaw = face
+        }
+      }
     }
   }
 
-  async {
-    while true {
-      step = !step
-      await delay(0.25)
+  template Villager {
+    prop seed: f32 = 0
+    prop x0: f32 = 0
+    prop z0: f32 = 0
+    prop x1: f32 = 0
+    prop z1: f32 = 0
+    prop period: f32 = 10
+
+    mut back = false
+    mut step = false
+
+    const yaw = atan2(x1 - x0, z1 - z0)
+    const outfit: Rgb = match floor(fract(seed * 7.7) * 5) {
+      0: {150, 70, 60}
+      1: {80, 120, 80}
+      2: {80, 100, 160}
+      3: {170, 140, 90}
+      _: {120, 90, 130}
+    }
+
+    Position: back ? {x0, 0, z0} : {x1, 0, z1}
+    Rotation: {0, back ? yaw + PI : yaw, 0}
+    Transition: [Position: {duration: period}]
+
+    bob {
+      Position: {0, step ? 0.08 : 0, 0}
+      Transition: [Position: {duration: 0.25}]
+      leg_a : MvDark { Position: {-0.14, 0.45, 0}; Capsule: {length: 0.6, radius: 0.09, segments: 8, smooth: true}; Rgb: {70, 60, 56} }
+      leg_b : MvDark { Position: {0.14, 0.45, 0}; Capsule: {length: 0.6, radius: 0.09, segments: 8, smooth: true}; Rgb: {70, 60, 56} }
+      shoe_a : MvLeather { Position: {-0.14, 0.08, 0.05}; RoundedBox: {0.18, 0.15, 0.3, 0.06, segments: 2} }
+      shoe_b : MvLeather { Position: {0.14, 0.08, 0.05}; RoundedBox: {0.18, 0.15, 0.3, 0.06, segments: 2} }
+      torso : MvCloth { Position: {0, 0.86, 0}; Scale: {0.92, 0.95, 0.85}; Lathe: {profile: MvTunicShape, segments: 14, rings: 8}; Rgb: outfit }
+      belt : MvLeather { Position: {0, 1.0, 0}; Scale: {0.92, 1, 0.8}; Torus: {radius: 0.36, tube: 0.035, segments: 14, rings: 4} }
+      arm_a : MvCloth { Position: {-0.35, 1.3, 0}; Rotation: {step ? 0.3 : -0.3, 0, 0.12}; Transition: [Rotation: {duration: 0.25}]; Capsule: {length: 0.4, radius: 0.085, segments: 8, smooth: true}; Rgb: outfit }
+      arm_b : MvCloth { Position: {0.35, 1.3, 0}; Rotation: {step ? -0.3 : 0.3, 0, -0.12}; Transition: [Rotation: {duration: 0.25}]; Capsule: {length: 0.4, radius: 0.085, segments: 8, smooth: true}; Rgb: outfit }
+      head : MvSkin { Position: {0, 1.92, 0}; Sphere: {radius: 0.26, segments: 14, smooth: true} }
+      eye_a : MvDark { Position: {-0.09, 1.95, 0.225}; Sphere: {radius: 0.035, segments: 6, smooth: true} }
+      eye_b : MvDark { Position: {0.09, 1.95, 0.225}; Sphere: {radius: 0.035, segments: 6, smooth: true} }
+      hair_ { Position: {0, 1.97, -0.03}; HemiSphere: {radius: 0.28, segments: 12, smooth: true}; Rgb: {100 + fract(seed * 9) * 80, 70 + fract(seed * 9) * 40, 40}; PbrMaterial: {roughness: 0.9} }
+      basket : MvHay { Position: {0.42, 0.95, 0.1}; Frustum: {length: 0.22, radius_bottom: 0.14, radius_top: 0.2, segments: 10}; Rgb: {190, 150, 90} }
+    }
+
+    async {
+      await delay(fract(seed * 3.1) * 2 + 0.1)
+      while true {
+        back = !back
+        await delay(period)
+      }
+    }
+
+    async {
+      while true {
+        step = !step
+        await delay(0.25)
+      }
     }
   }
 }

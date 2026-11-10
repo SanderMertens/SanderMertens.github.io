@@ -13,705 +13,713 @@ using box.spatial
 using box.transition
 using box.animation
 using box.movement
+using state
+using assets
 
-template CursorEdge {
-  prop len: f32 = 2
-  prop color: Rgb = {255, 255, 255}
-  prop glow: f32 = 2
+assets {
+  template CursorEdge {
+    prop len: f32 = 2
+    prop color: Rgb = {255, 255, 255}
+    prop glow: f32 = 2
 
-  Box: {len, 0.06, 0.09}
-  Rgb: color
-  Emissive: {strength: glow, color: color}
-  NoShadow
-  SpatialIgnore
-}
-
-template TileCursor {
-  prop idx: i32 = 0
-  prop k: i32 = 0
-  prop lvl: i32 = 0
-  prop seed: f32 = 0
-  prop n: bool = false
-  prop e: bool = false
-  prop s: bool = false
-  prop w: bool = false
-  prop hn: f32 = 0
-  prop he: f32 = 0
-  prop hs: f32 = 0
-  prop hw: f32 = 0
-  prop kn: i32 = 0
-  prop ke: i32 = 0
-  prop ks: i32 = 0
-  prop kw: i32 = 0
-  prop tn: bool = false
-  prop te: bool = false
-  prop ts: bool = false
-  prop tw: bool = false
-
-  const t = tool
-  const builds = t >= K_WALL && t <= K_PATH
-  const place = builds && k == K_EMPTY
-  const afford = gold >= cost_gold(t, 1) && stone >= cost_stone(t, 1)
-  const unique_ok = (t != K_KEEP || keep_cell < 0) && (t != K_SMITH || smith_cell < 0)
-  const big = t == K_FARM && place
-  const ok = place && afford && unique_ok && (t != K_FARM || fits4[idx]) && (t != K_QUARRY || deposit[idx])
-  const face = build_face(t, build_rot, kn, ke, ks, kw)
-  const razes = t == T_DEMOLISH && k != K_EMPTY
-  const picks = t != T_DEMOLISH && k != K_EMPTY
-  const y = k == K_MOAT ? -0.28 : 0.05
-
-  const color: Rgb = match ok {
-    true: {120, 235, 110}
-    _: match razes {
-      true: {255, 128, 48}
-      _: match t == 0 || picks { true: {255, 236, 190}; _: {235, 64, 52} }
-    }
+    Box: {len, 0.06, 0.09}
+    Rgb: color
+    Emissive: {strength: glow, color: color}
+    NoShadow
+    SpatialIgnore
   }
 
-  const span = big ? 8 : 2
-  const mid = big ? 1 : 0
-  CursorEdge edge_n(len: span, color: color) { Position: {mid, y, mid - span / 2 + 0.045} }
-  CursorEdge edge_s(len: span, color: color) { Position: {mid, y, mid + span / 2 - 0.045} }
-  CursorEdge edge_e(len: span, color: color) { Position: {mid + span / 2 - 0.045, y, mid}; Rotation: {0, HALF_PI, 0} }
-  CursorEdge edge_w(len: span, color: color) { Position: {mid - span / 2 + 0.045, y, mid}; Rotation: {0, HALF_PI, 0} }
+  template TileCursor {
+    prop idx: i32 = 0
+    prop k: i32 = 0
+    prop lvl: i32 = 0
+    prop seed: f32 = 0
+    prop n: bool = false
+    prop e: bool = false
+    prop s: bool = false
+    prop w: bool = false
+    prop hn: f32 = 0
+    prop he: f32 = 0
+    prop hs: f32 = 0
+    prop hw: f32 = 0
+    prop kn: i32 = 0
+    prop ke: i32 = 0
+    prop ks: i32 = 0
+    prop kw: i32 = 0
+    prop tn: bool = false
+    prop te: bool = false
+    prop ts: bool = false
+    prop tw: bool = false
 
-  if place {
-    ghost {
-      Opacity: {ok ? 0.5 : 0.3}
-      SpatialIgnore
-      if t == K_MOAT {
-        water : CastleWater { Position: {0, 0.03, 0}; Box: {1.9, 0.04, 1.9} }
-      } else if t == K_PATH {
-        dirt : CastleDirt { Position: {0, 0.01, 0}; Box: {1.9, 0.02, 1.9} }
-        PathPiece path(seed: seed)
-      } else if t == K_FARM {
-        FarmPiece farm(seed: hash(idx - GRID - 1), research: research) { Position: {1, 0, 1}; Rotation: {0, face * HALF_PI, 0} }
-      } else {
-        PieceView view(k: t, lvl: 1, seed: seed, face: face, n: n, e: e, s: s, w: w, hn: hn, he: he, hs: hs, hw: hw, tn: tn, te: te, ts: ts, tw: tw)
+    const t = tool
+    const builds = t >= K_WALL && t <= K_PATH
+    const place = builds && k == K_EMPTY
+    const afford = gold >= cost_gold(t, 1) && stone >= cost_stone(t, 1)
+    const unique_ok = (t != K_KEEP || keep_cell < 0) && (t != K_SMITH || smith_cell < 0)
+    const big = t == K_FARM && place
+    const ok = place && afford && unique_ok && (t != K_FARM || fits4[idx]) && (t != K_QUARRY || deposit[idx])
+    const face = build_face(t, build_rot, kn, ke, ks, kw)
+    const razes = t == T_DEMOLISH && k != K_EMPTY
+    const picks = t != T_DEMOLISH && k != K_EMPTY
+    const y = k == K_MOAT ? -0.28 : 0.05
+
+    const color: Rgb = match ok {
+      true: {120, 235, 110}
+      _: match razes {
+        true: {255, 128, 48}
+        _: match t == 0 || picks { true: {255, 236, 190}; _: {235, 64, 52} }
+      }
+    }
+
+    const span = big ? 8 : 2
+    const mid = big ? 1 : 0
+    CursorEdge edge_n(len: span, color: color) { Position: {mid, y, mid - span / 2 + 0.045} }
+    CursorEdge edge_s(len: span, color: color) { Position: {mid, y, mid + span / 2 - 0.045} }
+    CursorEdge edge_e(len: span, color: color) { Position: {mid + span / 2 - 0.045, y, mid}; Rotation: {0, HALF_PI, 0} }
+    CursorEdge edge_w(len: span, color: color) { Position: {mid - span / 2 + 0.045, y, mid}; Rotation: {0, HALF_PI, 0} }
+
+    if place {
+      ghost {
+        Opacity: {ok ? 0.5 : 0.3}
+        SpatialIgnore
+        if t == K_MOAT {
+          water : CastleWater { Position: {0, 0.03, 0}; Box: {1.9, 0.04, 1.9} }
+        } else if t == K_PATH {
+          dirt : CastleDirt { Position: {0, 0.01, 0}; Box: {1.9, 0.02, 1.9} }
+          PathPiece path(seed: seed)
+        } else if t == K_FARM {
+          FarmPiece farm(seed: hash(idx - GRID - 1), research: research) { Position: {1, 0, 1}; Rotation: {0, face * HALF_PI, 0} }
+        } else {
+          PieceView view(k: t, lvl: 1, seed: seed, face: face, n: n, e: e, s: s, w: w, hn: hn, he: he, hs: hs, hw: hw, tn: tn, te: te, ts: ts, tw: tw)
+        }
+      }
+    }
+
+    if razes {
+      marker {
+        Position: {0, 0.06, 0}
+        Rotation: {0, 0.7854, 0}
+        CursorEdge a(len: 1.6, color: color, glow: 3) { Position: {0, 0, 0} }
+        CursorEdge b(len: 1.6, color: color, glow: 3) { Rotation: {0, HALF_PI, 0} }
       }
     }
   }
 
-  if razes {
-    marker {
-      Position: {0, 0.06, 0}
-      Rotation: {0, 0.7854, 0}
-      CursorEdge a(len: 1.6, color: color, glow: 3) { Position: {0, 0, 0} }
-      CursorEdge b(len: 1.6, color: color, glow: 3) { Rotation: {0, HALF_PI, 0} }
-    }
-  }
-}
+  // A see-through preview of the wall or path that a drag lays from drag_start to drag_end
+  template LineGhost {
+    prop idx: i32 = 0
+    prop k: i32 = 0
+    prop seed: f32 = 0
+    prop kn: i32 = 0
+    prop ke: i32 = 0
+    prop ks: i32 = 0
+    prop kw: i32 = 0
 
-// A see-through preview of the wall or path that a drag lays from drag_start to drag_end
-template LineGhost {
-  prop idx: i32 = 0
-  prop k: i32 = 0
-  prop seed: f32 = 0
-  prop kn: i32 = 0
-  prop ke: i32 = 0
-  prop ks: i32 = 0
-  prop kw: i32 = 0
+    const t = tool
+    const x = idx % GRID
+    const z = (idx - x) / GRID
+    const sx = drag_start % GRID
+    const sz = (drag_start - sx) / GRID
 
-  const t = tool
-  const x = idx % GRID
-  const z = (idx - x) / GRID
-  const sx = drag_start % GRID
-  const sz = (drag_start - sx) / GRID
-
-  if k == K_EMPTY && on_line(x, z, drag_start, drag_end) {
-    const n = abs(x - sx) + abs(z - sz) + 1
-    const ok = gold >= n * cost_gold(t, 1) && stone >= n * cost_stone(t, 1)
-    const color: Rgb = match ok { true: {120, 235, 110}; _: {235, 64, 52} }
-    CursorEdge edge_n(len: 2, color: color) { Position: {0, 0.05, -0.955} }
-    CursorEdge edge_s(len: 2, color: color) { Position: {0, 0.05, 0.955} }
-    CursorEdge edge_e(len: 2, color: color) { Position: {0.955, 0.05, 0}; Rotation: {0, HALF_PI, 0} }
-    CursorEdge edge_w(len: 2, color: color) { Position: {-0.955, 0.05, 0}; Rotation: {0, HALF_PI, 0} }
-    ghost {
-      Opacity: {ok ? 0.5 : 0.3}
-      SpatialIgnore
-      if t == K_PATH {
-        dirt : CastleDirt { Position: {0, 0.01, 0}; Box: {1.9, 0.02, 1.9} }
-        PathPiece path(seed: seed)
-      } else {
-        WallPiece wall(
-          level_: 1, seed: seed,
-          n: barrier(kn) || on_line(x, z - 1, drag_start, drag_end),
-          e: barrier(ke) || (x < GRID - 1 && on_line(x + 1, z, drag_start, drag_end)),
-          s: barrier(ks) || on_line(x, z + 1, drag_start, drag_end),
-          w: barrier(kw) || (x > 0 && on_line(x - 1, z, drag_start, drag_end)))
-      }
-    }
-  }
-}
-
-template Tile {
-  prop idx: i32 = 0
-
-  mut hover = false
-  mut painted = false
-  mut extends = false
-
-  const k = kind[idx]
-  const lvl = level[idx]
-  const col = idx % GRID
-  const safe = inside[idx]
-  const ruined = abandoned[idx]
-  const marked = ready[idx]
-  const picked = selected == idx
-  const anchor = k == K_FARM && farm_origin[idx] == idx
-  const crops = anchor ? research : 0
-  const forging = k == K_SMITH && researching
-  const seed = hash(idx)
-  const face = facing[idx]
-  const rocky = deposit[idx]
-
-  const kn = idx >= GRID ? kind[idx - GRID] : 0
-  const ks = idx < CELLS - GRID ? kind[idx + GRID] : 0
-  const ke = col < GRID - 1 ? kind[idx + 1] : 0
-  const kw = col > 0 ? kind[idx - 1] : 0
-  const ln = idx >= GRID ? level[idx - GRID] : 0
-  const ls = idx < CELLS - GRID ? level[idx + GRID] : 0
-  const le = col < GRID - 1 ? level[idx + 1] : 0
-  const lw = col > 0 ? level[idx - 1] : 0
-
-  const n = barrier(kn)
-  const s = barrier(ks)
-  const e = barrier(ke)
-  const w = barrier(kw)
-  const hn = wall_height(kn, ln)
-  const hs = wall_height(ks, ls)
-  const he = wall_height(ke, le)
-  const hw = wall_height(kw, lw)
-  const tn = wooden(kn, ln)
-  const ts = wooden(ks, ls)
-  const te = wooden(ke, le)
-  const tw = wooden(kw, lw)
-
-  const sunk = rising == idx
-  const shade = hash(idx + 517) * 8
-
-  Position: {cell_x(idx), 0, cell_z(idx)}
-  Interactive
-
-  soil : CastleSoil {
-    Position: {0, k == K_MOAT ? -1.15 : -0.55, 0}
-    Box: {2, 0.9, 2}
-    TextureTransform: {scale_x: 1, scale_y: 0.45}
-  }
-
-  if k == K_MOAT {
-    water : CastleWater { Position: {0, -0.32, 0}; Box: {2, 0.06, 2}; TextureMapping: {mode: MappingWorld, size: 2}; TextureTransform: {scale_x: 1, scale_y: 1} }
-    bank_n : CastleDarkStoneBlock { Position: {0, -0.62, -0.96}; Box: {2, 0.6, 0.08} }
-    bank_s : CastleDarkStoneBlock { Position: {0, -0.62, 0.96}; Box: {2, 0.6, 0.08} }
-    bank_e : CastleDarkStoneBlock { Position: {0.96, -0.62, 0}; Box: {0.08, 0.6, 2} }
-    bank_w : CastleDarkStoneBlock { Position: {-0.96, -0.62, 0}; Box: {0.08, 0.6, 2} }
-    lily : CastleLeaf { Position: {0.4 - seed * 0.8, -0.285, 0.3}; Cylinder: {length: 0.01, radius: 0.12, segments: 8} }
-  } else {
-    turf {
-      Position: {0, -0.05, 0}
-      Box: {1.98, 0.1, 1.98}
-      PbrMaterial: {roughness: 1}
-      TextureMapping: {mode: MappingWorld, size: 4}
-      if k == K_PATH {
-        Rgb: {176 + shade, 148 + shade, 108 + shade}
-        PbrTextures: {albedo: castle_tex_earth, normal: castle_tex_earth_n}
-      } else if k == K_FARM {
-        Rgb: {150 + shade, 116 + shade, 80 + shade}
-        PbrTextures: {albedo: castle_tex_earth, normal: castle_tex_earth_n}
-      } else if k == K_QUARRY || rocky {
-        Rgb: {170 + shade, 160 + shade, 144 + shade}
-        PbrTextures: {albedo: castle_tex_earth, normal: castle_tex_earth_n}
-      } else if safe {
-        Rgb: {112 + shade, 86 + shade, 60 + shade}
-        PbrTextures: {albedo: castle_tex_earth, normal: castle_tex_earth_n}
-      } else {
-        Rgb: {116 + shade, 156 + shade, 70 + shade}
-        PbrTextures: {albedo: castle_tex_grass, normal: castle_tex_grass_n}
-      }
-      Transition: [Rgb: {duration: 0.6}]
-    }
-  }
-
-  if safe && k == K_EMPTY && hash(idx + 211) < 0.4 {
-    const ga = hash(idx + 213) * 6.283
-    const gx = sin(ga) * 0.45
-    const gz = cos(ga) * 0.45
-    for p in 0..3 {
-      const pa = ga + p * 2.1
-      const pr = 0.1 + hash(idx * 3 + p + 215) * 0.14
-      "green_{p}" : CastleGrass {
-        Position: {gx + sin(pa) * 0.16, 0.004 + p * 0.001, gz + cos(pa) * 0.16}
-        Rotation: {0, pa, 0}
-        Scale: {1.4, 1, 1}
-        Rgb: {88, 116, 54}
-        Cylinder: {length: 0.01, radius: pr, segments: 7}
-        TextureTransform: {scale_x: 0.2, scale_y: 0.2}
-      }
-    }
-    Tuft tuft_a(seed: hash(idx + 217)) { Position: {gx + 0.1, 0, gz - 0.05} }
-    Tuft tuft_b(seed: hash(idx + 219)) { Position: {gx - 0.12, 0, gz + 0.08} }
-  }
-  if safe && k == K_EMPTY && hash(idx + 223) < 0.12 {
-    puddle : CastleWater { Position: {(hash(idx + 225) - 0.5) * 0.9, 0.003, (hash(idx + 227) - 0.5) * 0.9}; Scale: {1.5, 1, 1}; Cylinder: {length: 0.008, radius: 0.16, segments: 10} }
-  }
-
-  if k == K_EMPTY && rocky {
-    StoneOutcrop outcrop(seed: hash(idx + 57))
-  } else if k == K_EMPTY && safe && hash(idx + 91) < 0.3 {
-    CourtProps props(seed: hash(idx + 93))
-  } else if k == K_EMPTY && !safe && hash(idx + 71) < 0.2 {
-    MeadowProps props(seed: hash(idx + 73))
-  }
-
-  piece {
-    Transition: [Position: {duration: sunk ? 0 : 0.7, timing_function: EaseOut}]
-    Position: {0, sunk ? -5 : 0, 0}
-    if anchor {
-      FarmPiece farm(seed: seed, research: crops) { Position: {3, 0, 3}; Rotation: {0, face * HALF_PI, 0} }
-    } else {
-      PieceView view(k: k, lvl: lvl, seed: seed, face: face, ruined: ruined, working: forging, n: n, e: e, s: s, w: w, hn: hn, he: he, hs: hs, hw: hw, tn: tn, te: te, ts: ts, tw: tw)
-    }
-  }
-
-  if raid_cell == idx {
-    BanditRaid raid(seed: seed)
-  }
-
-  if marked {
-    marker_ {
-      Position: {0, match lvl { 1: 2.5; _: 3.3 }, 0}
-      Scale: {1.8, 1.8, 1.8}
-      UpgradeMarker marker
-    }
-  }
-
-  if picked {
-    select_frame {
-      const glow: Rgb = {255, 206, 90}
-      const fy = k == K_MOAT ? -0.27 : 0.07
-      const span = k == K_FARM ? 8.08 : 2.08
-      const mid = k == K_FARM ? 3 : 0
-      CursorEdge edge_n(len: span, color: glow, glow: 3) { Position: {mid, fy, mid - span / 2 + 0.04} }
-      CursorEdge edge_s(len: span, color: glow, glow: 3) { Position: {mid, fy, mid + span / 2 - 0.04} }
-      CursorEdge edge_e(len: span, color: glow, glow: 3) { Position: {mid + span / 2 - 0.04, fy, mid}; Rotation: {0, HALF_PI, 0} }
-      CursorEdge edge_w(len: span, color: glow, glow: 3) { Position: {mid - span / 2 + 0.04, fy, mid}; Rotation: {0, HALF_PI, 0} }
-    }
-  }
-
-  if dragging && drag_tool(tool) {
-    LineGhost line(idx: idx, k: k, seed: seed, kn: kn, ke: ke, ks: ks, kw: kw)
-  }
-
-  if hover && !dragging {
-    TileCursor cursor(idx: idx, k: k, lvl: lvl, seed: seed, n: n, e: e, s: s, w: w, hn: hn, he: he, hs: hs, hw: hw, kn: kn, ke: ke, ks: ks, kw: kw, tn: tn, te: te, ts: ts, tw: tw)
-  }
-
-  async {
-    while true {
-      await on.enter(this)
-      hover = true
-      hover_cell = idx
-      await on.leave(this)
-      hover = false
-      if hover_cell == idx {
-        hover_cell = -1
-      }
-    }
-  }
-
-  async {
-    while true {
-      const ev = await on.press(this)
-      if ev.button == 0 {
-        extends = drag_tool(tool) && kind[idx] == tool
-        painted = drag_tool(tool) && (kind[idx] == K_EMPTY || extends)
-        if painted {
-          drag_start = idx
-          drag_end = idx
-          dragging = true
+    if k == K_EMPTY && on_line(x, z, drag_start, drag_end) {
+      const n = abs(x - sx) + abs(z - sz) + 1
+      const ok = gold >= n * cost_gold(t, 1) && stone >= n * cost_stone(t, 1)
+      const color: Rgb = match ok { true: {120, 235, 110}; _: {235, 64, 52} }
+      CursorEdge edge_n(len: 2, color: color) { Position: {0, 0.05, -0.955} }
+      CursorEdge edge_s(len: 2, color: color) { Position: {0, 0.05, 0.955} }
+      CursorEdge edge_e(len: 2, color: color) { Position: {0.955, 0.05, 0}; Rotation: {0, HALF_PI, 0} }
+      CursorEdge edge_w(len: 2, color: color) { Position: {-0.955, 0.05, 0}; Rotation: {0, HALF_PI, 0} }
+      ghost {
+        Opacity: {ok ? 0.5 : 0.3}
+        SpatialIgnore
+        if t == K_PATH {
+          dirt : CastleDirt { Position: {0, 0.01, 0}; Box: {1.9, 0.02, 1.9} }
+          PathPiece path(seed: seed)
+        } else {
+          WallPiece wall(
+            level_: 1, seed: seed,
+            n: barrier(kn) || on_line(x, z - 1, drag_start, drag_end),
+            e: barrier(ke) || (x < GRID - 1 && on_line(x + 1, z, drag_start, drag_end)),
+            s: barrier(ks) || on_line(x, z + 1, drag_start, drag_end),
+            w: barrier(kw) || (x > 0 && on_line(x - 1, z, drag_start, drag_end)))
         }
       }
     }
   }
 
-  async {
-    while true {
-      const ev = await on.click(this)
-      if ev.button == 0 {
-        if painted {
-          painted = false
-          if extends && drag_start == idx && drag_end == idx {
+  template Tile {
+    prop idx: i32 = 0
+
+    mut hover = false
+    mut painted = false
+    mut extends = false
+
+    const k = kind[idx]
+    const lvl = level[idx]
+    const col = idx % GRID
+    const safe = inside[idx]
+    const ruined = abandoned[idx]
+    const marked = ready[idx]
+    const picked = selected == idx
+    const anchor = k == K_FARM && farm_origin[idx] == idx
+    const crops = anchor ? research : 0
+    const forging = k == K_SMITH && researching
+    const seed = hash(idx)
+    const face = facing[idx]
+    const rocky = deposit[idx]
+
+    const kn = idx >= GRID ? kind[idx - GRID] : 0
+    const ks = idx < CELLS - GRID ? kind[idx + GRID] : 0
+    const ke = col < GRID - 1 ? kind[idx + 1] : 0
+    const kw = col > 0 ? kind[idx - 1] : 0
+    const ln = idx >= GRID ? level[idx - GRID] : 0
+    const ls = idx < CELLS - GRID ? level[idx + GRID] : 0
+    const le = col < GRID - 1 ? level[idx + 1] : 0
+    const lw = col > 0 ? level[idx - 1] : 0
+
+    const n = barrier(kn)
+    const s = barrier(ks)
+    const e = barrier(ke)
+    const w = barrier(kw)
+    const hn = wall_height(kn, ln)
+    const hs = wall_height(ks, ls)
+    const he = wall_height(ke, le)
+    const hw = wall_height(kw, lw)
+    const tn = wooden(kn, ln)
+    const ts = wooden(ks, ls)
+    const te = wooden(ke, le)
+    const tw = wooden(kw, lw)
+
+    const sunk = rising == idx
+    const shade = hash(idx + 517) * 8
+
+    Position: {cell_x(idx), 0, cell_z(idx)}
+    Interactive
+
+    soil : CastleSoil {
+      Position: {0, k == K_MOAT ? -1.15 : -0.55, 0}
+      Box: {2, 0.9, 2}
+      TextureTransform: {scale_x: 1, scale_y: 0.45}
+    }
+
+    if k == K_MOAT {
+      water : CastleWater { Position: {0, -0.32, 0}; Box: {2, 0.06, 2}; TextureMapping: {mode: MappingWorld, size: 2}; TextureTransform: {scale_x: 1, scale_y: 1} }
+      bank_n : CastleDarkStoneBlock { Position: {0, -0.62, -0.96}; Box: {2, 0.6, 0.08} }
+      bank_s : CastleDarkStoneBlock { Position: {0, -0.62, 0.96}; Box: {2, 0.6, 0.08} }
+      bank_e : CastleDarkStoneBlock { Position: {0.96, -0.62, 0}; Box: {0.08, 0.6, 2} }
+      bank_w : CastleDarkStoneBlock { Position: {-0.96, -0.62, 0}; Box: {0.08, 0.6, 2} }
+      lily : CastleLeaf { Position: {0.4 - seed * 0.8, -0.285, 0.3}; Cylinder: {length: 0.01, radius: 0.12, segments: 8} }
+    } else {
+      turf {
+        Position: {0, -0.05, 0}
+        Box: {1.98, 0.1, 1.98}
+        PbrMaterial: {roughness: 1}
+        TextureMapping: {mode: MappingWorld, size: 4}
+        if k == K_PATH {
+          Rgb: {176 + shade, 148 + shade, 108 + shade}
+          PbrTextures: {albedo: castle_tex_earth, normal: castle_tex_earth_n}
+        } else if k == K_FARM {
+          Rgb: {150 + shade, 116 + shade, 80 + shade}
+          PbrTextures: {albedo: castle_tex_earth, normal: castle_tex_earth_n}
+        } else if k == K_QUARRY || rocky {
+          Rgb: {170 + shade, 160 + shade, 144 + shade}
+          PbrTextures: {albedo: castle_tex_earth, normal: castle_tex_earth_n}
+        } else if safe {
+          Rgb: {112 + shade, 86 + shade, 60 + shade}
+          PbrTextures: {albedo: castle_tex_earth, normal: castle_tex_earth_n}
+        } else {
+          Rgb: {116 + shade, 156 + shade, 70 + shade}
+          PbrTextures: {albedo: castle_tex_grass, normal: castle_tex_grass_n}
+        }
+        Transition: [Rgb: {duration: 0.6}]
+      }
+    }
+
+    if safe && k == K_EMPTY && hash(idx + 211) < 0.4 {
+      const ga = hash(idx + 213) * 6.283
+      const gx = sin(ga) * 0.45
+      const gz = cos(ga) * 0.45
+      for p in 0..3 {
+        const pa = ga + p * 2.1
+        const pr = 0.1 + hash(idx * 3 + p + 215) * 0.14
+        "green_{p}" : CastleGrass {
+          Position: {gx + sin(pa) * 0.16, 0.004 + p * 0.001, gz + cos(pa) * 0.16}
+          Rotation: {0, pa, 0}
+          Scale: {1.4, 1, 1}
+          Rgb: {88, 116, 54}
+          Cylinder: {length: 0.01, radius: pr, segments: 7}
+          TextureTransform: {scale_x: 0.2, scale_y: 0.2}
+        }
+      }
+      Tuft tuft_a(seed: hash(idx + 217)) { Position: {gx + 0.1, 0, gz - 0.05} }
+      Tuft tuft_b(seed: hash(idx + 219)) { Position: {gx - 0.12, 0, gz + 0.08} }
+    }
+    if safe && k == K_EMPTY && hash(idx + 223) < 0.12 {
+      puddle : CastleWater { Position: {(hash(idx + 225) - 0.5) * 0.9, 0.003, (hash(idx + 227) - 0.5) * 0.9}; Scale: {1.5, 1, 1}; Cylinder: {length: 0.008, radius: 0.16, segments: 10} }
+    }
+
+    if k == K_EMPTY && rocky {
+      StoneOutcrop outcrop(seed: hash(idx + 57))
+    } else if k == K_EMPTY && safe && hash(idx + 91) < 0.3 {
+      CourtProps props(seed: hash(idx + 93))
+    } else if k == K_EMPTY && !safe && hash(idx + 71) < 0.2 {
+      MeadowProps props(seed: hash(idx + 73))
+    }
+
+    piece {
+      Transition: [Position: {duration: sunk ? 0 : 0.7, timing_function: EaseOut}]
+      Position: {0, sunk ? -5 : 0, 0}
+      if anchor {
+        FarmPiece farm(seed: seed, research: crops) { Position: {3, 0, 3}; Rotation: {0, face * HALF_PI, 0} }
+      } else {
+        PieceView view(k: k, lvl: lvl, seed: seed, face: face, ruined: ruined, working: forging, n: n, e: e, s: s, w: w, hn: hn, he: he, hs: hs, hw: hw, tn: tn, te: te, ts: ts, tw: tw)
+      }
+    }
+
+    if raid_cell == idx {
+      BanditRaid raid(seed: seed)
+    }
+
+    if marked {
+      marker_ {
+        Position: {0, match lvl { 1: 2.5; _: 3.3 }, 0}
+        Scale: {1.8, 1.8, 1.8}
+        UpgradeMarker marker
+      }
+    }
+
+    if picked {
+      select_frame {
+        const glow: Rgb = {255, 206, 90}
+        const fy = k == K_MOAT ? -0.27 : 0.07
+        const span = k == K_FARM ? 8.08 : 2.08
+        const mid = k == K_FARM ? 3 : 0
+        CursorEdge edge_n(len: span, color: glow, glow: 3) { Position: {mid, fy, mid - span / 2 + 0.04} }
+        CursorEdge edge_s(len: span, color: glow, glow: 3) { Position: {mid, fy, mid + span / 2 - 0.04} }
+        CursorEdge edge_e(len: span, color: glow, glow: 3) { Position: {mid + span / 2 - 0.04, fy, mid}; Rotation: {0, HALF_PI, 0} }
+        CursorEdge edge_w(len: span, color: glow, glow: 3) { Position: {mid - span / 2 + 0.04, fy, mid}; Rotation: {0, HALF_PI, 0} }
+      }
+    }
+
+    if dragging && drag_tool(tool) {
+      LineGhost line(idx: idx, k: k, seed: seed, kn: kn, ke: ke, ks: ks, kw: kw)
+    }
+
+    if hover && !dragging {
+      TileCursor cursor(idx: idx, k: k, lvl: lvl, seed: seed, n: n, e: e, s: s, w: w, hn: hn, he: he, hs: hs, hw: hw, kn: kn, ke: ke, ks: ks, kw: kw, tn: tn, te: te, ts: ts, tw: tw)
+    }
+
+    async {
+      while true {
+        await on.enter(this)
+        hover = true
+        hover_cell = idx
+        await on.leave(this)
+        hover = false
+        if hover_cell == idx {
+          hover_cell = -1
+        }
+      }
+    }
+
+    async {
+      while true {
+        const ev = await on.press(this)
+        if ev.button == 0 {
+          extends = drag_tool(tool) && kind[idx] == tool
+          painted = drag_tool(tool) && (kind[idx] == K_EMPTY || extends)
+          if painted {
+            drag_start = idx
+            drag_end = idx
+            dragging = true
+          }
+        }
+      }
+    }
+
+    async {
+      while true {
+        const ev = await on.click(this)
+        if ev.button == 0 {
+          if painted {
+            painted = false
+            if extends && drag_start == idx && drag_end == idx {
+              emit Build(i: idx)
+            }
+          } else {
             emit Build(i: idx)
           }
-        } else {
-          emit Build(i: idx)
         }
       }
     }
   }
 }
 
-fn road_x(z: f64) -> f64 {
-  sin((z - 29) * 0.04) * 7
-}
-
-fn river_z(x: f64) -> f64 {
-  70 + sin(x * 0.035) * 7 + sin(x * 0.011) * 4
-}
-
-castle_road_path {
-  Path3D: {start: {road_x(HALF + 1.3), 0, HALF + 1.3}, segments: [{kind: CatmullRom, end: {road_x(HALF + 1.3 + 16), 0, HALF + 1.3 + 16}}, {kind: CatmullRom, end: {road_x(HALF + 1.3 + 32), 0, HALF + 1.3 + 32}}, {kind: CatmullRom, end: {road_x(HALF + 1.3 + 48), 0, HALF + 1.3 + 48}}, {kind: CatmullRom, end: {road_x(HALF + 1.3 + 64), 0, HALF + 1.3 + 64}}, {kind: CatmullRom, end: {road_x(HALF + 1.3 + 80), 0, HALF + 1.3 + 80}}, {kind: CatmullRom, end: {road_x(HALF + 1.3 + 96), 0, HALF + 1.3 + 96}}, {kind: CatmullRom, end: {road_x(HALF + 1.3 + 112), 0, HALF + 1.3 + 112}}, {kind: CatmullRom, end: {road_x(HALF + 1.3 + 128), 0, HALF + 1.3 + 128}}, {kind: CatmullRom, end: {road_x(HALF + 1.3 + 144), 0, HALF + 1.3 + 144}}, {kind: CatmullRom, end: {road_x(HALF + 1.3 + 160), 0, HALF + 1.3 + 160}}, {kind: CatmullRom, end: {road_x(HALF + 1.3 + 176), 0, HALF + 1.3 + 176}}, {kind: CatmullRom, end: {road_x(HALF + 1.3 + 192), 0, HALF + 1.3 + 192}}, {kind: CatmullRom, end: {road_x(HALF + 1.3 + 208), 0, HALF + 1.3 + 208}}]}
-}
-
-castle_river_path {
-  Path3D: {start: {-220, 0, river_z(-220)}, segments: [{kind: CatmullRom, end: {-200, 0, river_z(-200)}}, {kind: CatmullRom, end: {-180, 0, river_z(-180)}}, {kind: CatmullRom, end: {-160, 0, river_z(-160)}}, {kind: CatmullRom, end: {-140, 0, river_z(-140)}}, {kind: CatmullRom, end: {-120, 0, river_z(-120)}}, {kind: CatmullRom, end: {-100, 0, river_z(-100)}}, {kind: CatmullRom, end: {-80, 0, river_z(-80)}}, {kind: CatmullRom, end: {-60, 0, river_z(-60)}}, {kind: CatmullRom, end: {-40, 0, river_z(-40)}}, {kind: CatmullRom, end: {-20, 0, river_z(-20)}}, {kind: CatmullRom, end: {0, 0, river_z(0)}}, {kind: CatmullRom, end: {20, 0, river_z(20)}}, {kind: CatmullRom, end: {40, 0, river_z(40)}}, {kind: CatmullRom, end: {60, 0, river_z(60)}}, {kind: CatmullRom, end: {80, 0, river_z(80)}}, {kind: CatmullRom, end: {100, 0, river_z(100)}}, {kind: CatmullRom, end: {120, 0, river_z(120)}}, {kind: CatmullRom, end: {140, 0, river_z(140)}}, {kind: CatmullRom, end: {160, 0, river_z(160)}}, {kind: CatmullRom, end: {180, 0, river_z(180)}}, {kind: CatmullRom, end: {200, 0, river_z(200)}}, {kind: CatmullRom, end: {220, 0, river_z(220)}}]}
-}
-
-template WildTree {
-  prop seed: f32 = 0
-  TreePiece tree(seed: seed)
-}
-
-template Walker {
-  prop x0: f32 = 0
-  prop z0: f32 = 0
-  prop x1: f32 = 0
-  prop z1: f32 = 0
-  prop period: f32 = 10
-  prop seed: f32 = 0
-
-  const yaw = atan2(x1 - x0, z1 - z0)
-  const turn = 0.4
-
-  Position: {x1, -1, z1}
-  Rotation: {0, yaw + PI, 0}
-  Scale: {1.6, 1.6, 1.6}
-
-  stroll {
-    AnimationClip: {duration: period * 2}
-    track_x { AnimationTrack: {component: Position, member: "x", curve: {keys: [{0, x1}, {period, x0}, {period * 2, x1}]}} }
-    track_z { AnimationTrack: {component: Position, member: "z", curve: {keys: [{0, z1}, {period, z0}, {period * 2, z1}]}} }
-    track_yaw { AnimationTrack: {component: Rotation, member: "y", curve: {keys: [{0, yaw + PI}, {period - turn, yaw + PI}, {period, yaw}, {period * 2 - turn, yaw}, {period * 2, yaw + PI}]}} }
+state {
+  fn road_x(z: f64) -> f64 {
+    sin((z - 29) * 0.04) * 7
   }
 
-  Animator: {clip: stroll}
-
-  Folk body(seed: seed)
-}
-
-template Sails {
-  Rotation: {0, 0, 0}
-  AngularVelocity: {0, 0, 0.35}
-
-  hub : CastleTimber { Rotation: {HALF_PI, 0, 0}; Cylinder: {length: 0.5, radius: 0.18, segments: 8} }
-  for b in 0..4 {
-    "blade_{b}" {
-      Rotation: {0, 0, b * HALF_PI}
-      spar : CastleTimber { Position: {0, 1.7, 0.1}; Box: {0.1, 3.4, 0.08} }
-      cloth : CastleCloth { Position: {0.32, 2.0, 0.12}; Box: {0.52, 2.6, 0.02} }
-      for r in 0..5 {
-        "rung_{r}" : CastleTimber { Position: {0.32, 0.8 + r * 0.6, 0.13}; Box: {0.58, 0.04, 0.03} }
-      }
-    }
+  fn river_z(x: f64) -> f64 {
+    70 + sin(x * 0.035) * 7 + sin(x * 0.011) * 4
   }
 }
 
-template Windmill {
-  mound : CastleGrass { Position: {0, -2.2, 0}; Scale: {11, 3, 11}; Sphere: {radius: 1, segments: 24, smooth: true}; TextureMapping: {mode: MappingWorld, size: 4, blend: 0.3} }
-  base : CastleDarkStone { Position: {0, 0.95, 0}; Cylinder: {length: 0.5, radius: 1.35, segments: 16}; TextureTransform: {scale_x: 6, scale_y: 0.4} }
-  body : CastlePlaster { Position: {0, 2.8, 0}; Frustum: {length: 3.4, radius_bottom: 1.2, radius_top: 0.85, segments: 16}; TextureTransform: {scale_x: 4, scale_y: 2} }
-  band : CastleTimber { Position: {0, 4.5, 0}; Cylinder: {length: 0.12, radius: 0.92, segments: 16} }
-  cap : CastleThatch { Position: {0, 5.1, 0}; Cone: {length: 1.2, radius: 1.05, segments: 16}; TextureTransform: {scale_x: 4, scale_y: 1} }
-  door : CastleWood { Position: {0, 1.6, 1.15}; Rotation: {-0.1, 0, 0}; Box: {0.5, 0.9, 0.06}; TextureTransform: {scale_x: 0.5, scale_y: 0.9} }
-  win : CastleWindow { Position: {0, 3.4, 1.02}; Rotation: {-0.1, 0, 0}; Box: {0.3, 0.36, 0.04} }
-  sacks : CastleCloth { Position: {0.7, 1.4, 1.2}; Scale: {1, 0.8, 0.8}; IcoSphere: {radius: 0.26, segments: 1} }
-  Sails sails { Position: {0, 4.8, 1.05} }
-  Folk miller(seed: 0.77) { Position: {-0.7, 1.2, 1.4}; Scale: {1.6, 1.6, 1.6} }
-}
-
-template Field {
-  prop t: i32 = 0
-  prop seed: f32 = 0
-  prop size: f32 = 14
-
-  const turn = seed > 0.5 ? HALF_PI : 0
-
-  if t == 0 {
-    soil : CastleWheat { Position: {0, -0.985, 0}; Rotation: {0, turn, 0}; Box: {size, 0.03, size}; TextureMapping: {mode: MappingObject, size: 4} }
-    if seed > 0.3 {
-      for h in 0..4 {
-        "stook_{h}" : CastleHay { Position: {-4 + h * 2.6, -0.4, (hash(h + 3) - 0.5) * 8}; Cone: {length: 1.2, radius: 0.5, segments: 8}; TextureTransform: {scale_x: 2, scale_y: 1} }
-      }
-    }
-  } else if t == 1 {
-    soil : CastleCrop { Position: {0, -0.985, 0}; Rotation: {0, turn, 0}; Box: {size, 0.03, size}; TextureMapping: {mode: MappingObject, size: 4} }
-  } else if t == 2 {
-    soil : CastlePlowed { Position: {0, -0.985, 0}; Rotation: {0, turn, 0}; Box: {size, 0.03, size}; TextureMapping: {mode: MappingObject, size: 4} }
-    Folk farmer(seed: seed) { Position: {(seed - 0.5) * 8, -1, 2}; Scale: {1.6, 1.6, 1.6}; Rotation: {0, seed * 9, 0} }
-  } else if t == 3 {
-    soil : CastleFlax { Position: {0, -0.985, 0}; Rotation: {0, turn, 0}; Box: {size, 0.03, size}; TextureMapping: {mode: MappingObject, size: 4} }
-  } else {
-    for f in 0..4 {
-      const fx = match f { 0: 0; 1: size / 2; 2: 0; _: 0 - size / 2 }
-      const fz = match f { 0: size / 2; 1: 0; 2: 0 - size / 2; _: 0 }
-      "rail_{f}" : CastleOldWood {
-        Position: {fx, -0.55, fz}
-        Rotation: {0, match f % 2 { 0: 0; _: HALF_PI }, 0}
-        Box: {size, 0.06, 0.06}
-      }
-      "post_{f}" : CastleTimber { Position: {fx * 1.0 + match f % 2 { 0: size / 2; _: 0 }, -0.6, fz + match f % 2 { 0: 0; _: size / 2 }}; Box: {0.12, 0.8, 0.12} }
-    }
-    for p in 0..7 {
-      "sheep_{p}" {
-        Position: {(hash(p * 5 + 1) - 0.5) * (size - 3), -1, (hash(p * 7 + 2) - 0.5) * (size - 3)}
-        Rotation: {0, hash(p * 3 + 9) * 6.28, 0}
-        Scale: {1.8, 1.8, 1.8}
-        Sheep sheep(seed: hash(p + 4))
-      }
-    }
-  }
-}
-
-template Landscape {
-  meadow : CastleMeadowBlend { Position: {0, -1.6, 0}; Box: {500, 1.2, 500} }
-
-  rim : CastleSoil { Position: {0, -1.05, 0}; Box: {GRID * PITCH + 1.2, 0.1, GRID * PITCH + 1.2} }
-  edge_n : CastleDarkStoneBlock { Position: {0, -0.5, -GRID * PITCH / 2 - 0.3}; Box: {GRID * PITCH + 1.2, 1.0, 0.6} }
-  edge_s : CastleDarkStoneBlock { Position: {0, -0.5, GRID * PITCH / 2 + 0.3}; Box: {GRID * PITCH + 1.2, 1.0, 0.6} }
-  edge_e : CastleDarkStoneBlock { Position: {GRID * PITCH / 2 + 0.3, -0.5, 0}; Rotation: {0, HALF_PI, 0}; Box: {GRID * PITCH, 1.0, 0.6} }
-  edge_w : CastleDarkStoneBlock { Position: {-GRID * PITCH / 2 - 0.3, -0.5, 0}; Rotation: {0, HALF_PI, 0}; Box: {GRID * PITCH, 1.0, 0.6} }
-  cap_n : CastleStoneBlock { Position: {0, 0.02, -GRID * PITCH / 2 - 0.3}; Box: {GRID * PITCH + 1.3, 0.08, 0.7} }
-  cap_s : CastleStoneBlock { Position: {0, 0.02, GRID * PITCH / 2 + 0.3}; Box: {GRID * PITCH + 1.3, 0.08, 0.7} }
-  cap_e : CastleStoneBlock { Position: {GRID * PITCH / 2 + 0.3, 0.02, 0}; Rotation: {0, HALF_PI, 0}; Box: {GRID * PITCH, 0.08, 0.7} }
-  cap_w : CastleStoneBlock { Position: {-GRID * PITCH / 2 - 0.3, 0.02, 0}; Rotation: {0, HALF_PI, 0}; Box: {GRID * PITCH, 0.08, 0.7} }
-
-  for k in 0..5 {
-    "step_{k}" : CastleDarkStoneBlock {
-      Position: {0, -0.1 - k * 0.2, GRID * PITCH / 2 + 0.8 + k * 0.4}
-      Box: {2.6, 0.2 + k * 0.4, 0.42}
-    }
+assets {
+  castle_road_path {
+    Path3D: {start: {road_x(HALF + 1.3), 0, HALF + 1.3}, segments: [{kind: CatmullRom, end: {road_x(HALF + 1.3 + 16), 0, HALF + 1.3 + 16}}, {kind: CatmullRom, end: {road_x(HALF + 1.3 + 32), 0, HALF + 1.3 + 32}}, {kind: CatmullRom, end: {road_x(HALF + 1.3 + 48), 0, HALF + 1.3 + 48}}, {kind: CatmullRom, end: {road_x(HALF + 1.3 + 64), 0, HALF + 1.3 + 64}}, {kind: CatmullRom, end: {road_x(HALF + 1.3 + 80), 0, HALF + 1.3 + 80}}, {kind: CatmullRom, end: {road_x(HALF + 1.3 + 96), 0, HALF + 1.3 + 96}}, {kind: CatmullRom, end: {road_x(HALF + 1.3 + 112), 0, HALF + 1.3 + 112}}, {kind: CatmullRom, end: {road_x(HALF + 1.3 + 128), 0, HALF + 1.3 + 128}}, {kind: CatmullRom, end: {road_x(HALF + 1.3 + 144), 0, HALF + 1.3 + 144}}, {kind: CatmullRom, end: {road_x(HALF + 1.3 + 160), 0, HALF + 1.3 + 160}}, {kind: CatmullRom, end: {road_x(HALF + 1.3 + 176), 0, HALF + 1.3 + 176}}, {kind: CatmullRom, end: {road_x(HALF + 1.3 + 192), 0, HALF + 1.3 + 192}}, {kind: CatmullRom, end: {road_x(HALF + 1.3 + 208), 0, HALF + 1.3 + 208}}]}
   }
 
-  for i in 0..64 {
-    const side = floor(i / 16)
-    const t = (i % 16) / 15.0 - 0.5
-    const half = GRID * PITCH / 2 + 0.9
-    const bx = match side { 0: t * (GRID * PITCH + 2); 1: half; 2: t * (GRID * PITCH + 2); _: 0 - half }
-    const bz = match side { 0: 0 - half; 1: t * (GRID * PITCH + 2); 2: half; _: t * (GRID * PITCH + 2) }
-    if hash(i + 2000) < 0.55 && !(side == 2 && abs(bx) < 2.5) {
-      "bush_{i}" : CastleLeafDark {
-        Position: {bx, -0.9, bz}
-        Scale: {1, 0.7, 1}
-        IcoSphere: {radius: 0.4 + hash(i + 2100) * 0.35, segments: 1}
-      }
+  castle_river_path {
+    Path3D: {start: {-220, 0, river_z(-220)}, segments: [{kind: CatmullRom, end: {-200, 0, river_z(-200)}}, {kind: CatmullRom, end: {-180, 0, river_z(-180)}}, {kind: CatmullRom, end: {-160, 0, river_z(-160)}}, {kind: CatmullRom, end: {-140, 0, river_z(-140)}}, {kind: CatmullRom, end: {-120, 0, river_z(-120)}}, {kind: CatmullRom, end: {-100, 0, river_z(-100)}}, {kind: CatmullRom, end: {-80, 0, river_z(-80)}}, {kind: CatmullRom, end: {-60, 0, river_z(-60)}}, {kind: CatmullRom, end: {-40, 0, river_z(-40)}}, {kind: CatmullRom, end: {-20, 0, river_z(-20)}}, {kind: CatmullRom, end: {0, 0, river_z(0)}}, {kind: CatmullRom, end: {20, 0, river_z(20)}}, {kind: CatmullRom, end: {40, 0, river_z(40)}}, {kind: CatmullRom, end: {60, 0, river_z(60)}}, {kind: CatmullRom, end: {80, 0, river_z(80)}}, {kind: CatmullRom, end: {100, 0, river_z(100)}}, {kind: CatmullRom, end: {120, 0, river_z(120)}}, {kind: CatmullRom, end: {140, 0, river_z(140)}}, {kind: CatmullRom, end: {160, 0, river_z(160)}}, {kind: CatmullRom, end: {180, 0, river_z(180)}}, {kind: CatmullRom, end: {200, 0, river_z(200)}}, {kind: CatmullRom, end: {220, 0, river_z(220)}}]}
+  }
+
+  template WildTree {
+    prop seed: f32 = 0
+    TreePiece tree(seed: seed)
+  }
+
+  template Walker {
+    prop x0: f32 = 0
+    prop z0: f32 = 0
+    prop x1: f32 = 0
+    prop z1: f32 = 0
+    prop period: f32 = 10
+    prop seed: f32 = 0
+
+    const yaw = atan2(x1 - x0, z1 - z0)
+    const turn = 0.4
+
+    Position: {x1, -1, z1}
+    Rotation: {0, yaw + PI, 0}
+    Scale: {1.6, 1.6, 1.6}
+
+    stroll {
+      AnimationClip: {duration: period * 2}
+      track_x { AnimationTrack: {component: Position, member: "x", curve: {keys: [{0, x1}, {period, x0}, {period * 2, x1}]}} }
+      track_z { AnimationTrack: {component: Position, member: "z", curve: {keys: [{0, z1}, {period, z0}, {period * 2, z1}]}} }
+      track_yaw { AnimationTrack: {component: Rotation, member: "y", curve: {keys: [{0, yaw + PI}, {period - turn, yaw + PI}, {period, yaw}, {period * 2 - turn, yaw}, {period * 2, yaw + PI}]}} }
     }
+
+    Animator: {clip: stroll}
+
+    Folk body(seed: seed)
   }
 
-  road : CastleDirt {
-    Position: {0, -1.002, 0}
-    Sweep: {path: castle_road_path, profile: CastleFlatProfile, scale: {2.6, 0.04}, rings: 128}
-    TextureMapping: {mode: MappingObject, size: 3}
-  }
+  template Sails {
+    Rotation: {0, 0, 0}
+    AngularVelocity: {0, 0, 0.35}
 
-  for i in 0..26 {
-    const z0 = HALF + 1.6 + i * 8
-    const z1 = z0 + 8
-    const x0 = road_x(z0)
-    const x1 = road_x(z1)
-    const len = sqrt((x1 - x0) * (x1 - x0) + 64)
-    for f in 0..2 {
-      const sx = match f { 0: -1.8; _: 1.8 }
-      if hash(i * 2 + f + 40) > 0.35 && (z0 > 78 || z0 < 60) {
-        "fence_{i}_{f}" {
-          Position: {(x0 + x1) / 2 + sx, -1, (z0 + z1) / 2}
-          Rotation: {0, atan2(x1 - x0, 8), 0}
-          rail_a : CastleOldWood { Position: {0, 0.45, 0}; Box: {0.06, 0.06, len - 1} }
-          rail_b : CastleOldWood { Position: {0, 0.25, 0}; Box: {0.06, 0.06, len - 1} }
-          post_a : CastleTimber { Position: {0, 0.3, 0 - len / 2 + 0.5}; Box: {0.1, 0.6, 0.1} }
-          post_b : CastleTimber { Position: {0, 0.3, 0}; Box: {0.1, 0.6, 0.1} }
-          post_c : CastleTimber { Position: {0, 0.3, len / 2 - 0.5}; Box: {0.1, 0.6, 0.1} }
+    hub : CastleTimber { Rotation: {HALF_PI, 0, 0}; Cylinder: {length: 0.5, radius: 0.18, segments: 8} }
+    for b in 0..4 {
+      "blade_{b}" {
+        Rotation: {0, 0, b * HALF_PI}
+        spar : CastleTimber { Position: {0, 1.7, 0.1}; Box: {0.1, 3.4, 0.08} }
+        cloth : CastleCloth { Position: {0.32, 2.0, 0.12}; Box: {0.52, 2.6, 0.02} }
+        for r in 0..5 {
+          "rung_{r}" : CastleTimber { Position: {0.32, 0.8 + r * 0.6, 0.13}; Box: {0.58, 0.04, 0.03} }
         }
       }
     }
   }
 
-  river_bank : CastleDirt {
-    Position: {0, -1.003, 0}
-    Sweep: {path: castle_river_path, profile: CastleFlatProfile, scale: {7.4, 0.03}, rings: 256}
-    TextureMapping: {mode: MappingObject, size: 3.5}
-  }
-  river : CastleWater {
-    Position: {0, -0.99, 0}
-    Sweep: {path: castle_river_path, profile: CastleFlatProfile, scale: {5.4, 0.03}, rings: 256}
-    TextureMapping: {mode: MappingObject, size: 4}
-    TextureTransform: {scale_x: 1, scale_y: 1}
+  template Windmill {
+    mound : CastleGrass { Position: {0, -2.2, 0}; Scale: {11, 3, 11}; Sphere: {radius: 1, segments: 24, smooth: true}; TextureMapping: {mode: MappingWorld, size: 4, blend: 0.3} }
+    base : CastleDarkStone { Position: {0, 0.95, 0}; Cylinder: {length: 0.5, radius: 1.35, segments: 16}; TextureTransform: {scale_x: 6, scale_y: 0.4} }
+    body : CastlePlaster { Position: {0, 2.8, 0}; Frustum: {length: 3.4, radius_bottom: 1.2, radius_top: 0.85, segments: 16}; TextureTransform: {scale_x: 4, scale_y: 2} }
+    band : CastleTimber { Position: {0, 4.5, 0}; Cylinder: {length: 0.12, radius: 0.92, segments: 16} }
+    cap : CastleThatch { Position: {0, 5.1, 0}; Cone: {length: 1.2, radius: 1.05, segments: 16}; TextureTransform: {scale_x: 4, scale_y: 1} }
+    door : CastleWood { Position: {0, 1.6, 1.15}; Rotation: {-0.1, 0, 0}; Box: {0.5, 0.9, 0.06}; TextureTransform: {scale_x: 0.5, scale_y: 0.9} }
+    win : CastleWindow { Position: {0, 3.4, 1.02}; Rotation: {-0.1, 0, 0}; Box: {0.3, 0.36, 0.04} }
+    sacks : CastleCloth { Position: {0.7, 1.4, 1.2}; Scale: {1, 0.8, 0.8}; IcoSphere: {radius: 0.26, segments: 1} }
+    Sails sails { Position: {0, 4.8, 1.05} }
+    Folk miller(seed: 0.77) { Position: {-0.7, 1.2, 1.4}; Scale: {1.6, 1.6, 1.6} }
   }
 
-  for i in 0..44 {
-    const x0 = -220 + i * 10
-    const x1 = x0 + 10
-    const z0 = river_z(x0)
-    const z1 = river_z(x1)
-    const len = sqrt((z1 - z0) * (z1 - z0) + 100)
-    "river_{i}" {
-      Position: {(x0 + x1) / 2, 0, (z0 + z1) / 2}
-      Rotation: {0, atan2(z0 - z1, 10), 0}
-      if hash(i + 3000) > 0.4 {
-        reeds_a : CastleCrop { Position: {(hash(i + 3100) - 0.5) * len, -0.7, 3.0}; Scale: {1.4, 0.6, 0.4}; IcoSphere: {radius: 0.6, segments: 1} }
+  template Field {
+    prop t: i32 = 0
+    prop seed: f32 = 0
+    prop size: f32 = 14
+
+    const turn = seed > 0.5 ? HALF_PI : 0
+
+    if t == 0 {
+      soil : CastleWheat { Position: {0, -0.985, 0}; Rotation: {0, turn, 0}; Box: {size, 0.03, size}; TextureMapping: {mode: MappingObject, size: 4} }
+      if seed > 0.3 {
+        for h in 0..4 {
+          "stook_{h}" : CastleHay { Position: {-4 + h * 2.6, -0.4, (hash(h + 3) - 0.5) * 8}; Cone: {length: 1.2, radius: 0.5, segments: 8}; TextureTransform: {scale_x: 2, scale_y: 1} }
+        }
       }
-      if hash(i + 3200) > 0.5 {
-        reeds_b : CastleCrop { Position: {(hash(i + 3300) - 0.5) * len, -0.7, -3.0}; Scale: {1.4, 0.6, 0.4}; IcoSphere: {radius: 0.6, segments: 1} }
+    } else if t == 1 {
+      soil : CastleCrop { Position: {0, -0.985, 0}; Rotation: {0, turn, 0}; Box: {size, 0.03, size}; TextureMapping: {mode: MappingObject, size: 4} }
+    } else if t == 2 {
+      soil : CastlePlowed { Position: {0, -0.985, 0}; Rotation: {0, turn, 0}; Box: {size, 0.03, size}; TextureMapping: {mode: MappingObject, size: 4} }
+      Folk farmer(seed: seed) { Position: {(seed - 0.5) * 8, -1, 2}; Scale: {1.6, 1.6, 1.6}; Rotation: {0, seed * 9, 0} }
+    } else if t == 3 {
+      soil : CastleFlax { Position: {0, -0.985, 0}; Rotation: {0, turn, 0}; Box: {size, 0.03, size}; TextureMapping: {mode: MappingObject, size: 4} }
+    } else {
+      for f in 0..4 {
+        const fx = match f { 0: 0; 1: size / 2; 2: 0; _: 0 - size / 2 }
+        const fz = match f { 0: size / 2; 1: 0; 2: 0 - size / 2; _: 0 }
+        "rail_{f}" : CastleOldWood {
+          Position: {fx, -0.55, fz}
+          Rotation: {0, match f % 2 { 0: 0; _: HALF_PI }, 0}
+          Box: {size, 0.06, 0.06}
+        }
+        "post_{f}" : CastleTimber { Position: {fx * 1.0 + match f % 2 { 0: size / 2; _: 0 }, -0.6, fz + match f % 2 { 0: 0; _: size / 2 }}; Box: {0.12, 0.8, 0.12} }
       }
-      if hash(i + 3400) > 0.55 {
-        rock_ : CastleRock { Position: {(hash(i + 3500) - 0.5) * len, -0.9, 2.7}; IcoSphere: {radius: 0.4, segments: 1} }
+      for p in 0..7 {
+        "sheep_{p}" {
+          Position: {(hash(p * 5 + 1) - 0.5) * (size - 3), -1, (hash(p * 7 + 2) - 0.5) * (size - 3)}
+          Rotation: {0, hash(p * 3 + 9) * 6.28, 0}
+          Scale: {1.8, 1.8, 1.8}
+          Sheep sheep(seed: hash(p + 4))
+        }
       }
     }
   }
 
-  const bz = river_z(road_x(70))
-  const bx = road_x(bz)
-  bridge {
-    Position: {bx, -1, bz}
-    Rotation: {0, atan2(road_x(bz + 4) - road_x(bz - 4), 8), 0}
-    deck : CastleOldWood { Position: {0, 0.32, 0}; Box: {3, 0.14, 8}; TextureTransform: {scale_x: 1, scale_y: 4} }
-    ramp_a : CastleOldWood { Position: {0, 0.15, 4.6}; Rotation: {0.2, 0, 0}; Box: {3, 0.12, 1.6}; TextureTransform: {scale_x: 1, scale_y: 1} }
-    ramp_b : CastleOldWood { Position: {0, 0.15, -4.6}; Rotation: {-0.2, 0, 0}; Box: {3, 0.12, 1.6}; TextureTransform: {scale_x: 1, scale_y: 1} }
-    for p in 0..2 {
-      const px = match p { 0: -1.45; _: 1.45 }
-      "rail_{p}" : CastleTimber { Position: {px, 1.0, 0}; Box: {0.1, 0.1, 8} }
-      for q in 0..5 {
-        "post_{p}_{q}" : CastleTimber { Position: {px, 0.65, -4 + q * 2}; Box: {0.14, 0.75, 0.14} }
+  template Landscape {
+    meadow : CastleMeadowBlend { Position: {0, -1.6, 0}; Box: {500, 1.2, 500} }
+
+    rim : CastleSoil { Position: {0, -1.05, 0}; Box: {GRID * PITCH + 1.2, 0.1, GRID * PITCH + 1.2} }
+    edge_n : CastleDarkStoneBlock { Position: {0, -0.5, -GRID * PITCH / 2 - 0.3}; Box: {GRID * PITCH + 1.2, 1.0, 0.6} }
+    edge_s : CastleDarkStoneBlock { Position: {0, -0.5, GRID * PITCH / 2 + 0.3}; Box: {GRID * PITCH + 1.2, 1.0, 0.6} }
+    edge_e : CastleDarkStoneBlock { Position: {GRID * PITCH / 2 + 0.3, -0.5, 0}; Rotation: {0, HALF_PI, 0}; Box: {GRID * PITCH, 1.0, 0.6} }
+    edge_w : CastleDarkStoneBlock { Position: {-GRID * PITCH / 2 - 0.3, -0.5, 0}; Rotation: {0, HALF_PI, 0}; Box: {GRID * PITCH, 1.0, 0.6} }
+    cap_n : CastleStoneBlock { Position: {0, 0.02, -GRID * PITCH / 2 - 0.3}; Box: {GRID * PITCH + 1.3, 0.08, 0.7} }
+    cap_s : CastleStoneBlock { Position: {0, 0.02, GRID * PITCH / 2 + 0.3}; Box: {GRID * PITCH + 1.3, 0.08, 0.7} }
+    cap_e : CastleStoneBlock { Position: {GRID * PITCH / 2 + 0.3, 0.02, 0}; Rotation: {0, HALF_PI, 0}; Box: {GRID * PITCH, 0.08, 0.7} }
+    cap_w : CastleStoneBlock { Position: {-GRID * PITCH / 2 - 0.3, 0.02, 0}; Rotation: {0, HALF_PI, 0}; Box: {GRID * PITCH, 0.08, 0.7} }
+
+    for k in 0..5 {
+      "step_{k}" : CastleDarkStoneBlock {
+        Position: {0, -0.1 - k * 0.2, GRID * PITCH / 2 + 0.8 + k * 0.4}
+        Box: {2.6, 0.2 + k * 0.4, 0.42}
       }
     }
-    for q in 0..3 {
-      "pile_{q}" : CastleTimber { Position: {0, 0, -2 + q * 2}; Box: {2.8, 0.5, 0.25} }
-    }
-  }
 
-  for gx in 0..15 {
-    for gz in 0..15 {
-      const i = gx * 15 + gz
-      const cx = (gx - 7) * 16 + (hash(i + 4000) - 0.5) * 2
-      const cz = (gz - 7) * 16 + (hash(i + 4100) - 0.5) * 2
-      const plot = abs(cx) < HALF + 13 && abs(cz) < HALF + 13
-      const road = cz > 20 && abs(cx - road_x(cz)) < 11
-      const river = abs(cz - river_z(cx)) < 12
-      const forest = cz < -56
-      const hamlet = cz > HALF && cz < HALF + 34 && abs(cx - road_x(cz)) < 22
-      const mill = abs(cx - 62) < 14 && abs(cz + 38) < 14
-      if !plot && !road && !river && !forest && !hamlet && !mill && hash(i + 4200) > 0.12 {
-        Field "field_{i}"(t: floor(hash(i + 4300) * 5), seed: hash(i + 4400), size: 13.5 + hash(i + 4500)) {
-          Position: {cx, 0, cz}
+    for i in 0..64 {
+      const side = floor(i / 16)
+      const t = (i % 16) / 15.0 - 0.5
+      const half = GRID * PITCH / 2 + 0.9
+      const bx = match side { 0: t * (GRID * PITCH + 2); 1: half; 2: t * (GRID * PITCH + 2); _: 0 - half }
+      const bz = match side { 0: 0 - half; 1: t * (GRID * PITCH + 2); 2: half; _: t * (GRID * PITCH + 2) }
+      if hash(i + 2000) < 0.55 && !(side == 2 && abs(bx) < 2.5) {
+        "bush_{i}" : CastleLeafDark {
+          Position: {bx, -0.9, bz}
+          Scale: {1, 0.7, 1}
+          IcoSphere: {radius: 0.4 + hash(i + 2100) * 0.35, segments: 1}
         }
-        if hash(i + 4600) > 0.35 {
-          "hedge_{i}" : CastleLeafDark { Position: {cx, -0.75, cz - 7.7}; Box: {15, 0.55, 0.6}; TextureTransform: {scale_x: 6, scale_y: 0.4} }
-        }
-        if hash(i + 4700) > 0.45 {
-          "hedge_e_{i}" : CastleLeafDark { Position: {cx + 7.7, -0.75, cz}; Box: {0.6, 0.55, 15}; TextureTransform: {scale_x: 6, scale_y: 0.4} }
-        }
-        if hash(i + 4800) > 0.55 {
-          "copse_{i}" {
-            Position: {cx + 7.7, -1, cz - 7.7}
-            Scale: {1.8, 1.8, 1.8}
-            WildTree tree(seed: hash(i + 4900))
+      }
+    }
+
+    road : CastleDirt {
+      Position: {0, -1.002, 0}
+      Sweep: {path: castle_road_path, profile: CastleFlatProfile, scale: {2.6, 0.04}, rings: 128}
+      TextureMapping: {mode: MappingObject, size: 3}
+    }
+
+    for i in 0..26 {
+      const z0 = HALF + 1.6 + i * 8
+      const z1 = z0 + 8
+      const x0 = road_x(z0)
+      const x1 = road_x(z1)
+      const len = sqrt((x1 - x0) * (x1 - x0) + 64)
+      for f in 0..2 {
+        const sx = match f { 0: -1.8; _: 1.8 }
+        if hash(i * 2 + f + 40) > 0.35 && (z0 > 78 || z0 < 60) {
+          "fence_{i}_{f}" {
+            Position: {(x0 + x1) / 2 + sx, -1, (z0 + z1) / 2}
+            Rotation: {0, atan2(x1 - x0, 8), 0}
+            rail_a : CastleOldWood { Position: {0, 0.45, 0}; Box: {0.06, 0.06, len - 1} }
+            rail_b : CastleOldWood { Position: {0, 0.25, 0}; Box: {0.06, 0.06, len - 1} }
+            post_a : CastleTimber { Position: {0, 0.3, 0 - len / 2 + 0.5}; Box: {0.1, 0.6, 0.1} }
+            post_b : CastleTimber { Position: {0, 0.3, 0}; Box: {0.1, 0.6, 0.1} }
+            post_c : CastleTimber { Position: {0, 0.3, len / 2 - 0.5}; Box: {0.1, 0.6, 0.1} }
           }
         }
       }
     }
-  }
 
-  for i in 0..240 {
-    const tx = -150 + hash(i * 3 + 5001) * 300
-    const tz = -58 - hash(i * 7 + 5002) * 100 - hash(i + 5003) * 6
-    "forest_{i}" {
-      Position: {tx, -1, tz}
-      Scale: {1.7 + hash(i + 5004) * 0.8, 1.7 + hash(i + 5004) * 0.8, 1.7 + hash(i + 5004) * 0.8}
-      WildTree tree(seed: hash(i * 13 + 5005) * 0.6)
+    river_bank : CastleDirt {
+      Position: {0, -1.003, 0}
+      Sweep: {path: castle_river_path, profile: CastleFlatProfile, scale: {7.4, 0.03}, rings: 256}
+      TextureMapping: {mode: MappingObject, size: 3.5}
     }
-  }
+    river : CastleWater {
+      Position: {0, -0.99, 0}
+      Sweep: {path: castle_river_path, profile: CastleFlatProfile, scale: {5.4, 0.03}, rings: 256}
+      TextureMapping: {mode: MappingObject, size: 4}
+      TextureTransform: {scale_x: 1, scale_y: 1}
+    }
 
-  for i in 0..90 {
-    const a = hash(i * 7 + 3) * 6.283
-    const r = HALF + 5 + hash(i * 5 + 11) * 46
-    const tx = sin(a) * r
-    const tz = cos(a) * r
-    const clear = abs(tx) > HALF + 3 || abs(tz) > HALF + 3
-    const off_road = tz < HALF - 2 || abs(tx - road_x(tz)) > 4
-    const off_river = abs(tz - river_z(tx)) > 5
-    if clear && off_road && off_river && hash(i + 6000) < 0.5 {
-      "tree_{i}" {
+    for i in 0..44 {
+      const x0 = -220 + i * 10
+      const x1 = x0 + 10
+      const z0 = river_z(x0)
+      const z1 = river_z(x1)
+      const len = sqrt((z1 - z0) * (z1 - z0) + 100)
+      "river_{i}" {
+        Position: {(x0 + x1) / 2, 0, (z0 + z1) / 2}
+        Rotation: {0, atan2(z0 - z1, 10), 0}
+        if hash(i + 3000) > 0.4 {
+          reeds_a : CastleCrop { Position: {(hash(i + 3100) - 0.5) * len, -0.7, 3.0}; Scale: {1.4, 0.6, 0.4}; IcoSphere: {radius: 0.6, segments: 1} }
+        }
+        if hash(i + 3200) > 0.5 {
+          reeds_b : CastleCrop { Position: {(hash(i + 3300) - 0.5) * len, -0.7, -3.0}; Scale: {1.4, 0.6, 0.4}; IcoSphere: {radius: 0.6, segments: 1} }
+        }
+        if hash(i + 3400) > 0.55 {
+          rock_ : CastleRock { Position: {(hash(i + 3500) - 0.5) * len, -0.9, 2.7}; IcoSphere: {radius: 0.4, segments: 1} }
+        }
+      }
+    }
+
+    const bz = river_z(road_x(70))
+    const bx = road_x(bz)
+    bridge {
+      Position: {bx, -1, bz}
+      Rotation: {0, atan2(road_x(bz + 4) - road_x(bz - 4), 8), 0}
+      deck : CastleOldWood { Position: {0, 0.32, 0}; Box: {3, 0.14, 8}; TextureTransform: {scale_x: 1, scale_y: 4} }
+      ramp_a : CastleOldWood { Position: {0, 0.15, 4.6}; Rotation: {0.2, 0, 0}; Box: {3, 0.12, 1.6}; TextureTransform: {scale_x: 1, scale_y: 1} }
+      ramp_b : CastleOldWood { Position: {0, 0.15, -4.6}; Rotation: {-0.2, 0, 0}; Box: {3, 0.12, 1.6}; TextureTransform: {scale_x: 1, scale_y: 1} }
+      for p in 0..2 {
+        const px = match p { 0: -1.45; _: 1.45 }
+        "rail_{p}" : CastleTimber { Position: {px, 1.0, 0}; Box: {0.1, 0.1, 8} }
+        for q in 0..5 {
+          "post_{p}_{q}" : CastleTimber { Position: {px, 0.65, -4 + q * 2}; Box: {0.14, 0.75, 0.14} }
+        }
+      }
+      for q in 0..3 {
+        "pile_{q}" : CastleTimber { Position: {0, 0, -2 + q * 2}; Box: {2.8, 0.5, 0.25} }
+      }
+    }
+
+    for gx in 0..15 {
+      for gz in 0..15 {
+        const i = gx * 15 + gz
+        const cx = (gx - 7) * 16 + (hash(i + 4000) - 0.5) * 2
+        const cz = (gz - 7) * 16 + (hash(i + 4100) - 0.5) * 2
+        const plot = abs(cx) < HALF + 13 && abs(cz) < HALF + 13
+        const road = cz > 20 && abs(cx - road_x(cz)) < 11
+        const river = abs(cz - river_z(cx)) < 12
+        const forest = cz < -56
+        const hamlet = cz > HALF && cz < HALF + 34 && abs(cx - road_x(cz)) < 22
+        const mill = abs(cx - 62) < 14 && abs(cz + 38) < 14
+        if !plot && !road && !river && !forest && !hamlet && !mill && hash(i + 4200) > 0.12 {
+          Field "field_{i}"(t: floor(hash(i + 4300) * 5), seed: hash(i + 4400), size: 13.5 + hash(i + 4500)) {
+            Position: {cx, 0, cz}
+          }
+          if hash(i + 4600) > 0.35 {
+            "hedge_{i}" : CastleLeafDark { Position: {cx, -0.75, cz - 7.7}; Box: {15, 0.55, 0.6}; TextureTransform: {scale_x: 6, scale_y: 0.4} }
+          }
+          if hash(i + 4700) > 0.45 {
+            "hedge_e_{i}" : CastleLeafDark { Position: {cx + 7.7, -0.75, cz}; Box: {0.6, 0.55, 15}; TextureTransform: {scale_x: 6, scale_y: 0.4} }
+          }
+          if hash(i + 4800) > 0.55 {
+            "copse_{i}" {
+              Position: {cx + 7.7, -1, cz - 7.7}
+              Scale: {1.8, 1.8, 1.8}
+              WildTree tree(seed: hash(i + 4900))
+            }
+          }
+        }
+      }
+    }
+
+    for i in 0..240 {
+      const tx = -150 + hash(i * 3 + 5001) * 300
+      const tz = -58 - hash(i * 7 + 5002) * 100 - hash(i + 5003) * 6
+      "forest_{i}" {
         Position: {tx, -1, tz}
+        Scale: {1.7 + hash(i + 5004) * 0.8, 1.7 + hash(i + 5004) * 0.8, 1.7 + hash(i + 5004) * 0.8}
+        WildTree tree(seed: hash(i * 13 + 5005) * 0.6)
+      }
+    }
+
+    for i in 0..90 {
+      const a = hash(i * 7 + 3) * 6.283
+      const r = HALF + 5 + hash(i * 5 + 11) * 46
+      const tx = sin(a) * r
+      const tz = cos(a) * r
+      const clear = abs(tx) > HALF + 3 || abs(tz) > HALF + 3
+      const off_road = tz < HALF - 2 || abs(tx - road_x(tz)) > 4
+      const off_river = abs(tz - river_z(tx)) > 5
+      if clear && off_road && off_river && hash(i + 6000) < 0.5 {
+        "tree_{i}" {
+          Position: {tx, -1, tz}
+          Scale: {1.5, 1.5, 1.5}
+          WildTree tree(seed: hash(i * 13 + 1))
+        }
+      }
+    }
+
+    for h in 0..8 {
+      const hz = HALF + 7 + h * 3.6
+      const side = match h % 2 { 0: -1; _: 1 }
+      "cottage_{h}" {
+        Position: {road_x(hz) + side * 4.4, -1, hz}
+        Rotation: {0, match side { -1: HALF_PI; _: 0 - HALF_PI }, 0}
         Scale: {1.5, 1.5, 1.5}
-        WildTree tree(seed: hash(i * 13 + 1))
+        HousePiece house(level_: match h % 3 { 1: 2; _: 1 }, seed: hash(h + 7000) * 0.5)
       }
     }
-  }
-
-  for h in 0..8 {
-    const hz = HALF + 7 + h * 3.6
-    const side = match h % 2 { 0: -1; _: 1 }
-    "cottage_{h}" {
-      Position: {road_x(hz) + side * 4.4, -1, hz}
-      Rotation: {0, match side { -1: HALF_PI; _: 0 - HALF_PI }, 0}
+    well_ {
+      Position: {road_x(HALF + 18) + 4.4, -1, HALF + 18}
       Scale: {1.5, 1.5, 1.5}
-      HousePiece house(level_: match h % 3 { 1: 2; _: 1 }, seed: hash(h + 7000) * 0.5)
+      CourtProps props(seed: 0)
     }
-  }
-  well_ {
-    Position: {road_x(HALF + 18) + 4.4, -1, HALF + 18}
-    Scale: {1.5, 1.5, 1.5}
-    CourtProps props(seed: 0)
-  }
-  stall_ {
-    Position: {road_x(HALF + 28) - 4.2, -1, HALF + 28}
-    Rotation: {0, HALF_PI, 0}
-    Scale: {1.5, 1.5, 1.5}
-    CourtProps props(seed: 0.15)
-  }
-  fire_ {
-    Position: {road_x(HALF + 32) + 5, -1, HALF + 32}
-    Scale: {1.5, 1.5, 1.5}
-    CourtProps props(seed: 0.03)
-  }
-
-  Windmill mill { Position: {62, -1, -38}; Rotation: {0, -0.9, 0} }
-
-  Walker walker_0(x0: road_x(32), z0: 32, x1: road_x(40), z1: 40, period: 9, seed: 0.11)
-  Walker walker_1(x0: road_x(44) + 0.6, z0: 44, x1: road_x(54) + 0.6, z1: 54, period: 11, seed: 0.37)
-  Walker walker_2(x0: road_x(58) - 0.6, z0: 58, x1: road_x(50) - 0.6, z1: 50, period: 8, seed: 0.58)
-  Walker walker_3(x0: road_x(78), z0: 78, x1: road_x(90), z1: 90, period: 13, seed: 0.83)
-  Walker walker_4(x0: road_x(34) - 0.5, z0: 34, x1: road_x(30) - 0.5, z1: 30, period: 5, seed: 0.24)
-  Walker walker_5(x0: 44, z0: -18, x1: 54, z1: -30, period: 14, seed: 0.66)
-
-  for i in 0..16 {
-    const a = i * 0.39 + hash(i + 300) * 0.3
-    const r = 170 + hash(i + 400) * 50
-    "hill_{i}" : CastleFarHill {
-      Position: {sin(a) * r, -18, cos(a) * r}
-      Scale: {34 + hash(i + 500) * 30, 14 + hash(i + 600) * 18, 30 + hash(i + 700) * 20}
-      Sphere: {radius: 1, segments: 24, smooth: true}
+    stall_ {
+      Position: {road_x(HALF + 28) - 4.2, -1, HALF + 28}
+      Rotation: {0, HALF_PI, 0}
+      Scale: {1.5, 1.5, 1.5}
+      CourtProps props(seed: 0.15)
     }
-  }
+    fire_ {
+      Position: {road_x(HALF + 32) + 5, -1, HALF + 32}
+      Scale: {1.5, 1.5, 1.5}
+      CourtProps props(seed: 0.03)
+    }
 
-  for i in 0..10 {
-    const a = hash(i + 900) * 6.283
-    const r = HALF + 8 + hash(i + 950) * 30
-    const bxr = sin(a) * r
-    const bzr = cos(a) * r
-    if abs(bzr - river_z(bxr)) > 5 && (bzr < HALF - 2 || abs(bxr - road_x(bzr)) > 4) {
-      "boulder_{i}" : CastleRock {
-        Position: {bxr, -1, bzr}
-        Rotation: {hash(i + 990), hash(i + 991) * 6, 0}
-        IcoSphere: {radius: 0.5 + hash(i + 992) * 0.6, segments: 1}
+    Windmill mill { Position: {62, -1, -38}; Rotation: {0, -0.9, 0} }
+
+    Walker walker_0(x0: road_x(32), z0: 32, x1: road_x(40), z1: 40, period: 9, seed: 0.11)
+    Walker walker_1(x0: road_x(44) + 0.6, z0: 44, x1: road_x(54) + 0.6, z1: 54, period: 11, seed: 0.37)
+    Walker walker_2(x0: road_x(58) - 0.6, z0: 58, x1: road_x(50) - 0.6, z1: 50, period: 8, seed: 0.58)
+    Walker walker_3(x0: road_x(78), z0: 78, x1: road_x(90), z1: 90, period: 13, seed: 0.83)
+    Walker walker_4(x0: road_x(34) - 0.5, z0: 34, x1: road_x(30) - 0.5, z1: 30, period: 5, seed: 0.24)
+    Walker walker_5(x0: 44, z0: -18, x1: 54, z1: -30, period: 14, seed: 0.66)
+
+    for i in 0..16 {
+      const a = i * 0.39 + hash(i + 300) * 0.3
+      const r = 170 + hash(i + 400) * 50
+      "hill_{i}" : CastleFarHill {
+        Position: {sin(a) * r, -18, cos(a) * r}
+        Scale: {34 + hash(i + 500) * 30, 14 + hash(i + 600) * 18, 30 + hash(i + 700) * 20}
+        Sphere: {radius: 1, segments: 24, smooth: true}
+      }
+    }
+
+    for i in 0..10 {
+      const a = hash(i + 900) * 6.283
+      const r = HALF + 8 + hash(i + 950) * 30
+      const bxr = sin(a) * r
+      const bzr = cos(a) * r
+      if abs(bzr - river_z(bxr)) > 5 && (bzr < HALF - 2 || abs(bxr - road_x(bzr)) > 4) {
+        "boulder_{i}" : CastleRock {
+          Position: {bxr, -1, bzr}
+          Rotation: {hash(i + 990), hash(i + 991) * 6, 0}
+          IcoSphere: {radius: 0.5 + hash(i + 992) * 0.6, segments: 1}
+        }
       }
     }
   }
-}
 
-template Board {
-  Landscape land()
+  template Board {
+    Landscape land()
 
-  for i in 0..CELLS {
-    Tile "cell_{i}"(idx: i)
+    for i in 0..CELLS {
+      Tile "cell_{i}"(idx: i)
+    }
   }
 }

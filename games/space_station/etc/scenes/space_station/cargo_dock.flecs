@@ -3,45 +3,47 @@ using box.transform
 using box.geometry
 using box.material
 
-template StationCrateStack {
-  prop mat: entity = 0
-  { (IsA, mat); Position: {0, 0.26, 0}; Box: {0.5, 0.5, 0.8} }
-  { (IsA, StationDark); Position: {0, 0.03, 0}; Box: {0.54, 0.05, 0.84} }
-  { (IsA, StationDark); Position: {0, 0.49, 0}; Box: {0.54, 0.03, 0.84} }
-  { (IsA, StationChrome); Position: {0.255, 0.26, 0}; Box: {0.01, 0.44, 0.1} }
-}
+assets {
+  template StationCrateStack {
+    prop mat: entity = 0
+    { (IsA, mat); Position: {0, 0.26, 0}; Box: {0.5, 0.5, 0.8} }
+    { (IsA, StationDark); Position: {0, 0.03, 0}; Box: {0.54, 0.05, 0.84} }
+    { (IsA, StationDark); Position: {0, 0.49, 0}; Box: {0.54, 0.03, 0.84} }
+    { (IsA, StationChrome); Position: {0.255, 0.26, 0}; Box: {0.01, 0.44, 0.1} }
+  }
 
-template StationCargoDockBody {
-  prop busy: bool = false
+  template StationCargoDockBody {
+    prop busy: bool = false
 
-  pad : StationDark { Position: {0, 0.2, 0}; RoundedBox: {5.3, 0.4, 5.3, 0.06, segments: 1} }
-  top : StationPanel { Position: {0, 0.41, 0}; Box: {4.2, 0.02, 4.2} }
-  for i in 0..8 {
-    { (IsA, StationHazard); Position: {-1.75 + i * 0.5, 0.43, 2.2}; Box: {0.24, 0.02, 0.12} }
-    { (IsA, StationHazard); Position: {-1.75 + i * 0.5, 0.43, -2.2}; Box: {0.24, 0.02, 0.12} }
-    { (IsA, StationHazard); Position: {2.2, 0.43, -1.75 + i * 0.5}; Box: {0.12, 0.02, 0.24} }
-    { (IsA, StationHazard); Position: {-2.2, 0.43, -1.75 + i * 0.5}; Box: {0.12, 0.02, 0.24} }
+    pad : StationDark { Position: {0, 0.2, 0}; RoundedBox: {5.3, 0.4, 5.3, 0.06, segments: 1} }
+    top : StationPanel { Position: {0, 0.41, 0}; Box: {4.2, 0.02, 4.2} }
+    for i in 0..8 {
+      { (IsA, StationHazard); Position: {-1.75 + i * 0.5, 0.43, 2.2}; Box: {0.24, 0.02, 0.12} }
+      { (IsA, StationHazard); Position: {-1.75 + i * 0.5, 0.43, -2.2}; Box: {0.24, 0.02, 0.12} }
+      { (IsA, StationHazard); Position: {2.2, 0.43, -1.75 + i * 0.5}; Box: {0.12, 0.02, 0.24} }
+      { (IsA, StationHazard); Position: {-2.2, 0.43, -1.75 + i * 0.5}; Box: {0.12, 0.02, 0.24} }
+    }
+    rail_a : StationDark { Position: {-0.9, 0.43, 0}; Box: {0.08, 0.03, 3.6} }
+    rail_b : StationDark { Position: {0.9, 0.43, 0}; Box: {0.08, 0.03, 3.6} }
+    lamp_a {
+      Position: {2.4, 0.5, 2.4}
+      Sphere: {radius: 0.1, segments: 10}
+      if busy { Rgb: {255, 80, 60}; Emissive: {strength: 5, color: {255, 60, 40}} } else { Rgb: {110, 240, 130}; Emissive: {strength: 5, color: {90, 255, 110}} }
+    }
+    lamp_b {
+      Position: {-2.4, 0.5, -2.4}
+      Sphere: {radius: 0.1, segments: 10}
+      if busy { Rgb: {255, 80, 60}; Emissive: {strength: 5, color: {255, 60, 40}} } else { Rgb: {110, 240, 130}; Emissive: {strength: 5, color: {90, 255, 110}} }
+    }
+    crane_base : StationDark { Position: {-2.35, 0.5, 2.35}; Box: {0.6, 0.2, 0.6} }
+    crane_post : StationHazard { Position: {-2.35, 1.6, 2.35}; Box: {0.3, 2.8, 0.3} }
+    crane_lamp : StationAmberLight { Position: {-2.35, 3.05, 2.35}; Sphere: {radius: 0.1, segments: 10} }
+    crane_arm : StationHazard { Position: {-1.5, 2.95, 1.5}; Rotation: {0, 0.785, 0}; Box: {2.5, 0.16, 0.16} }
+    crane_cable : StationDark { Position: {-0.75, 2.2, 0.75}; Cylinder: {radius: 0.015, length: 1.4, segments: 5} }
+    crane_hook : StationDark { Position: {-0.75, 1.5, 0.75}; Box: {0.2, 0.12, 0.2} }
+    StationCrateStack crate_a(mat: StationOrange) { Position: {2.2, 0.4, -2.2} }
+    StationCrateStack crate_b(mat: StationBlue) { Position: {1.65, 0.4, -2.3} }
+    StationCrateStack crate_c(mat: StationTeal) { Position: {2.2, 0.92, -2.2} }
+    StationGreebleBlock console(w: 0.6, h: 0.5, d: 0.3, led: StationCyanLight) { Position: {2.3, 0.4, 2.2} }
   }
-  rail_a : StationDark { Position: {-0.9, 0.43, 0}; Box: {0.08, 0.03, 3.6} }
-  rail_b : StationDark { Position: {0.9, 0.43, 0}; Box: {0.08, 0.03, 3.6} }
-  lamp_a {
-    Position: {2.4, 0.5, 2.4}
-    Sphere: {radius: 0.1, segments: 10}
-    if busy { Rgb: {255, 80, 60}; Emissive: {strength: 5, color: {255, 60, 40}} } else { Rgb: {110, 240, 130}; Emissive: {strength: 5, color: {90, 255, 110}} }
-  }
-  lamp_b {
-    Position: {-2.4, 0.5, -2.4}
-    Sphere: {radius: 0.1, segments: 10}
-    if busy { Rgb: {255, 80, 60}; Emissive: {strength: 5, color: {255, 60, 40}} } else { Rgb: {110, 240, 130}; Emissive: {strength: 5, color: {90, 255, 110}} }
-  }
-  crane_base : StationDark { Position: {-2.35, 0.5, 2.35}; Box: {0.6, 0.2, 0.6} }
-  crane_post : StationHazard { Position: {-2.35, 1.6, 2.35}; Box: {0.3, 2.8, 0.3} }
-  crane_lamp : StationAmberLight { Position: {-2.35, 3.05, 2.35}; Sphere: {radius: 0.1, segments: 10} }
-  crane_arm : StationHazard { Position: {-1.5, 2.95, 1.5}; Rotation: {0, 0.785, 0}; Box: {2.5, 0.16, 0.16} }
-  crane_cable : StationDark { Position: {-0.75, 2.2, 0.75}; Cylinder: {radius: 0.015, length: 1.4, segments: 5} }
-  crane_hook : StationDark { Position: {-0.75, 1.5, 0.75}; Box: {0.2, 0.12, 0.2} }
-  StationCrateStack crate_a(mat: StationOrange) { Position: {2.2, 0.4, -2.2} }
-  StationCrateStack crate_b(mat: StationBlue) { Position: {1.65, 0.4, -2.3} }
-  StationCrateStack crate_c(mat: StationTeal) { Position: {2.2, 0.92, -2.2} }
-  StationGreebleBlock console(w: 0.6, h: 0.5, d: 0.3, led: StationCyanLight) { Position: {2.3, 0.4, 2.2} }
 }

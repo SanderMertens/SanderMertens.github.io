@@ -11,448 +11,454 @@ using box.particle
 using box.transition
 using box.movement
 using box.animation
+using state
+using assets
 
-template Stamp {
-  prop text: string = ""
-  prop size: f32 = 14
-  prop ink: Rgb = {8, 8, 10}
-  prop font: entity = font_mono
-  prop align: box.layout.Align = Center
-  prop width: f32 = 0
+assets {
+  template Stamp {
+    prop text: string = ""
+    prop size: f32 = 14
+    prop ink: Rgb = {8, 8, 10}
+    prop font: entity = font_mono
+    prop align: box.layout.Align = Center
+    prop width: f32 = 0
 
-  Position: {0, 0, 0}
-  Scale: {0.001, 0.001, 0.001}
-  Text: {value: text, size: size, font: font, align: align, width: width, line_height: size * 1.02}
-  Rgb: ink
-  SpatialIgnore
-}
-
-template Decal {
-  prop at: P3 = {0, 0, 0}
-  prop w: f32 = 0.2
-  prop h: f32 = 0.2
-  prop spin: f32 = 0
-  prop tint: Rgb = {120, 84, 48}
-  prop fade: f32 = 1
-  prop tex: entity = tex_patch
-
-  Position: {at.x, at.y, at.z}
-  Rotation: {0 - PI / 2, spin, 0}
-  Quad: {w, h}
-  Rgb: tint
-  BlendMode: AlphaBlend
-  Opacity: {fade}
-  PbrMaterial: {metallic: 0, roughness: 0.96}
-  PbrTextures: {albedo: tex}
-  NoShadow
-  SpatialIgnore
-}
-
-template HullDecal {
-  prop s: f32 = 0.5
-  prop t: f32 = 0
-  prop lift: f32 = 0.006
-  prop w: f32 = 0.3
-  prop h: f32 = 0.3
-  prop roll: f32 = 0
-  prop tint: Rgb = {200, 210, 210}
-  prop rough: f32 = 0.3
-  prop tex: entity = tex_crack
-  prop solid: bool = false
-  prop glint: f32 = 0
-
-  const p = hull_pt(s, t)
-  const n = hull_in(s, t)
-  const c: P3 = {p.x + n.x * lift, p.y + n.y * lift, p.z + n.z * lift}
-  const f: P3 = {c.x + n.x, c.y + n.y, c.z + n.z}
-
-  Position: {c.x, c.y, c.z}
-  Rotation: {pitch_of(c, f), yaw_of(c, f), roll}
-  Quad: {w, h}
-  Rgb: tint
-  if !solid {
-    BlendMode: AlphaBlend
-  }
-  PbrMaterial: {metallic: 0, roughness: rough}
-  PbrTextures: {albedo: tex}
-  Emissive: {strength: glint, color: tint}
-  NoShadow
-  SpatialIgnore
-}
-
-template AssayPan {
-  prop heap: bool = false
-
-  SpatialIgnore
-  Tube3 a(a: {0, 0, 0}, b: {0.03, -0.1, 0}, r: 0.0007, tone: {176, 138, 72})
-  Tube3 b(a: {0, 0, 0}, b: {-0.03, -0.1, 0}, r: 0.0007, tone: {176, 138, 72})
-  Tube3 c(a: {0, 0, 0}, b: {0, -0.1, 0.03}, r: 0.0007, tone: {176, 138, 72})
-  Tube3 d(a: {0, 0, 0}, b: {0, -0.1, -0.03}, r: 0.0007, tone: {176, 138, 72})
-  dish : Brass { Position: {0, -0.104, 0}; Frustum: {radius_bottom: 0.02, radius_top: 0.036, length: 0.012, segments: 22, smooth: true} }
-  if heap {
-    dust { Position: {0, -0.099, 0}; Scale: {1, 0.42, 1}; HemiSphere: {radius: 0.03, segments: 16, smooth: true}; Rgb: {150, 88, 40}; PbrMaterial: {metallic: 0, roughness: 1} }
-  } else {
-    weight_a : Brass { Position: {-0.008, -0.094, 0.004}; Cylinder: {radius: 0.011, length: 0.012, segments: 12, smooth: true} }
-    weight_b : Brass { Position: {0.012, -0.096, -0.006}; Cylinder: {radius: 0.007, length: 0.009, segments: 12, smooth: true} }
-  }
-}
-
-template AssayBalance {
-  prop x: f32 = 0
-  prop z: f32 = 0
-
-  const tip = 0.05 + clamp(attitude_roll * 0.5, -0.22, 0.22) + sin(clock * 1.1) * 0.012 + shake * sin(clock * 17) * 0.1
-
-  Position: {x, 1.025, z}
-  Rotation: {0, 0.28, 0}
-  SpatialIgnore
-  base : Bakelite { Position: {0, 0.008, 0}; RoundedBox: {0.19, 0.016, 0.08, 0.006, segments: 2} }
-  inlay : Brass { Position: {0, 0.0165, 0}; Box: {0.15, 0.001, 0.05} }
-  pillar : Brass { Position: {0, 0.11, 0}; Cylinder: {radius: 0.0055, length: 0.19, segments: 12, smooth: true} }
-  collar : Brass { Position: {0, 0.03, 0}; Frustum: {radius_bottom: 0.018, radius_top: 0.007, length: 0.026, segments: 14, smooth: true} }
-  finial : Brass { Position: {0, 0.215, 0}; Sphere: {radius: 0.0085, segments: 10, smooth: true} }
-  arm {
-    Position: {0, 0.2, 0}
-    Rotation: {0, 0, tip}
-    bar : Brass { Position: {0, 0, 0}; Box: {0.21, 0.0048, 0.006} }
-    needle : BareSteel { Position: {0, -0.024, 0}; Box: {0.0018, 0.048, 0.0018} }
-    left { Position: {-0.104, 0, 0}; Rotation: {0, 0, 0 - tip}; AssayPan pan(heap: true) }
-    right { Position: {0.104, 0, 0}; Rotation: {0, 0, 0 - tip}; AssayPan pan(heap: false) }
-  }
-}
-
-DustJarPulse {
-  AnimationClip: {duration: 8.976}
-  glow {
-    AnimationTrack: {component: Emissive, member: "strength", curve: {kind: CurveBezier, keys: [
-      {0, 0.55, 0.28, 0.28}, {2.244, 0.95, 0, 0}, {4.488, 0.55, -0.28, -0.28}, {6.732, 0.15, 0, 0}, {8.976, 0.55, 0.28, 0.28}
-    ]}}
-  }
-}
-
-template DustJar {
-  prop x: f32 = 0
-  prop hue: Rgb = {150, 88, 40}
-  prop fill: f32 = 0.7
-  prop label: string = ""
-  prop dest: i32 = -1
-  prop glow: Rgb = {0, 0, 0}
-  prop pulse: f32 = 0
-
-  const here_now = dest == here && bus
-  const lit = bool_f(here_now) * 0.5 + pulse * 0.55
-
-  Position: {x, 0, 0}
-  SpatialIgnore
-  powder {
-    Position: {0, 0.009 + fill * 0.03, 0}
-    Cylinder: {radius: 0.0195, length: fill * 0.06, segments: 16, smooth: true}
-    Rgb: hue
-    PbrMaterial: {metallic: 0, roughness: 1}
-    Emissive: {strength: lit, color: glow}
-    Transition: [Emissive: {duration: 0.8}]
-    if pulse > 0 {
-      Animator: {clip: DustJarPulse}
-    }
-  }
-  shell : GlassWare { Position: {0, 0.041, 0}; Cylinder: {radius: 0.022, length: 0.072, segments: 18, smooth: true} }
-  neck : GlassWare { Position: {0, 0.083, 0}; Cylinder: {radius: 0.015, length: 0.012, segments: 14, smooth: true} }
-  stopper : Brass { Position: {0, 0.095, 0}; Cylinder: {radius: 0.0175, length: 0.014, segments: 14, smooth: true} }
-  tag : Paper { Position: {0, 0.038, 0.0226}; Quad: {0.036, 0.03} }
-  Stamp words(text: label, size: 15, font: font_hand) { Position = {0, 0.038, 0.0234} }
-}
-
-template DustRack {
-  prop x: f32 = 0
-  prop z: f32 = 0
-
-  Position: {x, 1.025, z}
-  Rotation: {0, -0.1, 0}
-  SpatialIgnore
-  base : Brass { Position: {0, 0.004, 0}; Box: {0.31, 0.008, 0.066}; Rgb: {74, 56, 34}; PbrMaterial: {metallic: 0.4, roughness: 0.6} }
-  rail_f : BareSteel { Position: {0, 0.03, 0.03}; Box: {0.3, 0.003, 0.003}; Rgb: {112, 108, 100} }
-  rail_b : BareSteel { Position: {0, 0.03, -0.03}; Box: {0.3, 0.003, 0.003}; Rgb: {112, 108, 100} }
-  post_a : BareSteel { Position: {-0.15, 0.018, 0.03}; Box: {0.004, 0.024, 0.004}; Rgb: {112, 108, 100} }
-  post_b : BareSteel { Position: {0.15, 0.018, 0.03}; Box: {0.004, 0.024, 0.004}; Rgb: {112, 108, 100} }
-  DustJar oro(x: -0.116, hue: {168, 96, 40}, fill: 0.86, label: "oro", dest: 0, glow: {255, 150, 60})
-  DustJar naur(x: -0.058, hue: {150, 190, 214}, fill: 0.52, label: "naur", dest: 1, glow: {120, 200, 255})
-  DustJar cinder(x: 0, hue: {26, 20, 20}, fill: 0.7, label: "cinder", dest: 2, glow: {255, 80, 30})
-  DustJar odd(x: 0.058, hue: {54, 28, 88}, fill: 0.34, label: "??", glow: {150, 70, 255}, pulse: 1)
-  DustJar spare(x: 0.116, hue: {176, 168, 148}, fill: 0.04, label: "next")
-  tape_x { Position: {0.058, 0.08, 0.0152}; Rotation: {0, 0, 0.55}; Box: {0.05, 0.007, 0.0008}; Rgb: {150, 40, 26}; PbrMaterial: {metallic: 0, roughness: 0.8} }
-}
-
-template ReceiptSpike {
-  prop x: f32 = 0
-  prop z: f32 = 0
-
-  Position: {x, 1.025, z}
-  SpatialIgnore
-  foot : BlackAnod { Position: {0, 0.005, 0}; Cylinder: {radius: 0.042, length: 0.01, segments: 20, smooth: true} }
-  rod : BareSteel { Position: {0, 0.07, 0}; Cylinder: {radius: 0.0016, length: 0.13, segments: 8} }
-  for i in 0..12 {
-    "slip_{i}" : Paper {
-      Position: {sin(i * 2.1) * 0.003, 0.012 + i * 0.0035, cos(i * 2.4) * 0.003}
-      Rotation: {sin(i * 1.3) * 0.05, i * 1.27, cos(i * 1.9) * 0.05}
-      Box: {0.078, 0.0012, 0.102}
-      Rgb: {176 - (i % 3) * 22, 168 - (i % 3) * 22, 136 - (i % 3) * 22}
-    }
-  }
-  top {
-    Position: {0, 0.055, 0}
-    Rotation: {0, -0.22, 0}
-    sheet : Paper { Position: {0, 0, 0}; Box: {0.086, 0.0012, 0.11}; Rgb: {206, 198, 160} }
-    head { Position: {0, 0.001, -0.03}; Rotation: {0 - PI / 2, 0, 0}; Stamp s(text: "TOLL STN ORO", size: 10) }
-    due { Position: {0, 0.001, 0.016}; Rotation: {0 - PI / 2, 0, 0.14}; Stamp s(text: "PAST DUE", size: 17, ink: {120, 8, 4}, font: font_stencil) }
-  }
-}
-
-template Steam {
-  prop on: bool = false
-  prop rate: f32 = 10
-  prop seed: i32 = 3
-
-  ParticleEmitter: {
-    max: 64, rate: on ? rate : 0, shape: EmitterSphere, radius: 0.008, direction: {0, 1, 0}, spread: 12,
-    speed: {0.03, 0.09}, lifetime: {1.1, 2.4}, size: {0.012, 0.03}, color: {224, 220, 212}, opacity: {0.08, 0.2}, seed: seed
-  }
-  ParticleForces: {gravity: {0, 0.025, 0}, turbulence: 0.05, drag: 0.4}
-  ParticleAppearance: {shape: ParticleCircle, blend: ParticleAlpha, softness: 0.05, lit: 0.6}
-  ParticleCurves: {
-    size: {keys: [{0, 0.4}, {0.33333334, 1}, {0.6666667, 1.6}, {1, 2.4}]}
-    opacity: {keys: [{0, 0}, {0.33333334, 1}, {0.6666667, 0.6}, {1, 0}]}
-  }
-  SpatialIgnore
-}
-
-template CoffeeMachine {
-  prop x: f32 = 0
-  prop z: f32 = 0
-
-  const brewing = sw[SW_SPARE_D] && bus
-
-  Position: {x, 1.025, z}
-  Rotation: {0, -0.72, 0}
-  SpatialIgnore
-  body : Chrome { Position: {0, 0.14, -0.03}; RoundedBox: {0.2, 0.2, 0.13, 0.014, segments: 3}; Rgb: {150, 148, 142}; PbrMaterial: {metallic: 1, roughness: 0.28} }
-  crown : Oxide { Position: {0, 0.255, -0.03}; RoundedBox: {0.21, 0.03, 0.14, 0.01, segments: 2}; Rgb: {120, 34, 22}; PbrMaterial: {metallic: 0.7, roughness: 0.34} }
-  plinth : BlackAnod { Position: {0, 0.015, 0.012}; RoundedBox: {0.22, 0.03, 0.2, 0.008, segments: 2} }
-  back : Chrome { Position: {0, 0.055, -0.06}; Box: {0.2, 0.08, 0.05}; Rgb: {120, 118, 112} }
-  tray : BareSteel { Position: {0, 0.034, 0.05}; Box: {0.17, 0.006, 0.09}; Rgb: {140, 138, 130} }
-  for i in 0..7 {
-    "slot_{i}" : BlackAnod { Position: {(i - 3) * 0.022, 0.0375, 0.05}; Box: {0.008, 0.001, 0.07} }
-  }
-  group : Chrome { Position: {0, 0.108, 0.058}; Cylinder: {radius: 0.03, length: 0.03, segments: 18, smooth: true} }
-  basket : BlackAnod { Position: {0, 0.086, 0.058}; Cylinder: {radius: 0.027, length: 0.018, segments: 18, smooth: true} }
-  handle : Bakelite { Position: {0.0, 0.086, 0.122}; Rotation: {PI / 2, 0, 0}; Capsule: {radius: 0.009, length: 0.08, segments: 10, smooth: true} }
-  cup : PaintedSteel { Position: {0, 0.056, 0.058}; Cylinder: {radius: 0.022, length: 0.034, segments: 16, smooth: true}; Rgb: {166, 160, 146}; PbrMaterial: {metallic: 0, roughness: 0.3} }
-  wand : BareSteel { Tube3: {a: {0.092, 0.17, 0.034}, b: {0.118, 0.07, 0.074}, r: 0.0036, tone: {156, 154, 148}} }
-  lever : Bakelite { Position: {-0.084, 0.2, 0.046}; Rotation: {0.5, 0, 0}; Capsule: {radius: 0.007, length: 0.04, segments: 8, smooth: true} }
-  lamp {
-    Position: {-0.084, 0.13, 0.037}
-    Sphere: {radius: 0.0065, segments: 10, smooth: true}
-    Rgb: {60, 8, 4}
-    Emissive: {strength: brewing ? 6 : 0.02, color: {255, 70, 30}}
-    Transition: [Emissive: {duration: 0.3}]
-  }
-  dial : BlackAnod { Position: {0.044, 0.18, 0.038}; Rotation: {PI / 2, 0, 0}; Cylinder: {radius: 0.024, length: 0.004, segments: 20, smooth: true}; Rgb: {14, 14, 14} }
-  dial_face { Position: {0.044, 0.18, 0.0404}; Circle: {0.02}; Rgb: {168, 160, 136} }
-  dial_needle { Position: {0.044, 0.18, 0.041}; Rotation: {0, 0, brewing ? -0.4 : 2.5}; Transition: [Rotation: {duration: 2.2, timing_function: EaseOut}]; Rect: {0.03, 0.0016}; Rgb: {120, 8, 4} }
-  asset_tag : Paper { Position: {-0.014, 0.142, 0.0375}; Box: {0.15, 0.05, 0.0012}; Rgb: {190, 186, 160} }
-  Stamp tag_a(text: "PROPERTY OF", size: 10) { Position = {-0.014, 0.153, 0.04} }
-  Stamp tag_b(text: "TOLL STN ORO", size: 15, ink: {90, 6, 4}, font: font_stencil) { Position = {-0.014, 0.135, 0.04} }
-  Steam plume(on: brewing, rate: 14, seed: 21) { Position: {0.118, 0.07, 0.074} }
-  Cable cord(a: {-0.1, 0.05, -0.07}, b: {-0.28, 0.0, 0.1}, sag: 0.02, thick: 0.008, tone: {120, 100, 40}) { Position: {0, 0, 0} }
-}
-
-template Manifest {
-  prop at: P3 = {0, 0, 0}
-  prop spin: f32 = 0
-
-  Position: {at.x, at.y, at.z}
-  Rotation: {0 - PI / 2 + 0.12, spin, 0}
-  SpatialIgnore
-  board : Brass { Position: {0, 0, 0}; Box: {0.17, 0.25, 0.005}; Rgb: {92, 58, 34}; PbrMaterial: {metallic: 0, roughness: 0.7} }
-  sheet : Paper { Position: {0, -0.01, 0.0035}; Box: {0.146, 0.21, 0.0008} }
-  clip : BareSteel { Position: {0, 0.112, 0.006}; RoundedBox: {0.07, 0.024, 0.006, 0.002, segments: 2}; Rgb: {156, 154, 148} }
-  Stamp head(text: "DM-7 MANIFEST", size: 11) { Position = {0, 0.068, 0.0045} }
-  Stamp list(text: "oro dust  x40\nnaur frost  x12\ncinder ash  x6\n1 coffee mach.\n???  - dont ask", size: 16, font: font_hand, align: Left, width: 136) { Position = {0, -0.02, 0.0045} }
-}
-
-template Extinguisher {
-  prop at: P3 = {0, 0, 0}
-  prop spin: f32 = 0
-
-  Position: {at.x, at.y, at.z}
-  Rotation: {0, spin, 0}
-  SpatialIgnore
-  shell : SignalRed { Position: {0, 0, 0}; Cylinder: {radius: 0.05, length: 0.27, segments: 18, smooth: true} }
-  dome : SignalRed { Position: {0, 0.135, 0}; Scale: {1, 0.5, 1}; HemiSphere: {radius: 0.05, segments: 18, smooth: true} }
-  head : Brass { Position: {0, 0.175, 0}; Cylinder: {radius: 0.016, length: 0.03, segments: 10, smooth: true} }
-  trigger : BareSteel { Position: {0.02, 0.2, 0}; Rotation: {0, 0, -0.3}; Box: {0.07, 0.006, 0.014} }
-  hose : Rubber { Position: {-0.03, 0.11, 0.04}; Rotation: {0.2, 0, 0.3}; Cylinder: {radius: 0.006, length: 0.14, segments: 8} }
-  band_a : Soot { Position: {0, 0.07, 0}; Tube: {radius: 0.054, thickness: 0.004, length: 0.018, segments: 18, smooth: true} }
-  band_b : Soot { Position: {0, -0.07, 0}; Tube: {radius: 0.054, thickness: 0.004, length: 0.018, segments: 18, smooth: true} }
-  tag : Paper { Position: {0, -0.01, 0.0505}; Quad: {0.056, 0.06} }
-  Stamp words(text: "empty\nsince\noro", size: 17, font: font_hand) { Position = {0, -0.008, 0.052} }
-}
-
-template Pedal {
-  prop x: f32 = 0
-
-  Position: {x, 0.13, -0.72}
-  Rotation: {-0.58, 0, 0}
-  SpatialIgnore
-  plate : BareSteel { Position: {0, 0, 0}; RoundedBox: {0.13, 0.22, 0.012, 0.012, segments: 2}; Rgb: {96, 92, 84}; PbrMaterial: {metallic: 1, roughness: 0.56} }
-  for i in 0..5 {
-    "tread_{i}" : Rubber { Position: {0, -0.08 + i * 0.04, 0.0075}; Box: {0.1, 0.014, 0.004} }
-  }
-  arm : Soot { Position: {0, -0.13, -0.07}; Rotation: {0.9, 0, 0}; Box: {0.024, 0.24, 0.02} }
-}
-
-template WireRun {
-  prop a: P3 = {0, 0, 0}
-  prop b: P3 = {0, 0, 1}
-  prop sag: f32 = 0.1
-
-  Cable w_a(a: a, b: b, sag: sag, thick: 0.013, tone: {24, 24, 26}) { Position: {0, 0, 0} }
-  Cable w_b(a: {a.x + 0.016, a.y, a.z}, b: {b.x + 0.018, b.y, b.z}, sag: sag + 0.012, thick: 0.009, tone: {120, 24, 16}) { Position: {0, 0, 0} }
-  Cable w_c(a: {a.x - 0.014, a.y, a.z}, b: {b.x - 0.02, b.y, b.z}, sag: sag + 0.02, thick: 0.009, tone: {150, 118, 28}) { Position: {0, 0, 0} }
-  Cable w_d(a: {a.x + 0.003, a.y + 0.014, a.z}, b: {b.x + 0.004, b.y + 0.016, b.z}, sag: sag - 0.01, thick: 0.007, tone: {24, 62, 110}) { Position: {0, 0, 0} }
-  clamp_a : Canvas { Position: {lerp(a.x, b.x, 0.33), lerp(a.y, b.y, 0.33) - sag * 0.68, lerp(a.z, b.z, 0.33)}; Scale: {1, 1, 1}; Sphere: {radius: 0.03, segments: 10, smooth: true}; Rgb: {30, 30, 30} }
-  clamp_b : Canvas { Position: {lerp(a.x, b.x, 0.66), lerp(a.y, b.y, 0.66) - sag * 0.72, lerp(a.z, b.z, 0.66)}; Scale: {1, 1, 1}; Sphere: {radius: 0.03, segments: 10, smooth: true}; Rgb: {30, 30, 30} }
-}
-
-template Underdash {
-  const warm = sw[SW_HEAT] && bus
-
-  heater {
-    Position: {-0.38, 0.27, -0.99}
+    Position: {0, 0, 0}
     Scale: {0.001, 0.001, 0.001}
+    Text: {value: text, size: size, font: font, align: align, width: width, line_height: size * 1.02}
+    Rgb: ink
     SpatialIgnore
-    glow {
-      Position: {0, 0, 0.6}
-      Rect: {520, 130}
-      Rgb: {4, 2, 1}
-      Emissive: {strength: warm ? 0.42 : 0, color: {255, 66, 16}}
-      Transition: [Emissive: {duration: 2.6, timing_function: EaseOut}]
-    }
-    Louver grille(w: 520, h: 130, slats: 8, tone: {28, 28, 28})
-  }
-  heater_light {
-    Position: {-0.38, 0.22, -0.82}
-    PointLight: {intensity: warm ? 0.11 : 0, range: 1.3}
-    Rgb: {255, 110, 44}
-    Transition: [PointLight: {duration: 2.6}]
   }
 
-  kick_a : Faceplate { Position: {0.28, 0.27, -0.99}; Box: {0.54, 0.2, 0.02}; Rgb: {58, 96, 92}; TextureMapping: {mode: MappingObject, size: 0.62} }
-  for i in 0..4 {
-    "kick_dzus_{i}" : BareSteel { Position: {i % 2 == 0 ? 0.04 : 0.52, i < 2 ? 0.34 : 0.2, -0.978}; Rotation: {PI / 2, 0, 0}; Cylinder: {radius: 0.009, length: 0.004, segments: 10, smooth: true}; Rgb: {120, 116, 106} }
-  }
+  template Decal {
+    prop at: P3 = {0, 0, 0}
+    prop w: f32 = 0.2
+    prop h: f32 = 0.2
+    prop spin: f32 = 0
+    prop tint: Rgb = {120, 84, 48}
+    prop fade: f32 = 1
+    prop tex: entity = tex_patch
 
-  pipe_a : Copper { Tube3: {a: {-0.86, 0.13, -0.97}, b: {0.58, 0.13, -0.97}, r: 0.014, tone: {184, 104, 62}, rough: 0.42} }
-  pipe_b : Copper { Tube3: {a: {-0.86, 0.09, -0.965}, b: {0.58, 0.09, -0.965}, r: 0.0095, tone: {150, 84, 50}, rough: 0.5} }
-  for i in 0..6 {
-    "pipe_clamp_{i}" : Soot { Position: {-0.8 + i * 0.27, 0.11, -0.965}; Box: {0.018, 0.08, 0.04} }
-  }
-  valve {
-    Position: {0.2, 0.13, -0.93}
-    Rotation: {PI / 2, 0, 0}
-    SpatialIgnore
-    stem : Brass { Position: {0, 0.015, 0}; Cylinder: {radius: 0.01, length: 0.05, segments: 10, smooth: true} }
-    wheel : SignalRed { Position: {0, -0.012, 0}; Torus: {radius: 0.04, tube: 0.0055, segments: 22, rings: 8, smooth: true} }
-    spoke_a : SignalRed { Position: {0, -0.012, 0}; Box: {0.08, 0.005, 0.006} }
-    spoke_b : SignalRed { Position: {0, -0.012, 0}; Box: {0.006, 0.005, 0.08} }
-  }
-
-  WireRun loom_l(a: {-0.92, 0.46, -0.84}, b: {-0.42, 0.02, -0.92}, sag: 0.1)
-  WireRun loom_r(a: {0.62, 0.46, -0.9}, b: {0.86, 0.02, -0.62}, sag: 0.06)
-  WireRun loom_p(a: {0.1, 0.42, -0.72}, b: {0.08, 0.02, -0.4}, sag: 0.03)
-
-  Pedal pedal_a(x: -0.6)
-  Pedal pedal_b(x: -0.16)
-
-  Extinguisher bottle(at: {-1.07, 0.24, -0.65}, spin: 0.72)
-
-  tin {
-    Position: {0.82, 0.075, -0.3}
-    Rotation: {0, 0.5, 0}
-    SpatialIgnore
-    body : Mustard { Position: {0, 0, 0}; RoundedBox: {0.28, 0.13, 0.16, 0.012, segments: 2}; TextureMapping: {mode: MappingObject, size: 0.62} }
-    lid : Mustard { Position: {0, 0.085, 0}; RoundedBox: {0.285, 0.03, 0.165, 0.012, segments: 2}; Rgb: {160, 112, 36}; TextureMapping: {mode: MappingObject, size: 0.62} }
-    latch : BareSteel { Position: {0, 0.065, 0.084}; Box: {0.03, 0.03, 0.004} }
-    grip : BareSteel { Position: {0, 0.112, 0}; Rotation: {PI / 2, 0, 0}; TorusShell: {radius: 0.05, tube: 0.005, ring_start: -1.4, ring_end: 1.4, tube_start: 0, tube_end: 6.283, segments: 12, rings: 8} }
-    Stamp words(text: "lunch. not cargo.", size: 22, font: font_hand) { Position = {0, 0, 0.0815} }
-  }
-}
-
-template MapLamp {
-  const lit = bus && sw[SW_CABIN]
-  const at: P3 = {-1.14, 1.21, -0.5}
-  const aim: P3 = {-1.1, 0.7, -0.66}
-
-  Cable neck(a: {-1.32, 1.03, -0.56}, b: {at.x, at.y, at.z}, sag: -0.07, thick: 0.009, tone: {130, 128, 120}) { Position: {0, 0, 0} }
-  foot : BlackAnod { Position: {-1.32, 1.04, -0.56}; Cylinder: {radius: 0.026, length: 0.012, segments: 14, smooth: true}; SpatialIgnore }
-  head {
     Position: {at.x, at.y, at.z}
-    Rotation: {pitch_of(at, aim), yaw_of(at, aim), 0}
+    Rotation: {0 - PI / 2, spin, 0}
+    Quad: {w, h}
+    Rgb: tint
+    BlendMode: AlphaBlend
+    Opacity: {fade}
+    PbrMaterial: {metallic: 0, roughness: 0.96}
+    PbrTextures: {albedo: tex}
+    NoShadow
     SpatialIgnore
-    shade : Mustard { Rotation: {PI / 2, 0, 0}; Frustum: {radius_bottom: 0.016, radius_top: 0.036, length: 0.06, segments: 16, smooth: true}; Rgb: {150, 110, 40} }
-    bulb { Position: {0, 0, 0.018}; Sphere: {radius: 0.012, segments: 10, smooth: true}; Rgb: {60, 50, 30}; Emissive: {strength: lit ? 4 : 0, color: {255, 196, 120}}; Transition: [Emissive: {duration: 0.4}] }
   }
-  beam_light {
-    Position: {at.x, at.y, at.z}
-    Rotation: {pitch_of(at, aim), yaw_of(at, aim), 0}
-    SpotLight: {intensity: lit ? 1.0 : 0, range: 1.6, inner_angle: 26, outer_angle: 54}
-    Rgb: {255, 206, 140}
-  }
-}
 
-template DustFall {
-  Decal a(at: {-0.56, 1.0272, -1.22}, w: 0.8, h: 0.42, spin: 0.2, fade: 0.5)
-  Decal b(at: {0.72, 1.0272, -1.14}, w: 0.72, h: 0.5, spin: -0.3, fade: 0.55)
-  Decal c(at: {0.1, 1.0272, -1.42}, w: 0.9, h: 0.3, spin: 0.05, fade: 0.8)
-  Decal d(at: {1.38, 1.0272, -0.86}, w: 0.26, h: 0.42, fade: 0.7)
-  Decal e(at: {-1.38, 1.0272, -0.86}, w: 0.26, h: 0.42, fade: 0.7)
-  Decal f(at: {-1.18, 0.006, -0.55}, w: 0.9, h: 0.8, spin: 0.4, tint: {96, 66, 36}, fade: 0.78)
-  Decal g(at: {1.02, 0.006, -0.64}, w: 1.0, h: 0.7, spin: -0.3, tint: {96, 66, 36}, fade: 0.78)
-  Decal h(at: {-0.4, 0.006, -0.72}, w: 0.8, h: 0.34, tint: {96, 66, 36}, fade: 0.66)
-  Decal i(at: {-1.7, 0.73, 0.45}, w: 0.3, h: 0.7, tint: {108, 76, 42}, fade: 0.55)
-  Decal j(at: {1.7, 0.73, 0.2}, w: 0.3, h: 0.8, tint: {108, 76, 42}, fade: 0.55)
-  Decal cup_a(at: {-0.68, 1.0276, -1.18}, w: 0.2, h: 0.2, spin: 0.3, tint: {255, 255, 255}, tex: tex_coffee)
-  Decal cup_b(at: {0.56, 1.0276, -1.34}, w: 0.18, h: 0.18, spin: 2.2, tint: {255, 255, 255}, tex: tex_coffee, fade: 0.75)
-  Decal cup_c(at: {1.0, 1.0276, -1.3}, w: 0.2, h: 0.2, spin: 4, tint: {255, 255, 255}, tex: tex_coffee, fade: 0.6)
-}
+  template HullDecal {
+    prop s: f32 = 0.5
+    prop t: f32 = 0
+    prop lift: f32 = 0.006
+    prop w: f32 = 0.3
+    prop h: f32 = 0.3
+    prop roll: f32 = 0
+    prop tint: Rgb = {200, 210, 210}
+    prop rough: f32 = 0.3
+    prop tex: entity = tex_crack
+    prop solid: bool = false
+    prop glint: f32 = 0
 
-template PaneDamage {
-  HullDecal crack(s: 0.235, t: -0.6, lift: 0.006, w: 0.46, h: 0.46, roll: 0.5, tint: {236, 240, 240}, tex: tex_crack, glint: 0.32)
-  HullDecal tape_a(s: 0.228, t: -0.585, lift: 0.009, w: 0.13, h: 0.026, roll: 0.72, tint: {214, 206, 170}, rough: 0.8, tex: tex_tape)
-  HullDecal tape_b(s: 0.228, t: -0.585, lift: 0.011, w: 0.12, h: 0.026, roll: -0.66, tint: {214, 206, 170}, rough: 0.8, tex: tex_tape)
-  wash {
-    const p = hull_pt(0.26, 0.42)
-    const n = hull_in(0.26, 0.42)
-    const c: P3 = {p.x + n.x * 0.006, p.y + n.y * 0.006, p.z + n.z * 0.006}
+    const p = hull_pt(s, t)
+    const n = hull_in(s, t)
+    const c: P3 = {p.x + n.x * lift, p.y + n.y * lift, p.z + n.z * lift}
     const f: P3 = {c.x + n.x, c.y + n.y, c.z + n.z}
+
     Position: {c.x, c.y, c.z}
-    Rotation: {pitch_of(c, f), yaw_of(c, f), -0.08}
-    Stamp words(text: "wash me", size: 88, ink: {78, 64, 46}, font: font_hand)
+    Rotation: {pitch_of(c, f), yaw_of(c, f), roll}
+    Quad: {w, h}
+    Rgb: tint
+    if !solid {
+      BlendMode: AlphaBlend
+    }
+    PbrMaterial: {metallic: 0, roughness: rough}
+    PbrTextures: {albedo: tex}
+    Emissive: {strength: glint, color: tint}
+    NoShadow
+    SpatialIgnore
   }
-  HullDecal chart(s: 0.935, t: -0.42, lift: 0.024, w: 0.46, h: 0.36, roll: 0.05, tint: {232, 226, 212}, rough: 0.9, tex: tex_chart, solid: true)
-  HullDecal chart_tape(s: 0.975, t: -0.42, lift: 0.028, w: 0.14, h: 0.04, roll: 0.1, tint: {176, 170, 140}, rough: 0.8, tex: tex_tape)
+
+  template AssayPan {
+    prop heap: bool = false
+
+    SpatialIgnore
+    Tube3 a(a: {0, 0, 0}, b: {0.03, -0.1, 0}, r: 0.0007, tone: {176, 138, 72})
+    Tube3 b(a: {0, 0, 0}, b: {-0.03, -0.1, 0}, r: 0.0007, tone: {176, 138, 72})
+    Tube3 c(a: {0, 0, 0}, b: {0, -0.1, 0.03}, r: 0.0007, tone: {176, 138, 72})
+    Tube3 d(a: {0, 0, 0}, b: {0, -0.1, -0.03}, r: 0.0007, tone: {176, 138, 72})
+    dish : Brass { Position: {0, -0.104, 0}; Frustum: {radius_bottom: 0.02, radius_top: 0.036, length: 0.012, segments: 22, smooth: true} }
+    if heap {
+      dust { Position: {0, -0.099, 0}; Scale: {1, 0.42, 1}; HemiSphere: {radius: 0.03, segments: 16, smooth: true}; Rgb: {150, 88, 40}; PbrMaterial: {metallic: 0, roughness: 1} }
+    } else {
+      weight_a : Brass { Position: {-0.008, -0.094, 0.004}; Cylinder: {radius: 0.011, length: 0.012, segments: 12, smooth: true} }
+      weight_b : Brass { Position: {0.012, -0.096, -0.006}; Cylinder: {radius: 0.007, length: 0.009, segments: 12, smooth: true} }
+    }
+  }
+
+  template AssayBalance {
+    prop x: f32 = 0
+    prop z: f32 = 0
+
+    const tip = 0.05 + clamp(attitude_roll * 0.5, -0.22, 0.22) + sin(clock * 1.1) * 0.012 + shake * sin(clock * 17) * 0.1
+
+    Position: {x, 1.025, z}
+    Rotation: {0, 0.28, 0}
+    SpatialIgnore
+    base : Bakelite { Position: {0, 0.008, 0}; RoundedBox: {0.19, 0.016, 0.08, 0.006, segments: 2} }
+    inlay : Brass { Position: {0, 0.0165, 0}; Box: {0.15, 0.001, 0.05} }
+    pillar : Brass { Position: {0, 0.11, 0}; Cylinder: {radius: 0.0055, length: 0.19, segments: 12, smooth: true} }
+    collar : Brass { Position: {0, 0.03, 0}; Frustum: {radius_bottom: 0.018, radius_top: 0.007, length: 0.026, segments: 14, smooth: true} }
+    finial : Brass { Position: {0, 0.215, 0}; Sphere: {radius: 0.0085, segments: 10, smooth: true} }
+    arm {
+      Position: {0, 0.2, 0}
+      Rotation: {0, 0, tip}
+      bar : Brass { Position: {0, 0, 0}; Box: {0.21, 0.0048, 0.006} }
+      needle : BareSteel { Position: {0, -0.024, 0}; Box: {0.0018, 0.048, 0.0018} }
+      left { Position: {-0.104, 0, 0}; Rotation: {0, 0, 0 - tip}; AssayPan pan(heap: true) }
+      right { Position: {0.104, 0, 0}; Rotation: {0, 0, 0 - tip}; AssayPan pan(heap: false) }
+    }
+  }
+
+  DustJarPulse {
+    AnimationClip: {duration: 8.976}
+    glow {
+      AnimationTrack: {component: Emissive, member: "strength", curve: {kind: CurveBezier, keys: [
+        {0, 0.55, 0.28, 0.28}, {2.244, 0.95, 0, 0}, {4.488, 0.55, -0.28, -0.28}, {6.732, 0.15, 0, 0}, {8.976, 0.55, 0.28, 0.28}
+      ]}}
+    }
+  }
+
+  template DustJar {
+    prop x: f32 = 0
+    prop hue: Rgb = {150, 88, 40}
+    prop fill: f32 = 0.7
+    prop label: string = ""
+    prop dest: i32 = -1
+    prop glow: Rgb = {0, 0, 0}
+    prop pulse: f32 = 0
+
+    const here_now = dest == here && bus
+    const lit = bool_f(here_now) * 0.5 + pulse * 0.55
+
+    Position: {x, 0, 0}
+    SpatialIgnore
+    powder {
+      Position: {0, 0.009 + fill * 0.03, 0}
+      Cylinder: {radius: 0.0195, length: fill * 0.06, segments: 16, smooth: true}
+      Rgb: hue
+      PbrMaterial: {metallic: 0, roughness: 1}
+      Emissive: {strength: lit, color: glow}
+      Transition: [Emissive: {duration: 0.8}]
+      if pulse > 0 {
+        Animator: {clip: DustJarPulse}
+      }
+    }
+    shell : GlassWare { Position: {0, 0.041, 0}; Cylinder: {radius: 0.022, length: 0.072, segments: 18, smooth: true} }
+    neck : GlassWare { Position: {0, 0.083, 0}; Cylinder: {radius: 0.015, length: 0.012, segments: 14, smooth: true} }
+    stopper : Brass { Position: {0, 0.095, 0}; Cylinder: {radius: 0.0175, length: 0.014, segments: 14, smooth: true} }
+    tag : Paper { Position: {0, 0.038, 0.0226}; Quad: {0.036, 0.03} }
+    Stamp words(text: label, size: 15, font: font_hand) { Position = {0, 0.038, 0.0234} }
+  }
+
+  template DustRack {
+    prop x: f32 = 0
+    prop z: f32 = 0
+
+    Position: {x, 1.025, z}
+    Rotation: {0, -0.1, 0}
+    SpatialIgnore
+    base : Brass { Position: {0, 0.004, 0}; Box: {0.31, 0.008, 0.066}; Rgb: {74, 56, 34}; PbrMaterial: {metallic: 0.4, roughness: 0.6} }
+    rail_f : BareSteel { Position: {0, 0.03, 0.03}; Box: {0.3, 0.003, 0.003}; Rgb: {112, 108, 100} }
+    rail_b : BareSteel { Position: {0, 0.03, -0.03}; Box: {0.3, 0.003, 0.003}; Rgb: {112, 108, 100} }
+    post_a : BareSteel { Position: {-0.15, 0.018, 0.03}; Box: {0.004, 0.024, 0.004}; Rgb: {112, 108, 100} }
+    post_b : BareSteel { Position: {0.15, 0.018, 0.03}; Box: {0.004, 0.024, 0.004}; Rgb: {112, 108, 100} }
+    DustJar oro(x: -0.116, hue: {168, 96, 40}, fill: 0.86, label: "oro", dest: 0, glow: {255, 150, 60})
+    DustJar naur(x: -0.058, hue: {150, 190, 214}, fill: 0.52, label: "naur", dest: 1, glow: {120, 200, 255})
+    DustJar cinder(x: 0, hue: {26, 20, 20}, fill: 0.7, label: "cinder", dest: 2, glow: {255, 80, 30})
+    DustJar odd(x: 0.058, hue: {54, 28, 88}, fill: 0.34, label: "??", glow: {150, 70, 255}, pulse: 1)
+    DustJar spare(x: 0.116, hue: {176, 168, 148}, fill: 0.04, label: "next")
+    tape_x { Position: {0.058, 0.08, 0.0152}; Rotation: {0, 0, 0.55}; Box: {0.05, 0.007, 0.0008}; Rgb: {150, 40, 26}; PbrMaterial: {metallic: 0, roughness: 0.8} }
+  }
+
+  template ReceiptSpike {
+    prop x: f32 = 0
+    prop z: f32 = 0
+
+    Position: {x, 1.025, z}
+    SpatialIgnore
+    foot : BlackAnod { Position: {0, 0.005, 0}; Cylinder: {radius: 0.042, length: 0.01, segments: 20, smooth: true} }
+    rod : BareSteel { Position: {0, 0.07, 0}; Cylinder: {radius: 0.0016, length: 0.13, segments: 8} }
+    for i in 0..12 {
+      "slip_{i}" : Paper {
+        Position: {sin(i * 2.1) * 0.003, 0.012 + i * 0.0035, cos(i * 2.4) * 0.003}
+        Rotation: {sin(i * 1.3) * 0.05, i * 1.27, cos(i * 1.9) * 0.05}
+        Box: {0.078, 0.0012, 0.102}
+        Rgb: {176 - (i % 3) * 22, 168 - (i % 3) * 22, 136 - (i % 3) * 22}
+      }
+    }
+    top {
+      Position: {0, 0.055, 0}
+      Rotation: {0, -0.22, 0}
+      sheet : Paper { Position: {0, 0, 0}; Box: {0.086, 0.0012, 0.11}; Rgb: {206, 198, 160} }
+      head { Position: {0, 0.001, -0.03}; Rotation: {0 - PI / 2, 0, 0}; Stamp s(text: "TOLL STN ORO", size: 10) }
+      due { Position: {0, 0.001, 0.016}; Rotation: {0 - PI / 2, 0, 0.14}; Stamp s(text: "PAST DUE", size: 17, ink: {120, 8, 4}, font: font_stencil) }
+    }
+  }
+
+  template Steam {
+    prop on: bool = false
+    prop rate: f32 = 10
+    prop seed: i32 = 3
+
+    ParticleEmitter: {
+      max: 64, rate: on ? rate : 0, shape: EmitterSphere, radius: 0.008, direction: {0, 1, 0}, spread: 12,
+      speed: {0.03, 0.09}, lifetime: {1.1, 2.4}, size: {0.012, 0.03}, color: {224, 220, 212}, opacity: {0.08, 0.2}, seed: seed
+    }
+    ParticleForces: {gravity: {0, 0.025, 0}, turbulence: 0.05, drag: 0.4}
+    ParticleAppearance: {shape: ParticleCircle, blend: ParticleAlpha, softness: 0.05, lit: 0.6}
+    ParticleCurves: {
+      size: {keys: [{0, 0.4}, {0.33333334, 1}, {0.6666667, 1.6}, {1, 2.4}]}
+      opacity: {keys: [{0, 0}, {0.33333334, 1}, {0.6666667, 0.6}, {1, 0}]}
+    }
+    SpatialIgnore
+  }
+
+  template CoffeeMachine {
+    prop x: f32 = 0
+    prop z: f32 = 0
+
+    const brewing = sw[SW_SPARE_D] && bus
+
+    Position: {x, 1.025, z}
+    Rotation: {0, -0.72, 0}
+    SpatialIgnore
+    body : Chrome { Position: {0, 0.14, -0.03}; RoundedBox: {0.2, 0.2, 0.13, 0.014, segments: 3}; Rgb: {150, 148, 142}; PbrMaterial: {metallic: 1, roughness: 0.28} }
+    crown : Oxide { Position: {0, 0.255, -0.03}; RoundedBox: {0.21, 0.03, 0.14, 0.01, segments: 2}; Rgb: {120, 34, 22}; PbrMaterial: {metallic: 0.7, roughness: 0.34} }
+    plinth : BlackAnod { Position: {0, 0.015, 0.012}; RoundedBox: {0.22, 0.03, 0.2, 0.008, segments: 2} }
+    back : Chrome { Position: {0, 0.055, -0.06}; Box: {0.2, 0.08, 0.05}; Rgb: {120, 118, 112} }
+    tray : BareSteel { Position: {0, 0.034, 0.05}; Box: {0.17, 0.006, 0.09}; Rgb: {140, 138, 130} }
+    for i in 0..7 {
+      "slot_{i}" : BlackAnod { Position: {(i - 3) * 0.022, 0.0375, 0.05}; Box: {0.008, 0.001, 0.07} }
+    }
+    group : Chrome { Position: {0, 0.108, 0.058}; Cylinder: {radius: 0.03, length: 0.03, segments: 18, smooth: true} }
+    basket : BlackAnod { Position: {0, 0.086, 0.058}; Cylinder: {radius: 0.027, length: 0.018, segments: 18, smooth: true} }
+    handle : Bakelite { Position: {0.0, 0.086, 0.122}; Rotation: {PI / 2, 0, 0}; Capsule: {radius: 0.009, length: 0.08, segments: 10, smooth: true} }
+    cup : PaintedSteel { Position: {0, 0.056, 0.058}; Cylinder: {radius: 0.022, length: 0.034, segments: 16, smooth: true}; Rgb: {166, 160, 146}; PbrMaterial: {metallic: 0, roughness: 0.3} }
+    wand : BareSteel { Tube3: {a: {0.092, 0.17, 0.034}, b: {0.118, 0.07, 0.074}, r: 0.0036, tone: {156, 154, 148}} }
+    lever : Bakelite { Position: {-0.084, 0.2, 0.046}; Rotation: {0.5, 0, 0}; Capsule: {radius: 0.007, length: 0.04, segments: 8, smooth: true} }
+    lamp {
+      Position: {-0.084, 0.13, 0.037}
+      Sphere: {radius: 0.0065, segments: 10, smooth: true}
+      Rgb: {60, 8, 4}
+      Emissive: {strength: brewing ? 6 : 0.02, color: {255, 70, 30}}
+      Transition: [Emissive: {duration: 0.3}]
+    }
+    dial : BlackAnod { Position: {0.044, 0.18, 0.038}; Rotation: {PI / 2, 0, 0}; Cylinder: {radius: 0.024, length: 0.004, segments: 20, smooth: true}; Rgb: {14, 14, 14} }
+    dial_face { Position: {0.044, 0.18, 0.0404}; Circle: {0.02}; Rgb: {168, 160, 136} }
+    dial_needle { Position: {0.044, 0.18, 0.041}; Rotation: {0, 0, brewing ? -0.4 : 2.5}; Transition: [Rotation: {duration: 2.2, timing_function: EaseOut}]; Rect: {0.03, 0.0016}; Rgb: {120, 8, 4} }
+    asset_tag : Paper { Position: {-0.014, 0.142, 0.0375}; Box: {0.15, 0.05, 0.0012}; Rgb: {190, 186, 160} }
+    Stamp tag_a(text: "PROPERTY OF", size: 10) { Position = {-0.014, 0.153, 0.04} }
+    Stamp tag_b(text: "TOLL STN ORO", size: 15, ink: {90, 6, 4}, font: font_stencil) { Position = {-0.014, 0.135, 0.04} }
+    Steam plume(on: brewing, rate: 14, seed: 21) { Position: {0.118, 0.07, 0.074} }
+    Cable cord(a: {-0.1, 0.05, -0.07}, b: {-0.28, 0.0, 0.1}, sag: 0.02, thick: 0.008, tone: {120, 100, 40}) { Position: {0, 0, 0} }
+  }
+
+  template Manifest {
+    prop at: P3 = {0, 0, 0}
+    prop spin: f32 = 0
+
+    Position: {at.x, at.y, at.z}
+    Rotation: {0 - PI / 2 + 0.12, spin, 0}
+    SpatialIgnore
+    board : Brass { Position: {0, 0, 0}; Box: {0.17, 0.25, 0.005}; Rgb: {92, 58, 34}; PbrMaterial: {metallic: 0, roughness: 0.7} }
+    sheet : Paper { Position: {0, -0.01, 0.0035}; Box: {0.146, 0.21, 0.0008} }
+    clip : BareSteel { Position: {0, 0.112, 0.006}; RoundedBox: {0.07, 0.024, 0.006, 0.002, segments: 2}; Rgb: {156, 154, 148} }
+    Stamp head(text: "DM-7 MANIFEST", size: 11) { Position = {0, 0.068, 0.0045} }
+    Stamp list(text: "oro dust  x40\nnaur frost  x12\ncinder ash  x6\n1 coffee mach.\n???  - dont ask", size: 16, font: font_hand, align: Left, width: 136) { Position = {0, -0.02, 0.0045} }
+  }
+
+  template Extinguisher {
+    prop at: P3 = {0, 0, 0}
+    prop spin: f32 = 0
+
+    Position: {at.x, at.y, at.z}
+    Rotation: {0, spin, 0}
+    SpatialIgnore
+    shell : SignalRed { Position: {0, 0, 0}; Cylinder: {radius: 0.05, length: 0.27, segments: 18, smooth: true} }
+    dome : SignalRed { Position: {0, 0.135, 0}; Scale: {1, 0.5, 1}; HemiSphere: {radius: 0.05, segments: 18, smooth: true} }
+    head : Brass { Position: {0, 0.175, 0}; Cylinder: {radius: 0.016, length: 0.03, segments: 10, smooth: true} }
+    trigger : BareSteel { Position: {0.02, 0.2, 0}; Rotation: {0, 0, -0.3}; Box: {0.07, 0.006, 0.014} }
+    hose : Rubber { Position: {-0.03, 0.11, 0.04}; Rotation: {0.2, 0, 0.3}; Cylinder: {radius: 0.006, length: 0.14, segments: 8} }
+    band_a : Soot { Position: {0, 0.07, 0}; Tube: {radius: 0.054, thickness: 0.004, length: 0.018, segments: 18, smooth: true} }
+    band_b : Soot { Position: {0, -0.07, 0}; Tube: {radius: 0.054, thickness: 0.004, length: 0.018, segments: 18, smooth: true} }
+    tag : Paper { Position: {0, -0.01, 0.0505}; Quad: {0.056, 0.06} }
+    Stamp words(text: "empty\nsince\noro", size: 17, font: font_hand) { Position = {0, -0.008, 0.052} }
+  }
+
+  template Pedal {
+    prop x: f32 = 0
+
+    Position: {x, 0.13, -0.72}
+    Rotation: {-0.58, 0, 0}
+    SpatialIgnore
+    plate : BareSteel { Position: {0, 0, 0}; RoundedBox: {0.13, 0.22, 0.012, 0.012, segments: 2}; Rgb: {96, 92, 84}; PbrMaterial: {metallic: 1, roughness: 0.56} }
+    for i in 0..5 {
+      "tread_{i}" : Rubber { Position: {0, -0.08 + i * 0.04, 0.0075}; Box: {0.1, 0.014, 0.004} }
+    }
+    arm : Soot { Position: {0, -0.13, -0.07}; Rotation: {0.9, 0, 0}; Box: {0.024, 0.24, 0.02} }
+  }
+
+  template WireRun {
+    prop a: P3 = {0, 0, 0}
+    prop b: P3 = {0, 0, 1}
+    prop sag: f32 = 0.1
+
+    Cable w_a(a: a, b: b, sag: sag, thick: 0.013, tone: {24, 24, 26}) { Position: {0, 0, 0} }
+    Cable w_b(a: {a.x + 0.016, a.y, a.z}, b: {b.x + 0.018, b.y, b.z}, sag: sag + 0.012, thick: 0.009, tone: {120, 24, 16}) { Position: {0, 0, 0} }
+    Cable w_c(a: {a.x - 0.014, a.y, a.z}, b: {b.x - 0.02, b.y, b.z}, sag: sag + 0.02, thick: 0.009, tone: {150, 118, 28}) { Position: {0, 0, 0} }
+    Cable w_d(a: {a.x + 0.003, a.y + 0.014, a.z}, b: {b.x + 0.004, b.y + 0.016, b.z}, sag: sag - 0.01, thick: 0.007, tone: {24, 62, 110}) { Position: {0, 0, 0} }
+    clamp_a : Canvas { Position: {lerp(a.x, b.x, 0.33), lerp(a.y, b.y, 0.33) - sag * 0.68, lerp(a.z, b.z, 0.33)}; Scale: {1, 1, 1}; Sphere: {radius: 0.03, segments: 10, smooth: true}; Rgb: {30, 30, 30} }
+    clamp_b : Canvas { Position: {lerp(a.x, b.x, 0.66), lerp(a.y, b.y, 0.66) - sag * 0.72, lerp(a.z, b.z, 0.66)}; Scale: {1, 1, 1}; Sphere: {radius: 0.03, segments: 10, smooth: true}; Rgb: {30, 30, 30} }
+  }
+
+  template Underdash {
+    const warm = sw[SW_HEAT] && bus
+
+    heater {
+      Position: {-0.38, 0.27, -0.99}
+      Scale: {0.001, 0.001, 0.001}
+      SpatialIgnore
+      glow {
+        Position: {0, 0, 0.6}
+        Rect: {520, 130}
+        Rgb: {4, 2, 1}
+        Emissive: {strength: warm ? 0.42 : 0, color: {255, 66, 16}}
+        Transition: [Emissive: {duration: 2.6, timing_function: EaseOut}]
+      }
+      Louver grille(w: 520, h: 130, slats: 8, tone: {28, 28, 28})
+    }
+    heater_light {
+      Position: {-0.38, 0.22, -0.82}
+      PointLight: {intensity: warm ? 0.11 : 0, range: 1.3}
+      Rgb: {255, 110, 44}
+      Transition: [PointLight: {duration: 2.6}]
+    }
+
+    kick_a : Faceplate { Position: {0.28, 0.27, -0.99}; Box: {0.54, 0.2, 0.02}; Rgb: {58, 96, 92}; TextureMapping: {mode: MappingObject, size: 0.62} }
+    for i in 0..4 {
+      "kick_dzus_{i}" : BareSteel { Position: {i % 2 == 0 ? 0.04 : 0.52, i < 2 ? 0.34 : 0.2, -0.978}; Rotation: {PI / 2, 0, 0}; Cylinder: {radius: 0.009, length: 0.004, segments: 10, smooth: true}; Rgb: {120, 116, 106} }
+    }
+
+    pipe_a : Copper { Tube3: {a: {-0.86, 0.13, -0.97}, b: {0.58, 0.13, -0.97}, r: 0.014, tone: {184, 104, 62}, rough: 0.42} }
+    pipe_b : Copper { Tube3: {a: {-0.86, 0.09, -0.965}, b: {0.58, 0.09, -0.965}, r: 0.0095, tone: {150, 84, 50}, rough: 0.5} }
+    for i in 0..6 {
+      "pipe_clamp_{i}" : Soot { Position: {-0.8 + i * 0.27, 0.11, -0.965}; Box: {0.018, 0.08, 0.04} }
+    }
+    valve {
+      Position: {0.2, 0.13, -0.93}
+      Rotation: {PI / 2, 0, 0}
+      SpatialIgnore
+      stem : Brass { Position: {0, 0.015, 0}; Cylinder: {radius: 0.01, length: 0.05, segments: 10, smooth: true} }
+      wheel : SignalRed { Position: {0, -0.012, 0}; Torus: {radius: 0.04, tube: 0.0055, segments: 22, rings: 8, smooth: true} }
+      spoke_a : SignalRed { Position: {0, -0.012, 0}; Box: {0.08, 0.005, 0.006} }
+      spoke_b : SignalRed { Position: {0, -0.012, 0}; Box: {0.006, 0.005, 0.08} }
+    }
+
+    WireRun loom_l(a: {-0.92, 0.46, -0.84}, b: {-0.42, 0.02, -0.92}, sag: 0.1)
+    WireRun loom_r(a: {0.62, 0.46, -0.9}, b: {0.86, 0.02, -0.62}, sag: 0.06)
+    WireRun loom_p(a: {0.1, 0.42, -0.72}, b: {0.08, 0.02, -0.4}, sag: 0.03)
+
+    Pedal pedal_a(x: -0.6)
+    Pedal pedal_b(x: -0.16)
+
+    Extinguisher bottle(at: {-1.07, 0.24, -0.65}, spin: 0.72)
+
+    tin {
+      Position: {0.82, 0.075, -0.3}
+      Rotation: {0, 0.5, 0}
+      SpatialIgnore
+      body : Mustard { Position: {0, 0, 0}; RoundedBox: {0.28, 0.13, 0.16, 0.012, segments: 2}; TextureMapping: {mode: MappingObject, size: 0.62} }
+      lid : Mustard { Position: {0, 0.085, 0}; RoundedBox: {0.285, 0.03, 0.165, 0.012, segments: 2}; Rgb: {160, 112, 36}; TextureMapping: {mode: MappingObject, size: 0.62} }
+      latch : BareSteel { Position: {0, 0.065, 0.084}; Box: {0.03, 0.03, 0.004} }
+      grip : BareSteel { Position: {0, 0.112, 0}; Rotation: {PI / 2, 0, 0}; TorusShell: {radius: 0.05, tube: 0.005, ring_start: -1.4, ring_end: 1.4, tube_start: 0, tube_end: 6.283, segments: 12, rings: 8} }
+      Stamp words(text: "lunch. not cargo.", size: 22, font: font_hand) { Position = {0, 0, 0.0815} }
+    }
+  }
+
+  template MapLamp {
+    const lit = bus && sw[SW_CABIN]
+    const at: P3 = {-1.14, 1.21, -0.5}
+    const aim: P3 = {-1.1, 0.7, -0.66}
+
+    Cable neck(a: {-1.32, 1.03, -0.56}, b: {at.x, at.y, at.z}, sag: -0.07, thick: 0.009, tone: {130, 128, 120}) { Position: {0, 0, 0} }
+    foot : BlackAnod { Position: {-1.32, 1.04, -0.56}; Cylinder: {radius: 0.026, length: 0.012, segments: 14, smooth: true}; SpatialIgnore }
+    head {
+      Position: {at.x, at.y, at.z}
+      Rotation: {pitch_of(at, aim), yaw_of(at, aim), 0}
+      SpatialIgnore
+      shade : Mustard { Rotation: {PI / 2, 0, 0}; Frustum: {radius_bottom: 0.016, radius_top: 0.036, length: 0.06, segments: 16, smooth: true}; Rgb: {150, 110, 40} }
+      bulb { Position: {0, 0, 0.018}; Sphere: {radius: 0.012, segments: 10, smooth: true}; Rgb: {60, 50, 30}; Emissive: {strength: lit ? 4 : 0, color: {255, 196, 120}}; Transition: [Emissive: {duration: 0.4}] }
+    }
+    beam_light {
+      Position: {at.x, at.y, at.z}
+      Rotation: {pitch_of(at, aim), yaw_of(at, aim), 0}
+      SpotLight: {intensity: lit ? 1.0 : 0, range: 1.6, inner_angle: 26, outer_angle: 54}
+      Rgb: {255, 206, 140}
+    }
+  }
+
+  template DustFall {
+    Decal a(at: {-0.56, 1.0272, -1.22}, w: 0.8, h: 0.42, spin: 0.2, fade: 0.5)
+    Decal b(at: {0.72, 1.0272, -1.14}, w: 0.72, h: 0.5, spin: -0.3, fade: 0.55)
+    Decal c(at: {0.1, 1.0272, -1.42}, w: 0.9, h: 0.3, spin: 0.05, fade: 0.8)
+    Decal d(at: {1.38, 1.0272, -0.86}, w: 0.26, h: 0.42, fade: 0.7)
+    Decal e(at: {-1.38, 1.0272, -0.86}, w: 0.26, h: 0.42, fade: 0.7)
+    Decal f(at: {-1.18, 0.006, -0.55}, w: 0.9, h: 0.8, spin: 0.4, tint: {96, 66, 36}, fade: 0.78)
+    Decal g(at: {1.02, 0.006, -0.64}, w: 1.0, h: 0.7, spin: -0.3, tint: {96, 66, 36}, fade: 0.78)
+    Decal h(at: {-0.4, 0.006, -0.72}, w: 0.8, h: 0.34, tint: {96, 66, 36}, fade: 0.66)
+    Decal i(at: {-1.7, 0.73, 0.45}, w: 0.3, h: 0.7, tint: {108, 76, 42}, fade: 0.55)
+    Decal j(at: {1.7, 0.73, 0.2}, w: 0.3, h: 0.8, tint: {108, 76, 42}, fade: 0.55)
+    Decal cup_a(at: {-0.68, 1.0276, -1.18}, w: 0.2, h: 0.2, spin: 0.3, tint: {255, 255, 255}, tex: tex_coffee)
+    Decal cup_b(at: {0.56, 1.0276, -1.34}, w: 0.18, h: 0.18, spin: 2.2, tint: {255, 255, 255}, tex: tex_coffee, fade: 0.75)
+    Decal cup_c(at: {1.0, 1.0276, -1.3}, w: 0.2, h: 0.2, spin: 4, tint: {255, 255, 255}, tex: tex_coffee, fade: 0.6)
+  }
+
+  template PaneDamage {
+    HullDecal crack(s: 0.235, t: -0.6, lift: 0.006, w: 0.46, h: 0.46, roll: 0.5, tint: {236, 240, 240}, tex: tex_crack, glint: 0.32)
+    HullDecal tape_a(s: 0.228, t: -0.585, lift: 0.009, w: 0.13, h: 0.026, roll: 0.72, tint: {214, 206, 170}, rough: 0.8, tex: tex_tape)
+    HullDecal tape_b(s: 0.228, t: -0.585, lift: 0.011, w: 0.12, h: 0.026, roll: -0.66, tint: {214, 206, 170}, rough: 0.8, tex: tex_tape)
+    wash {
+      const p = hull_pt(0.26, 0.42)
+      const n = hull_in(0.26, 0.42)
+      const c: P3 = {p.x + n.x * 0.006, p.y + n.y * 0.006, p.z + n.z * 0.006}
+      const f: P3 = {c.x + n.x, c.y + n.y, c.z + n.z}
+      Position: {c.x, c.y, c.z}
+      Rotation: {pitch_of(c, f), yaw_of(c, f), -0.08}
+      Stamp words(text: "wash me", size: 88, ink: {78, 64, 46}, font: font_hand)
+    }
+    HullDecal chart(s: 0.935, t: -0.42, lift: 0.024, w: 0.46, h: 0.36, roll: 0.05, tint: {232, 226, 212}, rough: 0.9, tex: tex_chart, solid: true)
+    HullDecal chart_tape(s: 0.975, t: -0.42, lift: 0.028, w: 0.14, h: 0.04, roll: 0.1, tint: {176, 170, 140}, rough: 0.8, tex: tex_tape)
+  }
+
+  template HeroProps {
+    AssayBalance scale(x: -1.09, z: -1.2)
+    DustRack jars(x: 0.0, z: -1.2)
+    ReceiptSpike spike(x: 0.64, z: -1.3)
+    CoffeeMachine machine(x: 1.14, z: -1.06)
+    Manifest sheet(at: {-1.72, 0.745, 0.24}, spin: -0.12)
+    Steam mug_steam(on: sw[SW_SPARE_D] && bus, rate: 9, seed: 31) { Position: {-0.82, 1.11, -1.12} }
+  }
 }
 
-template HeroProps {
-  AssayBalance scale(x: -1.09, z: -1.2)
-  DustRack jars(x: 0.0, z: -1.2)
-  ReceiptSpike spike(x: 0.64, z: -1.3)
-  CoffeeMachine machine(x: 1.14, z: -1.06)
-  Manifest sheet(at: {-1.72, 0.745, 0.24}, spin: -0.12)
-  Steam mug_steam(on: sw[SW_SPARE_D] && bus, rate: 9, seed: 31) { Position: {-0.82, 1.11, -1.12} }
+dust_merchant {
+  Underdash underdash()
+  MapLamp map_lamp()
+  DustFall dust_fall()
+  PaneDamage pane_damage()
+  HeroProps hero()
 }
-
-Underdash underdash()
-MapLamp map_lamp()
-DustFall dust_fall()
-PaneDamage pane_damage()
-HeroProps hero()

@@ -2,39 +2,42 @@ include state
 
 using flecs.script
 using flecs.script.math
+using state
 
-proc st_reset() {
-  st_tool = 0
-  st_speed = 1
-  st_lost = false
-  st_rank = 0
-  st_credits = 2500
-  st_income = 0
-  st_residents = 8
-  st_visitors = 0
-  st_food = 40
-  st_goods = 0
-  st_air = 80
-  st_reputation = 50
-  st_growth = 0
-  st_decline = 0
-  st_visitor_spend = 0
-  st_grid = st_start_grid
-  st_pad_busy = {}
-  st_ships = {}
-  st_next_pax = st_beat + 6
-  st_next_cargo = st_beat + 10
-  st_pax_docked = 0
-  st_pax_holding = 0
-  st_cargo_docked = 0
-  st_cargo_holding = 0
-  st_ships_served = 0
-  st_ships_lost = 0
-  st_stock_food = 0
-  st_stock_goods = 0
-  st_demand_goods = 0
-  st_notify("A new station. Good luck, Director.", 6)
-  st_retally()
+state {
+  proc st_reset() {
+    st_tool = 0
+    st_speed = 1
+    st_lost = false
+    st_rank = 0
+    st_credits = 2500
+    st_income = 0
+    st_residents = 8
+    st_visitors = 0
+    st_food = 40
+    st_goods = 0
+    st_air = 80
+    st_reputation = 50
+    st_growth = 0
+    st_decline = 0
+    st_visitor_spend = 0
+    st_grid = st_start_grid
+    st_pad_busy = {}
+    st_ships = {}
+    st_next_pax = st_beat + 6
+    st_next_cargo = st_beat + 10
+    st_pax_docked = 0
+    st_pax_holding = 0
+    st_cargo_docked = 0
+    st_cargo_holding = 0
+    st_ships_served = 0
+    st_ships_lost = 0
+    st_stock_food = 0
+    st_stock_goods = 0
+    st_demand_goods = 0
+    st_notify("A new station. Good luck, Director.", 6)
+    st_retally()
+  }
 }
 
 async {

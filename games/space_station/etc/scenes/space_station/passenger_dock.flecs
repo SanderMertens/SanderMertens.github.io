@@ -4,42 +4,44 @@ using box.transform
 using box.geometry
 using box.material
 
-template StationPassengerDockBody {
-  prop busy: bool = false
+assets {
+  template StationPassengerDockBody {
+    prop busy: bool = false
 
-  pad : StationDark { Position: {0, 0.2, 0}; Cylinder: {radius: 2.75, length: 0.4, segments: 8} }
-  top : StationPanel { Position: {0, 0.41, 0}; Cylinder: {radius: 2.3, length: 0.02, segments: 8} }
-  mark : StationWhite { Position: {0, 0.43, 0}; Torus: {radius: 1.5, tube: 0.06, segments: 40, rings: 4} }
-  mark_b : StationCyanLight { Position: {0, 0.43, 0}; Torus: {radius: 1.72, tube: 0.018, segments: 40, rings: 4} }
-  { (IsA, StationWhite); Position: {-0.45, 0.43, 0}; Box: {0.16, 0.02, 1} }
-  { (IsA, StationWhite); Position: {0.45, 0.43, 0}; Box: {0.16, 0.02, 1} }
-  { (IsA, StationWhite); Position: {0, 0.43, 0}; Box: {0.9, 0.02, 0.16} }
-  for i in 0..8 {
-    const a = i * PI / 4
-    { (IsA, StationChrome); Position: {cos(a) * 2.45, 0.42, sin(a) * 2.45}; Cylinder: {radius: 0.12, length: 0.04, segments: 10} }
-    lamp {
-      Position: {cos(a) * 2.45, 0.46, sin(a) * 2.45}
-      Sphere: {radius: 0.08, segments: 10}
-      if busy {
-        Rgb: {255, 80, 60}
-        Emissive: {strength: 5, color: {255, 60, 40}}
-      } else {
-        Rgb: {96, 220, 240}
-        Emissive: {strength: 5, color: {80, 214, 255}}
+    pad : StationDark { Position: {0, 0.2, 0}; Cylinder: {radius: 2.75, length: 0.4, segments: 8} }
+    top : StationPanel { Position: {0, 0.41, 0}; Cylinder: {radius: 2.3, length: 0.02, segments: 8} }
+    mark : StationWhite { Position: {0, 0.43, 0}; Torus: {radius: 1.5, tube: 0.06, segments: 40, rings: 4} }
+    mark_b : StationCyanLight { Position: {0, 0.43, 0}; Torus: {radius: 1.72, tube: 0.018, segments: 40, rings: 4} }
+    { (IsA, StationWhite); Position: {-0.45, 0.43, 0}; Box: {0.16, 0.02, 1} }
+    { (IsA, StationWhite); Position: {0.45, 0.43, 0}; Box: {0.16, 0.02, 1} }
+    { (IsA, StationWhite); Position: {0, 0.43, 0}; Box: {0.9, 0.02, 0.16} }
+    for i in 0..8 {
+      const a = i * PI / 4
+      { (IsA, StationChrome); Position: {cos(a) * 2.45, 0.42, sin(a) * 2.45}; Cylinder: {radius: 0.12, length: 0.04, segments: 10} }
+      lamp {
+        Position: {cos(a) * 2.45, 0.46, sin(a) * 2.45}
+        Sphere: {radius: 0.08, segments: 10}
+        if busy {
+          Rgb: {255, 80, 60}
+          Emissive: {strength: 5, color: {255, 60, 40}}
+        } else {
+          Rgb: {96, 220, 240}
+          Emissive: {strength: 5, color: {80, 214, 255}}
+        }
       }
     }
+    for i in 0..16 {
+      const a = i * PI / 8 + PI / 16
+      { (IsA, StationCyanLight); Position: {cos(a) * 1.95, 0.425, sin(a) * 1.95}; Rotation: {0, -a, 0}; Box: {0.2, 0.012, 0.04} }
+    }
+    gate : StationHull { Position: {0, 0.75, 2.45}; RoundedBox: {1.6, 1.1, 0.5, 0.1, segments: 2} }
+    gate_win : StationWindow { Position: {0, 0.8, 2.72}; Box: {1.1, 0.4, 0.02} }
+    gate_roof : StationDark { Position: {0, 1.33, 2.45}; Box: {1.7, 0.08, 0.6} }
+    bridge : StationPanel { Position: {0, 0.65, 1.95}; Box: {0.6, 0.12, 0.8} }
+    rail_a : StationChrome { Position: {0.3, 0.86, 1.95}; Box: {0.025, 0.025, 0.8} }
+    rail_b : StationChrome { Position: {-0.3, 0.86, 1.95}; Box: {0.025, 0.025, 0.8} }
+    sign : StationBlue { Position: {-2.1, 1, 2.1}; Box: {0.1, 1.2, 0.6} }
+    sign_face : StationCyanLight { Position: {-2.04, 1.25, 2.1}; Box: {0.02, 0.3, 0.42} }
+    StationAntenna antenna(tall: 1) { Position: {1.9, 0.4, 2.1} }
   }
-  for i in 0..16 {
-    const a = i * PI / 8 + PI / 16
-    { (IsA, StationCyanLight); Position: {cos(a) * 1.95, 0.425, sin(a) * 1.95}; Rotation: {0, -a, 0}; Box: {0.2, 0.012, 0.04} }
-  }
-  gate : StationHull { Position: {0, 0.75, 2.45}; RoundedBox: {1.6, 1.1, 0.5, 0.1, segments: 2} }
-  gate_win : StationWindow { Position: {0, 0.8, 2.72}; Box: {1.1, 0.4, 0.02} }
-  gate_roof : StationDark { Position: {0, 1.33, 2.45}; Box: {1.7, 0.08, 0.6} }
-  bridge : StationPanel { Position: {0, 0.65, 1.95}; Box: {0.6, 0.12, 0.8} }
-  rail_a : StationChrome { Position: {0.3, 0.86, 1.95}; Box: {0.025, 0.025, 0.8} }
-  rail_b : StationChrome { Position: {-0.3, 0.86, 1.95}; Box: {0.025, 0.025, 0.8} }
-  sign : StationBlue { Position: {-2.1, 1, 2.1}; Box: {0.1, 1.2, 0.6} }
-  sign_face : StationCyanLight { Position: {-2.04, 1.25, 2.1}; Box: {0.02, 0.3, 0.42} }
-  StationAntenna antenna(tall: 1) { Position: {1.9, 0.4, 2.1} }
 }

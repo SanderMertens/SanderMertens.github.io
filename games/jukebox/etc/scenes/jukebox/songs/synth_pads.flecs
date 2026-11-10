@@ -2,357 +2,359 @@ using box.audio
 using box.material
 
 box { audio { Song { Rgb: {170, 110, 255} } } }
+assets {
 
-pd_space {
-  AudioBus: {output: master, kind: AudioChannelReturn, volume: 0.8 * reverb_level / 100, effects: [pd_space]}
-  Reverb: {decay: 4.5, damping: 0.5, predelay: 0.04, size: 0.95, shimmer: 0.08}
-}
-
-pd_tone {
-  Equalizer: {bands: [
-    {kind: AudioEqLowCut, frequency: 32},
-    {kind: AudioEqPeak, frequency: 300, gain: -2, q: 0.8},
-    {kind: AudioEqHighShelf, frequency: 7000, gain: 2}
-  ]}
-}
-pd_glue { Compressor: {threshold: -16, ratio: 2, attack: 0.04, release: 0.35, knee: 10} }
-pd_pads {
-  AudioBus: {output: master, volume: 1, effects: [pd_tone, pd_glue]}
-  AudioMeter: {}
-}
-
-prefab pd_harmonics { Wavetable: {kind: WavetableHarmonics} }
-prefab pd_pulses { Wavetable: {kind: WavetablePulse} }
-
-prefab pd_warm_sound {
-  SynthSound: {seed: 101, drift: 6, free_phase: true}
-  SynthEnvelope: {attack: 0.9, decay: 1.5, sustain: 0.85, release: 2.2, attack_curve: 1}
-  SynthFilter: {kind: SynthLowPass, cutoff: 750, resonance: 0.22, slope: SynthSlope24, model: SynthFilterLadder, keytrack: 0.4, drive: 0.2}
-  SynthFilterEnvelope: {attack: 1.4, decay: 2.5, sustain: 0.45, release: 2, amount: 1.4}
-  SynthLfo: {rate: 0.18, random_phase: true, cutoff: 0.25}
-  saw {
-    SynthOscillator: {wave: SynthSaw, frequency: 440, level: 0.3}
-    SynthUnison: {voices: 5, detune: 16, width: 0.85}
+  pd_space {
+    AudioBus: {output: master, kind: AudioChannelReturn, volume: 0.8 * state.reverb_level / 100, effects: [pd_space]}
+    Reverb: {decay: 4.5, damping: 0.5, predelay: 0.04, size: 0.95, shimmer: 0.08}
   }
-  low {
-    SynthOscillator: {wave: SynthSaw, frequency: 220, level: 0.12}
-    SynthUnison: {voices: 3, detune: 9, width: 0.5}
-  }
-}
 
-prefab pd_pulse_sound {
-  SynthSound: {seed: 102, drift: 4, free_phase: true}
-  SynthEnvelope: {attack: 0.35, decay: 1, sustain: 0.8, release: 1.6}
-  SynthFilter: {kind: SynthLowPass, cutoff: 1900, resonance: 0.15, keytrack: 0.5}
-  SynthLfo: {wave: SynthLfoTriangle, rate: 0.35, random_phase: true, pulse_width: 0.38}
-  wide {
-    SynthOscillator: {wave: SynthSquare, frequency: 440, level: 0.22, pulse_width: 0.5}
-    SynthUnison: {voices: 3, detune: 7, width: 0.7}
+  pd_tone {
+    Equalizer: {bands: [
+      {kind: AudioEqLowCut, frequency: 32},
+      {kind: AudioEqPeak, frequency: 300, gain: -2, q: 0.8},
+      {kind: AudioEqHighShelf, frequency: 7000, gain: 2}
+    ]}
   }
-  thin {
-    SynthOscillator: {wave: SynthSquare, frequency: 880, level: 0.06, pulse_width: 0.3}
-    SynthEnvelope: {attack: 0.8, decay: 1, sustain: 0.7, release: 1.6}
+  pd_glue { Compressor: {threshold: -16, ratio: 2, attack: 0.04, release: 0.35, knee: 10} }
+  pd_pads {
+    AudioBus: {output: master, volume: 1, effects: [pd_tone, pd_glue]}
+    AudioMeter: {}
   }
-}
 
-prefab pd_glass_sound {
-  SynthSound: {seed: 103, drift: 3, level_variance: 0.03}
-  SynthEnvelope: {attack: 0.25, decay: 2.5, sustain: 0.6, release: 3}
-  SynthFilter: {kind: SynthLowPass, cutoff: 9000, velocity: 1}
-  SynthLfo: {rate: 3.2, random_phase: true, amplitude: 0.12}
-  bell {
-    SynthOscillator: {wave: SynthSine, frequency: 440, level: 0.3}
-    SynthUnison: {voices: 2, detune: 5, width: 0.8}
-    ping {
-      SynthOscillator: {frequency: 1540, modulation: SynthPhase, index: 2.2, velocity: 0.6}
-      SynthEnvelope: {attack: 0.01, decay: 1.6, sustain: 0.15, release: 2, curve: 3}
+  prefab pd_harmonics { Wavetable: {kind: WavetableHarmonics} }
+  prefab pd_pulses { Wavetable: {kind: WavetablePulse} }
+
+  prefab pd_warm_sound {
+    SynthSound: {seed: 101, drift: 6, free_phase: true}
+    SynthEnvelope: {attack: 0.9, decay: 1.5, sustain: 0.85, release: 2.2, attack_curve: 1}
+    SynthFilter: {kind: SynthLowPass, cutoff: 750, resonance: 0.22, slope: SynthSlope24, model: SynthFilterLadder, keytrack: 0.4, drive: 0.2}
+    SynthFilterEnvelope: {attack: 1.4, decay: 2.5, sustain: 0.45, release: 2, amount: 1.4}
+    SynthLfo: {rate: 0.18, random_phase: true, cutoff: 0.25}
+    saw {
+      SynthOscillator: {wave: SynthSaw, frequency: 440, level: 0.3}
+      SynthUnison: {voices: 5, detune: 16, width: 0.85}
+    }
+    low {
+      SynthOscillator: {wave: SynthSaw, frequency: 220, level: 0.12}
+      SynthUnison: {voices: 3, detune: 9, width: 0.5}
     }
   }
-  shine {
-    SynthOscillator: {wave: SynthSine, frequency: 880, level: 0.07}
-    SynthEnvelope: {attack: 1.2, decay: 2, sustain: 0.8, release: 3}
-    SynthUnison: {voices: 2, detune: 9, width: 1}
+
+  prefab pd_pulse_sound {
+    SynthSound: {seed: 102, drift: 4, free_phase: true}
+    SynthEnvelope: {attack: 0.35, decay: 1, sustain: 0.8, release: 1.6}
+    SynthFilter: {kind: SynthLowPass, cutoff: 1900, resonance: 0.15, keytrack: 0.5}
+    SynthLfo: {wave: SynthLfoTriangle, rate: 0.35, random_phase: true, pulse_width: 0.38}
+    wide {
+      SynthOscillator: {wave: SynthSquare, frequency: 440, level: 0.22, pulse_width: 0.5}
+      SynthUnison: {voices: 3, detune: 7, width: 0.7}
+    }
+    thin {
+      SynthOscillator: {wave: SynthSquare, frequency: 880, level: 0.06, pulse_width: 0.3}
+      SynthEnvelope: {attack: 0.8, decay: 1, sustain: 0.7, release: 1.6}
+    }
   }
-}
 
-prefab pd_morph_sound {
-  SynthSound: {seed: 104, drift: 5, free_phase: true}
-  SynthEnvelope: {attack: 1.6, decay: 2, sustain: 0.85, release: 2.8, attack_curve: 1}
-  SynthFilter: {kind: SynthLowPass, cutoff: 5000, keytrack: 0.3}
-  SynthLfo: {wave: SynthLfoTriangle, sync: 8, position: 9}
-  sweep {
-    SynthOscillator: {wave: SynthWavetable, frequency: 440, level: 0.22}
-    SynthTable: {table: pd_harmonics, position: 2, envelope: 8}
-    SynthUnison: {voices: 4, detune: 12, width: 1}
+  prefab pd_glass_sound {
+    SynthSound: {seed: 103, drift: 3, level_variance: 0.03}
+    SynthEnvelope: {attack: 0.25, decay: 2.5, sustain: 0.6, release: 3}
+    SynthFilter: {kind: SynthLowPass, cutoff: 9000, velocity: 1}
+    SynthLfo: {rate: 3.2, random_phase: true, amplitude: 0.12}
+    bell {
+      SynthOscillator: {wave: SynthSine, frequency: 440, level: 0.3}
+      SynthUnison: {voices: 2, detune: 5, width: 0.8}
+      ping {
+        SynthOscillator: {frequency: 1540, modulation: SynthPhase, index: 2.2, velocity: 0.6}
+        SynthEnvelope: {attack: 0.01, decay: 1.6, sustain: 0.15, release: 2, curve: 3}
+      }
+    }
+    shine {
+      SynthOscillator: {wave: SynthSine, frequency: 880, level: 0.07}
+      SynthEnvelope: {attack: 1.2, decay: 2, sustain: 0.8, release: 3}
+      SynthUnison: {voices: 2, detune: 9, width: 1}
+    }
   }
-  grain {
-    SynthOscillator: {wave: SynthWavetable, frequency: 880, level: 0.07}
-    SynthTable: {table: pd_pulses, position: 3, envelope: 6}
-    SynthUnison: {voices: 2, detune: 8, width: 0.6}
+
+  prefab pd_morph_sound {
+    SynthSound: {seed: 104, drift: 5, free_phase: true}
+    SynthEnvelope: {attack: 1.6, decay: 2, sustain: 0.85, release: 2.8, attack_curve: 1}
+    SynthFilter: {kind: SynthLowPass, cutoff: 5000, keytrack: 0.3}
+    SynthLfo: {wave: SynthLfoTriangle, sync: 8, position: 9}
+    sweep {
+      SynthOscillator: {wave: SynthWavetable, frequency: 440, level: 0.22}
+      SynthTable: {table: pd_harmonics, position: 2, envelope: 8}
+      SynthUnison: {voices: 4, detune: 12, width: 1}
+    }
+    grain {
+      SynthOscillator: {wave: SynthWavetable, frequency: 880, level: 0.07}
+      SynthTable: {table: pd_pulses, position: 3, envelope: 6}
+      SynthUnison: {voices: 2, detune: 8, width: 0.6}
+    }
   }
-}
 
-prefab pd_choir_sound {
-  SynthSound: {seed: 105, drift: 7, level_variance: 0.04, free_phase: true}
-  SynthEnvelope: {attack: 0.8, decay: 1.2, sustain: 0.9, release: 1.8, attack_curve: 1}
-  SynthFilter: {kind: SynthFormant, vowel: 3, resonance: 0.35}
-  SynthLfo: {rate: 0.11, random_phase: true, vowel: 1.3}
-  vibrato { SynthLfo: {rate: 4.8, delay: 0.5, fade: 1.2, random_phase: true, pitch: 7} }
-  voices {
-    SynthOscillator: {wave: SynthSaw, frequency: 440, level: 0.38}
-    SynthUnison: {voices: 4, detune: 11, width: 0.75}
+  prefab pd_choir_sound {
+    SynthSound: {seed: 105, drift: 7, level_variance: 0.04, free_phase: true}
+    SynthEnvelope: {attack: 0.8, decay: 1.2, sustain: 0.9, release: 1.8, attack_curve: 1}
+    SynthFilter: {kind: SynthFormant, vowel: 3, resonance: 0.35}
+    SynthLfo: {rate: 0.11, random_phase: true, vowel: 1.3}
+    vibrato { SynthLfo: {rate: 4.8, delay: 0.5, fade: 1.2, random_phase: true, pitch: 7} }
+    voices {
+      SynthOscillator: {wave: SynthSaw, frequency: 440, level: 0.38}
+      SynthUnison: {voices: 4, detune: 11, width: 0.75}
+    }
+    breath { SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, level: 0.03} }
   }
-  breath { SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, level: 0.03} }
-}
 
-prefab pd_air_sound {
-  SynthSound: {seed: 106, drift: 4}
-  SynthEnvelope: {attack: 1.4, decay: 1.5, sustain: 0.85, release: 2.6, attack_curve: 1}
-  SynthFilter: {kind: SynthComb, feedback: 0.93, cutoff: 7000, keytrack: 0.3}
-  SynthLfo: {rate: 0.21, random_phase: true, amplitude: 0.25}
-  breath { SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, frequency: 440, level: 0.9} }
-  hum { SynthOscillator: {wave: SynthSine, frequency: 440, level: 0.05} }
-}
+  prefab pd_air_sound {
+    SynthSound: {seed: 106, drift: 4}
+    SynthEnvelope: {attack: 1.4, decay: 1.5, sustain: 0.85, release: 2.6, attack_curve: 1}
+    SynthFilter: {kind: SynthComb, feedback: 0.93, cutoff: 7000, keytrack: 0.3}
+    SynthLfo: {rate: 0.21, random_phase: true, amplitude: 0.25}
+    breath { SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, frequency: 440, level: 0.9} }
+    hum { SynthOscillator: {wave: SynthSine, frequency: 440, level: 0.05} }
+  }
 
-pd_warm { Instrument: {sound: pd_warm_sound, velocity_curve: 1.3} }
-pd_pulse { Instrument: {sound: pd_pulse_sound, velocity_curve: 1.3} }
-pd_glass { Instrument: {sound: pd_glass_sound, spread: 0.4, spread_mode: InstrumentSpreadAlternate} }
-pd_morph { Instrument: {sound: pd_morph_sound, spread: 0.3, spread_mode: InstrumentSpreadAlternate} }
-pd_choir { Instrument: {sound: pd_choir_sound, spread: 0.5, spread_mode: InstrumentSpreadAlternate} }
-pd_air { Instrument: {sound: pd_air_sound, spread: 0.6, spread_mode: InstrumentSpreadAlternate} }
+  pd_warm { Instrument: {sound: pd_warm_sound, velocity_curve: 1.3} }
+  pd_pulse { Instrument: {sound: pd_pulse_sound, velocity_curve: 1.3} }
+  pd_glass { Instrument: {sound: pd_glass_sound, spread: 0.4, spread_mode: InstrumentSpreadAlternate} }
+  pd_morph { Instrument: {sound: pd_morph_sound, spread: 0.3, spread_mode: InstrumentSpreadAlternate} }
+  pd_choir { Instrument: {sound: pd_choir_sound, spread: 0.5, spread_mode: InstrumentSpreadAlternate} }
+  pd_air { Instrument: {sound: pd_air_sound, spread: 0.6, spread_mode: InstrumentSpreadAlternate} }
 
-prefab pd_chords {
-  NoteClip: {length: 16, notes: [
-    {start: 0, duration: 3.8, pitch: 50, velocity: 0.62},
-    {start: 0, duration: 3.8, pitch: 57, velocity: 0.6},
-    {start: 0, duration: 3.8, pitch: 61, velocity: 0.6},
-    {start: 0, duration: 3.8, pitch: 64, velocity: 0.6},
-    {start: 4, duration: 3.8, pitch: 47, velocity: 0.62},
-    {start: 4, duration: 3.8, pitch: 54, velocity: 0.6},
-    {start: 4, duration: 3.8, pitch: 57, velocity: 0.6},
-    {start: 4, duration: 3.8, pitch: 61, velocity: 0.6},
-    {start: 8, duration: 3.8, pitch: 43, velocity: 0.62},
-    {start: 8, duration: 3.8, pitch: 54, velocity: 0.6},
-    {start: 8, duration: 3.8, pitch: 57, velocity: 0.6},
-    {start: 8, duration: 3.8, pitch: 59, velocity: 0.6},
-    {start: 12, duration: 3.8, pitch: 45, velocity: 0.62},
-    {start: 12, duration: 3.8, pitch: 52, velocity: 0.6},
-    {start: 12, duration: 3.8, pitch: 59, velocity: 0.6},
-    {start: 12, duration: 3.8, pitch: 64, velocity: 0.6}
-  ]}
-}
+  prefab pd_chords {
+    NoteClip: {length: 16, notes: [
+      {start: 0, duration: 3.8, pitch: 50, velocity: 0.62},
+      {start: 0, duration: 3.8, pitch: 57, velocity: 0.6},
+      {start: 0, duration: 3.8, pitch: 61, velocity: 0.6},
+      {start: 0, duration: 3.8, pitch: 64, velocity: 0.6},
+      {start: 4, duration: 3.8, pitch: 47, velocity: 0.62},
+      {start: 4, duration: 3.8, pitch: 54, velocity: 0.6},
+      {start: 4, duration: 3.8, pitch: 57, velocity: 0.6},
+      {start: 4, duration: 3.8, pitch: 61, velocity: 0.6},
+      {start: 8, duration: 3.8, pitch: 43, velocity: 0.62},
+      {start: 8, duration: 3.8, pitch: 54, velocity: 0.6},
+      {start: 8, duration: 3.8, pitch: 57, velocity: 0.6},
+      {start: 8, duration: 3.8, pitch: 59, velocity: 0.6},
+      {start: 12, duration: 3.8, pitch: 45, velocity: 0.62},
+      {start: 12, duration: 3.8, pitch: 52, velocity: 0.6},
+      {start: 12, duration: 3.8, pitch: 59, velocity: 0.6},
+      {start: 12, duration: 3.8, pitch: 64, velocity: 0.6}
+    ]}
+  }
 
-prefab pd_high_chords {
-  NoteClip: {length: 16, notes: [
-    {start: 0, duration: 3.8, pitch: 62, velocity: 0.6},
-    {start: 0, duration: 3.8, pitch: 69, velocity: 0.58},
-    {start: 0, duration: 3.8, pitch: 73, velocity: 0.58},
-    {start: 0, duration: 3.8, pitch: 76, velocity: 0.58},
-    {start: 4, duration: 3.8, pitch: 59, velocity: 0.6},
-    {start: 4, duration: 3.8, pitch: 66, velocity: 0.58},
-    {start: 4, duration: 3.8, pitch: 69, velocity: 0.58},
-    {start: 4, duration: 3.8, pitch: 73, velocity: 0.58},
-    {start: 8, duration: 3.8, pitch: 55, velocity: 0.6},
-    {start: 8, duration: 3.8, pitch: 66, velocity: 0.58},
-    {start: 8, duration: 3.8, pitch: 69, velocity: 0.58},
-    {start: 8, duration: 3.8, pitch: 71, velocity: 0.58},
-    {start: 12, duration: 3.8, pitch: 57, velocity: 0.6},
-    {start: 12, duration: 3.8, pitch: 64, velocity: 0.58},
-    {start: 12, duration: 3.8, pitch: 71, velocity: 0.58},
-    {start: 12, duration: 3.8, pitch: 76, velocity: 0.58}
-  ]}
-}
+  prefab pd_high_chords {
+    NoteClip: {length: 16, notes: [
+      {start: 0, duration: 3.8, pitch: 62, velocity: 0.6},
+      {start: 0, duration: 3.8, pitch: 69, velocity: 0.58},
+      {start: 0, duration: 3.8, pitch: 73, velocity: 0.58},
+      {start: 0, duration: 3.8, pitch: 76, velocity: 0.58},
+      {start: 4, duration: 3.8, pitch: 59, velocity: 0.6},
+      {start: 4, duration: 3.8, pitch: 66, velocity: 0.58},
+      {start: 4, duration: 3.8, pitch: 69, velocity: 0.58},
+      {start: 4, duration: 3.8, pitch: 73, velocity: 0.58},
+      {start: 8, duration: 3.8, pitch: 55, velocity: 0.6},
+      {start: 8, duration: 3.8, pitch: 66, velocity: 0.58},
+      {start: 8, duration: 3.8, pitch: 69, velocity: 0.58},
+      {start: 8, duration: 3.8, pitch: 71, velocity: 0.58},
+      {start: 12, duration: 3.8, pitch: 57, velocity: 0.6},
+      {start: 12, duration: 3.8, pitch: 64, velocity: 0.58},
+      {start: 12, duration: 3.8, pitch: 71, velocity: 0.58},
+      {start: 12, duration: 3.8, pitch: 76, velocity: 0.58}
+    ]}
+  }
 
-prefab pd_triads {
-  NoteClip: {length: 16, notes: [
-    {start: 0, duration: 3.8, pitch: 54, velocity: 0.6},
-    {start: 0, duration: 3.8, pitch: 57, velocity: 0.6},
-    {start: 0, duration: 3.8, pitch: 62, velocity: 0.6},
-    {start: 4, duration: 3.8, pitch: 54, velocity: 0.6},
-    {start: 4, duration: 3.8, pitch: 59, velocity: 0.6},
-    {start: 4, duration: 3.8, pitch: 62, velocity: 0.6},
-    {start: 8, duration: 3.8, pitch: 55, velocity: 0.6},
-    {start: 8, duration: 3.8, pitch: 59, velocity: 0.6},
-    {start: 8, duration: 3.8, pitch: 62, velocity: 0.6},
-    {start: 12, duration: 3.8, pitch: 57, velocity: 0.6},
-    {start: 12, duration: 3.8, pitch: 61, velocity: 0.6},
-    {start: 12, duration: 3.8, pitch: 64, velocity: 0.6}
-  ]}
-}
+  prefab pd_triads {
+    NoteClip: {length: 16, notes: [
+      {start: 0, duration: 3.8, pitch: 54, velocity: 0.6},
+      {start: 0, duration: 3.8, pitch: 57, velocity: 0.6},
+      {start: 0, duration: 3.8, pitch: 62, velocity: 0.6},
+      {start: 4, duration: 3.8, pitch: 54, velocity: 0.6},
+      {start: 4, duration: 3.8, pitch: 59, velocity: 0.6},
+      {start: 4, duration: 3.8, pitch: 62, velocity: 0.6},
+      {start: 8, duration: 3.8, pitch: 55, velocity: 0.6},
+      {start: 8, duration: 3.8, pitch: 59, velocity: 0.6},
+      {start: 8, duration: 3.8, pitch: 62, velocity: 0.6},
+      {start: 12, duration: 3.8, pitch: 57, velocity: 0.6},
+      {start: 12, duration: 3.8, pitch: 61, velocity: 0.6},
+      {start: 12, duration: 3.8, pitch: 64, velocity: 0.6}
+    ]}
+  }
 
-prefab pd_air_notes {
-  NoteClip: {length: 16, notes: [
-    {start: 0, duration: 3.8, pitch: 69, velocity: 0.6},
-    {start: 0, duration: 3.8, pitch: 73, velocity: 0.6},
-    {start: 0, duration: 3.8, pitch: 76, velocity: 0.6},
-    {start: 4, duration: 3.8, pitch: 66, velocity: 0.6},
-    {start: 4, duration: 3.8, pitch: 69, velocity: 0.6},
-    {start: 4, duration: 3.8, pitch: 73, velocity: 0.6},
-    {start: 8, duration: 3.8, pitch: 66, velocity: 0.6},
-    {start: 8, duration: 3.8, pitch: 69, velocity: 0.6},
-    {start: 8, duration: 3.8, pitch: 71, velocity: 0.6},
-    {start: 12, duration: 3.8, pitch: 64, velocity: 0.6},
-    {start: 12, duration: 3.8, pitch: 71, velocity: 0.6},
-    {start: 12, duration: 3.8, pitch: 76, velocity: 0.6}
-  ]}
-}
+  prefab pd_air_notes {
+    NoteClip: {length: 16, notes: [
+      {start: 0, duration: 3.8, pitch: 69, velocity: 0.6},
+      {start: 0, duration: 3.8, pitch: 73, velocity: 0.6},
+      {start: 0, duration: 3.8, pitch: 76, velocity: 0.6},
+      {start: 4, duration: 3.8, pitch: 66, velocity: 0.6},
+      {start: 4, duration: 3.8, pitch: 69, velocity: 0.6},
+      {start: 4, duration: 3.8, pitch: 73, velocity: 0.6},
+      {start: 8, duration: 3.8, pitch: 66, velocity: 0.6},
+      {start: 8, duration: 3.8, pitch: 69, velocity: 0.6},
+      {start: 8, duration: 3.8, pitch: 71, velocity: 0.6},
+      {start: 12, duration: 3.8, pitch: 64, velocity: 0.6},
+      {start: 12, duration: 3.8, pitch: 71, velocity: 0.6},
+      {start: 12, duration: 3.8, pitch: 76, velocity: 0.6}
+    ]}
+  }
 
-prefab pd_warm_tutti {
-  NoteClip: {length: 32, notes: [
-    {start: 0, duration: 7.8, pitch: 50, velocity: 0.55},
-    {start: 0, duration: 7.8, pitch: 57, velocity: 0.52},
-    {start: 0, duration: 7.8, pitch: 61, velocity: 0.52},
-    {start: 0, duration: 7.8, pitch: 64, velocity: 0.52},
-    {start: 8, duration: 7.8, pitch: 47, velocity: 0.55},
-    {start: 8, duration: 7.8, pitch: 54, velocity: 0.52},
-    {start: 8, duration: 7.8, pitch: 57, velocity: 0.52},
-    {start: 8, duration: 7.8, pitch: 61, velocity: 0.52},
-    {start: 16, duration: 7.8, pitch: 43, velocity: 0.55},
-    {start: 16, duration: 7.8, pitch: 54, velocity: 0.52},
-    {start: 16, duration: 7.8, pitch: 57, velocity: 0.52},
-    {start: 16, duration: 7.8, pitch: 59, velocity: 0.52},
-    {start: 24, duration: 7.8, pitch: 45, velocity: 0.55},
-    {start: 24, duration: 7.8, pitch: 52, velocity: 0.52},
-    {start: 24, duration: 7.8, pitch: 59, velocity: 0.52},
-    {start: 24, duration: 7.8, pitch: 64, velocity: 0.52}
-  ]}
-}
+  prefab pd_warm_tutti {
+    NoteClip: {length: 32, notes: [
+      {start: 0, duration: 7.8, pitch: 50, velocity: 0.55},
+      {start: 0, duration: 7.8, pitch: 57, velocity: 0.52},
+      {start: 0, duration: 7.8, pitch: 61, velocity: 0.52},
+      {start: 0, duration: 7.8, pitch: 64, velocity: 0.52},
+      {start: 8, duration: 7.8, pitch: 47, velocity: 0.55},
+      {start: 8, duration: 7.8, pitch: 54, velocity: 0.52},
+      {start: 8, duration: 7.8, pitch: 57, velocity: 0.52},
+      {start: 8, duration: 7.8, pitch: 61, velocity: 0.52},
+      {start: 16, duration: 7.8, pitch: 43, velocity: 0.55},
+      {start: 16, duration: 7.8, pitch: 54, velocity: 0.52},
+      {start: 16, duration: 7.8, pitch: 57, velocity: 0.52},
+      {start: 16, duration: 7.8, pitch: 59, velocity: 0.52},
+      {start: 24, duration: 7.8, pitch: 45, velocity: 0.55},
+      {start: 24, duration: 7.8, pitch: 52, velocity: 0.52},
+      {start: 24, duration: 7.8, pitch: 59, velocity: 0.52},
+      {start: 24, duration: 7.8, pitch: 64, velocity: 0.52}
+    ]}
+  }
 
-prefab pd_pulse_tutti {
-  NoteClip: {length: 32, notes: [
-    {start: 0, duration: 7.8, pitch: 38, velocity: 0.6},
-    {start: 0, duration: 7.8, pitch: 45, velocity: 0.5},
-    {start: 8, duration: 7.8, pitch: 35, velocity: 0.6},
-    {start: 8, duration: 7.8, pitch: 42, velocity: 0.5},
-    {start: 16, duration: 7.8, pitch: 31, velocity: 0.6},
-    {start: 16, duration: 7.8, pitch: 38, velocity: 0.5},
-    {start: 24, duration: 7.8, pitch: 33, velocity: 0.6},
-    {start: 24, duration: 7.8, pitch: 40, velocity: 0.5}
-  ]}
-}
+  prefab pd_pulse_tutti {
+    NoteClip: {length: 32, notes: [
+      {start: 0, duration: 7.8, pitch: 38, velocity: 0.6},
+      {start: 0, duration: 7.8, pitch: 45, velocity: 0.5},
+      {start: 8, duration: 7.8, pitch: 35, velocity: 0.6},
+      {start: 8, duration: 7.8, pitch: 42, velocity: 0.5},
+      {start: 16, duration: 7.8, pitch: 31, velocity: 0.6},
+      {start: 16, duration: 7.8, pitch: 38, velocity: 0.5},
+      {start: 24, duration: 7.8, pitch: 33, velocity: 0.6},
+      {start: 24, duration: 7.8, pitch: 40, velocity: 0.5}
+    ]}
+  }
 
-prefab pd_glass_tutti {
-  NoteClip: {length: 32, notes: [
-    {start: 0, duration: 2.5, pitch: 69, velocity: 0.5},
-    {start: 3, duration: 2.5, pitch: 73, velocity: 0.45},
-    {start: 6, duration: 2, pitch: 76, velocity: 0.42},
-    {start: 8, duration: 2.5, pitch: 66, velocity: 0.5},
-    {start: 11, duration: 2.5, pitch: 69, velocity: 0.45},
-    {start: 14, duration: 2, pitch: 73, velocity: 0.42},
-    {start: 16, duration: 2.5, pitch: 66, velocity: 0.5},
-    {start: 19, duration: 2.5, pitch: 71, velocity: 0.45},
-    {start: 22, duration: 2, pitch: 74, velocity: 0.42},
-    {start: 24, duration: 2.5, pitch: 64, velocity: 0.5},
-    {start: 27, duration: 2.5, pitch: 69, velocity: 0.45},
-    {start: 30, duration: 2, pitch: 76, velocity: 0.42}
-  ]}
-}
+  prefab pd_glass_tutti {
+    NoteClip: {length: 32, notes: [
+      {start: 0, duration: 2.5, pitch: 69, velocity: 0.5},
+      {start: 3, duration: 2.5, pitch: 73, velocity: 0.45},
+      {start: 6, duration: 2, pitch: 76, velocity: 0.42},
+      {start: 8, duration: 2.5, pitch: 66, velocity: 0.5},
+      {start: 11, duration: 2.5, pitch: 69, velocity: 0.45},
+      {start: 14, duration: 2, pitch: 73, velocity: 0.42},
+      {start: 16, duration: 2.5, pitch: 66, velocity: 0.5},
+      {start: 19, duration: 2.5, pitch: 71, velocity: 0.45},
+      {start: 22, duration: 2, pitch: 74, velocity: 0.42},
+      {start: 24, duration: 2.5, pitch: 64, velocity: 0.5},
+      {start: 27, duration: 2.5, pitch: 69, velocity: 0.45},
+      {start: 30, duration: 2, pitch: 76, velocity: 0.42}
+    ]}
+  }
 
-prefab pd_morph_tutti {
-  NoteClip: {length: 32, notes: [
-    {start: 0, duration: 7.8, pitch: 69, velocity: 0.5},
-    {start: 0, duration: 7.8, pitch: 73, velocity: 0.5},
-    {start: 0, duration: 7.8, pitch: 76, velocity: 0.5},
-    {start: 8, duration: 7.8, pitch: 66, velocity: 0.5},
-    {start: 8, duration: 7.8, pitch: 69, velocity: 0.5},
-    {start: 8, duration: 7.8, pitch: 73, velocity: 0.5},
-    {start: 16, duration: 7.8, pitch: 66, velocity: 0.5},
-    {start: 16, duration: 7.8, pitch: 69, velocity: 0.5},
-    {start: 16, duration: 7.8, pitch: 71, velocity: 0.5},
-    {start: 24, duration: 7.8, pitch: 64, velocity: 0.5},
-    {start: 24, duration: 7.8, pitch: 71, velocity: 0.5},
-    {start: 24, duration: 7.8, pitch: 76, velocity: 0.5}
-  ]}
-}
+  prefab pd_morph_tutti {
+    NoteClip: {length: 32, notes: [
+      {start: 0, duration: 7.8, pitch: 69, velocity: 0.5},
+      {start: 0, duration: 7.8, pitch: 73, velocity: 0.5},
+      {start: 0, duration: 7.8, pitch: 76, velocity: 0.5},
+      {start: 8, duration: 7.8, pitch: 66, velocity: 0.5},
+      {start: 8, duration: 7.8, pitch: 69, velocity: 0.5},
+      {start: 8, duration: 7.8, pitch: 73, velocity: 0.5},
+      {start: 16, duration: 7.8, pitch: 66, velocity: 0.5},
+      {start: 16, duration: 7.8, pitch: 69, velocity: 0.5},
+      {start: 16, duration: 7.8, pitch: 71, velocity: 0.5},
+      {start: 24, duration: 7.8, pitch: 64, velocity: 0.5},
+      {start: 24, duration: 7.8, pitch: 71, velocity: 0.5},
+      {start: 24, duration: 7.8, pitch: 76, velocity: 0.5}
+    ]}
+  }
 
-prefab pd_choir_tutti {
-  NoteClip: {length: 32, notes: [
-    {start: 0, duration: 7.8, pitch: 54, velocity: 0.5},
-    {start: 0, duration: 7.8, pitch: 57, velocity: 0.5},
-    {start: 0, duration: 7.8, pitch: 62, velocity: 0.5},
-    {start: 8, duration: 7.8, pitch: 54, velocity: 0.5},
-    {start: 8, duration: 7.8, pitch: 59, velocity: 0.5},
-    {start: 8, duration: 7.8, pitch: 62, velocity: 0.5},
-    {start: 16, duration: 7.8, pitch: 55, velocity: 0.5},
-    {start: 16, duration: 7.8, pitch: 59, velocity: 0.5},
-    {start: 16, duration: 7.8, pitch: 62, velocity: 0.5},
-    {start: 24, duration: 7.8, pitch: 57, velocity: 0.5},
-    {start: 24, duration: 7.8, pitch: 61, velocity: 0.5},
-    {start: 24, duration: 7.8, pitch: 64, velocity: 0.5}
-  ]}
-}
+  prefab pd_choir_tutti {
+    NoteClip: {length: 32, notes: [
+      {start: 0, duration: 7.8, pitch: 54, velocity: 0.5},
+      {start: 0, duration: 7.8, pitch: 57, velocity: 0.5},
+      {start: 0, duration: 7.8, pitch: 62, velocity: 0.5},
+      {start: 8, duration: 7.8, pitch: 54, velocity: 0.5},
+      {start: 8, duration: 7.8, pitch: 59, velocity: 0.5},
+      {start: 8, duration: 7.8, pitch: 62, velocity: 0.5},
+      {start: 16, duration: 7.8, pitch: 55, velocity: 0.5},
+      {start: 16, duration: 7.8, pitch: 59, velocity: 0.5},
+      {start: 16, duration: 7.8, pitch: 62, velocity: 0.5},
+      {start: 24, duration: 7.8, pitch: 57, velocity: 0.5},
+      {start: 24, duration: 7.8, pitch: 61, velocity: 0.5},
+      {start: 24, duration: 7.8, pitch: 64, velocity: 0.5}
+    ]}
+  }
 
-prefab pd_air_tutti {
-  NoteClip: {length: 32, notes: [
-    {start: 0, duration: 7.8, pitch: 81, velocity: 0.5},
-    {start: 8, duration: 7.8, pitch: 78, velocity: 0.5},
-    {start: 16, duration: 7.8, pitch: 78, velocity: 0.5},
-    {start: 24, duration: 7.8, pitch: 76, velocity: 0.5}
-  ]}
-}
+  prefab pd_air_tutti {
+    NoteClip: {length: 32, notes: [
+      {start: 0, duration: 7.8, pitch: 81, velocity: 0.5},
+      {start: 8, duration: 7.8, pitch: 78, velocity: 0.5},
+      {start: 16, duration: 7.8, pitch: 78, velocity: 0.5},
+      {start: 24, duration: 7.8, pitch: 76, velocity: 0.5}
+    ]}
+  }
 
-pd_warm_chorus { Chorus: {voices: 3, rate: 0.15, depth: 4, delay: 16, spread: 1, mix: 0.25} }
-pd_track_warm {
-  Track: {instrument: pd_warm, humanize: {timing: 8, velocity: 0.04}}
-  AudioBus: {output: pd_pads, volume: 0.9, effects: [pd_warm_chorus], sends: [{bus: pd_space, level: 0.35}]}
-  AudioMeter: {}
-  pd_solo { ClipPlacement: {clip: pd_chords, start: 0} }
-  pd_tutti { ClipPlacement: {clip: pd_warm_tutti, start: 96} }
-}
+  pd_warm_chorus { Chorus: {voices: 3, rate: 0.15, depth: 4, delay: 16, spread: 1, mix: 0.25} }
+  pd_track_warm {
+    Track: {instrument: pd_warm, humanize: {timing: 8, velocity: 0.04}}
+    AudioBus: {output: pd_pads, volume: 0.9, effects: [pd_warm_chorus], sends: [{bus: pd_space, level: 0.35}]}
+    AudioMeter: {}
+    pd_solo { ClipPlacement: {clip: pd_chords, start: 0} }
+    pd_tutti { ClipPlacement: {clip: pd_warm_tutti, start: 96} }
+  }
 
-pd_pulse_phaser { Phaser: {stages: 6, rate: 0.12, feedback: 0.45, mix: 0.5} }
-pd_track_pulse {
-  Track: {instrument: pd_pulse, humanize: {timing: 8, velocity: 0.04}}
-  AudioBus: {output: pd_pads, volume: 0.9, effects: [pd_pulse_phaser], sends: [{bus: pd_space, level: 0.3}]}
-  AudioMeter: {}
-  pd_solo { ClipPlacement: {clip: pd_chords, start: 16} }
-  pd_tutti { ClipPlacement: {clip: pd_pulse_tutti, start: 96} }
-}
+  pd_pulse_phaser { Phaser: {stages: 6, rate: 0.12, feedback: 0.45, mix: 0.5} }
+  pd_track_pulse {
+    Track: {instrument: pd_pulse, humanize: {timing: 8, velocity: 0.04}}
+    AudioBus: {output: pd_pads, volume: 0.9, effects: [pd_pulse_phaser], sends: [{bus: pd_space, level: 0.3}]}
+    AudioMeter: {}
+    pd_solo { ClipPlacement: {clip: pd_chords, start: 16} }
+    pd_tutti { ClipPlacement: {clip: pd_pulse_tutti, start: 96} }
+  }
 
-pd_glass_echo { Delay: {sync: 0.75, feedback: 0.38, mix: 0.22, damping: 4500, ping_pong: true} }
-pd_track_glass {
-  Track: {instrument: pd_glass, humanize: {timing: 12, velocity: 0.06}}
-  AudioBus: {output: pd_pads, volume: 0.9, effects: [pd_glass_echo], sends: [{bus: pd_space, level: 0.5}]}
-  AudioMeter: {}
-  pd_solo { ClipPlacement: {clip: pd_high_chords, start: 32} }
-  pd_tutti { ClipPlacement: {clip: pd_glass_tutti, start: 96} }
-}
+  pd_glass_echo { Delay: {sync: 0.75, feedback: 0.38, mix: 0.22, damping: 4500, ping_pong: true} }
+  pd_track_glass {
+    Track: {instrument: pd_glass, humanize: {timing: 12, velocity: 0.06}}
+    AudioBus: {output: pd_pads, volume: 0.9, effects: [pd_glass_echo], sends: [{bus: pd_space, level: 0.5}]}
+    AudioMeter: {}
+    pd_solo { ClipPlacement: {clip: pd_high_chords, start: 32} }
+    pd_tutti { ClipPlacement: {clip: pd_glass_tutti, start: 96} }
+  }
 
-pd_track_morph {
-  Track: {instrument: pd_morph, humanize: {timing: 8, velocity: 0.04}}
-  AudioBus: {output: pd_pads, volume: 0.9, sends: [{bus: pd_space, level: 0.4}]}
-  AudioMeter: {}
-  pd_solo { ClipPlacement: {clip: pd_chords, start: 48} }
-  pd_tutti { ClipPlacement: {clip: pd_morph_tutti, start: 96} }
-}
+  pd_track_morph {
+    Track: {instrument: pd_morph, humanize: {timing: 8, velocity: 0.04}}
+    AudioBus: {output: pd_pads, volume: 0.9, sends: [{bus: pd_space, level: 0.4}]}
+    AudioMeter: {}
+    pd_solo { ClipPlacement: {clip: pd_chords, start: 48} }
+    pd_tutti { ClipPlacement: {clip: pd_morph_tutti, start: 96} }
+  }
 
-pd_choir_chorus { Chorus: {voices: 3, rate: 0.2, depth: 3, delay: 14, spread: 0.9, mix: 0.3} }
-pd_track_choir {
-  Track: {instrument: pd_choir, humanize: {timing: 15, velocity: 0.05}}
-  AudioBus: {output: pd_pads, volume: 0.8, effects: [pd_choir_chorus], sends: [{bus: pd_space, level: 0.45}]}
-  AudioMeter: {}
-  pd_solo { ClipPlacement: {clip: pd_triads, start: 64} }
-  pd_tutti { ClipPlacement: {clip: pd_choir_tutti, start: 96} }
-}
+  pd_choir_chorus { Chorus: {voices: 3, rate: 0.2, depth: 3, delay: 14, spread: 0.9, mix: 0.3} }
+  pd_track_choir {
+    Track: {instrument: pd_choir, humanize: {timing: 15, velocity: 0.05}}
+    AudioBus: {output: pd_pads, volume: 0.8, effects: [pd_choir_chorus], sends: [{bus: pd_space, level: 0.45}]}
+    AudioMeter: {}
+    pd_solo { ClipPlacement: {clip: pd_triads, start: 64} }
+    pd_tutti { ClipPlacement: {clip: pd_choir_tutti, start: 96} }
+  }
 
-pd_track_air {
-  Track: {instrument: pd_air, humanize: {timing: 10, velocity: 0.04}}
-  AudioBus: {output: pd_pads, volume: 1.7, sends: [{bus: pd_space, level: 0.55}]}
-  AudioMeter: {}
-  pd_solo { ClipPlacement: {clip: pd_air_notes, start: 80} }
-  pd_tutti { ClipPlacement: {clip: pd_air_tutti, start: 96} }
-}
+  pd_track_air {
+    Track: {instrument: pd_air, humanize: {timing: 10, velocity: 0.04}}
+    AudioBus: {output: pd_pads, volume: 1.7, sends: [{bus: pd_space, level: 0.55}]}
+    AudioMeter: {}
+    pd_solo { ClipPlacement: {clip: pd_air_notes, start: 80} }
+    pd_tutti { ClipPlacement: {clip: pd_air_tutti, start: 96} }
+  }
 
-$ {
-  Song: {
-    title: "Synth Pads", tempo: 80, beats_per_bar: 4, beat_unit: 4, beats: 128,
-    lanes: [
-      {name: "Warm Analog", bus: pd_track_warm},
-      {name: "Pulse", bus: pd_track_pulse},
-      {name: "Glass", bus: pd_track_glass},
-      {name: "Evolving", bus: pd_track_morph},
-      {name: "Choir", bus: pd_track_choir},
-      {name: "Air", bus: pd_track_air}
-    ]
+  $ {
+    Song: {
+      title: "Synth Pads", tempo: 80, beats_per_bar: 4, beat_unit: 4, beats: 128,
+      lanes: [
+        {name: "Warm Analog", bus: pd_track_warm},
+        {name: "Pulse", bus: pd_track_pulse},
+        {name: "Glass", bus: pd_track_glass},
+        {name: "Evolving", bus: pd_track_morph},
+        {name: "Choir", bus: pd_track_choir},
+        {name: "Air", bus: pd_track_air}
+      ]
+    }
   }
 }

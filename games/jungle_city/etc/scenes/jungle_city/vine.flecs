@@ -3,9 +3,11 @@ using box.transform
 using box.geometry
 using box.material
 
-template CanopyVine {
-  prop length: f32 = 3
-  prop phase: f32 = 0
-  { (IsA, CanopyVineCard); Position: {0, -length / 2, 0.04}; Rotation: {0, math.sin(phase) * 0.4, 0}; Quad: {0.32 + length * 0.1, length} }
-  { (IsA, CanopyVineCard); Rgb: {96, 138, 62}; Position: {0, -length * 0.42, 0.06}; Rotation: {0, 1.2 + math.cos(phase) * 0.5, 0}; Quad: {0.3 + length * 0.08, length * 0.84} }
+assets {
+  template CanopyVine {
+    prop length: f32 = 3
+    prop phase: f32 = 0
+    { (IsA, CanopyVineCard); Position: {0, -length / 2, 0.04}; Rotation: {0, math.sin(phase) * 0.4, 0}; Quad: {0.32 + length * 0.1, length} }
+    { (IsA, CanopyVineCard); Rgb: {96, 138, 62}; Position: {0, -length * 0.42, 0.06}; Rotation: {0, 1.2 + math.cos(phase) * 0.5, 0}; Quad: {0.3 + length * 0.08, length * 0.84} }
+  }
 }

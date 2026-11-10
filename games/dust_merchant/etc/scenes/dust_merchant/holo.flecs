@@ -13,174 +13,184 @@ using box.light
 using box.transition
 using box.movement
 using box.animation
+using state
+using assets
 
-export const HOLO: Rgb = {110, 214, 255}
+assets {
+  export const HOLO: Rgb = {110, 214, 255}
 
-HoloScanBob {
-  AnimationClip: {duration: 6.981}
-  lift {
-    AnimationTrack: {component: Position, member: "y", curve: {kind: CurveBezier, keys: [
-      {0, 16, 88.2, 88.2}, {1.745, 114, 0, 0}, {3.491, 16, -88.2, -88.2}, {5.236, -82, 0, 0}, {6.981, 16, 88.2, 88.2}
-    ]}}
-  }
-}
-
-template HoloRing {
-  prop tilt: f32 = 0
-  prop yaw: f32 = 0
-  prop r: f32 = 84
-  prop power: f32 = 1.3
-
-  Rotation: {tilt, yaw, 0}
-  Torus: {radius: r, tube: 0.55, segments: 56, rings: 5}
-  Rgb: {0, 0, 0}
-  Emissive: {strength: power, color: HOLO}
-  BlendMode: Additive
-  NoShadow
-  SpatialIgnore
-}
-
-template HoloTab {
-  prop dest: i32 = 0
-
-  mut hover = false
-  const picked = course == dest
-  const home = here == dest
-
-  Interactive
-  Cursor: {CursorPointer}
-  Layout: {padding: {6, 6, 10, 10}, h: Center, v: Middle}
-  LayoutItem: {width: {mode: Fixed, value: 176}}
-  Rect: {1, 1}
-  Rgb: {20, 60, 90}
-  BlendMode: Additive
-  Border: {width: 1.3, color: {110, 214, 255, 255}}
-  if hover && !home {
-    Emissive: {strength: 0.6, color: HOLO}
-  } else if picked {
-    Emissive: {strength: 0.35, color: HOLO}
-  } else {
-    Emissive: {strength: 0.02, color: HOLO}
-  }
-
-  Glow words(text: home ? "* {dest_name(dest)}" : dest_name(dest), size: 18, hue: HOLO, power: hover || picked ? 2.2 : 1.1, font: font_mono) { Position: {0, 0, 0.2} }
-
-  async {
-    while true {
-      await on.enter(this)
-      hover = true
-      await on.leave(this)
-      hover = false
+  HoloScanBob {
+    AnimationClip: {duration: 6.981}
+    lift {
+      AnimationTrack: {component: Position, member: "y", curve: {kind: CurveBezier, keys: [
+        {0, 16, 88.2, 88.2}, {1.745, 114, 0, 0}, {3.491, 16, -88.2, -88.2}, {5.236, -82, 0, 0}, {6.981, 16, 88.2, 88.2}
+      ]}}
     }
   }
 
-  async {
-    while true {
-      await on.click(this)
-      emit PickCourse(dest: dest)
+  template HoloRing {
+    prop tilt: f32 = 0
+    prop yaw: f32 = 0
+    prop r: f32 = 84
+    prop power: f32 = 1.3
+
+    Rotation: {tilt, yaw, 0}
+    Torus: {radius: r, tube: 0.55, segments: 56, rings: 5}
+    Rgb: {0, 0, 0}
+    Emissive: {strength: power, color: HOLO}
+    BlendMode: Additive
+    NoShadow
+    SpatialIgnore
+  }
+
+  template HoloTab {
+    prop dest: i32 = 0
+
+    mut hover = false
+    const picked = course == dest
+    const home = here == dest
+
+    Interactive
+    Cursor: {CursorPointer}
+    Layout: {padding: {6, 6, 10, 10}, h: Center, v: Middle}
+    LayoutItem: {width: {mode: Fixed, value: 176}}
+    Rect: {1, 1}
+    Rgb: {20, 60, 90}
+    BlendMode: Additive
+    Border: {width: 1.3, color: {110, 214, 255, 255}}
+    if hover && !home {
+      Emissive: {strength: 0.6, color: HOLO}
+    } else if picked {
+      Emissive: {strength: 0.35, color: HOLO}
+    } else {
+      Emissive: {strength: 0.02, color: HOLO}
     }
-  }
-}
 
-fn holo_blurb(i: i32) -> string {
-  match i {
-    0: "dust world. 2 ports.\ncheap fuel, bad coffee."
-    1: "ringed giant. ice mining.\nwatch the shear lanes."
-    _: "lava moon + wreck field.\nsalvage. no questions."
-  }
-}
+    Glow words(text: home ? "* {dest_name(dest)}" : dest_name(dest), size: 18, hue: HOLO, power: hover || picked ? 2.2 : 1.1, font: font_mono) { Position: {0, 0, 0.2} }
 
-template Hologram {
-  const show = sw[SW_HOLO] && bus
-  const target = course >= 0 ? course : here
-
-  Position: {0.27, 1.05, -1.14}
-  SpatialIgnore
-
-  puck : BlackAnod { Position: {0, -0.012, 0}; Cylinder: {radius: 0.075, length: 0.024, segments: 28, smooth: true} }
-  puck_rim : Brass { Position: {0, 0.002, 0}; Tube: {radius: 0.078, thickness: 0.006, length: 0.012, segments: 28, smooth: true} }
-  lens { Position: {0, 0.002, 0}; Cylinder: {radius: 0.056, length: 0.004, segments: 24, smooth: true}; Rgb: {10, 30, 40}; Emissive: {strength: show ? 3.2 : 0.02, color: HOLO}; Transition: [Emissive: {duration: 0.3}] }
-  fill { Position: {0, 0.16, 0}; PointLight: {intensity: show ? 0.1 : 0, range: 1.6}; Rgb: HOLO }
-
-  if show {
-    beam_a { Position: {0, 0.15, 0}; Rect: {0.36, 0.3}; Image: {texture: tex_beam}; Rgb: {46, 110, 150}; BlendMode: Additive; NoShadow; SpatialIgnore }
-    beam_b { Position: {0, 0.15, 0}; Rotation: {0, PI / 2, 0}; Rect: {0.36, 0.3}; Image: {texture: tex_beam}; Rgb: {46, 110, 150}; BlendMode: Additive; NoShadow; SpatialIgnore }
-
-    motes {
-      Position: {0, 0.04, 0}
-      ParticleEmitter: {
-        max: 80, rate: 22, shape: EmitterDisc, radius: 0.05,
-        direction: {0, 1, 0}, spread: 18, speed: {0.04, 0.12}, lifetime: {1.4, 3}, size: {0.0015, 0.004},
-        color: {110, 214, 255}, opacity: {0.5, 1}, seed: 5
+    async {
+      while true {
+        await on.enter(this)
+        hover = true
+        await on.leave(this)
+        hover = false
       }
-      ParticleForces: {gravity: {0, 0, 0}, turbulence: 0.02}
-      ParticleAppearance: {shape: ParticleCircle, blend: ParticleAdditive}
-      ParticleCurves: {opacity: {keys: [{0, 0}, {0.33333334, 1}, {0.6666667, 0.8}, {1, 0}]}}
     }
 
-    field {
-      Position: {0, 0.37, 0}
-      Rotation: {0, 0.1, 0}
-      Scale: {0.00105, 0.00105, 0.00105}
+    async {
+      while true {
+        await on.click(this)
+        emit PickCourse(dest: dest)
+      }
+    }
+  }
+}
 
-      globe {
-        Position: {0, 16, 0}
-        Rotation: {0.2, 0, 0.32}
-        AngularVelocity: {0, 0.45, 0}
-        HoloRing eq(tilt: 0, r: 84, power: 1.8)
-        HoloRing la(tilt: 0, r: 73)
-        la_p { Position: {0, 42, 0}; HoloRing r(r: 73) }
-        la_n { Position: {0, -42, 0}; HoloRing r(r: 73) }
-        lb_p { Position: {0, 72, 0}; HoloRing r(r: 43, power: 0.9) }
-        lb_n { Position: {0, -72, 0}; HoloRing r(r: 43, power: 0.9) }
-        for i in 0..5 {
-          "mer_{i}" { Rotation: {0, i * PI / 5, 0}; m { Rotation: {PI / 2, 0, 0}; HoloRing r(r: 84, power: 0.9) } }
+state {
+  fn holo_blurb(i: i32) -> string {
+    match i {
+      0: "dust world. 2 ports.\ncheap fuel, bad coffee."
+      1: "ringed giant. ice mining.\nwatch the shear lanes."
+      _: "lava moon + wreck field.\nsalvage. no questions."
+    }
+  }
+}
+
+assets {
+  template Hologram {
+    const show = sw[SW_HOLO] && bus
+    const target = course >= 0 ? course : here
+
+    Position: {0.27, 1.05, -1.14}
+    SpatialIgnore
+
+    puck : BlackAnod { Position: {0, -0.012, 0}; Cylinder: {radius: 0.075, length: 0.024, segments: 28, smooth: true} }
+    puck_rim : Brass { Position: {0, 0.002, 0}; Tube: {radius: 0.078, thickness: 0.006, length: 0.012, segments: 28, smooth: true} }
+    lens { Position: {0, 0.002, 0}; Cylinder: {radius: 0.056, length: 0.004, segments: 24, smooth: true}; Rgb: {10, 30, 40}; Emissive: {strength: show ? 3.2 : 0.02, color: HOLO}; Transition: [Emissive: {duration: 0.3}] }
+    fill { Position: {0, 0.16, 0}; PointLight: {intensity: show ? 0.1 : 0, range: 1.6}; Rgb: HOLO }
+
+    if show {
+      beam_a { Position: {0, 0.15, 0}; Rect: {0.36, 0.3}; Image: {texture: tex_beam}; Rgb: {46, 110, 150}; BlendMode: Additive; NoShadow; SpatialIgnore }
+      beam_b { Position: {0, 0.15, 0}; Rotation: {0, PI / 2, 0}; Rect: {0.36, 0.3}; Image: {texture: tex_beam}; Rgb: {46, 110, 150}; BlendMode: Additive; NoShadow; SpatialIgnore }
+
+      motes {
+        Position: {0, 0.04, 0}
+        ParticleEmitter: {
+          max: 80, rate: 22, shape: EmitterDisc, radius: 0.05,
+          direction: {0, 1, 0}, spread: 18, speed: {0.04, 0.12}, lifetime: {1.4, 3}, size: {0.0015, 0.004},
+          color: {110, 214, 255}, opacity: {0.5, 1}, seed: 5
         }
-        if target == DEST_NAUR {
-          ring_a { Rotation: {0, 0, 0}; HoloRing r(r: 126, power: 1.5) }
-          ring_b { Rotation: {0, 0, 0}; HoloRing r(r: 148, power: 0.9) }
-        }
-        if target == DEST_CINDER {
-          for i in 0..8 {
-            "chip_{i}" {
-              Position: {cos(i * 0.8) * 120, (i - 4) * 14.0, sin(i * 0.8) * 120}
-              Rotation: {i * 0.8, i * 1.7, 0}
-              Box: {10, 4, 7}
-              Rgb: {0, 0, 0}
-              Emissive: {strength: 2, color: HOLO}
-              BlendMode: Additive
-              NoShadow
-              SpatialIgnore
+        ParticleForces: {gravity: {0, 0, 0}, turbulence: 0.02}
+        ParticleAppearance: {shape: ParticleCircle, blend: ParticleAdditive}
+        ParticleCurves: {opacity: {keys: [{0, 0}, {0.33333334, 1}, {0.6666667, 0.8}, {1, 0}]}}
+      }
+
+      field {
+        Position: {0, 0.37, 0}
+        Rotation: {0, 0.1, 0}
+        Scale: {0.00105, 0.00105, 0.00105}
+
+        globe {
+          Position: {0, 16, 0}
+          Rotation: {0.2, 0, 0.32}
+          AngularVelocity: {0, 0.45, 0}
+          HoloRing eq(tilt: 0, r: 84, power: 1.8)
+          HoloRing la(tilt: 0, r: 73)
+          la_p { Position: {0, 42, 0}; HoloRing r(r: 73) }
+          la_n { Position: {0, -42, 0}; HoloRing r(r: 73) }
+          lb_p { Position: {0, 72, 0}; HoloRing r(r: 43, power: 0.9) }
+          lb_n { Position: {0, -72, 0}; HoloRing r(r: 43, power: 0.9) }
+          for i in 0..5 {
+            "mer_{i}" { Rotation: {0, i * PI / 5, 0}; m { Rotation: {PI / 2, 0, 0}; HoloRing r(r: 84, power: 0.9) } }
+          }
+          if target == DEST_NAUR {
+            ring_a { Rotation: {0, 0, 0}; HoloRing r(r: 126, power: 1.5) }
+            ring_b { Rotation: {0, 0, 0}; HoloRing r(r: 148, power: 0.9) }
+          }
+          if target == DEST_CINDER {
+            for i in 0..8 {
+              "chip_{i}" {
+                Position: {cos(i * 0.8) * 120, (i - 4) * 14.0, sin(i * 0.8) * 120}
+                Rotation: {i * 0.8, i * 1.7, 0}
+                Box: {10, 4, 7}
+                Rgb: {0, 0, 0}
+                Emissive: {strength: 2, color: HOLO}
+                BlendMode: Additive
+                NoShadow
+                SpatialIgnore
+              }
             }
           }
         }
-      }
 
-      scan {
-        Position: {0, 16, 0}
-        Animator: {clip: HoloScanBob}
-        Rotation: {PI / 2, 0, 0}
-        Circle: {108}
-        Rgb: {16, 48, 66}
-        BlendMode: Additive
-        NoShadow
-        SpatialIgnore
-      }
+        scan {
+          Position: {0, 16, 0}
+          Animator: {clip: HoloScanBob}
+          Rotation: {PI / 2, 0, 0}
+          Circle: {108}
+          Rgb: {16, 48, 66}
+          BlendMode: Additive
+          NoShadow
+          SpatialIgnore
+        }
 
-      card {
-        Position: {0, -112, 8}
-        Layout: {direction: Column, spacing: 3, h: Center, v: Middle}
-        Glow name(text: dest_name(target), size: 26, hue: {190, 236, 255}, power: 2, font: font_stencil)
-        Glow blurb(text: holo_blurb(target), size: 13, hue: HOLO, power: 1)
-        tabs {
-          Layout: {direction: Row, spacing: 6, padding: {6, 0, 0, 0}, h: Center}
-          HoloTab t0(dest: 0)
-          HoloTab t1(dest: 1)
-          HoloTab t2(dest: 2)
+        card {
+          Position: {0, -112, 8}
+          Layout: {direction: Column, spacing: 3, h: Center, v: Middle}
+          Glow name(text: dest_name(target), size: 26, hue: {190, 236, 255}, power: 2, font: font_stencil)
+          Glow blurb(text: holo_blurb(target), size: 13, hue: HOLO, power: 1)
+          tabs {
+            Layout: {direction: Row, spacing: 6, padding: {6, 0, 0, 0}, h: Center}
+            HoloTab t0(dest: 0)
+            HoloTab t1(dest: 1)
+            HoloTab t2(dest: 2)
+          }
         }
       }
     }
   }
 }
 
-Hologram hologram()
+dust_merchant {
+  Hologram hologram()
+}

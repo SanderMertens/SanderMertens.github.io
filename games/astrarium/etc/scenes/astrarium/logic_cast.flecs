@@ -1,6 +1,24 @@
 using flecs.script
 using flecs.script.math
 using box.app
+using state
+using assets
+
+assets {
+  template SpellTimer {
+    prop index: i32 = 0
+
+    async {
+      while true {
+        const e = await Cooldown
+        if e.spell == index {
+          await delay(e.seconds)
+          spell_cooling[index] = false
+        }
+      }
+    }
+  }
+}
 
 async {
   while true {
@@ -31,22 +49,10 @@ async {
   }
 }
 
-template SpellTimer {
-  prop index: i32 = 0
-
-  async {
-    while true {
-      const e = await Cooldown
-      if e.spell == index {
-        await delay(e.seconds)
-        spell_cooling[index] = false
-      }
+state {
+  spell_timers {
+    for i in 0..6 {
+      SpellTimer "timer_{i}"(index: i)
     }
-  }
-}
-
-spell_timers {
-  for i in 0..6 {
-    SpellTimer "timer_{i}"(index: i)
   }
 }

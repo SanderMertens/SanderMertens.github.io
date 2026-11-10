@@ -10,15 +10,12 @@ using box.surface
 using box.controllers
 using box.input
 using box.picking
+using state
+using assets
 
 window {
   Surface: {width: 1280, height: 720, vsync: true}
 }
-
-bloom { Bloom: {intensity: 0.13, threshold: 1.2, threshold_softness: 0.5} }
-occlusion { Gtao: {radius: 0.18, final_value_power: 1.6, quality: GtaoHigh} }
-tonemap { Tonemap: {operator_: TonyMcMapface} }
-smaa { Smaa: {} }
 
 camera {
   Position: {2.2, 1.68, 3.75}
@@ -27,7 +24,11 @@ camera {
   CameraController: {}
 }
 
-main_view {
+view {
+  bloom { Bloom: {intensity: 0.13, threshold: 1.2, threshold_softness: 0.5} }
+  occlusion { Gtao: {radius: 0.18, final_value_power: 1.6, quality: GtaoHigh} }
+  tonemap { Tonemap: {operator_: TonyMcMapface} }
+  smaa { Smaa: {} }
   View: {
     camera: camera,
     clear: {enabled: true, color: {12, 19, 23, 255}},
@@ -40,95 +41,97 @@ $ {
   AmbientLight: {sky: {122, 157, 173}, ground: {66, 52, 42}, intensity: 0.6}
 }
 
-key_light {
-  Position: {-1.7, 3.6, 2.7}
-  Rotation: {-0.72, -0.55, 0}
-  SpotLight: {intensity: 48 * PI, range: 9, inner_angle: 25, outer_angle: 46, shadows: true}
-  Rgb: {255, 222, 182}
-}
-fill_light {
-  Position: {2.7, 2.6, 1.6}
-  Rotation: {-0.4, 0.98, 0}
-  SpotLight: {intensity: 28 * PI, range: 7, inner_angle: 30, outer_angle: 52, shadows: true}
-  Rgb: {152, 214, 235}
-}
-rim_light {
-  Position: {-0.7, 2.9, -0.7}
-  PointLight: {intensity: 2.5 * PI, range: 4}
-  Rgb: {255, 181, 109}
-}
+jukebox {
+  key_light {
+    Position: {-1.7, 3.6, 2.7}
+    Rotation: {-0.72, -0.55, 0}
+    SpotLight: {intensity: 48 * PI, range: 9, inner_angle: 25, outer_angle: 46, shadows: true}
+    Rgb: {255, 222, 182}
+  }
+  fill_light {
+    Position: {2.7, 2.6, 1.6}
+    Rotation: {-0.4, 0.98, 0}
+    SpotLight: {intensity: 28 * PI, range: 7, inner_angle: 30, outer_angle: 52, shadows: true}
+    Rgb: {152, 214, 235}
+  }
+  rim_light {
+    Position: {-0.7, 2.9, -0.7}
+    PointLight: {intensity: 2.5 * PI, range: 4}
+    Rgb: {255, 181, 109}
+  }
 
-floor : JBDark {
-  Position: {0, -0.065, 0}
-  Box: {14, 0.12, 14}
-}
-for x in 0..14 {
-  for z in 0..14 {
-    "tile_{x}_{z}" {
-      Position: {(x - 7) * 0.72, -0.006, (z - 7) * 0.72}
-      RoundedBox: {0.714, 0.018, 0.714, 0.007, segments: 2}
-      PbrMaterial: {roughness: 0.32}
-      ClearCoat: {strength: 0.4, roughness: 0.24}
-      if (x + z) % 2 == 0 {
-        Rgb: {92, 103, 101}
-      } else {
-        Rgb: {39, 53, 55}
+  floor : JBDark {
+    Position: {0, -0.065, 0}
+    Box: {14, 0.12, 14}
+  }
+  for x in 0..14 {
+    for z in 0..14 {
+      "tile_{x}_{z}" {
+        Position: {(x - 7) * 0.72, -0.006, (z - 7) * 0.72}
+        RoundedBox: {0.714, 0.018, 0.714, 0.007, segments: 2}
+        PbrMaterial: {roughness: 0.32}
+        ClearCoat: {strength: 0.4, roughness: 0.24}
+        if (x + z) % 2 == 0 {
+          Rgb: {92, 103, 101}
+        } else {
+          Rgb: {39, 53, 55}
+        }
       }
     }
   }
-}
 
-back_wall {
-  Position: {0, 2.5, -1.3}
-  Box: {14, 5, 0.2}
-  Rgb: {24, 46, 48}
-  PbrMaterial: {roughness: 0.92}
-}
-wainscot : JBEnamel { Position: {0, 0.55, -1.17}; Box: {14, 1.1, 0.05}; PbrMaterial: {roughness: 0.5} }
-skirting : JBDark { Position: {0, 0.1, -1.1}; RoundedBox: {14, 0.2, 0.15, 0.018} }
-chair_rail : JBBrass { Position: {0, 1.12, -1.1}; RoundedBox: {14, 0.035, 0.065, 0.012} }
-for i in 0..16 {
-  "stile_{i}" : JBBrass { Position: {(i - 8) * 0.8, 0.61, -1.125}; RoundedBox: {0.012, 0.87, 0.025, 0.004} }
-}
-for side in 0..2 {
-  const x = (side * 2 - 1) * 1.65
-  "sconce_back_{side}" : JBDark { Position: {x, 1.95, -1.16}; RoundedBox: {0.19, 0.58, 0.06, 0.08} }
-  "sconce_cap_{side}" : JBBrass { Position: {x, 2.23, -1.07}; RoundedBox: {0.22, 0.055, 0.18, 0.025} }
-  "sconce_base_{side}" : JBBrass { Position: {x, 1.68, -1.07}; RoundedBox: {0.22, 0.055, 0.18, 0.025} }
-  "sconce_{side}" {
-    Position: {x, 1.95, -1.07}
-    RoundedBox: {0.115, 0.49, 0.095, 0.045}
-    Rgb: {255, 221, 172}
-    Emissive: {strength: 2.2, color: {255, 196, 128}}
+  back_wall {
+    Position: {0, 2.5, -1.3}
+    Box: {14, 5, 0.2}
+    Rgb: {24, 46, 48}
+    PbrMaterial: {roughness: 0.92}
   }
-  "lamp_{side}" {
-    Position: {x, 2, -0.91}
-    PointLight: {intensity: 0.9 * PI, range: 2.2}
-    Rgb: {255, 197, 130}
+  wainscot : JBEnamel { Position: {0, 0.55, -1.17}; Box: {14, 1.1, 0.05}; PbrMaterial: {roughness: 0.5} }
+  skirting : JBDark { Position: {0, 0.1, -1.1}; RoundedBox: {14, 0.2, 0.15, 0.018} }
+  chair_rail : JBBrass { Position: {0, 1.12, -1.1}; RoundedBox: {14, 0.035, 0.065, 0.012} }
+  for i in 0..16 {
+    "stile_{i}" : JBBrass { Position: {(i - 8) * 0.8, 0.61, -1.125}; RoundedBox: {0.012, 0.87, 0.025, 0.004} }
   }
-}
-
-lounge_haze {
-  Position: {0, 3.2, 0.6}
-  FogVolume: {
-    extent: {6, 1.9, 2.4},
-    density: 0.012,
-    color: {255, 238, 222},
-    asymmetry: 0.55,
-    edge_fade: 0.9,
-    ambient_inscatter: 0.2,
-    light_inscatter: 0.8,
-    noise_strength: 0.45,
-    noise_scale: 2.5,
-    wind: {0.04, 0.012, 0.02}
+  for side in 0..2 {
+    const x = (side * 2 - 1) * 1.65
+    "sconce_back_{side}" : JBDark { Position: {x, 1.95, -1.16}; RoundedBox: {0.19, 0.58, 0.06, 0.08} }
+    "sconce_cap_{side}" : JBBrass { Position: {x, 2.23, -1.07}; RoundedBox: {0.22, 0.055, 0.18, 0.025} }
+    "sconce_base_{side}" : JBBrass { Position: {x, 1.68, -1.07}; RoundedBox: {0.22, 0.055, 0.18, 0.025} }
+    "sconce_{side}" {
+      Position: {x, 1.95, -1.07}
+      RoundedBox: {0.115, 0.49, 0.095, 0.045}
+      Rgb: {255, 221, 172}
+      Emissive: {strength: 2.2, color: {255, 196, 128}}
+    }
+    "lamp_{side}" {
+      Position: {x, 2, -0.91}
+      PointLight: {intensity: 0.9 * PI, range: 2.2}
+      Rgb: {255, 197, 130}
+    }
   }
-}
 
-room_reflection {
-  Position: {0, 1.25, 1.2}
-  ReflectionProbe: {extent: {5, 3, 5}, blend: 0.5, projection: {6, 3, 6}, offset: {0, 0, 0}}
-}
+  lounge_haze {
+    Position: {0, 3.2, 0.6}
+    FogVolume: {
+      extent: {6, 1.9, 2.4},
+      density: 0.012,
+      color: {255, 238, 222},
+      asymmetry: 0.55,
+      edge_fade: 0.9,
+      ambient_inscatter: 0.2,
+      light_inscatter: 0.8,
+      noise_strength: 0.45,
+      noise_scale: 2.5,
+      wind: {0.04, 0.012, 0.02}
+    }
+  }
 
-Jukebox jukebox() {
-  Position: {0, 0, 0}
+  room_reflection {
+    Position: {0, 1.25, 1.2}
+    ReflectionProbe: {extent: {5, 3, 5}, blend: 0.5, projection: {6, 3, 6}, offset: {0, 0, 0}}
+  }
+
+  Jukebox jukebox() {
+    Position: {0, 0, 0}
+  }
 }

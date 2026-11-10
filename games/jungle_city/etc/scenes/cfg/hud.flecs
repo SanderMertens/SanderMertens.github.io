@@ -16,12 +16,14 @@ using box.picking
 using box.ui
 using box.widgets
 
-export mut hud_hour: f32 = 16
-export mut hud_day_of_year: f32 = 80
-export mut hud_latitude: f32 = 45
-export mut hud_north: f32 = 60
-export mut hud_fog: f32 = 0.002
-export mut hud_baked: bool = true
+state {
+  export mut hud_hour: f32 = 16
+  export mut hud_day_of_year: f32 = 80
+  export mut hud_latitude: f32 = 45
+  export mut hud_north: f32 = 60
+  export mut hud_fog: f32 = 0.002
+  export mut hud_baked: bool = true
+}
 
 window {}
 
@@ -58,62 +60,64 @@ box {
   }
 }
 
-template OptionsPanel : HeadlessCollapsible {
-  prop header: f32 = 24
+assets {
+  template OptionsPanel : HeadlessCollapsible {
+    prop header: f32 = 24
 
-  const t = box.ui.theme[UiTheme]
-  const ring = focused && FocusStatus[FocusStatus].visible
-  const radius = t.radius * 1.5
+    const t = box.ui.theme[UiTheme]
+    const ring = focused && FocusStatus[FocusStatus].visible
+    const radius = t.radius * 1.5
 
-  Layout: {direction: Column}
-  Rect: {1, 1}
-  Rgb: t.surface
-  Border: {width: 1, radius: radius, color: {t.border.r, t.border.g, t.border.b, 255}}
-  InputBlocker
-
-  head {
-    Layout: {}
-    LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: header}}
+    Layout: {direction: Column}
     Rect: {1, 1}
+    Rgb: t.surface
+    Border: {width: 1, radius: radius, color: {t.border.r, t.border.g, t.border.b, 255}}
+    InputBlocker
 
-    if down {
-      Rgb: t.pressed
-    } else if hover {
-      Rgb: t.hover
-    } else {
-      Rgb: t.surface_alt
-    }
+    head {
+      Layout: {}
+      LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: header}}
+      Rect: {1, 1}
 
-    if ring {
-      Border: {width: t.focus_width, radius: radius, color: {t.focus.r, t.focus.g, t.focus.b, 255}}
-    } else {
-      Border: {radius: radius}
-    }
+      if down {
+        Rgb: t.pressed
+      } else if hover {
+        Rgb: t.hover
+      } else {
+        Rgb: t.surface_alt
+      }
 
-    if current {
-      corners {
-        LayoutItem: {v: Bottom, width: {mode: Fixed, value: width}, height: {mode: Fixed, value: radius}}
-        Rect: {1, 1}
+      if ring {
+        Border: {width: t.focus_width, radius: radius, color: {t.focus.r, t.focus.g, t.focus.b, 255}}
+      } else {
+        Border: {radius: radius}
+      }
 
-        if down {
-          Rgb: t.pressed
-        } else if hover {
-          Rgb: t.hover
-        } else {
-          Rgb: t.surface_alt
+      if current {
+        corners {
+          LayoutItem: {v: Bottom, width: {mode: Fixed, value: width}, height: {mode: Fixed, value: radius}}
+          Rect: {1, 1}
+
+          if down {
+            Rgb: t.pressed
+          } else if hover {
+            Rgb: t.hover
+          } else {
+            Rgb: t.surface_alt
+          }
         }
       }
-    }
 
-    row {
-      Layout: {direction: Row, spacing: t.spacing, v: Middle}
-      LayoutItem: {h: Left, v: Middle, x: 12}
+      row {
+        Layout: {direction: Row, spacing: t.spacing, v: Middle}
+        LayoutItem: {h: Left, v: Middle, x: 12}
 
-      Chevron chevron(direction: match current { true: "down"; _: "right" }, color: t.text_muted)
+        Chevron chevron(direction: match current { true: "down"; _: "right" }, color: t.text_muted)
 
-      caption {
-        Text: {value: "OPTIONS", size: t.font_size * 0.8}
-        Rgb: t.text_muted
+        caption {
+          Text: {value: "OPTIONS", size: t.font_size * 0.8}
+          Rgb: t.text_muted
+        }
       }
     }
   }
@@ -132,24 +136,24 @@ hud {
     Layout: {direction: Column, padding: {16, 16, 16, 16}, h: Right}
     FocusScope
 
-    OptionsPanel options(value: true, width: 260) {
+    assets.OptionsPanel options(value: true, width: 260) {
       body {
         Layout: {direction: Column, spacing: 8, padding: {4, 12, 12, 12}}
 
-        Slider hour(label: "Time of day", width: 236, min: 0, max: 24, step: 0, value: hud_hour, decimals: 1, unit: " h")
-        Slider day_of_year(label: "Day of year", width: 236, min: 1, max: 365, step: 1, value: hud_day_of_year)
-        Slider latitude(label: "Latitude", width: 236, min: -90, max: 90, step: 0, value: hud_latitude, decimals: 1, unit: "°")
-        Slider north(label: "North", width: 236, min: 0, max: 360, step: 0, value: hud_north, decimals: 0, unit: "°")
-        Slider fog(label: "Fog density", width: 236, min: 0, max: 0.02, step: 0, value: hud_fog, decimals: 4)
+        Slider hour(label: "Time of day", width: 236, min: 0, max: 24, step: 0, value: state.hud_hour, decimals: 1, unit: " h")
+        Slider day_of_year(label: "Day of year", width: 236, min: 1, max: 365, step: 1, value: state.hud_day_of_year)
+        Slider latitude(label: "Latitude", width: 236, min: -90, max: 90, step: 0, value: state.hud_latitude, decimals: 1, unit: "°")
+        Slider north(label: "North", width: 236, min: 0, max: 360, step: 0, value: state.hud_north, decimals: 0, unit: "°")
+        Slider fog(label: "Fog density", width: 236, min: 0, max: 0.02, step: 0, value: state.hud_fog, decimals: 4)
         Separator lighting_start()
         Checkbox shadows(label: "Shadows", value: true)
-        Checkbox baked(label: "Baked lighting", value: hud_baked)
+        Checkbox baked(label: "Baked lighting", value: state.hud_baked)
         Checkbox gtao(label: "GTAO", value: true)
       }
     }
   }
-}
 
-hud_view {
-  View: {camera: hud.camera, order: 1, lighting: {enabled: false}, culling: {enabled: false}}
+  view {
+    View: {camera: camera, order: 1, lighting: {enabled: false}, culling: {enabled: false}}
+  }
 }

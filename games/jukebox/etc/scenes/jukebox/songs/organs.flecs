@@ -2,635 +2,637 @@ using box.audio
 using box.material
 
 box { audio { Song { Rgb: {196, 92, 112} } } }
+assets {
 
-og_church {
-  AudioBus: {output: master, kind: AudioChannelReturn, volume: 0.85 * reverb_level / 100, effects: [og_church]}
-  Reverb: {decay: 5.5, damping: 0.55, predelay: 0.05, size: 1}
-}
-
-og_club {
-  AudioBus: {output: master, kind: AudioChannelReturn, volume: 0.7 * reverb_level / 100, effects: [og_club]}
-  Reverb: {decay: 1.3, damping: 0.6, predelay: 0.015, size: 0.45}
-}
-
-og_tone {
-  Equalizer: {bands: [
-    {kind: AudioEqLowCut, frequency: 24},
-    {kind: AudioEqPeak, frequency: 250, gain: -1.5, q: 0.8}
-  ]}
-}
-og_glue { Compressor: {threshold: -14, ratio: 2, attack: 0.03, release: 0.3, knee: 8} }
-og_organs {
-  AudioBus: {output: master, volume: 0.75, effects: [og_tone, og_glue]}
-  AudioMeter: {}
-}
-
-prefab og_tonewheel_sound {
-  SynthSound: {seed: 201, free_phase: true}
-  SynthEnvelope: {attack: 0.004, decay: 0.1, sustain: 1, release: 0.04}
-  SynthFilter: {kind: SynthLowPass, cutoff: 7000}
-  sub { SynthOscillator: {wave: SynthSine, frequency: 220, level: 0.13} }
-  fifth { SynthOscillator: {wave: SynthSine, frequency: 660, level: 0.13} }
-  unison { SynthOscillator: {wave: SynthSine, frequency: 440, level: 0.13} }
-  octave { SynthOscillator: {wave: SynthSine, frequency: 880, level: 0.13} }
-  bright { SynthOscillator: {wave: SynthSine, frequency: 1760, level: 0.03} }
-  click {
-    SynthOscillator: {wave: SynthNoise, level: 0.05}
-    SynthEnvelope: {attack: 0.001, decay: 0.012, sustain: 0, release: 0.01, curve: 3}
+  og_church {
+    AudioBus: {output: master, kind: AudioChannelReturn, volume: 0.85 * state.reverb_level / 100, effects: [og_church]}
+    Reverb: {decay: 5.5, damping: 0.55, predelay: 0.05, size: 1}
   }
-}
 
-prefab og_jazz_sound {
-  SynthSound: {seed: 202, free_phase: true}
-  SynthEnvelope: {attack: 0.003, decay: 0.1, sustain: 1, release: 0.03}
-  SynthFilter: {kind: SynthLowPass, cutoff: 8000}
-  sub { SynthOscillator: {wave: SynthSine, frequency: 220, level: 0.14} }
-  fifth { SynthOscillator: {wave: SynthSine, frequency: 660, level: 0.14} }
-  unison { SynthOscillator: {wave: SynthSine, frequency: 440, level: 0.14} }
-  percussion {
-    SynthOscillator: {wave: SynthSine, frequency: 1320, level: 0.16}
-    SynthEnvelope: {attack: 0.001, decay: 0.45, sustain: 0, release: 0.05, curve: 3}
+  og_club {
+    AudioBus: {output: master, kind: AudioChannelReturn, volume: 0.7 * state.reverb_level / 100, effects: [og_club]}
+    Reverb: {decay: 1.3, damping: 0.6, predelay: 0.015, size: 0.45}
   }
-  click {
-    SynthOscillator: {wave: SynthNoise, level: 0.07}
-    SynthEnvelope: {attack: 0.001, decay: 0.01, sustain: 0, release: 0.01, curve: 3}
+
+  og_tone {
+    Equalizer: {bands: [
+      {kind: AudioEqLowCut, frequency: 24},
+      {kind: AudioEqPeak, frequency: 250, gain: -1.5, q: 0.8}
+    ]}
   }
-}
-
-prefab og_combo_sound {
-  SynthSound: {seed: 203}
-  SynthEnvelope: {attack: 0.003, decay: 0.1, sustain: 1, release: 0.03}
-  SynthFilter: {kind: SynthLowPass, cutoff: 4200, resonance: 0.1, keytrack: 0.4}
-  SynthLfo: {wave: SynthLfoTriangle, rate: 6.4, pitch: 16}
-  reed { SynthOscillator: {wave: SynthSquare, frequency: 440, level: 0.16, pulse_width: 0.32} }
-  flute { SynthOscillator: {wave: SynthTriangle, frequency: 880, level: 0.08} }
-  buzz { SynthOscillator: {wave: SynthSaw, frequency: 1760, level: 0.025} }
-}
-
-prefab og_flute_sound {
-  SynthSound: {seed: 204, drift: 1.5, free_phase: true}
-  SynthEnvelope: {attack: 0.05, decay: 0.1, sustain: 1, release: 0.15, attack_curve: 1}
-  SynthFilter: {kind: SynthLowPass, cutoff: 2600, keytrack: 0.7}
-  SynthLfo: {rate: 5.6, amplitude: 0.12, pitch: 4}
-  stopped { SynthOscillator: {wave: SynthSine, frequency: 440, level: 0.3} }
-  twelfth { SynthOscillator: {wave: SynthSine, frequency: 1320, level: 0.025} }
-  open { SynthOscillator: {wave: SynthSine, frequency: 880, level: 0.1} }
-  breath { SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, level: 0.012} }
-  chiff {
-    SynthOscillator: {wave: SynthNoise, level: 0.08}
-    SynthEnvelope: {attack: 0.004, decay: 0.06, sustain: 0, release: 0.02, curve: 2}
+  og_glue { Compressor: {threshold: -14, ratio: 2, attack: 0.03, release: 0.3, knee: 8} }
+  og_organs {
+    AudioBus: {output: master, volume: 0.75, effects: [og_tone, og_glue]}
+    AudioMeter: {}
   }
-}
 
-prefab og_principal_sound {
-  SynthSound: {seed: 205, drift: 1.2, free_phase: true}
-  SynthEnvelope: {attack: 0.06, decay: 0.1, sustain: 1, release: 0.22, attack_curve: 1}
-  SynthFilter: {kind: SynthLowPass, cutoff: 3600, keytrack: 0.5}
-  body { SynthOscillator: {wave: SynthSaw, frequency: 440, level: 0.07} }
-  eight { SynthOscillator: {wave: SynthSine, frequency: 440, level: 0.2} }
-  four { SynthOscillator: {wave: SynthSine, frequency: 880, level: 0.11} }
-  twelfth { SynthOscillator: {wave: SynthSine, frequency: 1320, level: 0.05} }
-  two { SynthOscillator: {wave: SynthSine, frequency: 1760, level: 0.06} }
-  mixture { SynthOscillator: {wave: SynthSine, frequency: 2640, level: 0.03} }
-  chiff {
-    SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, level: 0.06}
-    SynthEnvelope: {attack: 0.005, decay: 0.07, sustain: 0, release: 0.02, curve: 2}
+  prefab og_tonewheel_sound {
+    SynthSound: {seed: 201, free_phase: true}
+    SynthEnvelope: {attack: 0.004, decay: 0.1, sustain: 1, release: 0.04}
+    SynthFilter: {kind: SynthLowPass, cutoff: 7000}
+    sub { SynthOscillator: {wave: SynthSine, frequency: 220, level: 0.13} }
+    fifth { SynthOscillator: {wave: SynthSine, frequency: 660, level: 0.13} }
+    unison { SynthOscillator: {wave: SynthSine, frequency: 440, level: 0.13} }
+    octave { SynthOscillator: {wave: SynthSine, frequency: 880, level: 0.13} }
+    bright { SynthOscillator: {wave: SynthSine, frequency: 1760, level: 0.03} }
+    click {
+      SynthOscillator: {wave: SynthNoise, level: 0.05}
+      SynthEnvelope: {attack: 0.001, decay: 0.012, sustain: 0, release: 0.01, curve: 3}
+    }
   }
-}
 
-prefab og_reed_sound {
-  SynthSound: {seed: 206, drift: 1, free_phase: true}
-  SynthEnvelope: {attack: 0.02, decay: 0.1, sustain: 1, release: 0.12}
-  SynthPitchEnvelope: {amount: -0.4, decay: 0.04, curve: 2}
-  SynthDrive: {drive: 0.3, asymmetry: 0.2}
-  SynthFilter: {kind: SynthLowPass, cutoff: 2400, resonance: 0.2, keytrack: 0.7}
-  SynthFilterEnvelope: {attack: 0.015, decay: 0.2, sustain: 0.6, release: 0.1, amount: 0.8}
-  tongue { SynthOscillator: {wave: SynthSaw, frequency: 440, level: 0.26} }
-  shallot { SynthOscillator: {wave: SynthSquare, frequency: 440, level: 0.06, pulse_width: 0.4} }
-}
+  prefab og_jazz_sound {
+    SynthSound: {seed: 202, free_phase: true}
+    SynthEnvelope: {attack: 0.003, decay: 0.1, sustain: 1, release: 0.03}
+    SynthFilter: {kind: SynthLowPass, cutoff: 8000}
+    sub { SynthOscillator: {wave: SynthSine, frequency: 220, level: 0.14} }
+    fifth { SynthOscillator: {wave: SynthSine, frequency: 660, level: 0.14} }
+    unison { SynthOscillator: {wave: SynthSine, frequency: 440, level: 0.14} }
+    percussion {
+      SynthOscillator: {wave: SynthSine, frequency: 1320, level: 0.16}
+      SynthEnvelope: {attack: 0.001, decay: 0.45, sustain: 0, release: 0.05, curve: 3}
+    }
+    click {
+      SynthOscillator: {wave: SynthNoise, level: 0.07}
+      SynthEnvelope: {attack: 0.001, decay: 0.01, sustain: 0, release: 0.01, curve: 3}
+    }
+  }
 
-prefab og_pedal_sound {
-  SynthSound: {seed: 207, drift: 1, free_phase: true}
-  SynthEnvelope: {attack: 0.07, decay: 0.1, sustain: 1, release: 0.3, attack_curve: 1}
-  subbass { SynthOscillator: {wave: SynthSine, frequency: 220, level: 0.34} }
-  octave { SynthOscillator: {wave: SynthSine, frequency: 440, level: 0.14} }
-  definition { SynthOscillator: {wave: SynthTriangle, frequency: 220, level: 0.06} }
-  choral { SynthOscillator: {wave: SynthSine, frequency: 880, level: 0.04} }
-}
+  prefab og_combo_sound {
+    SynthSound: {seed: 203}
+    SynthEnvelope: {attack: 0.003, decay: 0.1, sustain: 1, release: 0.03}
+    SynthFilter: {kind: SynthLowPass, cutoff: 4200, resonance: 0.1, keytrack: 0.4}
+    SynthLfo: {wave: SynthLfoTriangle, rate: 6.4, pitch: 16}
+    reed { SynthOscillator: {wave: SynthSquare, frequency: 440, level: 0.16, pulse_width: 0.32} }
+    flute { SynthOscillator: {wave: SynthTriangle, frequency: 880, level: 0.08} }
+    buzz { SynthOscillator: {wave: SynthSaw, frequency: 1760, level: 0.025} }
+  }
 
-og_tonewheel { Instrument: {sound: og_tonewheel_sound, velocity_curve: 1} }
-og_jazz { Instrument: {sound: og_jazz_sound, velocity_curve: 1.5} }
-og_combo { Instrument: {sound: og_combo_sound, velocity_curve: 1} }
-og_flute { Instrument: {sound: og_flute_sound, velocity_curve: 1} }
-og_principal { Instrument: {sound: og_principal_sound, velocity_curve: 1} }
-og_reed { Instrument: {sound: og_reed_sound, velocity_curve: 1} }
-og_pedal { Instrument: {sound: og_pedal_sound, velocity_curve: 1} }
+  prefab og_flute_sound {
+    SynthSound: {seed: 204, drift: 1.5, free_phase: true}
+    SynthEnvelope: {attack: 0.05, decay: 0.1, sustain: 1, release: 0.15, attack_curve: 1}
+    SynthFilter: {kind: SynthLowPass, cutoff: 2600, keytrack: 0.7}
+    SynthLfo: {rate: 5.6, amplitude: 0.12, pitch: 4}
+    stopped { SynthOscillator: {wave: SynthSine, frequency: 440, level: 0.3} }
+    twelfth { SynthOscillator: {wave: SynthSine, frequency: 1320, level: 0.025} }
+    open { SynthOscillator: {wave: SynthSine, frequency: 880, level: 0.1} }
+    breath { SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, level: 0.012} }
+    chiff {
+      SynthOscillator: {wave: SynthNoise, level: 0.08}
+      SynthEnvelope: {attack: 0.004, decay: 0.06, sustain: 0, release: 0.02, curve: 2}
+    }
+  }
 
-prefab og_gospel {
-  NoteClip: {length: 16, notes: [
-    {start: 0, duration: 0.25, pitch: 63},
-    {start: 0.25, duration: 2.15, pitch: 64},
-    {start: 0, duration: 2.4, pitch: 55},
-    {start: 0, duration: 2.4, pitch: 60},
-    {start: 0, duration: 2.4, pitch: 67},
-    {start: 2.5, duration: 1.4, pitch: 57},
-    {start: 2.5, duration: 1.4, pitch: 60},
-    {start: 2.5, duration: 1.4, pitch: 65},
-    {start: 2.5, duration: 1.4, pitch: 69},
-    {start: 4, duration: 2.4, pitch: 57},
-    {start: 4, duration: 2.4, pitch: 60},
-    {start: 4, duration: 2.4, pitch: 65},
-    {start: 4, duration: 2.4, pitch: 69},
-    {start: 6.5, duration: 0.4, pitch: 58},
-    {start: 6.5, duration: 0.4, pitch: 62},
-    {start: 6.5, duration: 0.4, pitch: 65},
-    {start: 6.5, duration: 0.4, pitch: 70},
-    {start: 7, duration: 0.9, pitch: 57},
-    {start: 7, duration: 0.9, pitch: 60},
-    {start: 7, duration: 0.9, pitch: 65},
-    {start: 7, duration: 0.9, pitch: 69},
-    {start: 8, duration: 0.25, pitch: 63},
-    {start: 8.25, duration: 1.65, pitch: 64},
-    {start: 8, duration: 1.9, pitch: 55},
-    {start: 8, duration: 1.9, pitch: 60},
-    {start: 8, duration: 1.9, pitch: 67},
-    {start: 10, duration: 1.9, pitch: 57},
-    {start: 10, duration: 1.9, pitch: 60},
-    {start: 10, duration: 1.9, pitch: 64},
-    {start: 10, duration: 1.9, pitch: 69},
-    {start: 12, duration: 1.9, pitch: 57},
-    {start: 12, duration: 1.9, pitch: 60},
-    {start: 12, duration: 1.9, pitch: 62},
-    {start: 12, duration: 1.9, pitch: 65},
-    {start: 14, duration: 1.9, pitch: 55},
-    {start: 14, duration: 1.9, pitch: 59},
-    {start: 14, duration: 1.9, pitch: 62},
-    {start: 14, duration: 1.9, pitch: 65}
-  ]}
-}
+  prefab og_principal_sound {
+    SynthSound: {seed: 205, drift: 1.2, free_phase: true}
+    SynthEnvelope: {attack: 0.06, decay: 0.1, sustain: 1, release: 0.22, attack_curve: 1}
+    SynthFilter: {kind: SynthLowPass, cutoff: 3600, keytrack: 0.5}
+    body { SynthOscillator: {wave: SynthSaw, frequency: 440, level: 0.07} }
+    eight { SynthOscillator: {wave: SynthSine, frequency: 440, level: 0.2} }
+    four { SynthOscillator: {wave: SynthSine, frequency: 880, level: 0.11} }
+    twelfth { SynthOscillator: {wave: SynthSine, frequency: 1320, level: 0.05} }
+    two { SynthOscillator: {wave: SynthSine, frequency: 1760, level: 0.06} }
+    mixture { SynthOscillator: {wave: SynthSine, frequency: 2640, level: 0.03} }
+    chiff {
+      SynthOscillator: {wave: SynthNoise, color: SynthNoisePink, level: 0.06}
+      SynthEnvelope: {attack: 0.005, decay: 0.07, sustain: 0, release: 0.02, curve: 2}
+    }
+  }
 
-prefab og_jazz_line {
-  NoteClip: {length: 16, notes: [
-    {start: 0, duration: 1.4, pitch: 58, velocity: 0.7},
-    {start: 0, duration: 1.4, pitch: 64, velocity: 0.7},
-    {start: 0, duration: 0.45, pitch: 67},
-    {start: 0.5, duration: 0.45, pitch: 70},
-    {start: 1, duration: 0.45, pitch: 72},
-    {start: 1.5, duration: 0.45, pitch: 75},
-    {start: 2, duration: 0.9, pitch: 76},
-    {start: 3, duration: 0.45, pitch: 72},
-    {start: 3.5, duration: 0.45, pitch: 69},
-    {start: 4, duration: 1.4, pitch: 57, velocity: 0.7},
-    {start: 4, duration: 1.4, pitch: 63, velocity: 0.7},
-    {start: 4, duration: 1.4, pitch: 67},
-    {start: 5.5, duration: 0.45, pitch: 64},
-    {start: 6, duration: 0.45, pitch: 65},
-    {start: 6.5, duration: 0.45, pitch: 66},
-    {start: 7, duration: 0.9, pitch: 67},
-    {start: 8, duration: 1.4, pitch: 58, velocity: 0.7},
-    {start: 8, duration: 1.4, pitch: 64, velocity: 0.7},
-    {start: 8, duration: 0.45, pitch: 72},
-    {start: 8.5, duration: 0.45, pitch: 70},
-    {start: 9, duration: 0.45, pitch: 67},
-    {start: 9.5, duration: 0.45, pitch: 63},
-    {start: 10, duration: 0.45, pitch: 64},
-    {start: 10.5, duration: 0.45, pitch: 67},
-    {start: 11, duration: 0.45, pitch: 69},
-    {start: 11.5, duration: 0.45, pitch: 72},
-    {start: 12, duration: 1.4, pitch: 60, velocity: 0.7},
-    {start: 12, duration: 1.4, pitch: 65, velocity: 0.7},
-    {start: 12, duration: 0.45, pitch: 74},
-    {start: 12.5, duration: 0.45, pitch: 75},
-    {start: 13, duration: 0.9, pitch: 76},
-    {start: 14, duration: 1.4, pitch: 59, velocity: 0.7},
-    {start: 14, duration: 1.4, pitch: 65, velocity: 0.7},
-    {start: 14, duration: 0.45, pitch: 79},
-    {start: 14.5, duration: 0.45, pitch: 76},
-    {start: 15, duration: 0.9, pitch: 72}
-  ]}
-}
+  prefab og_reed_sound {
+    SynthSound: {seed: 206, drift: 1, free_phase: true}
+    SynthEnvelope: {attack: 0.02, decay: 0.1, sustain: 1, release: 0.12}
+    SynthPitchEnvelope: {amount: -0.4, decay: 0.04, curve: 2}
+    SynthDrive: {drive: 0.3, asymmetry: 0.2}
+    SynthFilter: {kind: SynthLowPass, cutoff: 2400, resonance: 0.2, keytrack: 0.7}
+    SynthFilterEnvelope: {attack: 0.015, decay: 0.2, sustain: 0.6, release: 0.1, amount: 0.8}
+    tongue { SynthOscillator: {wave: SynthSaw, frequency: 440, level: 0.26} }
+    shallot { SynthOscillator: {wave: SynthSquare, frequency: 440, level: 0.06, pulse_width: 0.4} }
+  }
 
-prefab og_combo_riff {
-  NoteClip: {length: 16, notes: [
-    {start: 0, duration: 0.3, pitch: 69},
-    {start: 0.5, duration: 0.3, pitch: 72},
-    {start: 1, duration: 0.3, pitch: 76},
-    {start: 1.5, duration: 0.3, pitch: 72},
-    {start: 2, duration: 0.3, pitch: 69},
-    {start: 2.5, duration: 0.3, pitch: 72},
-    {start: 3, duration: 0.8, pitch: 76},
-    {start: 4, duration: 0.3, pitch: 67},
-    {start: 4.5, duration: 0.3, pitch: 71},
-    {start: 5, duration: 0.3, pitch: 74},
-    {start: 5.5, duration: 0.3, pitch: 71},
-    {start: 6, duration: 0.3, pitch: 67},
-    {start: 6.5, duration: 0.3, pitch: 71},
-    {start: 7, duration: 0.8, pitch: 74},
-    {start: 8, duration: 0.3, pitch: 65},
-    {start: 8.5, duration: 0.3, pitch: 69},
-    {start: 9, duration: 0.3, pitch: 72},
-    {start: 9.5, duration: 0.3, pitch: 69},
-    {start: 10, duration: 0.3, pitch: 65},
-    {start: 10.5, duration: 0.3, pitch: 69},
-    {start: 11, duration: 0.8, pitch: 72},
-    {start: 12, duration: 0.3, pitch: 64},
-    {start: 12.5, duration: 0.3, pitch: 68},
-    {start: 13, duration: 0.3, pitch: 71},
-    {start: 13.5, duration: 0.3, pitch: 74},
-    {start: 14, duration: 1.9, pitch: 76}
-  ]}
-}
+  prefab og_pedal_sound {
+    SynthSound: {seed: 207, drift: 1, free_phase: true}
+    SynthEnvelope: {attack: 0.07, decay: 0.1, sustain: 1, release: 0.3, attack_curve: 1}
+    subbass { SynthOscillator: {wave: SynthSine, frequency: 220, level: 0.34} }
+    octave { SynthOscillator: {wave: SynthSine, frequency: 440, level: 0.14} }
+    definition { SynthOscillator: {wave: SynthTriangle, frequency: 220, level: 0.06} }
+    choral { SynthOscillator: {wave: SynthSine, frequency: 880, level: 0.04} }
+  }
 
-prefab og_flute_tune {
-  NoteClip: {length: 16, notes: [
-    {start: 0, duration: 3.9, pitch: 60, velocity: 0.8},
-    {start: 0, duration: 0.95, pitch: 76},
-    {start: 1, duration: 0.45, pitch: 74},
-    {start: 1.5, duration: 0.45, pitch: 72},
-    {start: 2, duration: 0.95, pitch: 74},
-    {start: 3, duration: 0.95, pitch: 67},
-    {start: 4, duration: 3.9, pitch: 64, velocity: 0.8},
-    {start: 4, duration: 1.45, pitch: 72},
-    {start: 5.5, duration: 0.45, pitch: 74},
-    {start: 6, duration: 0.95, pitch: 76},
-    {start: 7, duration: 0.95, pitch: 79},
-    {start: 8, duration: 3.9, pitch: 65, velocity: 0.8},
-    {start: 8, duration: 1.45, pitch: 81},
-    {start: 9.5, duration: 0.45, pitch: 79},
-    {start: 10, duration: 0.95, pitch: 76},
-    {start: 11, duration: 0.95, pitch: 72},
-    {start: 12, duration: 1.95, pitch: 67, velocity: 0.8},
-    {start: 14, duration: 1.9, pitch: 64, velocity: 0.8},
-    {start: 12, duration: 1.45, pitch: 74},
-    {start: 13.5, duration: 0.45, pitch: 76},
-    {start: 14, duration: 1.9, pitch: 72}
-  ]}
-}
+  og_tonewheel { Instrument: {sound: og_tonewheel_sound, velocity_curve: 1} }
+  og_jazz { Instrument: {sound: og_jazz_sound, velocity_curve: 1.5} }
+  og_combo { Instrument: {sound: og_combo_sound, velocity_curve: 1} }
+  og_flute { Instrument: {sound: og_flute_sound, velocity_curve: 1} }
+  og_principal { Instrument: {sound: og_principal_sound, velocity_curve: 1} }
+  og_reed { Instrument: {sound: og_reed_sound, velocity_curve: 1} }
+  og_pedal { Instrument: {sound: og_pedal_sound, velocity_curve: 1} }
 
-prefab og_chorale {
-  NoteClip: {length: 16, notes: [
-    {start: 0, duration: 1.95, pitch: 48},
-    {start: 0, duration: 1.95, pitch: 64},
-    {start: 0, duration: 1.95, pitch: 67},
-    {start: 0, duration: 1.95, pitch: 72},
-    {start: 2, duration: 1.95, pitch: 45},
-    {start: 2, duration: 1.95, pitch: 65},
-    {start: 2, duration: 1.95, pitch: 69},
-    {start: 2, duration: 1.95, pitch: 72},
-    {start: 4, duration: 1.95, pitch: 43},
-    {start: 4, duration: 1.95, pitch: 62},
-    {start: 4, duration: 1.95, pitch: 67},
-    {start: 4, duration: 1.95, pitch: 71},
-    {start: 6, duration: 1.95, pitch: 48},
-    {start: 6, duration: 1.95, pitch: 64},
-    {start: 6, duration: 1.95, pitch: 67},
-    {start: 6, duration: 1.95, pitch: 72},
-    {start: 8, duration: 1.95, pitch: 45},
-    {start: 8, duration: 1.95, pitch: 64},
-    {start: 8, duration: 1.95, pitch: 69},
-    {start: 8, duration: 1.95, pitch: 72},
-    {start: 10, duration: 1.95, pitch: 52},
-    {start: 10, duration: 1.95, pitch: 64},
-    {start: 10, duration: 1.95, pitch: 67},
-    {start: 10, duration: 1.95, pitch: 71},
-    {start: 12, duration: 1.95, pitch: 53},
-    {start: 12, duration: 1.95, pitch: 65},
-    {start: 12, duration: 1.95, pitch: 69},
-    {start: 12, duration: 1.95, pitch: 72},
-    {start: 14, duration: 1.9, pitch: 43},
-    {start: 14, duration: 1.9, pitch: 62},
-    {start: 14, duration: 1.9, pitch: 67},
-    {start: 14, duration: 1.9, pitch: 71}
-  ]}
-}
+  prefab og_gospel {
+    NoteClip: {length: 16, notes: [
+      {start: 0, duration: 0.25, pitch: 63},
+      {start: 0.25, duration: 2.15, pitch: 64},
+      {start: 0, duration: 2.4, pitch: 55},
+      {start: 0, duration: 2.4, pitch: 60},
+      {start: 0, duration: 2.4, pitch: 67},
+      {start: 2.5, duration: 1.4, pitch: 57},
+      {start: 2.5, duration: 1.4, pitch: 60},
+      {start: 2.5, duration: 1.4, pitch: 65},
+      {start: 2.5, duration: 1.4, pitch: 69},
+      {start: 4, duration: 2.4, pitch: 57},
+      {start: 4, duration: 2.4, pitch: 60},
+      {start: 4, duration: 2.4, pitch: 65},
+      {start: 4, duration: 2.4, pitch: 69},
+      {start: 6.5, duration: 0.4, pitch: 58},
+      {start: 6.5, duration: 0.4, pitch: 62},
+      {start: 6.5, duration: 0.4, pitch: 65},
+      {start: 6.5, duration: 0.4, pitch: 70},
+      {start: 7, duration: 0.9, pitch: 57},
+      {start: 7, duration: 0.9, pitch: 60},
+      {start: 7, duration: 0.9, pitch: 65},
+      {start: 7, duration: 0.9, pitch: 69},
+      {start: 8, duration: 0.25, pitch: 63},
+      {start: 8.25, duration: 1.65, pitch: 64},
+      {start: 8, duration: 1.9, pitch: 55},
+      {start: 8, duration: 1.9, pitch: 60},
+      {start: 8, duration: 1.9, pitch: 67},
+      {start: 10, duration: 1.9, pitch: 57},
+      {start: 10, duration: 1.9, pitch: 60},
+      {start: 10, duration: 1.9, pitch: 64},
+      {start: 10, duration: 1.9, pitch: 69},
+      {start: 12, duration: 1.9, pitch: 57},
+      {start: 12, duration: 1.9, pitch: 60},
+      {start: 12, duration: 1.9, pitch: 62},
+      {start: 12, duration: 1.9, pitch: 65},
+      {start: 14, duration: 1.9, pitch: 55},
+      {start: 14, duration: 1.9, pitch: 59},
+      {start: 14, duration: 1.9, pitch: 62},
+      {start: 14, duration: 1.9, pitch: 65}
+    ]}
+  }
 
-prefab og_fanfare {
-  NoteClip: {length: 16, notes: [
-    {start: 0, duration: 0.45, pitch: 55},
-    {start: 0.5, duration: 0.45, pitch: 60},
-    {start: 1, duration: 0.95, pitch: 64},
-    {start: 2, duration: 1.45, pitch: 67},
-    {start: 3.5, duration: 0.45, pitch: 64},
-    {start: 4, duration: 0.95, pitch: 65},
-    {start: 5, duration: 0.95, pitch: 69},
-    {start: 6, duration: 1.9, pitch: 67},
-    {start: 8, duration: 0.45, pitch: 64},
-    {start: 8.5, duration: 0.45, pitch: 65},
-    {start: 9, duration: 0.95, pitch: 67},
-    {start: 10, duration: 0.95, pitch: 72},
-    {start: 11, duration: 0.45, pitch: 71},
-    {start: 11.5, duration: 0.45, pitch: 69},
-    {start: 12, duration: 0.95, pitch: 67},
-    {start: 13, duration: 0.45, pitch: 65},
-    {start: 13.5, duration: 0.45, pitch: 62},
-    {start: 14, duration: 1.9, pitch: 60}
-  ]}
-}
+  prefab og_jazz_line {
+    NoteClip: {length: 16, notes: [
+      {start: 0, duration: 1.4, pitch: 58, velocity: 0.7},
+      {start: 0, duration: 1.4, pitch: 64, velocity: 0.7},
+      {start: 0, duration: 0.45, pitch: 67},
+      {start: 0.5, duration: 0.45, pitch: 70},
+      {start: 1, duration: 0.45, pitch: 72},
+      {start: 1.5, duration: 0.45, pitch: 75},
+      {start: 2, duration: 0.9, pitch: 76},
+      {start: 3, duration: 0.45, pitch: 72},
+      {start: 3.5, duration: 0.45, pitch: 69},
+      {start: 4, duration: 1.4, pitch: 57, velocity: 0.7},
+      {start: 4, duration: 1.4, pitch: 63, velocity: 0.7},
+      {start: 4, duration: 1.4, pitch: 67},
+      {start: 5.5, duration: 0.45, pitch: 64},
+      {start: 6, duration: 0.45, pitch: 65},
+      {start: 6.5, duration: 0.45, pitch: 66},
+      {start: 7, duration: 0.9, pitch: 67},
+      {start: 8, duration: 1.4, pitch: 58, velocity: 0.7},
+      {start: 8, duration: 1.4, pitch: 64, velocity: 0.7},
+      {start: 8, duration: 0.45, pitch: 72},
+      {start: 8.5, duration: 0.45, pitch: 70},
+      {start: 9, duration: 0.45, pitch: 67},
+      {start: 9.5, duration: 0.45, pitch: 63},
+      {start: 10, duration: 0.45, pitch: 64},
+      {start: 10.5, duration: 0.45, pitch: 67},
+      {start: 11, duration: 0.45, pitch: 69},
+      {start: 11.5, duration: 0.45, pitch: 72},
+      {start: 12, duration: 1.4, pitch: 60, velocity: 0.7},
+      {start: 12, duration: 1.4, pitch: 65, velocity: 0.7},
+      {start: 12, duration: 0.45, pitch: 74},
+      {start: 12.5, duration: 0.45, pitch: 75},
+      {start: 13, duration: 0.9, pitch: 76},
+      {start: 14, duration: 1.4, pitch: 59, velocity: 0.7},
+      {start: 14, duration: 1.4, pitch: 65, velocity: 0.7},
+      {start: 14, duration: 0.45, pitch: 79},
+      {start: 14.5, duration: 0.45, pitch: 76},
+      {start: 15, duration: 0.9, pitch: 72}
+    ]}
+  }
 
-prefab og_pedal_walk {
-  NoteClip: {length: 16, notes: [
-    {start: 0, duration: 0.45, pitch: 48},
-    {start: 0.5, duration: 0.45, pitch: 50},
-    {start: 1, duration: 0.45, pitch: 52},
-    {start: 1.5, duration: 0.45, pitch: 53},
-    {start: 2, duration: 0.95, pitch: 55},
-    {start: 3, duration: 0.95, pitch: 43},
-    {start: 4, duration: 0.45, pitch: 45},
-    {start: 4.5, duration: 0.45, pitch: 47},
-    {start: 5, duration: 0.45, pitch: 48},
-    {start: 5.5, duration: 0.45, pitch: 45},
-    {start: 6, duration: 0.95, pitch: 41},
-    {start: 7, duration: 0.95, pitch: 43},
-    {start: 8, duration: 0.45, pitch: 48},
-    {start: 8.5, duration: 0.45, pitch: 47},
-    {start: 9, duration: 0.45, pitch: 45},
-    {start: 9.5, duration: 0.45, pitch: 43},
-    {start: 10, duration: 0.45, pitch: 41},
-    {start: 10.5, duration: 0.45, pitch: 40},
-    {start: 11, duration: 0.95, pitch: 38},
-    {start: 12, duration: 1.45, pitch: 43},
-    {start: 13.5, duration: 0.45, pitch: 43},
-    {start: 14, duration: 1.9, pitch: 36}
-  ]}
-}
+  prefab og_combo_riff {
+    NoteClip: {length: 16, notes: [
+      {start: 0, duration: 0.3, pitch: 69},
+      {start: 0.5, duration: 0.3, pitch: 72},
+      {start: 1, duration: 0.3, pitch: 76},
+      {start: 1.5, duration: 0.3, pitch: 72},
+      {start: 2, duration: 0.3, pitch: 69},
+      {start: 2.5, duration: 0.3, pitch: 72},
+      {start: 3, duration: 0.8, pitch: 76},
+      {start: 4, duration: 0.3, pitch: 67},
+      {start: 4.5, duration: 0.3, pitch: 71},
+      {start: 5, duration: 0.3, pitch: 74},
+      {start: 5.5, duration: 0.3, pitch: 71},
+      {start: 6, duration: 0.3, pitch: 67},
+      {start: 6.5, duration: 0.3, pitch: 71},
+      {start: 7, duration: 0.8, pitch: 74},
+      {start: 8, duration: 0.3, pitch: 65},
+      {start: 8.5, duration: 0.3, pitch: 69},
+      {start: 9, duration: 0.3, pitch: 72},
+      {start: 9.5, duration: 0.3, pitch: 69},
+      {start: 10, duration: 0.3, pitch: 65},
+      {start: 10.5, duration: 0.3, pitch: 69},
+      {start: 11, duration: 0.8, pitch: 72},
+      {start: 12, duration: 0.3, pitch: 64},
+      {start: 12.5, duration: 0.3, pitch: 68},
+      {start: 13, duration: 0.3, pitch: 71},
+      {start: 13.5, duration: 0.3, pitch: 74},
+      {start: 14, duration: 1.9, pitch: 76}
+    ]}
+  }
 
-prefab og_hymn_melody {
-  NoteClip: {length: 32, notes: [
-    {start: 0, duration: 0.95, pitch: 76},
-    {start: 1, duration: 0.95, pitch: 74},
-    {start: 2, duration: 0.95, pitch: 72},
-    {start: 3, duration: 0.95, pitch: 76},
-    {start: 4, duration: 0.95, pitch: 77},
-    {start: 5, duration: 0.95, pitch: 81},
-    {start: 6, duration: 1.95, pitch: 79},
-    {start: 8, duration: 1.45, pitch: 76},
-    {start: 9.5, duration: 0.45, pitch: 74},
-    {start: 10, duration: 0.95, pitch: 72},
-    {start: 11, duration: 0.95, pitch: 69},
-    {start: 12, duration: 0.95, pitch: 71},
-    {start: 13, duration: 0.95, pitch: 72},
-    {start: 14, duration: 1.95, pitch: 74},
-    {start: 16, duration: 0.95, pitch: 76},
-    {start: 17, duration: 0.95, pitch: 79},
-    {start: 18, duration: 1.45, pitch: 79},
-    {start: 19.5, duration: 0.45, pitch: 76},
-    {start: 20, duration: 0.95, pitch: 77},
-    {start: 21, duration: 0.95, pitch: 81},
-    {start: 22, duration: 0.95, pitch: 79},
-    {start: 23, duration: 0.95, pitch: 76},
-    {start: 24, duration: 0.95, pitch: 74},
-    {start: 25, duration: 0.95, pitch: 77},
-    {start: 26, duration: 0.95, pitch: 74},
-    {start: 27, duration: 0.95, pitch: 71},
-    {start: 28, duration: 3.8, pitch: 72}
-  ]}
-}
+  prefab og_flute_tune {
+    NoteClip: {length: 16, notes: [
+      {start: 0, duration: 3.9, pitch: 60, velocity: 0.8},
+      {start: 0, duration: 0.95, pitch: 76},
+      {start: 1, duration: 0.45, pitch: 74},
+      {start: 1.5, duration: 0.45, pitch: 72},
+      {start: 2, duration: 0.95, pitch: 74},
+      {start: 3, duration: 0.95, pitch: 67},
+      {start: 4, duration: 3.9, pitch: 64, velocity: 0.8},
+      {start: 4, duration: 1.45, pitch: 72},
+      {start: 5.5, duration: 0.45, pitch: 74},
+      {start: 6, duration: 0.95, pitch: 76},
+      {start: 7, duration: 0.95, pitch: 79},
+      {start: 8, duration: 3.9, pitch: 65, velocity: 0.8},
+      {start: 8, duration: 1.45, pitch: 81},
+      {start: 9.5, duration: 0.45, pitch: 79},
+      {start: 10, duration: 0.95, pitch: 76},
+      {start: 11, duration: 0.95, pitch: 72},
+      {start: 12, duration: 1.95, pitch: 67, velocity: 0.8},
+      {start: 14, duration: 1.9, pitch: 64, velocity: 0.8},
+      {start: 12, duration: 1.45, pitch: 74},
+      {start: 13.5, duration: 0.45, pitch: 76},
+      {start: 14, duration: 1.9, pitch: 72}
+    ]}
+  }
 
-prefab og_hymn_inner {
-  NoteClip: {length: 32, notes: [
-    {start: 0, duration: 3.95, pitch: 55},
-    {start: 0, duration: 3.95, pitch: 60},
-    {start: 0, duration: 3.95, pitch: 64},
-    {start: 4, duration: 1.95, pitch: 57},
-    {start: 4, duration: 1.95, pitch: 60},
-    {start: 4, duration: 1.95, pitch: 65},
-    {start: 6, duration: 1.95, pitch: 55},
-    {start: 6, duration: 1.95, pitch: 60},
-    {start: 6, duration: 1.95, pitch: 64},
-    {start: 8, duration: 1.95, pitch: 57},
-    {start: 8, duration: 1.95, pitch: 60},
-    {start: 8, duration: 1.95, pitch: 64},
-    {start: 10, duration: 1.95, pitch: 57},
-    {start: 10, duration: 1.95, pitch: 60},
-    {start: 10, duration: 1.95, pitch: 65},
-    {start: 12, duration: 1.95, pitch: 55},
-    {start: 12, duration: 1.95, pitch: 59},
-    {start: 12, duration: 1.95, pitch: 62},
-    {start: 14, duration: 1.95, pitch: 55},
-    {start: 14, duration: 1.95, pitch: 59},
-    {start: 14, duration: 1.95, pitch: 65},
-    {start: 16, duration: 1.95, pitch: 55},
-    {start: 16, duration: 1.95, pitch: 60},
-    {start: 16, duration: 1.95, pitch: 64},
-    {start: 18, duration: 1.95, pitch: 55},
-    {start: 18, duration: 1.95, pitch: 59},
-    {start: 18, duration: 1.95, pitch: 64},
-    {start: 20, duration: 1.95, pitch: 57},
-    {start: 20, duration: 1.95, pitch: 60},
-    {start: 20, duration: 1.95, pitch: 65},
-    {start: 22, duration: 1.95, pitch: 55},
-    {start: 22, duration: 1.95, pitch: 60},
-    {start: 22, duration: 1.95, pitch: 64},
-    {start: 24, duration: 1.95, pitch: 57},
-    {start: 24, duration: 1.95, pitch: 60},
-    {start: 24, duration: 1.95, pitch: 65},
-    {start: 26, duration: 1.95, pitch: 55},
-    {start: 26, duration: 1.95, pitch: 59},
-    {start: 26, duration: 1.95, pitch: 62},
-    {start: 28, duration: 3.8, pitch: 55},
-    {start: 28, duration: 3.8, pitch: 60},
-    {start: 28, duration: 3.8, pitch: 64}
-  ]}
-}
+  prefab og_chorale {
+    NoteClip: {length: 16, notes: [
+      {start: 0, duration: 1.95, pitch: 48},
+      {start: 0, duration: 1.95, pitch: 64},
+      {start: 0, duration: 1.95, pitch: 67},
+      {start: 0, duration: 1.95, pitch: 72},
+      {start: 2, duration: 1.95, pitch: 45},
+      {start: 2, duration: 1.95, pitch: 65},
+      {start: 2, duration: 1.95, pitch: 69},
+      {start: 2, duration: 1.95, pitch: 72},
+      {start: 4, duration: 1.95, pitch: 43},
+      {start: 4, duration: 1.95, pitch: 62},
+      {start: 4, duration: 1.95, pitch: 67},
+      {start: 4, duration: 1.95, pitch: 71},
+      {start: 6, duration: 1.95, pitch: 48},
+      {start: 6, duration: 1.95, pitch: 64},
+      {start: 6, duration: 1.95, pitch: 67},
+      {start: 6, duration: 1.95, pitch: 72},
+      {start: 8, duration: 1.95, pitch: 45},
+      {start: 8, duration: 1.95, pitch: 64},
+      {start: 8, duration: 1.95, pitch: 69},
+      {start: 8, duration: 1.95, pitch: 72},
+      {start: 10, duration: 1.95, pitch: 52},
+      {start: 10, duration: 1.95, pitch: 64},
+      {start: 10, duration: 1.95, pitch: 67},
+      {start: 10, duration: 1.95, pitch: 71},
+      {start: 12, duration: 1.95, pitch: 53},
+      {start: 12, duration: 1.95, pitch: 65},
+      {start: 12, duration: 1.95, pitch: 69},
+      {start: 12, duration: 1.95, pitch: 72},
+      {start: 14, duration: 1.9, pitch: 43},
+      {start: 14, duration: 1.9, pitch: 62},
+      {start: 14, duration: 1.9, pitch: 67},
+      {start: 14, duration: 1.9, pitch: 71}
+    ]}
+  }
 
-prefab og_hymn_bass {
-  NoteClip: {length: 32, notes: [
-    {start: 0, duration: 1.95, pitch: 36},
-    {start: 2, duration: 1.95, pitch: 40},
-    {start: 4, duration: 1.95, pitch: 41},
-    {start: 6, duration: 1.95, pitch: 36},
-    {start: 8, duration: 1.95, pitch: 45},
-    {start: 10, duration: 1.95, pitch: 41},
-    {start: 12, duration: 1.95, pitch: 43},
-    {start: 14, duration: 1.95, pitch: 43},
-    {start: 16, duration: 1.95, pitch: 36},
-    {start: 18, duration: 1.95, pitch: 40},
-    {start: 20, duration: 1.95, pitch: 41},
-    {start: 22, duration: 1.95, pitch: 40},
-    {start: 24, duration: 1.95, pitch: 38},
-    {start: 26, duration: 1.95, pitch: 43},
-    {start: 28, duration: 3.8, pitch: 36}
-  ]}
-}
+  prefab og_fanfare {
+    NoteClip: {length: 16, notes: [
+      {start: 0, duration: 0.45, pitch: 55},
+      {start: 0.5, duration: 0.45, pitch: 60},
+      {start: 1, duration: 0.95, pitch: 64},
+      {start: 2, duration: 1.45, pitch: 67},
+      {start: 3.5, duration: 0.45, pitch: 64},
+      {start: 4, duration: 0.95, pitch: 65},
+      {start: 5, duration: 0.95, pitch: 69},
+      {start: 6, duration: 1.9, pitch: 67},
+      {start: 8, duration: 0.45, pitch: 64},
+      {start: 8.5, duration: 0.45, pitch: 65},
+      {start: 9, duration: 0.95, pitch: 67},
+      {start: 10, duration: 0.95, pitch: 72},
+      {start: 11, duration: 0.45, pitch: 71},
+      {start: 11.5, duration: 0.45, pitch: 69},
+      {start: 12, duration: 0.95, pitch: 67},
+      {start: 13, duration: 0.45, pitch: 65},
+      {start: 13.5, duration: 0.45, pitch: 62},
+      {start: 14, duration: 1.9, pitch: 60}
+    ]}
+  }
 
-prefab og_hymn_wheel {
-  NoteClip: {length: 32, notes: [
-    {start: 0, duration: 3.95, pitch: 60},
-    {start: 0, duration: 3.95, pitch: 64},
-    {start: 0, duration: 3.95, pitch: 67},
-    {start: 4, duration: 1.95, pitch: 60},
-    {start: 4, duration: 1.95, pitch: 65},
-    {start: 4, duration: 1.95, pitch: 69},
-    {start: 6, duration: 1.95, pitch: 60},
-    {start: 6, duration: 1.95, pitch: 64},
-    {start: 6, duration: 1.95, pitch: 67},
-    {start: 8, duration: 1.95, pitch: 60},
-    {start: 8, duration: 1.95, pitch: 64},
-    {start: 8, duration: 1.95, pitch: 69},
-    {start: 10, duration: 1.95, pitch: 60},
-    {start: 10, duration: 1.95, pitch: 65},
-    {start: 10, duration: 1.95, pitch: 69},
-    {start: 12, duration: 1.95, pitch: 59},
-    {start: 12, duration: 1.95, pitch: 62},
-    {start: 12, duration: 1.95, pitch: 67},
-    {start: 14, duration: 1.95, pitch: 59},
-    {start: 14, duration: 1.95, pitch: 62},
-    {start: 14, duration: 1.95, pitch: 65},
-    {start: 16, duration: 1.95, pitch: 60},
-    {start: 16, duration: 1.95, pitch: 64},
-    {start: 16, duration: 1.95, pitch: 67},
-    {start: 18, duration: 1.95, pitch: 59},
-    {start: 18, duration: 1.95, pitch: 64},
-    {start: 18, duration: 1.95, pitch: 67},
-    {start: 20, duration: 1.95, pitch: 60},
-    {start: 20, duration: 1.95, pitch: 65},
-    {start: 20, duration: 1.95, pitch: 69},
-    {start: 22, duration: 1.95, pitch: 60},
-    {start: 22, duration: 1.95, pitch: 64},
-    {start: 22, duration: 1.95, pitch: 67},
-    {start: 24, duration: 1.95, pitch: 60},
-    {start: 24, duration: 1.95, pitch: 62},
-    {start: 24, duration: 1.95, pitch: 65},
-    {start: 26, duration: 1.95, pitch: 59},
-    {start: 26, duration: 1.95, pitch: 62},
-    {start: 26, duration: 1.95, pitch: 67},
-    {start: 28, duration: 3.8, pitch: 60},
-    {start: 28, duration: 3.8, pitch: 64},
-    {start: 28, duration: 3.8, pitch: 67}
-  ]}
-}
+  prefab og_pedal_walk {
+    NoteClip: {length: 16, notes: [
+      {start: 0, duration: 0.45, pitch: 48},
+      {start: 0.5, duration: 0.45, pitch: 50},
+      {start: 1, duration: 0.45, pitch: 52},
+      {start: 1.5, duration: 0.45, pitch: 53},
+      {start: 2, duration: 0.95, pitch: 55},
+      {start: 3, duration: 0.95, pitch: 43},
+      {start: 4, duration: 0.45, pitch: 45},
+      {start: 4.5, duration: 0.45, pitch: 47},
+      {start: 5, duration: 0.45, pitch: 48},
+      {start: 5.5, duration: 0.45, pitch: 45},
+      {start: 6, duration: 0.95, pitch: 41},
+      {start: 7, duration: 0.95, pitch: 43},
+      {start: 8, duration: 0.45, pitch: 48},
+      {start: 8.5, duration: 0.45, pitch: 47},
+      {start: 9, duration: 0.45, pitch: 45},
+      {start: 9.5, duration: 0.45, pitch: 43},
+      {start: 10, duration: 0.45, pitch: 41},
+      {start: 10.5, duration: 0.45, pitch: 40},
+      {start: 11, duration: 0.95, pitch: 38},
+      {start: 12, duration: 1.45, pitch: 43},
+      {start: 13.5, duration: 0.45, pitch: 43},
+      {start: 14, duration: 1.9, pitch: 36}
+    ]}
+  }
 
-prefab og_hymn_stabs {
-  NoteClip: {length: 16, notes: [
-    {start: 1.5, duration: 0.4, pitch: 64},
-    {start: 1.5, duration: 0.4, pitch: 67},
-    {start: 1.5, duration: 0.4, pitch: 72},
-    {start: 3.5, duration: 0.4, pitch: 64},
-    {start: 3.5, duration: 0.4, pitch: 67},
-    {start: 3.5, duration: 0.4, pitch: 71},
-    {start: 5.5, duration: 0.4, pitch: 65},
-    {start: 5.5, duration: 0.4, pitch: 69},
-    {start: 5.5, duration: 0.4, pitch: 72},
-    {start: 7.5, duration: 0.4, pitch: 64},
-    {start: 7.5, duration: 0.4, pitch: 67},
-    {start: 7.5, duration: 0.4, pitch: 72},
-    {start: 9.5, duration: 0.4, pitch: 65},
-    {start: 9.5, duration: 0.4, pitch: 69},
-    {start: 9.5, duration: 0.4, pitch: 72},
-    {start: 11.5, duration: 0.4, pitch: 62},
-    {start: 11.5, duration: 0.4, pitch: 67},
-    {start: 11.5, duration: 0.4, pitch: 71},
-    {start: 12, duration: 3.8, pitch: 64},
-    {start: 12, duration: 3.8, pitch: 67},
-    {start: 12, duration: 3.8, pitch: 72}
-  ]}
-}
+  prefab og_hymn_melody {
+    NoteClip: {length: 32, notes: [
+      {start: 0, duration: 0.95, pitch: 76},
+      {start: 1, duration: 0.95, pitch: 74},
+      {start: 2, duration: 0.95, pitch: 72},
+      {start: 3, duration: 0.95, pitch: 76},
+      {start: 4, duration: 0.95, pitch: 77},
+      {start: 5, duration: 0.95, pitch: 81},
+      {start: 6, duration: 1.95, pitch: 79},
+      {start: 8, duration: 1.45, pitch: 76},
+      {start: 9.5, duration: 0.45, pitch: 74},
+      {start: 10, duration: 0.95, pitch: 72},
+      {start: 11, duration: 0.95, pitch: 69},
+      {start: 12, duration: 0.95, pitch: 71},
+      {start: 13, duration: 0.95, pitch: 72},
+      {start: 14, duration: 1.95, pitch: 74},
+      {start: 16, duration: 0.95, pitch: 76},
+      {start: 17, duration: 0.95, pitch: 79},
+      {start: 18, duration: 1.45, pitch: 79},
+      {start: 19.5, duration: 0.45, pitch: 76},
+      {start: 20, duration: 0.95, pitch: 77},
+      {start: 21, duration: 0.95, pitch: 81},
+      {start: 22, duration: 0.95, pitch: 79},
+      {start: 23, duration: 0.95, pitch: 76},
+      {start: 24, duration: 0.95, pitch: 74},
+      {start: 25, duration: 0.95, pitch: 77},
+      {start: 26, duration: 0.95, pitch: 74},
+      {start: 27, duration: 0.95, pitch: 71},
+      {start: 28, duration: 3.8, pitch: 72}
+    ]}
+  }
 
-prefab og_hymn_combo {
-  NoteClip: {length: 16, notes: [
-    {start: 0, duration: 3.95, pitch: 79},
-    {start: 4, duration: 1.95, pitch: 81},
-    {start: 6, duration: 1.95, pitch: 79},
-    {start: 8, duration: 1.95, pitch: 81},
-    {start: 10, duration: 1.95, pitch: 83},
-    {start: 12, duration: 3.8, pitch: 88}
-  ]}
-}
+  prefab og_hymn_inner {
+    NoteClip: {length: 32, notes: [
+      {start: 0, duration: 3.95, pitch: 55},
+      {start: 0, duration: 3.95, pitch: 60},
+      {start: 0, duration: 3.95, pitch: 64},
+      {start: 4, duration: 1.95, pitch: 57},
+      {start: 4, duration: 1.95, pitch: 60},
+      {start: 4, duration: 1.95, pitch: 65},
+      {start: 6, duration: 1.95, pitch: 55},
+      {start: 6, duration: 1.95, pitch: 60},
+      {start: 6, duration: 1.95, pitch: 64},
+      {start: 8, duration: 1.95, pitch: 57},
+      {start: 8, duration: 1.95, pitch: 60},
+      {start: 8, duration: 1.95, pitch: 64},
+      {start: 10, duration: 1.95, pitch: 57},
+      {start: 10, duration: 1.95, pitch: 60},
+      {start: 10, duration: 1.95, pitch: 65},
+      {start: 12, duration: 1.95, pitch: 55},
+      {start: 12, duration: 1.95, pitch: 59},
+      {start: 12, duration: 1.95, pitch: 62},
+      {start: 14, duration: 1.95, pitch: 55},
+      {start: 14, duration: 1.95, pitch: 59},
+      {start: 14, duration: 1.95, pitch: 65},
+      {start: 16, duration: 1.95, pitch: 55},
+      {start: 16, duration: 1.95, pitch: 60},
+      {start: 16, duration: 1.95, pitch: 64},
+      {start: 18, duration: 1.95, pitch: 55},
+      {start: 18, duration: 1.95, pitch: 59},
+      {start: 18, duration: 1.95, pitch: 64},
+      {start: 20, duration: 1.95, pitch: 57},
+      {start: 20, duration: 1.95, pitch: 60},
+      {start: 20, duration: 1.95, pitch: 65},
+      {start: 22, duration: 1.95, pitch: 55},
+      {start: 22, duration: 1.95, pitch: 60},
+      {start: 22, duration: 1.95, pitch: 64},
+      {start: 24, duration: 1.95, pitch: 57},
+      {start: 24, duration: 1.95, pitch: 60},
+      {start: 24, duration: 1.95, pitch: 65},
+      {start: 26, duration: 1.95, pitch: 55},
+      {start: 26, duration: 1.95, pitch: 59},
+      {start: 26, duration: 1.95, pitch: 62},
+      {start: 28, duration: 3.8, pitch: 55},
+      {start: 28, duration: 3.8, pitch: 60},
+      {start: 28, duration: 3.8, pitch: 64}
+    ]}
+  }
 
-og_tonewheel_leslie { Rotary: {speed: 0, drive: 0.35, balance: 0.1} }
-og_track_tonewheel {
-  Track: {instrument: og_tonewheel, humanize: {timing: 5}}
-  AudioBus: {output: og_organs, volume: 0.65, effects: [og_tonewheel_leslie], sends: [{bus: og_club, level: 0.35}]}
-  AudioMeter: {}
-  og_solo { ClipPlacement: {clip: og_gospel, start: 0} }
-  og_tutti { ClipPlacement: {clip: og_hymn_wheel, start: 112, gain: 0.55} }
-}
+  prefab og_hymn_bass {
+    NoteClip: {length: 32, notes: [
+      {start: 0, duration: 1.95, pitch: 36},
+      {start: 2, duration: 1.95, pitch: 40},
+      {start: 4, duration: 1.95, pitch: 41},
+      {start: 6, duration: 1.95, pitch: 36},
+      {start: 8, duration: 1.95, pitch: 45},
+      {start: 10, duration: 1.95, pitch: 41},
+      {start: 12, duration: 1.95, pitch: 43},
+      {start: 14, duration: 1.95, pitch: 43},
+      {start: 16, duration: 1.95, pitch: 36},
+      {start: 18, duration: 1.95, pitch: 40},
+      {start: 20, duration: 1.95, pitch: 41},
+      {start: 22, duration: 1.95, pitch: 40},
+      {start: 24, duration: 1.95, pitch: 38},
+      {start: 26, duration: 1.95, pitch: 43},
+      {start: 28, duration: 3.8, pitch: 36}
+    ]}
+  }
 
-og_jazz_leslie { Rotary: {speed: 0, drive: 0.5, balance: 0.25} }
-og_track_jazz {
-  Track: {instrument: og_jazz, swing: 0.3, humanize: {timing: 6}}
-  AudioBus: {output: og_organs, volume: 1, effects: [og_jazz_leslie], sends: [{bus: og_club, level: 0.3}]}
-  AudioMeter: {}
-  og_solo { ClipPlacement: {clip: og_jazz_line, start: 16} }
-  og_tutti { ClipPlacement: {clip: og_hymn_stabs, start: 128, gain: 0.5} }
-}
+  prefab og_hymn_wheel {
+    NoteClip: {length: 32, notes: [
+      {start: 0, duration: 3.95, pitch: 60},
+      {start: 0, duration: 3.95, pitch: 64},
+      {start: 0, duration: 3.95, pitch: 67},
+      {start: 4, duration: 1.95, pitch: 60},
+      {start: 4, duration: 1.95, pitch: 65},
+      {start: 4, duration: 1.95, pitch: 69},
+      {start: 6, duration: 1.95, pitch: 60},
+      {start: 6, duration: 1.95, pitch: 64},
+      {start: 6, duration: 1.95, pitch: 67},
+      {start: 8, duration: 1.95, pitch: 60},
+      {start: 8, duration: 1.95, pitch: 64},
+      {start: 8, duration: 1.95, pitch: 69},
+      {start: 10, duration: 1.95, pitch: 60},
+      {start: 10, duration: 1.95, pitch: 65},
+      {start: 10, duration: 1.95, pitch: 69},
+      {start: 12, duration: 1.95, pitch: 59},
+      {start: 12, duration: 1.95, pitch: 62},
+      {start: 12, duration: 1.95, pitch: 67},
+      {start: 14, duration: 1.95, pitch: 59},
+      {start: 14, duration: 1.95, pitch: 62},
+      {start: 14, duration: 1.95, pitch: 65},
+      {start: 16, duration: 1.95, pitch: 60},
+      {start: 16, duration: 1.95, pitch: 64},
+      {start: 16, duration: 1.95, pitch: 67},
+      {start: 18, duration: 1.95, pitch: 59},
+      {start: 18, duration: 1.95, pitch: 64},
+      {start: 18, duration: 1.95, pitch: 67},
+      {start: 20, duration: 1.95, pitch: 60},
+      {start: 20, duration: 1.95, pitch: 65},
+      {start: 20, duration: 1.95, pitch: 69},
+      {start: 22, duration: 1.95, pitch: 60},
+      {start: 22, duration: 1.95, pitch: 64},
+      {start: 22, duration: 1.95, pitch: 67},
+      {start: 24, duration: 1.95, pitch: 60},
+      {start: 24, duration: 1.95, pitch: 62},
+      {start: 24, duration: 1.95, pitch: 65},
+      {start: 26, duration: 1.95, pitch: 59},
+      {start: 26, duration: 1.95, pitch: 62},
+      {start: 26, duration: 1.95, pitch: 67},
+      {start: 28, duration: 3.8, pitch: 60},
+      {start: 28, duration: 3.8, pitch: 64},
+      {start: 28, duration: 3.8, pitch: 67}
+    ]}
+  }
 
-og_combo_tone {
-  Equalizer: {bands: [
-    {kind: AudioEqLowCut, frequency: 120},
-    {kind: AudioEqPeak, frequency: 2200, gain: 2.5, q: 0.9}
-  ]}
-}
-og_track_combo {
-  Track: {instrument: og_combo, humanize: {timing: 5}}
-  AudioBus: {output: og_organs, volume: 0.55, pan: 0.2, effects: [og_combo_tone], sends: [{bus: og_club, level: 0.4}]}
-  AudioMeter: {}
-  og_solo { ClipPlacement: {clip: og_combo_riff, start: 32} }
-  og_tutti { ClipPlacement: {clip: og_hymn_combo, start: 128, gain: 0.4} }
-}
+  prefab og_hymn_stabs {
+    NoteClip: {length: 16, notes: [
+      {start: 1.5, duration: 0.4, pitch: 64},
+      {start: 1.5, duration: 0.4, pitch: 67},
+      {start: 1.5, duration: 0.4, pitch: 72},
+      {start: 3.5, duration: 0.4, pitch: 64},
+      {start: 3.5, duration: 0.4, pitch: 67},
+      {start: 3.5, duration: 0.4, pitch: 71},
+      {start: 5.5, duration: 0.4, pitch: 65},
+      {start: 5.5, duration: 0.4, pitch: 69},
+      {start: 5.5, duration: 0.4, pitch: 72},
+      {start: 7.5, duration: 0.4, pitch: 64},
+      {start: 7.5, duration: 0.4, pitch: 67},
+      {start: 7.5, duration: 0.4, pitch: 72},
+      {start: 9.5, duration: 0.4, pitch: 65},
+      {start: 9.5, duration: 0.4, pitch: 69},
+      {start: 9.5, duration: 0.4, pitch: 72},
+      {start: 11.5, duration: 0.4, pitch: 62},
+      {start: 11.5, duration: 0.4, pitch: 67},
+      {start: 11.5, duration: 0.4, pitch: 71},
+      {start: 12, duration: 3.8, pitch: 64},
+      {start: 12, duration: 3.8, pitch: 67},
+      {start: 12, duration: 3.8, pitch: 72}
+    ]}
+  }
 
-og_track_flute {
-  Track: {instrument: og_flute, humanize: {timing: 4}}
-  AudioBus: {output: og_organs, volume: 0.4, pan: -0.15, sends: [{bus: og_church, level: 0.55}]}
-  AudioMeter: {}
-  og_solo { ClipPlacement: {clip: og_flute_tune, start: 48} }
-  og_tutti { ClipPlacement: {clip: og_hymn_melody, start: 128, offset: 16, transpose: 12, gain: 0.6} }
-}
+  prefab og_hymn_combo {
+    NoteClip: {length: 16, notes: [
+      {start: 0, duration: 3.95, pitch: 79},
+      {start: 4, duration: 1.95, pitch: 81},
+      {start: 6, duration: 1.95, pitch: 79},
+      {start: 8, duration: 1.95, pitch: 81},
+      {start: 10, duration: 1.95, pitch: 83},
+      {start: 12, duration: 3.8, pitch: 88}
+    ]}
+  }
 
-og_track_principal {
-  Track: {instrument: og_principal, humanize: {timing: 4}}
-  AudioBus: {output: og_organs, volume: 0.35, sends: [{bus: og_church, level: 0.6}]}
-  AudioMeter: {}
-  og_solo { ClipPlacement: {clip: og_chorale, start: 64} }
-  og_tutti { ClipPlacement: {clip: og_hymn_inner, start: 112} }
-}
+  og_tonewheel_leslie { Rotary: {speed: 0, drive: 0.35, balance: 0.1} }
+  og_track_tonewheel {
+    Track: {instrument: og_tonewheel, humanize: {timing: 5}}
+    AudioBus: {output: og_organs, volume: 0.65, effects: [og_tonewheel_leslie], sends: [{bus: og_club, level: 0.35}]}
+    AudioMeter: {}
+    og_solo { ClipPlacement: {clip: og_gospel, start: 0} }
+    og_tutti { ClipPlacement: {clip: og_hymn_wheel, start: 112, gain: 0.55} }
+  }
 
-og_reed_tone {
-  Equalizer: {bands: [
-    {kind: AudioEqLowCut, frequency: 70},
-    {kind: AudioEqPeak, frequency: 1400, gain: 2.5, q: 1},
-    {kind: AudioEqHighShelf, frequency: 6000, gain: -3}
-  ]}
-}
-og_track_reed {
-  Track: {instrument: og_reed, humanize: {timing: 4}}
-  AudioBus: {output: og_organs, volume: 0.45, pan: 0.15, effects: [og_reed_tone], sends: [{bus: og_church, level: 0.55}]}
-  AudioMeter: {}
-  og_solo { ClipPlacement: {clip: og_fanfare, start: 80} }
-  og_tutti { ClipPlacement: {clip: og_hymn_melody, start: 112, gain: 0.8} }
-}
+  og_jazz_leslie { Rotary: {speed: 0, drive: 0.5, balance: 0.25} }
+  og_track_jazz {
+    Track: {instrument: og_jazz, swing: 0.3, humanize: {timing: 6}}
+    AudioBus: {output: og_organs, volume: 1, effects: [og_jazz_leslie], sends: [{bus: og_club, level: 0.3}]}
+    AudioMeter: {}
+    og_solo { ClipPlacement: {clip: og_jazz_line, start: 16} }
+    og_tutti { ClipPlacement: {clip: og_hymn_stabs, start: 128, gain: 0.5} }
+  }
 
-og_track_pedal {
-  Track: {instrument: og_pedal, humanize: {timing: 4}}
-  AudioBus: {output: og_organs, volume: 0.42, sends: [{bus: og_church, level: 0.4}]}
-  AudioMeter: {}
-  og_solo { ClipPlacement: {clip: og_pedal_walk, start: 96} }
-  og_tutti { ClipPlacement: {clip: og_hymn_bass, start: 112} }
-}
+  og_combo_tone {
+    Equalizer: {bands: [
+      {kind: AudioEqLowCut, frequency: 120},
+      {kind: AudioEqPeak, frequency: 2200, gain: 2.5, q: 0.9}
+    ]}
+  }
+  og_track_combo {
+    Track: {instrument: og_combo, humanize: {timing: 5}}
+    AudioBus: {output: og_organs, volume: 0.55, pan: 0.2, effects: [og_combo_tone], sends: [{bus: og_club, level: 0.4}]}
+    AudioMeter: {}
+    og_solo { ClipPlacement: {clip: og_combo_riff, start: 32} }
+    og_tutti { ClipPlacement: {clip: og_hymn_combo, start: 128, gain: 0.4} }
+  }
 
-prefab og_leslie_switch {
-  AutomationClip: {target: og_tonewheel_leslie, component: Rotary, member: "speed", length: 144,
-    curve: {kind: CurveLinear, keys: [
-      {0, 0}, {7.99, 0}, {8, 1}, {15.99, 1}, {16, 0},
-      {127.99, 0}, {128, 1}, {144, 1}
-    ]}}
-}
-og_automation {
-  Track: {}
-  og_leslie { ClipPlacement: {clip: og_leslie_switch, start: 0} }
-}
+  og_track_flute {
+    Track: {instrument: og_flute, humanize: {timing: 4}}
+    AudioBus: {output: og_organs, volume: 0.4, pan: -0.15, sends: [{bus: og_church, level: 0.55}]}
+    AudioMeter: {}
+    og_solo { ClipPlacement: {clip: og_flute_tune, start: 48} }
+    og_tutti { ClipPlacement: {clip: og_hymn_melody, start: 128, offset: 16, transpose: 12, gain: 0.6} }
+  }
 
-$ {
-  Song: {
-    title: "Organs", tempo: 88, beats_per_bar: 4, beat_unit: 4, beats: 144,
-    lanes: [
-      {name: "Tonewheel & Leslie", bus: og_track_tonewheel},
-      {name: "Jazz Percussion", bus: og_track_jazz},
-      {name: "Combo Organ", bus: og_track_combo},
-      {name: "Flute Pipes", bus: og_track_flute},
-      {name: "Principal", bus: og_track_principal},
-      {name: "Reed Pipes", bus: og_track_reed},
-      {name: "Pedal", bus: og_track_pedal}
-    ]
+  og_track_principal {
+    Track: {instrument: og_principal, humanize: {timing: 4}}
+    AudioBus: {output: og_organs, volume: 0.35, sends: [{bus: og_church, level: 0.6}]}
+    AudioMeter: {}
+    og_solo { ClipPlacement: {clip: og_chorale, start: 64} }
+    og_tutti { ClipPlacement: {clip: og_hymn_inner, start: 112} }
+  }
+
+  og_reed_tone {
+    Equalizer: {bands: [
+      {kind: AudioEqLowCut, frequency: 70},
+      {kind: AudioEqPeak, frequency: 1400, gain: 2.5, q: 1},
+      {kind: AudioEqHighShelf, frequency: 6000, gain: -3}
+    ]}
+  }
+  og_track_reed {
+    Track: {instrument: og_reed, humanize: {timing: 4}}
+    AudioBus: {output: og_organs, volume: 0.45, pan: 0.15, effects: [og_reed_tone], sends: [{bus: og_church, level: 0.55}]}
+    AudioMeter: {}
+    og_solo { ClipPlacement: {clip: og_fanfare, start: 80} }
+    og_tutti { ClipPlacement: {clip: og_hymn_melody, start: 112, gain: 0.8} }
+  }
+
+  og_track_pedal {
+    Track: {instrument: og_pedal, humanize: {timing: 4}}
+    AudioBus: {output: og_organs, volume: 0.42, sends: [{bus: og_church, level: 0.4}]}
+    AudioMeter: {}
+    og_solo { ClipPlacement: {clip: og_pedal_walk, start: 96} }
+    og_tutti { ClipPlacement: {clip: og_hymn_bass, start: 112} }
+  }
+
+  prefab og_leslie_switch {
+    AutomationClip: {target: og_tonewheel_leslie, component: Rotary, member: "speed", length: 144,
+      curve: {kind: CurveLinear, keys: [
+        {0, 0}, {7.99, 0}, {8, 1}, {15.99, 1}, {16, 0},
+        {127.99, 0}, {128, 1}, {144, 1}
+      ]}}
+  }
+  og_automation {
+    Track: {}
+    og_leslie { ClipPlacement: {clip: og_leslie_switch, start: 0} }
+  }
+
+  $ {
+    Song: {
+      title: "Organs", tempo: 88, beats_per_bar: 4, beat_unit: 4, beats: 144,
+      lanes: [
+        {name: "Tonewheel & Leslie", bus: og_track_tonewheel},
+        {name: "Jazz Percussion", bus: og_track_jazz},
+        {name: "Combo Organ", bus: og_track_combo},
+        {name: "Flute Pipes", bus: og_track_flute},
+        {name: "Principal", bus: og_track_principal},
+        {name: "Reed Pipes", bus: og_track_reed},
+        {name: "Pedal", bus: og_track_pedal}
+      ]
+    }
   }
 }

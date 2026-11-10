@@ -6,3 +6,8 @@ include jukebox/materials
 include jukebox/cabinet
 include jukebox/room
 include jukebox/hud
+
+$ {
+  box.view.Scene: {reflections: true, punctual_shadows: true, blend_modes: true,
+    transmission: true, triplanar: true, sheen: true, clear_coat: true, anisotropy: true}
+}

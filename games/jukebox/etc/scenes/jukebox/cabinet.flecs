@@ -9,193 +9,197 @@ using box.input
 using box.picking
 using box.transition
 using box.audio
+using state
+using assets
 
-prefab JBOutline {
-  Path2D: {
-    start: {-0.72, 0.16},
-    segments: [
-      {kind: Line, end: {0.72, 0.16}},
-      {kind: Line, end: {0.72, 1.5}},
-      {kind: CubicBezier, end: {0, 2.22}, control1: {0.72, 1.898}, control2: {0.398, 2.22}},
-      {kind: CubicBezier, end: {-0.72, 1.5}, control1: {-0.398, 2.22}, control2: {-0.72, 1.898}}
-    ],
-    closed: true
-  }
-}
-prefab JBProfile { Profile2D: {outer: JBOutline} }
-prefab JBRoundOutline {
-  Path2D: {
-    start: {1, 0},
-    segments: [
-      {kind: CubicBezier, end: {0, 1}, control1: {1, 0.5523}, control2: {0.5523, 1}},
-      {kind: CubicBezier, end: {-1, 0}, control1: {-0.5523, 1}, control2: {-1, 0.5523}},
-      {kind: CubicBezier, end: {0, -1}, control1: {-1, -0.5523}, control2: {-0.5523, -1}},
-      {kind: CubicBezier, end: {1, 0}, control1: {0.5523, -1}, control2: {1, -0.5523}}
-    ],
-    closed: true
-  }
-}
-prefab JBRoundProfile { Profile2D: {outer: JBRoundOutline} }
-
-template JBArch {
-  prop radius: f32 = 0.65
-  prop bottom: f32 = 0.24
-  prop tube: f32 = 0.018
-  route {
-    Path3D: {
-      start: {-radius, bottom, 0},
+assets {
+  prefab JBOutline {
+    Path2D: {
+      start: {-0.72, 0.16},
       segments: [
-        {kind: Line, end: {-radius, 1.5, 0}},
-        {kind: CubicBezier, end: {0, 1.5 + radius, 0}, control1: {-radius, 1.5 + radius * 0.5523, 0}, control2: {-radius * 0.5523, 1.5 + radius, 0}},
-        {kind: CubicBezier, end: {radius, 1.5, 0}, control1: {radius * 0.5523, 1.5 + radius, 0}, control2: {radius, 1.5 + radius * 0.5523, 0}},
-        {kind: Line, end: {radius, bottom, 0}}
-      ]
+        {kind: Line, end: {0.72, 0.16}},
+        {kind: Line, end: {0.72, 1.5}},
+        {kind: CubicBezier, end: {0, 2.22}, control1: {0.72, 1.898}, control2: {0.398, 2.22}},
+        {kind: CubicBezier, end: {-0.72, 1.5}, control1: {-0.398, 2.22}, control2: {-0.72, 1.898}}
+      ],
+      closed: true
     }
   }
-  Sweep: {path: route, profile: JBRoundProfile, scale: {tube, tube}, rings: 160}
-}
-
-template Jukebox {
-  shell : JBWood {
-    Position: {0, 0, -0.04}
-    Rotation: {-PI / 2, 0, 0}
-    ProfileExtrusion: {profile: JBProfile, depth: 0.76, cap_start: true, cap_end: true, smooth: true}
-  }
-  face : JBEnamel {
-    Position: {0, 0, 0.35}
-    Rotation: {-PI / 2, 0, 0}
-    Scale: {0.96, 1, 0.985}
-    ProfileExtrusion: {profile: JBProfile, depth: 0.045, cap_start: true, cap_end: true, smooth: true}
-  }
-  plinth : JBDark { Position: {0, 0.08, 0}; RoundedBox: {1.53, 0.16, 0.94, 0.06} }
-  bumper : JBChrome { Position: {0, 0.165, 0.015}; RoundedBox: {1.5, 0.055, 0.91, 0.025} }
-  toe : JBBrass { Position: {0, 0.24, 0.43}; RoundedBox: {1.32, 0.08, 0.09, 0.025} }
-
-  JBArch outer_trim(radius: 0.691, tube: 0.022) { Position: {0, 0, 0.39}; (IsA, JBChrome) }
-  JBArch light_channel(radius: 0.632, tube: 0.048) { Position: {0, 0, 0.402}; (IsA, JBBrass) }
-  JBArch neon(radius: 0.632, tube: 0.033) {
-    Position: {0, 0, 0.439}
-    Rgb: lit ? color : {58, 60, 68}
-    Emissive: {strength: lit ? 0.7 + 1.15 * glow : 0, color: color}
-    Transition: [Rgb: {duration: 0.4, timing_function: EaseOut}, Emissive: {duration: 0.12, timing_function: EaseOut}]
-    PbrMaterial: {roughness: 0.25}
-    ClearCoat: {strength: 1, roughness: 0.12}
-  }
-  JBArch inner_trim(radius: 0.579, bottom: 0.31, tube: 0.014) { Position: {0, 0, 0.418}; (IsA, JBChrome) }
-  for side in 0..2 {
-    const x = (side * 2 - 1) * 0.632
-    "foot_{side}" : JBChrome { Position: {x, 0.29, 0.44}; RoundedBox: {0.113, 0.19, 0.12, 0.025} }
-    for i in 0..3 {
-      "collar_{side}_{i}" : JBBrass { Position: {x, 0.4 + i * 0.065, 0.44}; Cylinder: {radius: 0.041, length: 0.014, segments: 24, smooth: true} }
+  prefab JBProfile { Profile2D: {outer: JBOutline} }
+  prefab JBRoundOutline {
+    Path2D: {
+      start: {1, 0},
+      segments: [
+        {kind: CubicBezier, end: {0, 1}, control1: {1, 0.5523}, control2: {0.5523, 1}},
+        {kind: CubicBezier, end: {-1, 0}, control1: {-0.5523, 1}, control2: {-1, 0.5523}},
+        {kind: CubicBezier, end: {0, -1}, control1: {-1, -0.5523}, control2: {-0.5523, -1}},
+        {kind: CubicBezier, end: {1, 0}, control1: {0.5523, -1}, control2: {1, -0.5523}}
+      ],
+      closed: true
     }
   }
+  prefab JBRoundProfile { Profile2D: {outer: JBRoundOutline} }
 
-  display_back : JBDark {
-    Position: {0, 1.5, 0.393}
-    Rotation: {PI / 2, 0, 0}
-    Cylinder: {radius: 0.526, length: 0.018, segments: 96, smooth: true}
-  }
-  display_rim : JBBrass {
-    Position: {0, 1.5, 0.419}
-    Rotation: {PI / 2, 0, 0}
-    Torus: {radius: 0.515, tube: 0.009, segments: 96, rings: 8, smooth: true}
-  }
-  for i in 0..17 {
-    const a = i * PI / 16
-    "fan_{i}" : JBBrass {
-      Position: {cos(a) * 0.42, 1.5 + sin(a) * 0.42, 0.414}
-      Rotation: {0, 0, a - PI / 2}
-      RoundedBox: {0.008, 0.115, 0.012, 0.003}
-    }
-  }
-  turntable {
-    Position: {-0.035, 1.52, 0.433}
-    Rotation: {PI / 2, 0, 0}
-    platter : JBChrome { Cylinder: {radius: 0.325, length: 0.014, segments: 96, smooth: true} }
-    record {
-      Position: {0, 0.011, 0}
-      Rotation: {0, -beat * PI / 2, 0}
-      Cylinder: {radius: 0.307, length: 0.009, segments: 96, smooth: true}
-      Rgb: {17, 19, 23}
-      PbrMaterial: {metallic: 0.2, roughness: 0.26}
-      SpecularAnisotropy: {strength: 0.7}
-      for i in 0..12 {
-        "groove_{i}" {
-          Position: {0, 0.0055, 0}
-          Torus: {radius: 0.129 + i * 0.014, tube: 0.0012, segments: 80, rings: 4, smooth: true}
-          Rgb: {39, 42, 46}
-          PbrMaterial: {metallic: 0.25, roughness: 0.35}
-        }
+  template JBArch {
+    prop radius: f32 = 0.65
+    prop bottom: f32 = 0.24
+    prop tube: f32 = 0.018
+    route {
+      Path3D: {
+        start: {-radius, bottom, 0},
+        segments: [
+          {kind: Line, end: {-radius, 1.5, 0}},
+          {kind: CubicBezier, end: {0, 1.5 + radius, 0}, control1: {-radius, 1.5 + radius * 0.5523, 0}, control2: {-radius * 0.5523, 1.5 + radius, 0}},
+          {kind: CubicBezier, end: {radius, 1.5, 0}, control1: {radius * 0.5523, 1.5 + radius, 0}, control2: {radius, 1.5 + radius * 0.5523, 0}},
+          {kind: Line, end: {radius, bottom, 0}}
+        ]
       }
-      label { Position: {0, 0.007, 0}; Cylinder: {radius: 0.104, length: 0.005, segments: 48, smooth: true}; Rgb: color }
-      label_ring : JBBrass { Position: {0, 0.011, 0}; Torus: {radius: 0.081, tube: 0.002, segments: 48, rings: 6, smooth: true} }
-      spindle : JBChrome { Position: {0, 0.014, 0}; Cylinder: {radius: 0.014, length: 0.02, segments: 24, smooth: true} }
     }
-  }
-  tonearm {
-    Position: {0.31, 1.7, 0.475}
-    pivot : JBBrass { Rotation: {PI / 2, 0, 0}; Cylinder: {radius: 0.045, length: 0.045, segments: 32, smooth: true} }
-    arm : JBChrome { Position: {-0.055, -0.125, 0.013}; Rotation: {0, 0, -0.41}; RoundedBox: {0.018, 0.28, 0.024, 0.008} }
-    cartridge : JBIvory { Position: {-0.119, -0.246, 0.017}; Rotation: {0, 0, -0.41}; RoundedBox: {0.042, 0.061, 0.033, 0.008} }
-  }
-  display_light {
-    Position: {-0.1, 1.8, 0.74}
-    PointLight: {intensity: 0.22 * PI, range: 0.8}
-    Rgb: {255, 228, 190}
-  }
-  glass : JBGlass {
-    Position: {0, 1.5, 0.511}
-    Rotation: {PI / 2, 0, 0}
-    Cylinder: {radius: 0.502, length: 0.008, segments: 96, smooth: true}
-  }
-  badge : JBBrass { Position: {0, 1.95, 0.528}; RoundedBox: {0.37, 0.068, 0.023, 0.022} }
-  brand {
-    Position: {0, 1.95, 0.543}
-    Scale: {0.00135, 0.00135, 0.00135}
-    Text: {value: "S T E R E O", size: 25}
-    Rgb: {24, 41, 40}
+    Sweep: {path: route, profile: JBRoundProfile, scale: {tube, tube}, rings: 160}
   }
 
-  console : JBChrome { Position: {0, 1.035, 0.425}; RoundedBox: {1.075, 0.25, 0.16, 0.045} }
-  console_inset : JBDark { Position: {0, 1.041, 0.51}; RoundedBox: {0.975, 0.17, 0.018, 0.022} }
-  song_plate : JBIvory { Position: {0, 1.092, 0.525}; RoundedBox: {0.55, 0.033, 0.006, 0.006} }
-  song_title {
-    Position: {0, 1.093, 0.531}
-    Scale: {0.00041, 0.00041, 0.00041}
-    if lit {
-      Text: {value: "{Song[Song].title}", size: 25}
-    } else {
-      Text: {value: "", size: 25}
+  template Jukebox {
+    shell : JBWood {
+      Position: {0, 0, -0.04}
+      Rotation: {-PI / 2, 0, 0}
+      ProfileExtrusion: {profile: JBProfile, depth: 0.76, cap_start: true, cap_end: true, smooth: true}
     }
-    Rgb: {28, 49, 48}
-  }
+    face : JBEnamel {
+      Position: {0, 0, 0.35}
+      Rotation: {-PI / 2, 0, 0}
+      Scale: {0.96, 1, 0.985}
+      ProfileExtrusion: {profile: JBProfile, depth: 0.045, cap_start: true, cap_end: true, smooth: true}
+    }
+    plinth : JBDark { Position: {0, 0.08, 0}; RoundedBox: {1.53, 0.16, 0.94, 0.06} }
+    bumper : JBChrome { Position: {0, 0.165, 0.015}; RoundedBox: {1.5, 0.055, 0.91, 0.025} }
+    toe : JBBrass { Position: {0, 0.24, 0.43}; RoundedBox: {1.32, 0.08, 0.09, 0.025} }
 
-  grille_frame : JBBrass { Position: {0, 0.609, 0.412}; RoundedBox: {1.036, 0.61, 0.06, 0.1} }
-  speaker_cloth : JBDark { Position: {0, 0.609, 0.447}; RoundedBox: {0.975, 0.55, 0.024, 0.07}; Sheen: {color: {96, 84, 66}, roughness: 0.55} }
-  for i in 0..31 {
-    "warp_{i}" : JBBrass { Position: {-0.449 + i * 0.03, 0.605, 0.464}; Cylinder: {radius: 0.0028, length: 0.46, segments: 6, smooth: true} }
-  }
-  for i in 0..19 {
-    "weft_{i}" { Position: {0, 0.38 + i * 0.025, 0.465}; Rotation: {0, 0, PI / 2}; Cylinder: {radius: 0.0025, length: 0.91, segments: 6, smooth: true}; Rgb: {121, 109, 81}; PbrMaterial: {metallic: 0.3, roughness: 0.65} }
-  }
-  for i in 0..5 {
-    "rib_{i}" : JBChrome { Position: {(i - 2) * 0.176, 0.605, 0.483}; RoundedBox: {0.014, 0.51, 0.024, 0.006} }
-  }
-  crest : JBBrass { Position: {0, 0.69, 0.508}; Rotation: {0, 0, PI / 4}; RoundedBox: {0.112, 0.112, 0.025, 0.014} }
-  crest_inset : JBEnamel { Position: {0, 0.69, 0.524}; Rotation: {0, 0, PI / 4}; RoundedBox: {0.077, 0.077, 0.012, 0.009} }
-  coin_bezel : JBChrome { Position: {0.393, 0.841, 0.49}; RoundedBox: {0.1, 0.055, 0.014, 0.009} }
-  coin_slot : JBDark { Position: {0.393, 0.841, 0.5}; RoundedBox: {0.059, 0.007, 0.008, 0.002} }
+    JBArch outer_trim(radius: 0.691, tube: 0.022) { Position: {0, 0, 0.39}; (IsA, JBChrome) }
+    JBArch light_channel(radius: 0.632, tube: 0.048) { Position: {0, 0, 0.402}; (IsA, JBBrass) }
+    JBArch neon(radius: 0.632, tube: 0.033) {
+      Position: {0, 0, 0.439}
+      Rgb: lit ? color : {58, 60, 68}
+      Emissive: {strength: lit ? 0.7 + 1.15 * glow : 0, color: color}
+      Transition: [Rgb: {duration: 0.4, timing_function: EaseOut}, Emissive: {duration: 0.12, timing_function: EaseOut}]
+      PbrMaterial: {roughness: 0.25}
+      ClearCoat: {strength: 1, roughness: 0.12}
+    }
+    JBArch inner_trim(radius: 0.579, bottom: 0.31, tube: 0.014) { Position: {0, 0, 0.418}; (IsA, JBChrome) }
+    for side in 0..2 {
+      const x = (side * 2 - 1) * 0.632
+      "foot_{side}" : JBChrome { Position: {x, 0.29, 0.44}; RoundedBox: {0.113, 0.19, 0.12, 0.025} }
+      for i in 0..3 {
+        "collar_{side}_{i}" : JBBrass { Position: {x, 0.4 + i * 0.065, 0.44}; Cylinder: {radius: 0.041, length: 0.014, segments: 24, smooth: true} }
+      }
+    }
 
-  for side in 0..2 {
-    const x = (side * 2 - 1) * 0.723
-    "side_panel_{side}" : JBEnamel { Position: {x, 0.82, -0.07}; RoundedBox: {0.018, 1.06, 0.51, 0.008} }
+    display_back : JBDark {
+      Position: {0, 1.5, 0.393}
+      Rotation: {PI / 2, 0, 0}
+      Cylinder: {radius: 0.526, length: 0.018, segments: 96, smooth: true}
+    }
+    display_rim : JBBrass {
+      Position: {0, 1.5, 0.419}
+      Rotation: {PI / 2, 0, 0}
+      Torus: {radius: 0.515, tube: 0.009, segments: 96, rings: 8, smooth: true}
+    }
+    for i in 0..17 {
+      const a = i * PI / 16
+      "fan_{i}" : JBBrass {
+        Position: {cos(a) * 0.42, 1.5 + sin(a) * 0.42, 0.414}
+        Rotation: {0, 0, a - PI / 2}
+        RoundedBox: {0.008, 0.115, 0.012, 0.003}
+      }
+    }
+    turntable {
+      Position: {-0.035, 1.52, 0.433}
+      Rotation: {PI / 2, 0, 0}
+      platter : JBChrome { Cylinder: {radius: 0.325, length: 0.014, segments: 96, smooth: true} }
+      record {
+        Position: {0, 0.011, 0}
+        Rotation: {0, -beat * PI / 2, 0}
+        Cylinder: {radius: 0.307, length: 0.009, segments: 96, smooth: true}
+        Rgb: {17, 19, 23}
+        PbrMaterial: {metallic: 0.2, roughness: 0.26}
+        SpecularAnisotropy: {strength: 0.7}
+        for i in 0..12 {
+          "groove_{i}" {
+            Position: {0, 0.0055, 0}
+            Torus: {radius: 0.129 + i * 0.014, tube: 0.0012, segments: 80, rings: 4, smooth: true}
+            Rgb: {39, 42, 46}
+            PbrMaterial: {metallic: 0.25, roughness: 0.35}
+          }
+        }
+        label { Position: {0, 0.007, 0}; Cylinder: {radius: 0.104, length: 0.005, segments: 48, smooth: true}; Rgb: color }
+        label_ring : JBBrass { Position: {0, 0.011, 0}; Torus: {radius: 0.081, tube: 0.002, segments: 48, rings: 6, smooth: true} }
+        spindle : JBChrome { Position: {0, 0.014, 0}; Cylinder: {radius: 0.014, length: 0.02, segments: 24, smooth: true} }
+      }
+    }
+    tonearm {
+      Position: {0.31, 1.7, 0.475}
+      pivot : JBBrass { Rotation: {PI / 2, 0, 0}; Cylinder: {radius: 0.045, length: 0.045, segments: 32, smooth: true} }
+      arm : JBChrome { Position: {-0.055, -0.125, 0.013}; Rotation: {0, 0, -0.41}; RoundedBox: {0.018, 0.28, 0.024, 0.008} }
+      cartridge : JBIvory { Position: {-0.119, -0.246, 0.017}; Rotation: {0, 0, -0.41}; RoundedBox: {0.042, 0.061, 0.033, 0.008} }
+    }
+    display_light {
+      Position: {-0.1, 1.8, 0.74}
+      PointLight: {intensity: 0.22 * PI, range: 0.8}
+      Rgb: {255, 228, 190}
+    }
+    glass : JBGlass {
+      Position: {0, 1.5, 0.511}
+      Rotation: {PI / 2, 0, 0}
+      Cylinder: {radius: 0.502, length: 0.008, segments: 96, smooth: true}
+    }
+    badge : JBBrass { Position: {0, 1.95, 0.528}; RoundedBox: {0.37, 0.068, 0.023, 0.022} }
+    brand {
+      Position: {0, 1.95, 0.543}
+      Scale: {0.00135, 0.00135, 0.00135}
+      Text: {value: "S T E R E O", size: 25}
+      Rgb: {24, 41, 40}
+    }
+
+    console : JBChrome { Position: {0, 1.035, 0.425}; RoundedBox: {1.075, 0.25, 0.16, 0.045} }
+    console_inset : JBDark { Position: {0, 1.041, 0.51}; RoundedBox: {0.975, 0.17, 0.018, 0.022} }
+    song_plate : JBIvory { Position: {0, 1.092, 0.525}; RoundedBox: {0.55, 0.033, 0.006, 0.006} }
+    song_title {
+      Position: {0, 1.093, 0.531}
+      Scale: {0.00041, 0.00041, 0.00041}
+      if lit {
+        Text: {value: "{Song[Song].title}", size: 25}
+      } else {
+        Text: {value: "", size: 25}
+      }
+      Rgb: {28, 49, 48}
+    }
+
+    grille_frame : JBBrass { Position: {0, 0.609, 0.412}; RoundedBox: {1.036, 0.61, 0.06, 0.1} }
+    speaker_cloth : JBDark { Position: {0, 0.609, 0.447}; RoundedBox: {0.975, 0.55, 0.024, 0.07}; Sheen: {color: {96, 84, 66}, roughness: 0.55} }
+    for i in 0..31 {
+      "warp_{i}" : JBBrass { Position: {-0.449 + i * 0.03, 0.605, 0.464}; Cylinder: {radius: 0.0028, length: 0.46, segments: 6, smooth: true} }
+    }
+    for i in 0..19 {
+      "weft_{i}" { Position: {0, 0.38 + i * 0.025, 0.465}; Rotation: {0, 0, PI / 2}; Cylinder: {radius: 0.0025, length: 0.91, segments: 6, smooth: true}; Rgb: {121, 109, 81}; PbrMaterial: {metallic: 0.3, roughness: 0.65} }
+    }
     for i in 0..5 {
-      "vent_{side}_{i}" : JBBrass { Position: {x * 1.014, 0.62 + i * 0.065, -0.07}; RoundedBox: {0.008, 0.015, 0.33, 0.005} }
+      "rib_{i}" : JBChrome { Position: {(i - 2) * 0.176, 0.605, 0.483}; RoundedBox: {0.014, 0.51, 0.024, 0.006} }
     }
-    "spill_{side}" {
-      Position: {(side * 2 - 1) * 0.72, 0.75, 0.66}
-      PointLight: {intensity: (0.12 + 0.5 * master_level[side]) * PI, range: 1.8}
-      Rgb: color
+    crest : JBBrass { Position: {0, 0.69, 0.508}; Rotation: {0, 0, PI / 4}; RoundedBox: {0.112, 0.112, 0.025, 0.014} }
+    crest_inset : JBEnamel { Position: {0, 0.69, 0.524}; Rotation: {0, 0, PI / 4}; RoundedBox: {0.077, 0.077, 0.012, 0.009} }
+    coin_bezel : JBChrome { Position: {0.393, 0.841, 0.49}; RoundedBox: {0.1, 0.055, 0.014, 0.009} }
+    coin_slot : JBDark { Position: {0.393, 0.841, 0.5}; RoundedBox: {0.059, 0.007, 0.008, 0.002} }
+
+    for side in 0..2 {
+      const x = (side * 2 - 1) * 0.723
+      "side_panel_{side}" : JBEnamel { Position: {x, 0.82, -0.07}; RoundedBox: {0.018, 1.06, 0.51, 0.008} }
+      for i in 0..5 {
+        "vent_{side}_{i}" : JBBrass { Position: {x * 1.014, 0.62 + i * 0.065, -0.07}; RoundedBox: {0.008, 0.015, 0.33, 0.005} }
+      }
+      "spill_{side}" {
+        Position: {(side * 2 - 1) * 0.72, 0.75, 0.66}
+        PointLight: {intensity: (0.12 + 0.5 * master_level[side]) * PI, range: 1.8}
+        Rgb: color
+      }
     }
   }
 }

@@ -12,49 +12,53 @@ using box.picking
 using box.ui
 using box.widgets
 using box.audio
+using state
+using assets
 
 const PANEL_W: f32 = 320
 
-template SongButton : HeadlessButton {
-  prop index: i32 = 0
+assets {
+  template SongButton : HeadlessButton {
+    prop index: i32 = 0
 
-  const selected = song == index
-  const active = selected && lit
+    const selected = song == index
+    const active = selected && lit
 
-  Layout: {direction: Row, spacing: 10, padding: {7, 7, 10, 10}, v: Middle}
-  LayoutItem: {width: {mode: Grow}}
-  Rect: {1, 1}
+    Layout: {direction: Row, spacing: 10, padding: {7, 7, 10, 10}, v: Middle}
+    LayoutItem: {width: {mode: Grow}}
+    Rect: {1, 1}
 
-  if active {
-    Rgb: {color.r * 0.25, color.g * 0.25, color.b * 0.25}
-    Border: {radius: 6, width: 2, color: {color.r, color.g, color.b, 255}}
-  } else if hover {
-    Rgb: {44, 48, 62}
-    Border: {radius: 6, width: 2, color: {80, 85, 105, 255}}
-  } else {
-    Rgb: {30, 33, 44}
-    Border: {radius: 6, width: 2, color: selected ? {80, 85, 105, 255} : {30, 33, 44, 255}}
-  }
+    if active {
+      Rgb: {color.r * 0.25, color.g * 0.25, color.b * 0.25}
+      Border: {radius: 6, width: 2, color: {color.r, color.g, color.b, 255}}
+    } else if hover {
+      Rgb: {44, 48, 62}
+      Border: {radius: 6, width: 2, color: {80, 85, 105, 255}}
+    } else {
+      Rgb: {30, 33, 44}
+      Border: {radius: 6, width: 2, color: selected ? {80, 85, 105, 255} : {30, 33, 44, 255}}
+    }
 
-  number {
-    Text: {value: "{index + 1}", size: 15}
-    Rgb: active ? color : IDLE
-  }
+    number {
+      Text: {value: "{index + 1}", size: 15}
+      Rgb: active ? color : IDLE
+    }
 
-  title {
-    Text: {value: SONGS[index].title, size: 17}
-    Rgb: {240, 240, 245}
-  }
+    title {
+      Text: {value: SONGS[index].title, size: 17}
+      Rgb: {240, 240, 245}
+    }
 
-  async {
-    while true {
-      const e = await on.activate(this)
-      if ui.activation(e) == this {
-        if playing && song == index {
-          playing = false
-        } else {
-          song = index
-          playing = true
+    async {
+      while true {
+        const e = await on.activate(this)
+        if ui.activation(e) == this {
+          if playing && song == index {
+            playing = false
+          } else {
+            song = index
+            playing = true
+          }
         }
       }
     }
@@ -156,10 +160,10 @@ hud {
       }
     }
   }
-}
 
-hud_view {
-  View: {camera: hud.camera, lighting: {enabled: false}, culling: {enabled: false}}
+  view {
+    View: {camera: hud.camera, lighting: {enabled: false}, culling: {enabled: false}}
+  }
 }
 
 async {

@@ -7,15 +7,15 @@ using box.layout
 using box.surface
 using box.picking
 using box.ui
+using state
+using assets
 
-template AuraUi {
-  box.effects.Bloom: {intensity: 0.62 * rite_aura, threshold: 0.68, threshold_softness: 0.3}
-}
+assets {
+  template AuraUi {
+    box.effects.Bloom: {intensity: 0.62 * rite_aura, threshold: 0.68, threshold_softness: 0.3}
+  }
 
-aura_ui { AuraUi }
-
-template Interface {
-  ui {
+  template Interface {
     Scene: {}
 
     ScreenCamera camera()
@@ -28,17 +28,21 @@ template Interface {
       Hud hud()
       Title title()
     }
-  }
 
-  ui_view {
-    View: {
-      camera: ui.camera,
-      order: 3,
-      lighting: {enabled: false},
-      culling: {enabled: false},
-      effects: [{enabled: true, effect: aura_ui}]
+    view {
+      aura { AuraUi }
+
+      View: {
+        camera: camera,
+        order: 3,
+        lighting: {enabled: false},
+        culling: {enabled: false},
+        effects: [{enabled: true, effect: aura}]
+      }
     }
+
+    FxLayer fx_layer()
   }
 }
 
-Interface interface()
+Interface hud()

@@ -1,30 +1,34 @@
 using box.material
 
-struct JukeboxSong(title: string, file: string)
+assets {
+  export const IDLE: Rgb = {150, 155, 175}
+}
 
-export const SONGS: JukeboxSong[] = [
-  {"Distant Orbit", "distant_orbit"}
-  {"Late train", "late_train"}
-  {"After the horizon", "after_the_horizon"}
-  {"Drum Kit", "drum_kit"}
-  {"Woodwinds", "woodwinds"}
-  {"Strings", "strings"}
-  {"Horns", "horns"}
-  {"Trumpets", "trumpets"}
-  {"Synth Pads", "synth_pads"}
-  {"Organs", "organs"}
-]
+state {
+  struct JukeboxSong(title: string, file: string)
 
-export const IDLE: Rgb = {150, 155, 175}
+  export const SONGS: JukeboxSong[] = [
+    {"Distant Orbit", "distant_orbit"}
+    {"Late train", "late_train"}
+    {"After the horizon", "after_the_horizon"}
+    {"Drum Kit", "drum_kit"}
+    {"Woodwinds", "woodwinds"}
+    {"Strings", "strings"}
+    {"Horns", "horns"}
+    {"Trumpets", "trumpets"}
+    {"Synth Pads", "synth_pads"}
+    {"Organs", "organs"}
+  ]
 
-export mut song: i32 = 0
-export mut playing = false
-export mut volume_level: f32 = 100
-export mut reverb_level: f32 = 100
-export mut beat: f32 = 0
-export mut song_beats: f32 = 1
-export mut loaded = false
-export mut lit = false
-export mut color: Rgb = IDLE
-export mut master_level: f32[2] = {}
-export mut glow: f32 = 0
+  export mut song: i32 = 0
+  export mut playing = false
+  export mut volume_level: f32 = 100
+  export mut reverb_level: f32 = 100
+  export mut beat: f32 = 0
+  export mut song_beats: f32 = 1
+  export mut loaded = false
+  export mut lit = false
+  export mut color: Rgb = assets.IDLE
+  export mut master_level: f32[2] = {}
+  export mut glow: f32 = 0
+}

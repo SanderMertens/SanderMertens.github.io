@@ -1,15 +1,19 @@
 using flecs.script
 using flecs.script.math
+using state
+using assets
 
-struct DevCmd(n: i32, op: i32, x: f32, z: f32)
+state {
+  struct DevCmd(n: i32, op: i32, x: f32, z: f32)
 
-dev { DevCmd: {n: 0, op: 0, x: 0, z: 0} }
+  dev { DevCmd: {n: 0, op: 0, x: 0, z: 0} }
+}
 
 async {
   mut seen: i32 = 0
   while true {
     await next_frame()
-    const c = dev[DevCmd]
+    const c = state.dev[state.DevCmd]
     if c.n != seen {
       seen = c.n
       if c.op == 0 {

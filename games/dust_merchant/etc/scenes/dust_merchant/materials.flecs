@@ -1,36 +1,39 @@
 using box.material
 using box.geometry
+using assets
 
-prefab PaintedSteel {
-  Rgb: {176, 168, 148}
-  PbrMaterial: {metallic: 1, roughness: 1}
-  PbrTextures: {albedo: tex_steel, orm: tex_steel_orm, normal: tex_steel_normal}
+assets {
+  prefab PaintedSteel {
+    Rgb: {176, 168, 148}
+    PbrMaterial: {metallic: 1, roughness: 1}
+    PbrTextures: {albedo: tex_steel, orm: tex_steel_orm, normal: tex_steel_normal}
+  }
+
+  prefab HullPlate {
+    Rgb: {168, 160, 142}
+    PbrMaterial: {metallic: 1, roughness: 1}
+    PbrTextures: {albedo: tex_plate, orm: tex_plate_orm, normal: tex_plate_normal}
+  }
+
+  prefab Faceplate : PaintedSteel { Rgb: {66, 68, 66} }
+  prefab FaceplateWarm : PaintedSteel { Rgb: {98, 92, 78} }
+  prefab BoneWhite : PaintedSteel { Rgb: {176, 168, 148} }
+  prefab Oxide : PaintedSteel { Rgb: {128, 58, 38} }
+  prefab Mustard : PaintedSteel { Rgb: {186, 134, 46} }
+  prefab Soot : PaintedSteel { Rgb: {44, 44, 46} }
+  prefab Vinyl { Rgb: {26, 25, 25}; PbrMaterial: {metallic: 0, roughness: 0.62}; PbrTextures: {normal: tex_steel_normal} }
+  prefab Rubber { Rgb: {16, 16, 17}; PbrMaterial: {metallic: 0, roughness: 0.82} }
+  prefab BareSteel { Rgb: {168, 168, 170}; PbrMaterial: {metallic: 1, roughness: 0.34} }
+  prefab Chrome { Rgb: {214, 214, 218}; PbrMaterial: {metallic: 1, roughness: 0.16} }
+  prefab Brass { Rgb: {176, 138, 72}; PbrMaterial: {metallic: 1, roughness: 0.32} }
+  prefab BlackAnod { Rgb: {26, 26, 28}; PbrMaterial: {metallic: 0.9, roughness: 0.42} }
+  prefab Bakelite { Rgb: {30, 22, 18}; PbrMaterial: {metallic: 0, roughness: 0.4}; ClearCoat: {strength: 0.9, roughness: 0.12} }
+  prefab SignalRed { Rgb: {168, 28, 20}; PbrMaterial: {metallic: 0.1, roughness: 0.32} }
+  prefab Duct { Rgb: {92, 92, 90}; PbrMaterial: {metallic: 0.8, roughness: 0.5} }
+  prefab Copper { Rgb: {184, 104, 62}; PbrMaterial: {metallic: 1, roughness: 0.38} }
+  prefab Paper { Rgb: {186, 176, 146}; PbrMaterial: {metallic: 0, roughness: 0.94} }
+  prefab Canvas { Rgb: {74, 66, 46}; PbrMaterial: {metallic: 0, roughness: 0.96} }
+  prefab Quilt { Rgb: {96, 48, 30}; PbrMaterial: {metallic: 0, roughness: 0.66}; PbrTextures: {albedo: tex_quilt, normal: tex_quilt_normal}; Sheen: {color: {150, 110, 90}, roughness: 0.55} }
+  prefab Teal : PaintedSteel { Rgb: {58, 96, 92} }
+  prefab GlassWare { Rgb: {222, 232, 226}; PbrMaterial: {metallic: 0, roughness: 0.05}; Transmission: {transmission_factor: 0.95, ior: 1.5, thickness_factor: 0.004}; NoShadow }
 }
-
-prefab HullPlate {
-  Rgb: {168, 160, 142}
-  PbrMaterial: {metallic: 1, roughness: 1}
-  PbrTextures: {albedo: tex_plate, orm: tex_plate_orm, normal: tex_plate_normal}
-}
-
-prefab Faceplate : PaintedSteel { Rgb: {66, 68, 66} }
-prefab FaceplateWarm : PaintedSteel { Rgb: {98, 92, 78} }
-prefab BoneWhite : PaintedSteel { Rgb: {176, 168, 148} }
-prefab Oxide : PaintedSteel { Rgb: {128, 58, 38} }
-prefab Mustard : PaintedSteel { Rgb: {186, 134, 46} }
-prefab Soot : PaintedSteel { Rgb: {44, 44, 46} }
-prefab Vinyl { Rgb: {26, 25, 25}; PbrMaterial: {metallic: 0, roughness: 0.62}; PbrTextures: {normal: tex_steel_normal} }
-prefab Rubber { Rgb: {16, 16, 17}; PbrMaterial: {metallic: 0, roughness: 0.82} }
-prefab BareSteel { Rgb: {168, 168, 170}; PbrMaterial: {metallic: 1, roughness: 0.34} }
-prefab Chrome { Rgb: {214, 214, 218}; PbrMaterial: {metallic: 1, roughness: 0.16} }
-prefab Brass { Rgb: {176, 138, 72}; PbrMaterial: {metallic: 1, roughness: 0.32} }
-prefab BlackAnod { Rgb: {26, 26, 28}; PbrMaterial: {metallic: 0.9, roughness: 0.42} }
-prefab Bakelite { Rgb: {30, 22, 18}; PbrMaterial: {metallic: 0, roughness: 0.4}; ClearCoat: {strength: 0.9, roughness: 0.12} }
-prefab SignalRed { Rgb: {168, 28, 20}; PbrMaterial: {metallic: 0.1, roughness: 0.32} }
-prefab Duct { Rgb: {92, 92, 90}; PbrMaterial: {metallic: 0.8, roughness: 0.5} }
-prefab Copper { Rgb: {184, 104, 62}; PbrMaterial: {metallic: 1, roughness: 0.38} }
-prefab Paper { Rgb: {186, 176, 146}; PbrMaterial: {metallic: 0, roughness: 0.94} }
-prefab Canvas { Rgb: {74, 66, 46}; PbrMaterial: {metallic: 0, roughness: 0.96} }
-prefab Quilt { Rgb: {96, 48, 30}; PbrMaterial: {metallic: 0, roughness: 0.66}; PbrTextures: {albedo: tex_quilt, normal: tex_quilt_normal}; Sheen: {color: {150, 110, 90}, roughness: 0.55} }
-prefab Teal : PaintedSteel { Rgb: {58, 96, 92} }
-prefab GlassWare { Rgb: {222, 232, 226}; PbrMaterial: {metallic: 0, roughness: 0.05}; Transmission: {transmission_factor: 0.95, ior: 1.5, thickness_factor: 0.004}; NoShadow }

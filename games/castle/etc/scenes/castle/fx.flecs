@@ -5,213 +5,217 @@ using flecs.script
 using box.audio
 using box.particle
 using box.transform
-
-sfx { AudioBus: {volume: 0.9} }
+using state
+using assets
 
 $ {
   ParticleSettings: {effect_max: 16, effect_total: 64, effect_overflow: EffectRecycle}
 }
 
-// Stone set on stone: a thud with a gritty top
-prefab SfxBuild {
-  AudioOutput: {bus: sfx}
-  AudioSpatial: {min_distance: 30, max_distance: 260, rolloff: 0.5}
-  SynthSound: {seed: 3, pitch_variance: 0.12, level_variance: 0.1}
-  SynthEnvelope: {attack: 0.002, decay: 0.28}
-  SynthFilter: {kind: SynthLowPass, cutoff: 300, resonance: 0.1}
-  SynthFilterEnvelope: {decay: 0.2, amount: 3}
-  thud { SynthOscillator: {wave: SynthSine, frequency: 140, frequency_end: 55, sweep: 0.18, level: 0.9} }
-  grit {
-    SynthOscillator: {wave: SynthNoise, level: 0.5}
-    SynthEnvelope: {attack: 0.001, decay: 0.12}
-  }
-}
+assets {
+  sfx { AudioBus: {volume: 0.9} }
 
-// A wall coming down: a long rumble of noise
-prefab SfxRaze {
-  AudioOutput: {bus: sfx}
-  AudioSpatial: {min_distance: 30, max_distance: 260, rolloff: 0.5}
-  SynthSound: {seed: 9, pitch_variance: 0.1}
-  SynthEnvelope: {attack: 0.01, decay: 0.2, sustain: 0.5, hold: 0.15, release: 0.45}
-  SynthFilter: {kind: SynthLowPass, cutoff: 200, resonance: 0.2}
-  SynthFilterEnvelope: {decay: 0.7, amount: 2.807}
-  rubble { SynthOscillator: {wave: SynthNoise, level: 0.8} }
-  boom { SynthOscillator: {wave: SynthSine, frequency: 90, frequency_end: 40, sweep: 0.5, level: 0.6} }
-}
-
-// A rustle of leaves and earth
-prefab SfxPlant {
-  AudioOutput: {bus: sfx}
-  AudioSpatial: {min_distance: 30, max_distance: 260, rolloff: 0.5}
-  SynthSound: {seed: 5, pitch_variance: 0.15}
-  SynthEnvelope: {attack: 0.01, decay: 0.18}
-  SynthFilter: {kind: SynthBandPass, cutoff: 1200, resonance: 0.4}
-  SynthFilterEnvelope: {decay: 0.15, amount: 1.115}
-  SynthOscillator: {wave: SynthNoise, level: 0.7}
-}
-
-// Water poured into the moat
-prefab SfxSplash {
-  AudioOutput: {bus: sfx}
-  AudioSpatial: {min_distance: 30, max_distance: 260, rolloff: 0.5}
-  SynthSound: {seed: 11, pitch_variance: 0.1}
-  SynthEnvelope: {attack: 0.005, decay: 0.4}
-  SynthFilter: {kind: SynthBandPass, cutoff: 600, resonance: 0.55}
-  SynthFilterEnvelope: {attack: 0.25, sustain: 1, hold: 0.16, amount: 2.322}
-  water { SynthOscillator: {wave: SynthNoise, level: 0.8} }
-  bloop { SynthOscillator: {wave: SynthSine, frequency: 300, frequency_end: 700, sweep: 0.12, level: 0.3} }
-}
-
-// A wooden knock when a tool is picked
-prefab SfxClick {
-  AudioOutput: {bus: sfx}
-  SynthSound: {pitch_variance: 0.04}
-  SynthEnvelope: {attack: 0.001, decay: 0.06}
-  SynthFilter: {kind: SynthLowPass, cutoff: 2200}
-  knock { SynthOscillator: {wave: SynthTriangle, frequency: 520, frequency_end: 380, sweep: 0.05, level: 0.6} }
-  tap { SynthOscillator: {wave: SynthNoise, level: 0.25}; SynthEnvelope: {attack: 0.001, decay: 0.02} }
-}
-
-// A low buzz when something cannot be done
-prefab SfxDeny {
-  AudioOutput: {bus: sfx}
-  SynthEnvelope: {attack: 0.004, decay: 0.05, sustain: 0.6, hold: 0.08, release: 0.06}
-  SynthFilter: {kind: SynthLowPass, cutoff: 900}
-  low { SynthOscillator: {wave: SynthSquare, frequency: 110, level: 0.25} }
-  beat { SynthOscillator: {wave: SynthSquare, frequency: 116, level: 0.2} }
-}
-
-// The four notes of the fanfare of a new rank
-prefab SfxFanfareA {
-  AudioOutput: {bus: sfx}
-  SynthEnvelope: {attack: 0.01, decay: 0.08, sustain: 0.6, hold: 0.08, release: 0.12}
-  SynthFilter: {kind: SynthLowPass, cutoff: 3200, resonance: 0.2}
-  horn { SynthOscillator: {wave: SynthSaw, frequency: 392, level: 0.25} }
-  body { SynthOscillator: {wave: SynthTriangle, frequency: 196, level: 0.3} }
-}
-
-prefab SfxFanfareB {
-  AudioOutput: {bus: sfx}
-  SynthEnvelope: {attack: 0.01, decay: 0.08, sustain: 0.6, hold: 0.08, release: 0.12}
-  SynthFilter: {kind: SynthLowPass, cutoff: 3200, resonance: 0.2}
-  horn { SynthOscillator: {wave: SynthSaw, frequency: 523.25, level: 0.25} }
-  body { SynthOscillator: {wave: SynthTriangle, frequency: 261.63, level: 0.3} }
-}
-
-prefab SfxFanfareC {
-  AudioOutput: {bus: sfx}
-  SynthEnvelope: {attack: 0.01, decay: 0.08, sustain: 0.6, hold: 0.08, release: 0.12}
-  SynthFilter: {kind: SynthLowPass, cutoff: 3200, resonance: 0.2}
-  horn { SynthOscillator: {wave: SynthSaw, frequency: 659.25, level: 0.25} }
-  body { SynthOscillator: {wave: SynthTriangle, frequency: 329.63, level: 0.3} }
-}
-
-prefab SfxFanfareD {
-  AudioOutput: {bus: sfx}
-  SynthEnvelope: {attack: 0.01, decay: 0.2, sustain: 0.7, hold: 0.5, release: 0.6}
-  SynthFilter: {kind: SynthLowPass, cutoff: 3600, resonance: 0.2}
-  horn { SynthOscillator: {wave: SynthSaw, frequency: 783.99, level: 0.25} }
-  fifth { SynthOscillator: {wave: SynthSaw, frequency: 523.25, level: 0.18} }
-  body { SynthOscillator: {wave: SynthTriangle, frequency: 261.63, level: 0.3} }
-}
-
-// The crack of a firework
-prefab SfxPop {
-  AudioOutput: {bus: sfx}
-  SynthSound: {seed: 21, pitch_variance: 0.3, level_variance: 0.2}
-  SynthEnvelope: {attack: 0.001, decay: 0.35}
-  SynthFilter: {kind: SynthLowPass, cutoff: 400}
-  SynthFilterEnvelope: {decay: 0.3, amount: 2.907}
-  SynthOscillator: {wave: SynthNoise, level: 0.6}
-}
-
-// Dust thrown up around the foot of a new piece
-prefab DustBurst {
-  particles {
-    Position: {0, 0, 0}
-    ParticleEmitter: {
-      max: 48, rate: 0,
-      shape: EmitterBox, extents: {0.9, 0.05, 0.9},
-      direction: {0, 1, 0}, spread: 70, speed: {0.8, 2.6},
-      lifetime: {0.6, 1.3}, size: {0.25, 0.6}, opacity: {0.5, 0.8},
-      color: {214, 200, 172}, color_variance: {16, 14, 10},
-      seed: 7
+  // Stone set on stone: a thud with a gritty top
+  prefab SfxBuild {
+    AudioOutput: {bus: sfx}
+    AudioSpatial: {min_distance: 30, max_distance: 260, rolloff: 0.5}
+    SynthSound: {seed: 3, pitch_variance: 0.12, level_variance: 0.1}
+    SynthEnvelope: {attack: 0.002, decay: 0.28}
+    SynthFilter: {kind: SynthLowPass, cutoff: 300, resonance: 0.1}
+    SynthFilterEnvelope: {decay: 0.2, amount: 3}
+    thud { SynthOscillator: {wave: SynthSine, frequency: 140, frequency_end: 55, sweep: 0.18, level: 0.9} }
+    grit {
+      SynthOscillator: {wave: SynthNoise, level: 0.5}
+      SynthEnvelope: {attack: 0.001, decay: 0.12}
     }
-    ParticleBurst: {count: 40}
-    ParticleForces: {gravity: {0, -2.5, 0}, drag: 2.2}
-    ParticleCurves: {size: {keys: [{0, 0.6}, {0.333, 1.4}, {0.667, 2}, {1, 2.4}]}, opacity: {keys: [{0, 1}, {0.333, 0.8}, {0.667, 0.4}, {1, 0}]}}
   }
-}
 
-// Stones and dust of a piece torn down
-prefab RubbleBurst {
-  dust {
-    Position: {0, 0, 0}
-    ParticleEmitter: {
-      max: 64, rate: 0,
-      shape: EmitterBox, extents: {0.8, 0.6, 0.8},
-      direction: {0, 1, 0}, spread: 80, speed: {0.6, 2.2},
-      lifetime: {0.9, 1.8}, size: {0.4, 0.9}, opacity: {0.5, 0.75},
-      color: {170, 160, 146}, color_variance: {14, 14, 14},
-      seed: 13
-    }
-    ParticleBurst: {count: 56}
-    ParticleForces: {gravity: {0, -1.5, 0}, drag: 1.8}
-    ParticleCurves: {size: {keys: [{0, 0.6}, {0.333, 1.5}, {0.667, 2.1}, {1, 2.6}]}, opacity: {keys: [{0, 1}, {0.333, 0.8}, {0.667, 0.4}, {1, 0}]}}
+  // A wall coming down: a long rumble of noise
+  prefab SfxRaze {
+    AudioOutput: {bus: sfx}
+    AudioSpatial: {min_distance: 30, max_distance: 260, rolloff: 0.5}
+    SynthSound: {seed: 9, pitch_variance: 0.1}
+    SynthEnvelope: {attack: 0.01, decay: 0.2, sustain: 0.5, hold: 0.15, release: 0.45}
+    SynthFilter: {kind: SynthLowPass, cutoff: 200, resonance: 0.2}
+    SynthFilterEnvelope: {decay: 0.7, amount: 2.807}
+    rubble { SynthOscillator: {wave: SynthNoise, level: 0.8} }
+    boom { SynthOscillator: {wave: SynthSine, frequency: 90, frequency_end: 40, sweep: 0.5, level: 0.6} }
   }
-  stones {
-    Position: {0, 0, 0}
-    ParticleEmitter: {
-      max: 40, rate: 0,
-      shape: EmitterBox, extents: {0.6, 0.8, 0.6},
-      direction: {0, 1, 0}, spread: 60, speed: {2, 5},
-      lifetime: {0.8, 1.2}, size: {0.08, 0.18}, opacity: {1, 1},
-      color: {120, 112, 100}, color_variance: {20, 20, 20},
-      seed: 14
-    }
-    ParticleBurst: {count: 30}
-    ParticleForces: {gravity: {0, -14, 0}}
-    ParticleCollision: {height: 0.03, bounce: 0.3, friction: 0.6}
-  }
-}
 
-// Spray where the moat fills
-prefab SplashBurst {
-  particles {
-    Position: {0, 0, 0}
-    ParticleEmitter: {
-      max: 48, rate: 0,
-      shape: EmitterBox, extents: {0.8, 0.02, 0.8},
-      direction: {0, 1, 0}, spread: 30, speed: {1.5, 3.5},
-      lifetime: {0.5, 0.9}, size: {0.08, 0.16}, opacity: {0.6, 0.9},
-      color: {200, 230, 245}, color_variance: {10, 10, 10},
-      seed: 17
-    }
-    ParticleBurst: {count: 40}
-    ParticleForces: {gravity: {0, -12, 0}}
-    ParticleCollision: {height: -0.31, die: true}
+  // A rustle of leaves and earth
+  prefab SfxPlant {
+    AudioOutput: {bus: sfx}
+    AudioSpatial: {min_distance: 30, max_distance: 260, rolloff: 0.5}
+    SynthSound: {seed: 5, pitch_variance: 0.15}
+    SynthEnvelope: {attack: 0.01, decay: 0.18}
+    SynthFilter: {kind: SynthBandPass, cutoff: 1200, resonance: 0.4}
+    SynthFilterEnvelope: {decay: 0.15, amount: 1.115}
+    SynthOscillator: {wave: SynthNoise, level: 0.7}
   }
-}
 
-// A burst of colored sparks high above the keep
-prefab Firework {
-  sparks {
-    Position: {0, 0, 0}
-    ParticleEmitter: {
-      max: 160, rate: 0,
-      shape: EmitterSphere, radius: 0.1,
-      direction: {0, 0, 0}, radial: {5, 8},
-      lifetime: {1.2, 1.9}, size: {0.12, 0.2}, opacity: {1, 1},
-      color: {255, 200, 90}, color_variance: {0, 60, 90},
-      seed: 23
+  // Water poured into the moat
+  prefab SfxSplash {
+    AudioOutput: {bus: sfx}
+    AudioSpatial: {min_distance: 30, max_distance: 260, rolloff: 0.5}
+    SynthSound: {seed: 11, pitch_variance: 0.1}
+    SynthEnvelope: {attack: 0.005, decay: 0.4}
+    SynthFilter: {kind: SynthBandPass, cutoff: 600, resonance: 0.55}
+    SynthFilterEnvelope: {attack: 0.25, sustain: 1, hold: 0.16, amount: 2.322}
+    water { SynthOscillator: {wave: SynthNoise, level: 0.8} }
+    bloop { SynthOscillator: {wave: SynthSine, frequency: 300, frequency_end: 700, sweep: 0.12, level: 0.3} }
+  }
+
+  // A wooden knock when a tool is picked
+  prefab SfxClick {
+    AudioOutput: {bus: sfx}
+    SynthSound: {pitch_variance: 0.04}
+    SynthEnvelope: {attack: 0.001, decay: 0.06}
+    SynthFilter: {kind: SynthLowPass, cutoff: 2200}
+    knock { SynthOscillator: {wave: SynthTriangle, frequency: 520, frequency_end: 380, sweep: 0.05, level: 0.6} }
+    tap { SynthOscillator: {wave: SynthNoise, level: 0.25}; SynthEnvelope: {attack: 0.001, decay: 0.02} }
+  }
+
+  // A low buzz when something cannot be done
+  prefab SfxDeny {
+    AudioOutput: {bus: sfx}
+    SynthEnvelope: {attack: 0.004, decay: 0.05, sustain: 0.6, hold: 0.08, release: 0.06}
+    SynthFilter: {kind: SynthLowPass, cutoff: 900}
+    low { SynthOscillator: {wave: SynthSquare, frequency: 110, level: 0.25} }
+    beat { SynthOscillator: {wave: SynthSquare, frequency: 116, level: 0.2} }
+  }
+
+  // The four notes of the fanfare of a new rank
+  prefab SfxFanfareA {
+    AudioOutput: {bus: sfx}
+    SynthEnvelope: {attack: 0.01, decay: 0.08, sustain: 0.6, hold: 0.08, release: 0.12}
+    SynthFilter: {kind: SynthLowPass, cutoff: 3200, resonance: 0.2}
+    horn { SynthOscillator: {wave: SynthSaw, frequency: 392, level: 0.25} }
+    body { SynthOscillator: {wave: SynthTriangle, frequency: 196, level: 0.3} }
+  }
+
+  prefab SfxFanfareB {
+    AudioOutput: {bus: sfx}
+    SynthEnvelope: {attack: 0.01, decay: 0.08, sustain: 0.6, hold: 0.08, release: 0.12}
+    SynthFilter: {kind: SynthLowPass, cutoff: 3200, resonance: 0.2}
+    horn { SynthOscillator: {wave: SynthSaw, frequency: 523.25, level: 0.25} }
+    body { SynthOscillator: {wave: SynthTriangle, frequency: 261.63, level: 0.3} }
+  }
+
+  prefab SfxFanfareC {
+    AudioOutput: {bus: sfx}
+    SynthEnvelope: {attack: 0.01, decay: 0.08, sustain: 0.6, hold: 0.08, release: 0.12}
+    SynthFilter: {kind: SynthLowPass, cutoff: 3200, resonance: 0.2}
+    horn { SynthOscillator: {wave: SynthSaw, frequency: 659.25, level: 0.25} }
+    body { SynthOscillator: {wave: SynthTriangle, frequency: 329.63, level: 0.3} }
+  }
+
+  prefab SfxFanfareD {
+    AudioOutput: {bus: sfx}
+    SynthEnvelope: {attack: 0.01, decay: 0.2, sustain: 0.7, hold: 0.5, release: 0.6}
+    SynthFilter: {kind: SynthLowPass, cutoff: 3600, resonance: 0.2}
+    horn { SynthOscillator: {wave: SynthSaw, frequency: 783.99, level: 0.25} }
+    fifth { SynthOscillator: {wave: SynthSaw, frequency: 523.25, level: 0.18} }
+    body { SynthOscillator: {wave: SynthTriangle, frequency: 261.63, level: 0.3} }
+  }
+
+  // The crack of a firework
+  prefab SfxPop {
+    AudioOutput: {bus: sfx}
+    SynthSound: {seed: 21, pitch_variance: 0.3, level_variance: 0.2}
+    SynthEnvelope: {attack: 0.001, decay: 0.35}
+    SynthFilter: {kind: SynthLowPass, cutoff: 400}
+    SynthFilterEnvelope: {decay: 0.3, amount: 2.907}
+    SynthOscillator: {wave: SynthNoise, level: 0.6}
+  }
+
+  // Dust thrown up around the foot of a new piece
+  prefab DustBurst {
+    particles {
+      Position: {0, 0, 0}
+      ParticleEmitter: {
+        max: 48, rate: 0,
+        shape: EmitterBox, extents: {0.9, 0.05, 0.9},
+        direction: {0, 1, 0}, spread: 70, speed: {0.8, 2.6},
+        lifetime: {0.6, 1.3}, size: {0.25, 0.6}, opacity: {0.5, 0.8},
+        color: {214, 200, 172}, color_variance: {16, 14, 10},
+        seed: 7
+      }
+      ParticleBurst: {count: 40}
+      ParticleForces: {gravity: {0, -2.5, 0}, drag: 2.2}
+      ParticleCurves: {size: {keys: [{0, 0.6}, {0.333, 1.4}, {0.667, 2}, {1, 2.4}]}, opacity: {keys: [{0, 1}, {0.333, 0.8}, {0.667, 0.4}, {1, 0}]}}
     }
-    ParticleAppearance: {blend: ParticleAdditive, stretch: 0.05}
-    ParticleBurst: {count: 140}
-    ParticleForces: {gravity: {0, -3, 0}, drag: 1.2}
-    ParticleCurves: {
-      size: {keys: [{0, 1}, {0.333, 1}, {0.667, 0.8}, {1, 0.4}]},
-      opacity: {keys: [{0, 1}, {0.333, 1}, {0.667, 0.7}, {1, 0}]},
-      color: {keys: [{0, {255, 255, 255}}, {0.333, {255, 220, 160}}, {0.667, {255, 120, 140}}, {1, {120, 80, 255}}]}
+  }
+
+  // Stones and dust of a piece torn down
+  prefab RubbleBurst {
+    dust {
+      Position: {0, 0, 0}
+      ParticleEmitter: {
+        max: 64, rate: 0,
+        shape: EmitterBox, extents: {0.8, 0.6, 0.8},
+        direction: {0, 1, 0}, spread: 80, speed: {0.6, 2.2},
+        lifetime: {0.9, 1.8}, size: {0.4, 0.9}, opacity: {0.5, 0.75},
+        color: {170, 160, 146}, color_variance: {14, 14, 14},
+        seed: 13
+      }
+      ParticleBurst: {count: 56}
+      ParticleForces: {gravity: {0, -1.5, 0}, drag: 1.8}
+      ParticleCurves: {size: {keys: [{0, 0.6}, {0.333, 1.5}, {0.667, 2.1}, {1, 2.6}]}, opacity: {keys: [{0, 1}, {0.333, 0.8}, {0.667, 0.4}, {1, 0}]}}
+    }
+    stones {
+      Position: {0, 0, 0}
+      ParticleEmitter: {
+        max: 40, rate: 0,
+        shape: EmitterBox, extents: {0.6, 0.8, 0.6},
+        direction: {0, 1, 0}, spread: 60, speed: {2, 5},
+        lifetime: {0.8, 1.2}, size: {0.08, 0.18}, opacity: {1, 1},
+        color: {120, 112, 100}, color_variance: {20, 20, 20},
+        seed: 14
+      }
+      ParticleBurst: {count: 30}
+      ParticleForces: {gravity: {0, -14, 0}}
+      ParticleCollision: {height: 0.03, bounce: 0.3, friction: 0.6}
+    }
+  }
+
+  // Spray where the moat fills
+  prefab SplashBurst {
+    particles {
+      Position: {0, 0, 0}
+      ParticleEmitter: {
+        max: 48, rate: 0,
+        shape: EmitterBox, extents: {0.8, 0.02, 0.8},
+        direction: {0, 1, 0}, spread: 30, speed: {1.5, 3.5},
+        lifetime: {0.5, 0.9}, size: {0.08, 0.16}, opacity: {0.6, 0.9},
+        color: {200, 230, 245}, color_variance: {10, 10, 10},
+        seed: 17
+      }
+      ParticleBurst: {count: 40}
+      ParticleForces: {gravity: {0, -12, 0}}
+      ParticleCollision: {height: -0.31, die: true}
+    }
+  }
+
+  // A burst of colored sparks high above the keep
+  prefab Firework {
+    sparks {
+      Position: {0, 0, 0}
+      ParticleEmitter: {
+        max: 160, rate: 0,
+        shape: EmitterSphere, radius: 0.1,
+        direction: {0, 0, 0}, radial: {5, 8},
+        lifetime: {1.2, 1.9}, size: {0.12, 0.2}, opacity: {1, 1},
+        color: {255, 200, 90}, color_variance: {0, 60, 90},
+        seed: 23
+      }
+      ParticleAppearance: {blend: ParticleAdditive, stretch: 0.05}
+      ParticleBurst: {count: 140}
+      ParticleForces: {gravity: {0, -3, 0}, drag: 1.2}
+      ParticleCurves: {
+        size: {keys: [{0, 1}, {0.333, 1}, {0.667, 0.8}, {1, 0.4}]},
+        opacity: {keys: [{0, 1}, {0.333, 1}, {0.667, 0.7}, {1, 0}]},
+        color: {keys: [{0, {255, 255, 255}}, {0.333, {255, 220, 160}}, {0.667, {255, 120, 140}}, {1, {120, 80, 255}}]}
+      }
     }
   }
 }

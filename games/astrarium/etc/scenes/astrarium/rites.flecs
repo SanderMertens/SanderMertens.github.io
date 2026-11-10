@@ -11,357 +11,361 @@ using box.ui
 using box.transition
 using box.movement
 using box.widgets
+using state
+using assets
 
-template RuneSliderFace {
-  prop label: string = ""
-  prop detail: string = ""
-  prop value: f32 = 0
-  prop min: f32 = 0
-  prop max: f32 = 1
-  prop hover: bool = false
-  prop down: bool = false
-  prop readout: string = ""
-  prop span: f32 = 400
+assets {
+  template RuneSliderFace {
+    prop label: string = ""
+    prop detail: string = ""
+    prop value: f32 = 0
+    prop min: f32 = 0
+    prop max: f32 = 1
+    prop hover: bool = false
+    prop down: bool = false
+    prop readout: string = ""
+    prop span: f32 = 400
 
-  const t = clamp((value - min) / (max - min), 0, 1)
-  const inset = 13
-  const room = span - inset * 2
-  const hot = hover || down
+    const t = clamp((value - min) / (max - min), 0, 1)
+    const inset = 13
+    const room = span - inset * 2
+    const hot = hover || down
 
-  Layout: {direction: Column, spacing: 4}
-  LayoutItem: {width: {mode: Grow}}
-  box.spatial.SpatialIgnore
-
-  head {
-    Layout: {direction: Row, spacing: 10, v: Middle}
+    Layout: {direction: Column, spacing: 4}
     LayoutItem: {width: {mode: Grow}}
-    Caption name(text: label, size: 16, font: font_display, color: ui_pale)
-    Caption note(text: detail, size: 13, font: font_italic, color: ui_muted)
-    gap {
-      LayoutItem: {width: {mode: Grow}}
-    }
-    Caption amount(text: readout, size: 15, font: font_display, color: ui_gold)
-  }
-
-  rail {
-    Layout: {}
-    LayoutItem: {width: {mode: Fixed, value: span}, height: {mode: Fixed, value: 26}}
     box.spatial.SpatialIgnore
 
-    groove {
-      Position: {0, 0, 0}
-      Rect: {room, 4}
-      Rgb: {6, 8, 18}
-      Border: {width: 1, radius: 2, color: {ui_gold.r * 0.4, ui_gold.g * 0.4, ui_gold.b * 0.4, 255}}
+    head {
+      Layout: {direction: Row, spacing: 10, v: Middle}
+      LayoutItem: {width: {mode: Grow}}
+      Caption name(text: label, size: 16, font: font_display, color: ui_pale)
+      Caption note(text: detail, size: 13, font: font_italic, color: ui_muted)
+      gap {
+        LayoutItem: {width: {mode: Grow}}
+      }
+      Caption amount(text: readout, size: 15, font: font_display, color: ui_gold)
     }
 
-    for i in 0..21 {
-      "tick_{i}" {
-        const f = i / 20.0
-        const big = i % 5 == 0
-        Position: {(f - 0.5) * room, 0, 1}
-        Rect: {1, big ? 14 : 8}
-        if f <= t {
-          Rgb: ui_pale
-          Emissive: {strength: 0.5, color: {255, 196, 110}}
-        } else {
-          Rgb: {ui_dim.r * 0.8, ui_dim.g * 0.8, ui_dim.b * 0.8}
-          Emissive: {strength: 0, color: {255, 196, 110}}
+    rail {
+      Layout: {}
+      LayoutItem: {width: {mode: Fixed, value: span}, height: {mode: Fixed, value: 26}}
+      box.spatial.SpatialIgnore
+
+      groove {
+        Position: {0, 0, 0}
+        Rect: {room, 4}
+        Rgb: {6, 8, 18}
+        Border: {width: 1, radius: 2, color: {ui_gold.r * 0.4, ui_gold.g * 0.4, ui_gold.b * 0.4, 255}}
+      }
+
+      for i in 0..21 {
+        "tick_{i}" {
+          const f = i / 20.0
+          const big = i % 5 == 0
+          Position: {(f - 0.5) * room, 0, 1}
+          Rect: {1, big ? 14 : 8}
+          if f <= t {
+            Rgb: ui_pale
+            Emissive: {strength: 0.5, color: {255, 196, 110}}
+          } else {
+            Rgb: {ui_dim.r * 0.8, ui_dim.g * 0.8, ui_dim.b * 0.8}
+            Emissive: {strength: 0, color: {255, 196, 110}}
+          }
+        }
+      }
+
+      fill {
+        Position: {(t - 1) * room / 2, 0, 2}
+        Scale: {max(t, 0.001), 1, 1}
+        Rect: {room, 2}
+        Rgb: ui_pale
+        Emissive: {strength: 0.9, color: {255, 190, 100}}
+      }
+
+      thumb {
+        Position: {(t - 0.5) * room, 0, 3}
+
+        Halo aura(size: hot ? 58 : 36, color: {ui_gold.r * 0.5, ui_gold.g * 0.42, ui_gold.b * 0.28}, z: 0)
+
+        gem {
+          Position: {0, 0, 1}
+          Rotation: {0, 0, PI / 4}
+          Scale: {hot ? 1.2 : 1, hot ? 1.2 : 1, 1}
+          Rect: {13, 13}
+          Rgb: {255, 248, 226}
+          Emissive: {strength: 1, color: {255, 196, 110}}
+          Border: {width: 1, color: {ui_gold.r, ui_gold.g, ui_gold.b, 255}}
+          Transition: [Scale: {duration: 0.12, timing_function: EaseOut}]
         }
       }
     }
+  }
 
-    fill {
-      Position: {(t - 1) * room / 2, 0, 2}
-      Scale: {max(t, 0.001), 1, 1}
-      Rect: {room, 2}
-      Rgb: ui_pale
-      Emissive: {strength: 0.9, color: {255, 190, 100}}
+  template RuneSlider : HeadlessSlider {
+    prop label: string = ""
+    prop detail: string = ""
+    prop decimals: i32 = 0
+    prop suffix: string = ""
+    prop span: f32 = 400
+
+    LayoutItem: {width: {mode: Grow}}
+    Layout: {direction: Column}
+
+    RuneSliderFace face(
+      label: label, detail: detail, value: current, min: min, max: max,
+      hover: hover, down: down, span: span, readout: "{current:.decimals}{suffix}")
+  }
+
+  template RuneToggleFace {
+    prop label: string = ""
+    prop detail: string = ""
+    prop on_: bool = false
+    prop hover: bool = false
+
+    Layout: {direction: Row, spacing: 12, v: Middle}
+    LayoutItem: {width: {mode: Grow}}
+    box.spatial.SpatialIgnore
+
+    words {
+      Layout: {direction: Column}
+      LayoutItem: {width: {mode: Grow}}
+      Caption name(text: label, size: 16, font: font_display, color: ui_pale)
+      Caption note(text: detail, size: 13, font: font_italic, color: ui_muted)
     }
 
-    thumb {
-      Position: {(t - 0.5) * room, 0, 3}
-
-      Halo aura(size: hot ? 58 : 36, color: {ui_gold.r * 0.5, ui_gold.g * 0.42, ui_gold.b * 0.28}, z: 0)
+    socket {
+      Layout: {}
+      LayoutItem: {width: {mode: Fixed, value: 58}, height: {mode: Fixed, value: 26}}
+      Rect: {1, 1}
+      Rgb: on_ ? {ui_gold.r * 0.34, ui_gold.g * 0.28, ui_gold.b * 0.2} : {6, 8, 18}
+      Border: {width: 1, radius: 13, color: {ui_gold.r * 0.7, ui_gold.g * 0.7, ui_gold.b * 0.7, 255}}
+      Transition: [Rgb: {duration: 0.2}]
+      box.spatial.SpatialIgnore
 
       gem {
-        Position: {0, 0, 1}
-        Rotation: {0, 0, PI / 4}
-        Scale: {hot ? 1.2 : 1, hot ? 1.2 : 1, 1}
-        Rect: {13, 13}
-        Rgb: {255, 248, 226}
-        Emissive: {strength: 1, color: {255, 196, 110}}
-        Border: {width: 1, color: {ui_gold.r, ui_gold.g, ui_gold.b, 255}}
-        Transition: [Scale: {duration: 0.12, timing_function: EaseOut}]
+        Position: {on_ ? 16 : -16, 0, 1}
+        Rotation: {0, 0, on_ ? PI / 4 : 0 - PI / 4}
+        Rect: {14, 14}
+        if on_ {
+          Rgb: {255, 248, 226}
+          Emissive: {strength: 1.1, color: {255, 196, 110}}
+        } else {
+          Rgb: {ui_dim.r, ui_dim.g, ui_dim.b}
+          Emissive: {strength: 0, color: {255, 196, 110}}
+        }
+        Transition: [
+          Position: {duration: 0.26, timing_function: EaseInOut},
+          Rotation: {duration: 0.26, timing_function: EaseInOut},
+          Rgb: {duration: 0.2},
+          Emissive: {duration: 0.2}
+        ]
       }
     }
   }
-}
 
-template RuneSlider : HeadlessSlider {
-  prop label: string = ""
-  prop detail: string = ""
-  prop decimals: i32 = 0
-  prop suffix: string = ""
-  prop span: f32 = 400
+  template RuneToggle : HeadlessToggle {
+    prop detail: string = ""
 
-  LayoutItem: {width: {mode: Grow}}
-  Layout: {direction: Column}
+    LayoutItem: {width: {mode: Grow}}
+    Layout: {direction: Column}
 
-  RuneSliderFace face(
-    label: label, detail: detail, value: current, min: min, max: max,
-    hover: hover, down: down, span: span, readout: "{current:.decimals}{suffix}")
-}
+    RuneToggleFace face(label: label, detail: detail, on_: current, hover: hover)
+  }
 
-template RuneToggleFace {
-  prop label: string = ""
-  prop detail: string = ""
-  prop on_: bool = false
-  prop hover: bool = false
+  template MetalFace {
+    prop index: i32 = 0
+    prop label: string = ""
+    prop tone: Rgb = {255, 255, 255}
+    prop hover: bool = false
 
-  Layout: {direction: Row, spacing: 12, v: Middle}
-  LayoutItem: {width: {mode: Grow}}
-  box.spatial.SpatialIgnore
+    const active = rite_metal == index
+    const k = hover ? 1.08 : 1
 
-  words {
+    Layout: {direction: Column, h: Center, spacing: 6}
+    LayoutItem: {width: {mode: Grow}}
+    box.spatial.SpatialIgnore
+
+    medal {
+      Layout: {}
+      LayoutItem: {width: {mode: Fixed, value: 76}, height: {mode: Fixed, value: 76}}
+      Scale: {k, k, 1}
+      Transition: [Scale: {duration: 0.15, timing_function: EaseOut}]
+      box.spatial.SpatialIgnore
+
+      Halo aura(size: 130, color: {tone.r * 0.32, tone.g * 0.32, tone.b * 0.32}, z: -1) {
+        Opacity: {active ? 1 : 0.15}
+        Transition: [Opacity: {duration: 0.3}]
+      }
+
+      disc {
+        Position: {0, 0, 0}
+        Circle: {30}
+        Rgb: {tone.r * 0.2, tone.g * 0.2, tone.b * 0.24}
+        Border: {width: 2, color: {tone.r, tone.g, tone.b, 255}}
+      }
+
+      star {
+        Position: {0, 0, 1}
+        Rect: {46, 46}
+        Image: {texture: tex_sigil}
+        Rgb: tone
+        Emissive: {strength: active ? 0.6 : 0, color: tone}
+        AngularVelocity: {0, 0, active ? 0.6 : 0.08}
+      }
+
+      if active {
+        ring {
+          Position: {0, 0, 2}
+          Rect: {74, 74}
+          Image: {texture: tex_dashes}
+          Rgb: tone
+          BlendMode: Additive
+          AngularVelocity: {0, 0, -0.5}
+        }
+      }
+    }
+
+    Caption name(text: label, size: 14, font: font_display, color: active ? ui_pale : ui_muted)
+  }
+
+  template MetalChoice : HeadlessButton {
+    prop index: i32 = 0
+    prop tone: Rgb = {255, 255, 255}
+
     Layout: {direction: Column}
     LayoutItem: {width: {mode: Grow}}
-    Caption name(text: label, size: 16, font: font_display, color: ui_pale)
-    Caption note(text: detail, size: 13, font: font_italic, color: ui_muted)
-  }
-
-  socket {
-    Layout: {}
-    LayoutItem: {width: {mode: Fixed, value: 58}, height: {mode: Fixed, value: 26}}
     Rect: {1, 1}
-    Rgb: on_ ? {ui_gold.r * 0.34, ui_gold.g * 0.28, ui_gold.b * 0.2} : {6, 8, 18}
-    Border: {width: 1, radius: 13, color: {ui_gold.r * 0.7, ui_gold.g * 0.7, ui_gold.b * 0.7, 255}}
-    Transition: [Rgb: {duration: 0.2}]
+    Rgb: {0, 0, 0}
+    BlendMode: Additive
+
+    MetalFace face(index: index, label: label, tone: tone, hover: hover)
+
+    async {
+      while true {
+        await on.change(this)
+        emit Metal(index: index)
+      }
+    }
+  }
+
+  template RitesForm {
+    Layout: {direction: Row}
+    LayoutItem: {height: {mode: Grow}}
+
+    Frame frame(title: "Rites of the Observatory", width: 470, gap: 11, pad: 20) {
+      Caption intro(text: "The library's own headless sliders in a new coat. Each one changes the running scene.", size: 15, font: font_italic, width: 428, color: ui_text)
+
+      RuneSlider aura(label: "Aura", detail: "how brightly things bloom", min: 0, max: 2, step: 0, value: 1, decimals: 2, thumb: 26, span: 428) {
+        async {
+          while true {
+            await on.change(this)
+            rite_aura = this[RuneSlider.mut].current
+          }
+        }
+      }
+
+      RuneSlider dust(label: "Starfall", detail: "motes adrift in the void", min: 0, max: 4, step: 0, value: 1, decimals: 1, suffix: "x", thumb: 26, span: 428) {
+        async {
+          while true {
+            await on.change(this)
+            rite_dust = this[RuneSlider.mut].current
+          }
+        }
+      }
+
+      RuneSlider clock(label: "Clockwork", detail: "speed of the astrolabe", min: 0, max: 12, step: 0, value: 1, decimals: 1, suffix: "x", thumb: 26, span: 428) {
+        async {
+          while true {
+            await on.change(this)
+            rite_clock = this[RuneSlider.mut].current
+          }
+        }
+      }
+
+      Divider rule_b()
+
+      RuneToggle names(label: "Keystone Names", detail: "label the great stars on the chart", value: true) {
+        async {
+          while true {
+            await on.change(this)
+            rite_names = this[RuneToggle.mut].current
+          }
+        }
+      }
+
+      RuneToggle drift(label: "Drifting Motes", detail: "the slow dust behind every screen", value: true) {
+        async {
+          while true {
+            await on.change(this)
+            rite_drift = this[RuneToggle.mut].current
+          }
+        }
+      }
+
+      gap {
+        LayoutItem: {height: {mode: Grow}}
+      }
+
+      PlainButton leave(label: "Return to the Title", width: 430) {
+        async {
+          while true {
+            await on.change(this)
+            emit Navigate(screen: SCREEN_TITLE)
+          }
+        }
+      }
+    }
+  }
+
+  template CodexEntry {
+    prop title: string = ""
+    prop body: string = ""
+
+    Layout: {direction: Column, spacing: 3}
+    LayoutItem: {width: {mode: Grow}}
     box.spatial.SpatialIgnore
 
-    gem {
-      Position: {on_ ? 16 : -16, 0, 1}
-      Rotation: {0, 0, on_ ? PI / 4 : 0 - PI / 4}
-      Rect: {14, 14}
-      if on_ {
-        Rgb: {255, 248, 226}
-        Emissive: {strength: 1.1, color: {255, 196, 110}}
-      } else {
-        Rgb: {ui_dim.r, ui_dim.g, ui_dim.b}
-        Emissive: {strength: 0, color: {255, 196, 110}}
-      }
-      Transition: [
-        Position: {duration: 0.26, timing_function: EaseInOut},
-        Rotation: {duration: 0.26, timing_function: EaseInOut},
-        Rgb: {duration: 0.2},
-        Emissive: {duration: 0.2}
-      ]
-    }
+    Caption name(text: title, size: 15, font: font_display, color: ui_pale)
+    Caption words(text: body, size: 14, width: 288, color: ui_text)
   }
-}
 
-template RuneToggle : HeadlessToggle {
-  prop detail: string = ""
+  template RitesAside {
+    Layout: {direction: Row}
+    LayoutItem: {height: {mode: Grow}}
 
-  LayoutItem: {width: {mode: Grow}}
-  Layout: {direction: Column}
+    Frame frame(title: "Metal of the Instrument", width: 360, gap: 11, pad: 20) {
+      metals {
+        Layout: {direction: Row, spacing: 6}
+        LayoutItem: {width: {mode: Grow}}
+        MetalChoice gilded(index: 0, label: "Gilded", tone: {232, 199, 122})
+        MetalChoice moon(index: 1, label: "Moonsilver", tone: {158, 210, 240})
+        MetalChoice rose(index: 2, label: "Rosewater", tone: {240, 148, 162})
+      }
 
-  RuneToggleFace face(label: label, detail: detail, on_: current, hover: hover)
-}
+      Heading sub(text: "Codex", size: 15)
+      Divider rule_b()
 
-template MetalFace {
-  prop index: i32 = 0
-  prop label: string = ""
-  prop tone: Rgb = {255, 255, 255}
-  prop hover: bool = false
-
-  const active = rite_metal == index
-  const k = hover ? 1.08 : 1
-
-  Layout: {direction: Column, h: Center, spacing: 6}
-  LayoutItem: {width: {mode: Grow}}
-  box.spatial.SpatialIgnore
-
-  medal {
-    Layout: {}
-    LayoutItem: {width: {mode: Fixed, value: 76}, height: {mode: Fixed, value: 76}}
-    Scale: {k, k, 1}
-    Transition: [Scale: {duration: 0.15, timing_function: EaseOut}]
-    box.spatial.SpatialIgnore
-
-    Halo aura(size: 130, color: {tone.r * 0.32, tone.g * 0.32, tone.b * 0.32}, z: -1) {
-      Opacity: {active ? 1 : 0.15}
-      Transition: [Opacity: {duration: 0.3}]
-    }
-
-    disc {
-      Position: {0, 0, 0}
-      Circle: {30}
-      Rgb: {tone.r * 0.2, tone.g * 0.2, tone.b * 0.24}
-      Border: {width: 2, color: {tone.r, tone.g, tone.b, 255}}
-    }
-
-    star {
-      Position: {0, 0, 1}
-      Rect: {46, 46}
-      Image: {texture: tex_sigil}
-      Rgb: tone
-      Emissive: {strength: active ? 0.6 : 0, color: tone}
-      AngularVelocity: {0, 0, active ? 0.6 : 0.08}
-    }
-
-    if active {
-      ring {
-        Position: {0, 0, 2}
-        Rect: {74, 74}
-        Image: {texture: tex_dashes}
-        Rgb: tone
-        BlendMode: Additive
-        AngularVelocity: {0, 0, -0.5}
+      ScrollView codex(focusable: false) {
+        LayoutItem = {width: {mode: Grow}, height: {mode: Grow}}
+        CodexEntry a(title: "The Astrarium", body: "An engine of brass and patience, built to chart a sky that no longer exists. It keeps better time than the stars do.")
+        CodexEntry b(title: "The Four Bands", body: "Pyre, Tide, Thorn and Veil. Every wanderer is born owing a debt to each, and spends a lifetime deciding which to pay first.")
+        CodexEntry c(title: "Star Points", body: "Earned by living loudly. A star point spent is not lost; it is merely on fire somewhere else.")
+        CodexEntry d(title: "Realignment", body: "The sky forgives. Stars may be put back, though they remember where they were.")
+        CodexEntry e(title: "The Drowned Stars", body: "They did not fall. They sank, slowly, over ten thousand years, and the sea has not yet told anyone why.")
+        CodexEntry f(title: "A Word on Vitality", body: "It ebbs. It has always ebbed. The briars of the Thorn Aegis are the only thing known to make it stop.")
       }
     }
   }
 
-  Caption name(text: label, size: 14, font: font_display, color: active ? ui_pale : ui_muted)
-}
+  template RitesPage : Page {
+    Layout: {direction: Row, spacing: 16, padding: {6, 6, 22, 22}}
 
-template MetalChoice : HeadlessButton {
-  prop index: i32 = 0
-  prop tone: Rgb = {255, 255, 255}
-
-  Layout: {direction: Column}
-  LayoutItem: {width: {mode: Grow}}
-  Rect: {1, 1}
-  Rgb: {0, 0, 0}
-  BlendMode: Additive
-
-  MetalFace face(index: index, label: label, tone: tone, hover: hover)
-
-  async {
-    while true {
-      await on.change(this)
-      emit Metal(index: index)
-    }
-  }
-}
-
-template RitesForm {
-  Layout: {direction: Row}
-  LayoutItem: {height: {mode: Grow}}
-
-  Frame frame(title: "Rites of the Observatory", width: 470, gap: 11, pad: 20) {
-    Caption intro(text: "The library's own headless sliders in a new coat. Each one changes the running scene.", size: 15, font: font_italic, width: 428, color: ui_text)
-
-    RuneSlider aura(label: "Aura", detail: "how brightly things bloom", min: 0, max: 2, step: 0, value: 1, decimals: 2, thumb: 26, span: 428) {
-      async {
-        while true {
-          await on.change(this)
-          rite_aura = this[RuneSlider.mut].current
-        }
-      }
-    }
-
-    RuneSlider dust(label: "Starfall", detail: "motes adrift in the void", min: 0, max: 4, step: 0, value: 1, decimals: 1, suffix: "x", thumb: 26, span: 428) {
-      async {
-        while true {
-          await on.change(this)
-          rite_dust = this[RuneSlider.mut].current
-        }
-      }
-    }
-
-    RuneSlider clock(label: "Clockwork", detail: "speed of the astrolabe", min: 0, max: 12, step: 0, value: 1, decimals: 1, suffix: "x", thumb: 26, span: 428) {
-      async {
-        while true {
-          await on.change(this)
-          rite_clock = this[RuneSlider.mut].current
-        }
-      }
-    }
-
-    Divider rule_b()
-
-    RuneToggle names(label: "Keystone Names", detail: "label the great stars on the chart", value: true) {
-      async {
-        while true {
-          await on.change(this)
-          rite_names = this[RuneToggle.mut].current
-        }
-      }
-    }
-
-    RuneToggle drift(label: "Drifting Motes", detail: "the slow dust behind every screen", value: true) {
-      async {
-        while true {
-          await on.change(this)
-          rite_drift = this[RuneToggle.mut].current
-        }
-      }
-    }
+    RitesForm form()
+    RitesAside aside()
 
     gap {
-      LayoutItem: {height: {mode: Grow}}
-    }
-
-    PlainButton leave(label: "Return to the Title", width: 430) {
-      async {
-        while true {
-          await on.change(this)
-          emit Navigate(screen: SCREEN_TITLE)
-        }
-      }
-    }
-  }
-}
-
-template CodexEntry {
-  prop title: string = ""
-  prop body: string = ""
-
-  Layout: {direction: Column, spacing: 3}
-  LayoutItem: {width: {mode: Grow}}
-  box.spatial.SpatialIgnore
-
-  Caption name(text: title, size: 15, font: font_display, color: ui_pale)
-  Caption words(text: body, size: 14, width: 288, color: ui_text)
-}
-
-template RitesAside {
-  Layout: {direction: Row}
-  LayoutItem: {height: {mode: Grow}}
-
-  Frame frame(title: "Metal of the Instrument", width: 360, gap: 11, pad: 20) {
-    metals {
-      Layout: {direction: Row, spacing: 6}
       LayoutItem: {width: {mode: Grow}}
-      MetalChoice gilded(index: 0, label: "Gilded", tone: {232, 199, 122})
-      MetalChoice moon(index: 1, label: "Moonsilver", tone: {158, 210, 240})
-      MetalChoice rose(index: 2, label: "Rosewater", tone: {240, 148, 162})
     }
-
-    Heading sub(text: "Codex", size: 15)
-    Divider rule_b()
-
-    ScrollView codex(focusable: false) {
-      LayoutItem = {width: {mode: Grow}, height: {mode: Grow}}
-      CodexEntry a(title: "The Astrarium", body: "An engine of brass and patience, built to chart a sky that no longer exists. It keeps better time than the stars do.")
-      CodexEntry b(title: "The Four Bands", body: "Pyre, Tide, Thorn and Veil. Every wanderer is born owing a debt to each, and spends a lifetime deciding which to pay first.")
-      CodexEntry c(title: "Star Points", body: "Earned by living loudly. A star point spent is not lost; it is merely on fire somewhere else.")
-      CodexEntry d(title: "Realignment", body: "The sky forgives. Stars may be put back, though they remember where they were.")
-      CodexEntry e(title: "The Drowned Stars", body: "They did not fall. They sank, slowly, over ten thousand years, and the sea has not yet told anyone why.")
-      CodexEntry f(title: "A Word on Vitality", body: "It ebbs. It has always ebbed. The briars of the Thorn Aegis are the only thing known to make it stop.")
-    }
-  }
-}
-
-template RitesPage : Page {
-  Layout: {direction: Row, spacing: 16, padding: {6, 6, 22, 22}}
-
-  RitesForm form()
-  RitesAside aside()
-
-  gap {
-    LayoutItem: {width: {mode: Grow}}
   }
 }
 

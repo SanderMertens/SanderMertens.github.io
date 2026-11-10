@@ -24,21 +24,11 @@ using box.light
 using box.effects
 using box.surface
 using box.atmosphere
+using state
+using assets
 
-window { Surface: {width: 1600, height: 960, vsync: true} }
-
-mv_contact { Gtao: {radius: 0.8, final_value_power: 1.8} }
-mv_bloom { Bloom: {intensity: 0.14, threshold: 1.1, threshold_softness: 0.5} }
-mv_exposure { AutoExposure: {min_log_luma: -10.8, exposure_compensation: 0.35} }
-mv_film { Tonemap: {auto_exposure: mv_exposure, operator_: TonyMcMapface} }
-mv_edges { Smaa: {} }
-
-mv_sun {
-  DirectionalLight: {intensity: 2.6 * PI}
-  Rgb: {255, 244, 226}
-}
-
-mv_sky {
+$ {
+  Scene: {environment: true, alpha_cutout: true, blend_modes: true, texture_blend: true, sheen: true}
   if hour > 19 || hour < 5.5 {
     AmbientLight: {sky: {90, 110, 190}, ground: {40, 40, 60}, intensity: 1.1}
   } else if hour > 17.5 {
@@ -46,8 +36,15 @@ mv_sky {
   } else {
     AmbientLight: {sky: {150, 170, 205}, ground: {96, 86, 64}, intensity: 0.4}
   }
+}
+
+window { Surface: {width: 1600, height: 960, vsync: true} }
+
+sky {
+  DirectionalLight: {intensity: 2.6 * PI}
+  Rgb: {255, 244, 226}
   Atmosphere: {
-    sun: mv_sun,
+    sun: sky,
     units_per_km: 400,
     rayleigh: {scale_height: 8, scattering_scale: 2.0},
     mie: {scale_height: 1.4, anisotropy: 0.76, scattering_scale: 2.2, tint: {255, 232, 200}},
@@ -56,25 +53,32 @@ mv_sky {
     sun_disk_intensity: 10,
     sun_radius: 0.75
   }
-  TimeOfDay: {hour: hour, day_of_year: 170, latitude: 48, north: 160, sun: mv_sun}
-  HeightFog: {density: 0.004, falloff: 0.07, base_height: -2, max_opacity: 0.4, atmosphere: mv_sky}
+  TimeOfDay: {hour: hour, day_of_year: 170, latitude: 48, north: 160, sun: sky}
+  HeightFog: {density: 0.004, falloff: 0.07, base_height: -2, max_opacity: 0.4, atmosphere: sky}
 }
 
-mv_view {
+view {
+  gtao { Gtao: {radius: 0.8, final_value_power: 1.8} }
+  bloom { Bloom: {intensity: 0.14, threshold: 1.1, threshold_softness: 0.5} }
+  exposure { AutoExposure: {min_log_luma: -10.8, exposure_compensation: 0.35} }
+  tonemap { Tonemap: {auto_exposure: exposure, operator_: TonyMcMapface} }
+  smaa { Smaa: {} }
+
   View: {
-    camera: mv_rig.arm.camera,
+    camera: camera.arm.eye,
     clear: {enabled: true, color: {150, 178, 210, 255}},
     lighting: {
       enabled: true,
       reflections: true,
       atmosphere: true,
-      environment: {source: mv_sky, intensity: 0.6, background: false}
+      depth_prepass: false,
+      environment: {source: sky, intensity: 0.6, background: false}
     },
     shadows: {
       enabled: true,
-      cascades: 3,
-      resolution: 2048,
-      max_distance: 90,
+      cascades: 2,
+      resolution: 1024,
+      max_distance: 50,
       split_lambda: 0.7,
       depth_bias: 2,
       normal_offset: 2,
@@ -84,18 +88,17 @@ mv_view {
     },
     culling: {enabled: true, occlusion: true, min_dimension_px: 2},
     effects: [
-      {effect: mv_contact},
-      {effect: mv_sky},
-      {effect: mv_bloom},
-      {effect: mv_film},
-      {effect: mv_edges}
+      {effect: gtao},
+      {effect: sky},
+      {effect: bloom},
+      {effect: tonemap}
     ]
   }
 }
 
 async {
   while true {
-    await on.pressed(mv_actions.TalkKey)
+    await on.pressed(state.mv_actions.TalkKey)
     if game_state == 0 {
       emit StartGame()
     } else if game_state == 2 && clock > ending_t + 12 {

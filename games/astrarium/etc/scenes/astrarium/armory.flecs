@@ -10,501 +10,505 @@ using box.input
 using box.transition
 using box.movement
 using box.widgets
+using state
+using assets
 
-template Sparkle : OneShot {
-  prop hue: Rgb = {255, 255, 255}
+assets {
+  template Sparkle : OneShot {
+    prop hue: Rgb = {255, 255, 255}
 
-  const k = go ? 1.6 : 0.4
-  const a = go ? 0 : 1
+    const k = go ? 1.6 : 0.4
+    const a = go ? 0 : 1
 
-  Position: {0, 0, 5}
-  Scale: {k, k, 1}
-  Opacity: {a}
-  Rect: {110, 110}
-  Image: {texture: tex_sigil}
-  Rgb: hue
-  Emissive: {strength: 1.2, color: hue}
-  BlendMode: Additive
-  Rotation: {0, 0, go ? 1 : 0}
-  Transition: [
-    Scale: {duration: 0.6, timing_function: EaseOut},
-    Opacity: {duration: 0.6, timing_function: EaseIn},
-    Rotation: {duration: 0.6, timing_function: EaseOut}
-  ]
-  box.spatial.SpatialIgnore
-}
-
-template ItemFace {
-  prop owner: entity = 0
-  prop order: i32 = 0
-  prop slot: i32 = 0
-  prop rarity: i32 = 0
-  prop icon: entity = 0
-  prop hover: bool = false
-  prop down: bool = false
-
-  const size = 88
-  const hue: Rgb = {rarity_r(rarity), rarity_g(rarity), rarity_b(rarity)}
-  const equipped = eq[slot] == owner
-  const shown = armory_filter < 0 || armory_filter == slot
-  const k = down ? 0.96 : hover ? 1.07 : 1
-  const a = shown ? 1 : 0.16
-
-  Position: {0, 0, hover ? 3 : 0}
-  Scale: {k, k, 1}
-  Opacity: {a}
-  Transition: [
-    Scale: {duration: 0.14, timing_function: EaseOut},
-    Opacity: {duration: 0.3, delay: order * 0.018}
-  ]
-  box.spatial.SpatialIgnore
-
-  if rarity >= 2 {
-    Halo aura(size: 170, color: {hue.r * 0.3, hue.g * 0.3, hue.b * 0.3}, z: -1)
+    Position: {0, 0, 5}
+    Scale: {k, k, 1}
+    Opacity: {a}
+    Rect: {110, 110}
+    Image: {texture: tex_sigil}
+    Rgb: hue
+    Emissive: {strength: 1.2, color: hue}
+    BlendMode: Additive
+    Rotation: {0, 0, go ? 1 : 0}
+    Transition: [
+      Scale: {duration: 0.6, timing_function: EaseOut},
+      Opacity: {duration: 0.6, timing_function: EaseIn},
+      Rotation: {duration: 0.6, timing_function: EaseOut}
+    ]
+    box.spatial.SpatialIgnore
   }
 
-  plate {
-    Position: {0, 0, 0}
-    Layout: {}
-    LayoutItem: {width: {mode: Fixed, value: size}, height: {mode: Fixed, value: size}}
-    Rect: {1, 1}
-    Image: {texture: tex_panel}
-    Rgb: {hue.r * 0.14 + 8, hue.g * 0.14 + 8, hue.b * 0.14 + 14}
-    if hover {
-      Border: {width: 2, radius: 6, color: {min(255, hue.r + 70), min(255, hue.g + 70), min(255, hue.b + 70), 255}}
-    } else if equipped {
-      Border: {width: 2, radius: 6, color: {ui_pale.r, ui_pale.g, ui_pale.b, 255}}
-    } else {
-      Border: {width: 1, radius: 6, color: {hue.r * 0.7, hue.g * 0.7, hue.b * 0.7, 255}}
-    }
-    ClipChildren
+  template ItemFace {
+    prop owner: entity = 0
+    prop order: i32 = 0
+    prop slot: i32 = 0
+    prop rarity: i32 = 0
+    prop icon: entity = 0
+    prop hover: bool = false
+    prop down: bool = false
+
+    const size = 88
+    const hue: Rgb = {rarity_r(rarity), rarity_g(rarity), rarity_b(rarity)}
+    const equipped = eq[slot] == owner
+    const shown = armory_filter < 0 || armory_filter == slot
+    const k = down ? 0.96 : hover ? 1.07 : 1
+    const a = shown ? 1 : 0.16
+
+    Position: {0, 0, hover ? 3 : 0}
+    Scale: {k, k, 1}
+    Opacity: {a}
+    Transition: [
+      Scale: {duration: 0.14, timing_function: EaseOut},
+      Opacity: {duration: 0.3, delay: order * 0.018}
+    ]
     box.spatial.SpatialIgnore
 
-    if rarity == 3 {
-      rays {
-        Position: {0, 0, 1}
-        Rect: {150, 150}
-        Image: {texture: tex_rays}
-        Rgb: {hue.r * 0.3, hue.g * 0.25, hue.b * 0.16}
+    if rarity >= 2 {
+      Halo aura(size: 170, color: {hue.r * 0.3, hue.g * 0.3, hue.b * 0.3}, z: -1)
+    }
+
+    plate {
+      Position: {0, 0, 0}
+      Layout: {}
+      LayoutItem: {width: {mode: Fixed, value: size}, height: {mode: Fixed, value: size}}
+      Rect: {1, 1}
+      Image: {texture: tex_panel}
+      Rgb: {hue.r * 0.14 + 8, hue.g * 0.14 + 8, hue.b * 0.14 + 14}
+      if hover {
+        Border: {width: 2, radius: 6, color: {min(255, hue.r + 70), min(255, hue.g + 70), min(255, hue.b + 70), 255}}
+      } else if equipped {
+        Border: {width: 2, radius: 6, color: {ui_pale.r, ui_pale.g, ui_pale.b, 255}}
+      } else {
+        Border: {width: 1, radius: 6, color: {hue.r * 0.7, hue.g * 0.7, hue.b * 0.7, 255}}
+      }
+      ClipChildren
+      box.spatial.SpatialIgnore
+
+      if rarity == 3 {
+        rays {
+          Position: {0, 0, 1}
+          Rect: {150, 150}
+          Image: {texture: tex_rays}
+          Rgb: {hue.r * 0.3, hue.g * 0.25, hue.b * 0.16}
+          BlendMode: Additive
+          AngularVelocity: {0, 0, 0.3}
+          box.spatial.SpatialIgnore
+        }
+      }
+
+      floor {
+        Position: {0, 0 - size * 0.2, 2}
+        Rotation: {0, 0, PI}
+        Rect: {size, size * 0.62}
+        Image: {texture: tex_sheen}
+        Rgb: {hue.r * 0.4, hue.g * 0.4, hue.b * 0.4}
         BlendMode: Additive
-        AngularVelocity: {0, 0, 0.3}
+        box.spatial.SpatialIgnore
+      }
+
+      art {
+        Position: {0, 0, 3}
+        Rect: {60, 60}
+        Image: {texture: icon}
+        Rgb: {255, 255, 255}
+        Emissive: {strength: hover ? 0.16 : 0, color: hue}
+        Transition: [Emissive: {duration: 0.15}]
         box.spatial.SpatialIgnore
       }
     }
 
-    floor {
-      Position: {0, 0 - size * 0.2, 2}
-      Rotation: {0, 0, PI}
-      Rect: {size, size * 0.62}
-      Image: {texture: tex_sheen}
-      Rgb: {hue.r * 0.4, hue.g * 0.4, hue.b * 0.4}
-      BlendMode: Additive
-      box.spatial.SpatialIgnore
+    if equipped {
+      worn {
+        Position: {size / 2 - 11, size / 2 - 11, 4}
+        Rotation: {0, 0, PI / 4}
+        Rect: {10, 10}
+        Rgb: {255, 248, 226}
+        Emissive: {strength: 1.4, color: {255, 196, 104}}
+        box.spatial.SpatialIgnore
+      }
+      Sparkle sparkle(hue: hue)
+    }
+  }
+
+  template Item : HeadlessButton {
+    prop order: i32 = 0
+    prop name: string = ""
+    prop slot: i32 = 0
+    prop rarity: i32 = 0
+    prop model_hue: Rgb = {220, 220, 230}
+    prop might: i32 = 0
+    prop ward: i32 = 0
+    prop haste: i32 = 0
+    prop aether: i32 = 0
+    prop icon: entity = 0
+    prop flavor: string = ""
+    prop start: bool = false
+
+    Layout: {}
+    LayoutItem: {width: {mode: Fixed, value: 88}, height: {mode: Fixed, value: 88}}
+    Rect: {1, 1}
+    Rgb: {0, 0, 0}
+    BlendMode: Additive
+
+    ItemFace face(
+      owner: this, order: order, slot: slot, rarity: rarity, icon: icon, hover: hover, down: down)
+
+    async {
+      if start {
+        eq[slot] = this
+        emit StatsChanged()
+        emit HoverChanged()
+      }
+    }
+
+    async {
+      while true {
+        await on.enter(this)
+        armory_hover = this
+        armory_hovering = true
+        armory_tip = this
+        armory_tip_on = true
+        emit HoverChanged()
+        await on.leave(this)
+        emit HoverLeft(item: this)
+      }
+    }
+
+    async {
+      while true {
+        await on.change(this)
+        emit Equip(item: this)
+      }
+    }
+  }
+
+  template FilterFace {
+    prop value: i32 = -1
+    prop label: string = ""
+    prop hover: bool = false
+
+    const active = armory_filter == value
+
+    Layout: {direction: Row, h: Center, v: Middle}
+    LayoutItem: {width: {mode: Grow}, height: {mode: Grow}}
+    Rect: {1, 1}
+    if active {
+      Rgb: {ui_gold.r * 0.24, ui_gold.g * 0.2, ui_gold.b * 0.14}
+      Border: {width: 1, radius: 4, color: {ui_gold.r, ui_gold.g, ui_gold.b, 255}}
+    } else if hover {
+      Rgb: {ui_gold.r * 0.1, ui_gold.g * 0.09, ui_gold.b * 0.08}
+      Border: {width: 1, radius: 4, color: {ui_gold.r * 0.6, ui_gold.g * 0.6, ui_gold.b * 0.6, 255}}
+    } else {
+      Rgb: {8, 10, 22}
+      Border: {width: 1, radius: 4, color: {ui_gold.r * 0.3, ui_gold.g * 0.3, ui_gold.b * 0.3, 255}}
+    }
+    Transition: [Rgb: {duration: 0.15}]
+    box.spatial.SpatialIgnore
+
+    Caption name(text: label, size: 12, font: font_display, color: active ? ui_pale : ui_muted)
+  }
+
+  template FilterTab : HeadlessButton {
+    prop value: i32 = -1
+
+    Layout: {direction: Row, h: Center, v: Middle}
+    LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: 30}}
+    Rect: {1, 1}
+    Rgb: {0, 0, 0}
+    BlendMode: Additive
+
+    FilterFace face(value: value, label: label, hover: hover)
+
+    async {
+      while true {
+        await on.change(this)
+        armory_filter = value
+      }
+    }
+  }
+
+  template ComparisonRow {
+    prop stat: i32 = 0
+    prop value: i32 = 0
+    prop delta: i32 = 0
+
+    Layout: {direction: Row, spacing: 7, v: Middle}
+    LayoutItem: {width: {mode: Grow}}
+    box.spatial.SpatialIgnore
+
+    Icon glyph(tex: stat_tex(stat), size: 13, color: {stat_r(stat), stat_g(stat), stat_b(stat)})
+    Caption name(text: stat_name(stat), size: 14, color: ui_text)
+    gap {
+      LayoutItem: {width: {mode: Grow}}
+    }
+    Caption amount(text: "{value}", size: 14, font: font_display, color: ui_pale)
+    shift {
+      LayoutItem: {width: {min: 34, max: 34}}
+      Text: {
+        value: delta > 0 ? "+{delta}" : delta < 0 ? "{delta}" : "=",
+        size: 13,
+        font: font_display,
+        align: Right
+      }
+      Rgb: delta > 0 ? {130, 244, 170} : delta < 0 ? {255, 110, 96} : {110, 114, 134}
+    }
+  }
+
+  template ItemTip {
+    const it = armory_tip[Item]
+    const hue: Rgb = {rarity_r(it.rarity), rarity_g(it.rarity), rarity_b(it.rarity)}
+    const a = armory_tip_on ? 1 : 0
+
+    Position: {0, 0, 30}
+    LayoutFloat: {anchor: armory_tip, h: Right, v: Top, anchor_h: Left, anchor_v: Top, x: -12, y: 8, flip: true}
+    LayoutItem: {width: {mode: Fixed, value: 270}}
+    Layout: {direction: Column, padding: {14, 14, 16, 16}, spacing: 7}
+    Rect: {1, 1}
+    Rgb: {8, 10, 24}
+    Border: {width: 1, radius: 5, color: {hue.r, hue.g, hue.b, 255}}
+    BoxShadow: {offset_y: -6, blur: 26, spread: 2, color: {0, 0, 0, 170}}
+    Opacity: {a}
+    Transition: [
+      Opacity: {duration: 0.14},
+      Position: {duration: 0.2, timing_function: EaseOut}
+    ]
+    box.spatial.SpatialIgnore
+
+    Caption name(text: it.name, size: 20, font: font_display, color: hue)
+    Caption kind(text: "{rarity_name(it.rarity)} {slot_name(it.slot)}", size: 13, font: font_italic, color: ui_muted)
+    Divider rule()
+    ComparisonRow might(stat: 0, value: it.might, delta: preview[0])
+    ComparisonRow ward(stat: 1, value: it.ward, delta: preview[1])
+    ComparisonRow haste(stat: 2, value: it.haste, delta: preview[2])
+    ComparisonRow aether(stat: 3, value: it.aether, delta: preview[3])
+    Divider rule_b()
+    Caption flavor(text: it.flavor, size: 14, font: font_italic, width: 238, color: ui_text)
+  }
+
+  template SocketFace {
+    prop slot: i32 = 0
+    prop item: entity = 0
+
+    const it = item[Item]
+    const hue: Rgb = {rarity_r(it.rarity), rarity_g(it.rarity), rarity_b(it.rarity)}
+
+    Position: {0, 0, 0}
+    box.spatial.SpatialIgnore
+
+    Halo aura(size: 120, color: {hue.r * 0.32, hue.g * 0.32, hue.b * 0.32}, z: -1)
+
+    plate {
+      Position: {0, 0, 0}
+      Circle: {31}
+      Rgb: {hue.r * 0.14 + 8, hue.g * 0.14 + 8, hue.b * 0.14 + 16}
+      Border: {width: 1.5, color: {min(255, hue.r + 30), min(255, hue.g + 30), min(255, hue.b + 30), 255}}
     }
 
     art {
-      Position: {0, 0, 3}
-      Rect: {60, 60}
-      Image: {texture: icon}
-      Rgb: {255, 255, 255}
-      Emissive: {strength: hover ? 0.16 : 0, color: hue}
-      Transition: [Emissive: {duration: 0.15}]
-      box.spatial.SpatialIgnore
+      Position: {0, 0, 1}
+      Rect: {44, 44}
+      Image: {texture: it.icon}
+    }
+
+    words {
+      Position: {0, -44, 1}
+      Text: {value: slot_name(slot), size: 12, font: font_display}
+      Rgb: ui_gold
     }
   }
 
-  if equipped {
-    worn {
-      Position: {size / 2 - 11, size / 2 - 11, 4}
-      Rotation: {0, 0, PI / 4}
-      Rect: {10, 10}
-      Rgb: {255, 248, 226}
-      Emissive: {strength: 1.4, color: {255, 196, 104}}
-      box.spatial.SpatialIgnore
-    }
-    Sparkle sparkle(hue: hue)
-  }
-}
+  template Socket {
+    prop slot: i32 = 0
+    prop x: f32 = 0
+    prop y: f32 = 0
 
-template Item : HeadlessButton {
-  prop order: i32 = 0
-  prop name: string = ""
-  prop slot: i32 = 0
-  prop rarity: i32 = 0
-  prop model_hue: Rgb = {220, 220, 230}
-  prop might: i32 = 0
-  prop ward: i32 = 0
-  prop haste: i32 = 0
-  prop aether: i32 = 0
-  prop icon: entity = 0
-  prop flavor: string = ""
-  prop start: bool = false
+    const e = eq[slot]
 
-  Layout: {}
-  LayoutItem: {width: {mode: Fixed, value: 88}, height: {mode: Fixed, value: 88}}
-  Rect: {1, 1}
-  Rgb: {0, 0, 0}
-  BlendMode: Additive
-
-  ItemFace face(
-    owner: this, order: order, slot: slot, rarity: rarity, icon: icon, hover: hover, down: down)
-
-  async {
-    if start {
-      eq[slot] = this
-      emit StatsChanged()
-      emit HoverChanged()
-    }
-  }
-
-  async {
-    while true {
-      await on.enter(this)
-      armory_hover = this
-      armory_hovering = true
-      armory_tip = this
-      armory_tip_on = true
-      emit HoverChanged()
-      await on.leave(this)
-      emit HoverLeft(item: this)
-    }
-  }
-
-  async {
-    while true {
-      await on.change(this)
-      emit Equip(item: this)
-    }
-  }
-}
-
-template FilterFace {
-  prop value: i32 = -1
-  prop label: string = ""
-  prop hover: bool = false
-
-  const active = armory_filter == value
-
-  Layout: {direction: Row, h: Center, v: Middle}
-  LayoutItem: {width: {mode: Grow}, height: {mode: Grow}}
-  Rect: {1, 1}
-  if active {
-    Rgb: {ui_gold.r * 0.24, ui_gold.g * 0.2, ui_gold.b * 0.14}
-    Border: {width: 1, radius: 4, color: {ui_gold.r, ui_gold.g, ui_gold.b, 255}}
-  } else if hover {
-    Rgb: {ui_gold.r * 0.1, ui_gold.g * 0.09, ui_gold.b * 0.08}
-    Border: {width: 1, radius: 4, color: {ui_gold.r * 0.6, ui_gold.g * 0.6, ui_gold.b * 0.6, 255}}
-  } else {
-    Rgb: {8, 10, 22}
-    Border: {width: 1, radius: 4, color: {ui_gold.r * 0.3, ui_gold.g * 0.3, ui_gold.b * 0.3, 255}}
-  }
-  Transition: [Rgb: {duration: 0.15}]
-  box.spatial.SpatialIgnore
-
-  Caption name(text: label, size: 12, font: font_display, color: active ? ui_pale : ui_muted)
-}
-
-template FilterTab : HeadlessButton {
-  prop value: i32 = -1
-
-  Layout: {direction: Row, h: Center, v: Middle}
-  LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: 30}}
-  Rect: {1, 1}
-  Rgb: {0, 0, 0}
-  BlendMode: Additive
-
-  FilterFace face(value: value, label: label, hover: hover)
-
-  async {
-    while true {
-      await on.change(this)
-      armory_filter = value
-    }
-  }
-}
-
-template ComparisonRow {
-  prop stat: i32 = 0
-  prop value: i32 = 0
-  prop delta: i32 = 0
-
-  Layout: {direction: Row, spacing: 7, v: Middle}
-  LayoutItem: {width: {mode: Grow}}
-  box.spatial.SpatialIgnore
-
-  Icon glyph(tex: stat_tex(stat), size: 13, color: {stat_r(stat), stat_g(stat), stat_b(stat)})
-  Caption name(text: stat_name(stat), size: 14, color: ui_text)
-  gap {
-    LayoutItem: {width: {mode: Grow}}
-  }
-  Caption amount(text: "{value}", size: 14, font: font_display, color: ui_pale)
-  shift {
-    LayoutItem: {width: {min: 34, max: 34}}
-    Text: {
-      value: delta > 0 ? "+{delta}" : delta < 0 ? "{delta}" : "=",
-      size: 13,
-      font: font_display,
-      align: Right
-    }
-    Rgb: delta > 0 ? {130, 244, 170} : delta < 0 ? {255, 110, 96} : {110, 114, 134}
-  }
-}
-
-template ItemTip {
-  const it = armory_tip[Item]
-  const hue: Rgb = {rarity_r(it.rarity), rarity_g(it.rarity), rarity_b(it.rarity)}
-  const a = armory_tip_on ? 1 : 0
-
-  Position: {0, 0, 30}
-  LayoutFloat: {anchor: armory_tip, h: Right, v: Top, anchor_h: Left, anchor_v: Top, x: -12, y: 8, flip: true}
-  LayoutItem: {width: {mode: Fixed, value: 270}}
-  Layout: {direction: Column, padding: {14, 14, 16, 16}, spacing: 7}
-  Rect: {1, 1}
-  Rgb: {8, 10, 24}
-  Border: {width: 1, radius: 5, color: {hue.r, hue.g, hue.b, 255}}
-  BoxShadow: {offset_y: -6, blur: 26, spread: 2, color: {0, 0, 0, 170}}
-  Opacity: {a}
-  Transition: [
-    Opacity: {duration: 0.14},
-    Position: {duration: 0.2, timing_function: EaseOut}
-  ]
-  box.spatial.SpatialIgnore
-
-  Caption name(text: it.name, size: 20, font: font_display, color: hue)
-  Caption kind(text: "{rarity_name(it.rarity)} {slot_name(it.slot)}", size: 13, font: font_italic, color: ui_muted)
-  Divider rule()
-  ComparisonRow might(stat: 0, value: it.might, delta: preview[0])
-  ComparisonRow ward(stat: 1, value: it.ward, delta: preview[1])
-  ComparisonRow haste(stat: 2, value: it.haste, delta: preview[2])
-  ComparisonRow aether(stat: 3, value: it.aether, delta: preview[3])
-  Divider rule_b()
-  Caption flavor(text: it.flavor, size: 14, font: font_italic, width: 238, color: ui_text)
-}
-
-template SocketFace {
-  prop slot: i32 = 0
-  prop item: entity = 0
-
-  const it = item[Item]
-  const hue: Rgb = {rarity_r(it.rarity), rarity_g(it.rarity), rarity_b(it.rarity)}
-
-  Position: {0, 0, 0}
-  box.spatial.SpatialIgnore
-
-  Halo aura(size: 120, color: {hue.r * 0.32, hue.g * 0.32, hue.b * 0.32}, z: -1)
-
-  plate {
-    Position: {0, 0, 0}
-    Circle: {31}
-    Rgb: {hue.r * 0.14 + 8, hue.g * 0.14 + 8, hue.b * 0.14 + 16}
-    Border: {width: 1.5, color: {min(255, hue.r + 30), min(255, hue.g + 30), min(255, hue.b + 30), 255}}
-  }
-
-  art {
-    Position: {0, 0, 1}
-    Rect: {44, 44}
-    Image: {texture: it.icon}
-  }
-
-  words {
-    Position: {0, -44, 1}
-    Text: {value: slot_name(slot), size: 12, font: font_display}
-    Rgb: ui_gold
-  }
-}
-
-template Socket {
-  prop slot: i32 = 0
-  prop x: f32 = 0
-  prop y: f32 = 0
-
-  const e = eq[slot]
-
-  Position: {x, y, 2}
-  box.spatial.SpatialIgnore
-
-  wire {
-    Position: {0, 0, -2}
-    Line: {0, 0, 0 - x * 0.46, 0 - y * 0.46, width: 1}
-    Rgb: {ui_gold.r * 0.5, ui_gold.g * 0.5, ui_gold.b * 0.5}
-    BlendMode: Additive
-  }
-
-  if e != 0 {
-    SocketFace face(slot: slot, item: e)
-  }
-}
-
-template ArmoryCenter {
-  LayoutItem: {width: {mode: Grow}, height: {mode: Grow}}
-  Layout: {}
-  box.spatial.SpatialIgnore
-
-  stage_center {
-    LayoutItem: {h: Center, v: Middle, width: {mode: Fixed, value: 1}, height: {mode: Fixed, value: 1}}
-    Position: {0, 0, 0}
+    Position: {x, y, 2}
     box.spatial.SpatialIgnore
 
-    Halo backglow(size: 620, color: {relic_r * 0.13, relic_g * 0.13, relic_b * 0.13}, z: -4) {
-      Transition: [Rgb: {duration: 0.4}]
+    wire {
+      Position: {0, 0, -2}
+      Line: {0, 0, 0 - x * 0.46, 0 - y * 0.46, width: 1}
+      Rgb: {ui_gold.r * 0.5, ui_gold.g * 0.5, ui_gold.b * 0.5}
+      BlendMode: Additive
     }
 
-    relic_image {
-      Position: {0, 24, 0}
-      Rect: {430, 430}
-      Image: {texture: relic_texture}
-      box.spatial.SpatialIgnore
-    }
-
-    Socket s0(slot: 0, x: -176, y: 164)
-    Socket s1(slot: 1, x: 176, y: 164)
-    Socket s2(slot: 2, x: -176, y: -112)
-    Socket s3(slot: 3, x: 176, y: -112)
-  }
-
-  plaque {
-    LayoutItem: {h: Center, v: Bottom, y: 6, width: {mode: Fixed, value: 420}}
-    Layout: {direction: Column, h: Center, spacing: 2}
-    box.spatial.SpatialIgnore
-    Caption line(text: relic_line, size: 14, font: font_italic, color: {relic_r, relic_g, relic_b})
-    Caption name(text: relic_name, size: 28, font: font_display, color: ui_pale) {
-      Emissive: {strength: 0.22, color: {255, 200, 120}}
+    if e != 0 {
+      SocketFace face(slot: slot, item: e)
     }
   }
-}
 
-template Satchel {
-  Layout: {direction: Row}
-  LayoutItem: {height: {mode: Grow}}
-
-  Frame frame(title: "Satchel", width: 424, gap: 10) {
-    filters {
-      Layout: {direction: Row, spacing: 4}
-      LayoutItem: {width: {mode: Grow}}
-      FilterTab all(value: -1, label: "All")
-      FilterTab blades(value: 0, label: "Blades")
-      FilterTab relics(value: 1, label: "Relics")
-      FilterTab crowns(value: 2, label: "Crowns")
-      FilterTab bands(value: 3, label: "Bands")
-    }
-
-    row_0 {
-      Layout: {direction: Row, spacing: 10}
-      Item ember_fang(order: 0, name: "Ember Fang", slot: 0, rarity: 3, might: 34, haste: 8, icon: tex_ember_fang, model_hue: {255, 110, 40},
-        flavor: "Cut from the tooth of a sun that bit the wrong god.")
-      Item drowned_heart(order: 1, name: "Drowned Heart", slot: 1, rarity: 3, aether: 36, ward: 6, icon: tex_drowned_heart, model_hue: {255, 120, 40},
-        flavor: "It still beats, slowly, in time with no tide you know.")
-      Item nine_comets(order: 2, name: "Nine Comets", slot: 2, rarity: 2, might: 8, aether: 18, icon: tex_nine_comets, model_hue: {190, 110, 255},
-        flavor: "Each point was once a promise made to the sky.")
-      Item last_light(order: 3, name: "Band of Last Light", slot: 3, rarity: 3, might: 12, haste: 16, icon: tex_last_light, model_hue: {255, 96, 36},
-        flavor: "The final thing the old world ever saw, set in gold.")
-    }
-
-    row_1 {
-      Layout: {direction: Row, spacing: 10}
-      Item tidecaller(order: 4, name: "Tidecaller", slot: 0, rarity: 2, might: 22, aether: 10, icon: tex_tidecaller, model_hue: {80, 170, 255},
-        flavor: "Point it at the horizon, and the horizon comes.")
-      Item moon_prism(order: 5, name: "Moon Prism", slot: 1, rarity: 2, aether: 24, haste: 6, icon: tex_moon_prism, model_hue: {180, 120, 255},
-        flavor: "Bends the moonlight until it confesses.")
-      Item vesper(order: 6, name: "Circlet of Vesper", slot: 2, rarity: 1, ward: 8, aether: 8, start: true, icon: tex_vesper, model_hue: {90, 170, 255},
-        flavor: "Worn by the first star to arrive, and the last to leave.")
-      Item serpent_loop(order: 7, name: "Serpent Loop", slot: 3, rarity: 1, ward: 6, haste: 8, icon: tex_serpent_loop, model_hue: {80, 230, 150},
-        flavor: "It has been swallowing itself for a very long time.")
-    }
-
-    row_2 {
-      Layout: {direction: Row, spacing: 10}
-      Item thornreaver(order: 8, name: "Thornreaver", slot: 0, rarity: 1, might: 14, ward: 6, icon: tex_thornreaver, model_hue: {70, 220, 130},
-        flavor: "Grown, not forged. It would like some water.")
-      Item sun_lens(order: 9, name: "Sun Lens", slot: 1, rarity: 1, aether: 14, might: 2, start: true, icon: tex_sun_lens, model_hue: {80, 190, 255},
-        flavor: "Hold it to the light, and the light holds you.")
-      Item thorn_circlet(order: 10, name: "Thorn Circlet", slot: 2, rarity: 2, ward: 22, might: 4, icon: tex_thorn_circlet, model_hue: {70, 230, 140},
-        flavor: "Everything that would harm you must first ask it.")
-      Item mirror_loop(order: 11, name: "Mirror Loop", slot: 3, rarity: 2, aether: 12, haste: 12, icon: tex_mirror_loop, model_hue: {120, 210, 255},
-        flavor: "Look through it, and something looks through too.")
-    }
-
-    row_3 {
-      Layout: {direction: Row, spacing: 10}
-      Item ash_dirk(order: 12, name: "Ash Dirk", slot: 0, rarity: 0, might: 6, start: true, icon: tex_ash_dirk, model_hue: {190, 190, 200},
-        flavor: "Plain, reliable, and rarely thanked.")
-      Item moth_blade(order: 13, name: "Moth Blade", slot: 0, rarity: 2, might: 18, haste: 14, icon: tex_moth_blade, model_hue: {170, 110, 255},
-        flavor: "It only ever moves toward the light.")
-      Item star_compass(order: 14, name: "Star Compass", slot: 1, rarity: 1, aether: 8, haste: 10, icon: tex_star_compass, model_hue: {255, 196, 80},
-        flavor: "North is a matter of opinion, up here.")
-      Item iron_vow(order: 15, name: "Iron Vow", slot: 3, rarity: 0, ward: 4, start: true, icon: tex_iron_vow, model_hue: {180, 180, 192},
-        flavor: "Worth exactly what you promised on it.")
-    }
-  }
-}
-
-template Vital {
-  prop label: string = ""
-  prop value: f32 = 0
-  prop unit: string = ""
-  prop tex: entity = 0
-  prop hue: Rgb = {255, 255, 255}
-
-  Layout: {direction: Row, spacing: 8, v: Middle}
-  LayoutItem: {width: {mode: Grow}}
-  box.spatial.SpatialIgnore
-
-  Icon glyph(tex: tex, size: 15, color: hue)
-  Caption name(text: label, size: 14, color: ui_text)
-  gap {
-    LayoutItem: {width: {mode: Grow}}
-  }
-  Caption amount(text: "{value:.0}{unit}", size: 15, font: font_display, color: ui_pale)
-}
-
-template ArmoryLedger {
-  Layout: {direction: Row}
-  LayoutItem: {height: {mode: Grow}}
-
-  Frame frame(title: "Attributes", width: 272, gap: 12) {
-    StatBar might(stat: 0, value: stat_might, delta: preview[0])
-    StatBar ward(stat: 1, value: stat_ward, delta: preview[1])
-    StatBar haste(stat: 2, value: stat_haste, delta: preview[2])
-    StatBar aether(stat: 3, value: stat_aether, delta: preview[3])
-
-    gap_a {
-      LayoutItem: {height: {mode: Fixed, value: 6}}
-    }
-
-    Heading sub(text: "Vitals", size: 14)
-    Divider rule_b()
-
-    vitals {
-      Layout: {direction: Column, spacing: 8}
-      LayoutItem: {width: {mode: Grow}}
-      Vital hp(label: "Vitality", value: hero_hp_max, tex: tex_heart, hue: {255, 96, 106})
-      Vital mp(label: "Aether", value: hero_mp_max, tex: tex_stat_aether, hue: {120, 190, 255})
-      Vital cd(label: "Recharge", value: 100 * haste_scale(stat_haste), unit: "%", tex: tex_stat_haste, hue: {196, 160, 255})
-    }
-
-    gap_b {
-      LayoutItem: {height: {mode: Grow}}
-    }
-
-    Caption hint(text: "Hover an item to weigh it against what you wear. Click to equip.", size: 14, font: font_italic, width: 234, align: Center, color: ui_muted) {
-      LayoutItem: {width: {mode: Grow}}
-    }
-  }
-}
-
-template ArmoryPage : Page {
-  Layout: {}
-
-  columns {
+  template ArmoryCenter {
     LayoutItem: {width: {mode: Grow}, height: {mode: Grow}}
-    Layout: {direction: Row, padding: {6, 6, 22, 22}}
+    Layout: {}
+    box.spatial.SpatialIgnore
 
-    ArmoryLedger ledger()
-    ArmoryCenter center()
-    Satchel satchel()
+    stage_center {
+      LayoutItem: {h: Center, v: Middle, width: {mode: Fixed, value: 1}, height: {mode: Fixed, value: 1}}
+      Position: {0, 0, 0}
+      box.spatial.SpatialIgnore
+
+      Halo backglow(size: 620, color: {relic_r * 0.13, relic_g * 0.13, relic_b * 0.13}, z: -4) {
+        Transition: [Rgb: {duration: 0.4}]
+      }
+
+      relic_image {
+        Position: {0, 24, 0}
+        Rect: {430, 430}
+        Image: {texture: relic_texture}
+        box.spatial.SpatialIgnore
+      }
+
+      Socket s0(slot: 0, x: -176, y: 164)
+      Socket s1(slot: 1, x: 176, y: 164)
+      Socket s2(slot: 2, x: -176, y: -112)
+      Socket s3(slot: 3, x: 176, y: -112)
+    }
+
+    plaque {
+      LayoutItem: {h: Center, v: Bottom, y: 6, width: {mode: Fixed, value: 420}}
+      Layout: {direction: Column, h: Center, spacing: 2}
+      box.spatial.SpatialIgnore
+      Caption line(text: relic_line, size: 14, font: font_italic, color: {relic_r, relic_g, relic_b})
+      Caption name(text: relic_name, size: 28, font: font_display, color: ui_pale) {
+        Emissive: {strength: 0.22, color: {255, 200, 120}}
+      }
+    }
   }
 
-  if armory_tip != 0 {
-    ItemTip tip()
+  template Satchel {
+    Layout: {direction: Row}
+    LayoutItem: {height: {mode: Grow}}
+
+    Frame frame(title: "Satchel", width: 424, gap: 10) {
+      filters {
+        Layout: {direction: Row, spacing: 4}
+        LayoutItem: {width: {mode: Grow}}
+        FilterTab all(value: -1, label: "All")
+        FilterTab blades(value: 0, label: "Blades")
+        FilterTab relics(value: 1, label: "Relics")
+        FilterTab crowns(value: 2, label: "Crowns")
+        FilterTab bands(value: 3, label: "Bands")
+      }
+
+      row_0 {
+        Layout: {direction: Row, spacing: 10}
+        Item ember_fang(order: 0, name: "Ember Fang", slot: 0, rarity: 3, might: 34, haste: 8, icon: tex_ember_fang, model_hue: {255, 110, 40},
+          flavor: "Cut from the tooth of a sun that bit the wrong god.")
+        Item drowned_heart(order: 1, name: "Drowned Heart", slot: 1, rarity: 3, aether: 36, ward: 6, icon: tex_drowned_heart, model_hue: {255, 120, 40},
+          flavor: "It still beats, slowly, in time with no tide you know.")
+        Item nine_comets(order: 2, name: "Nine Comets", slot: 2, rarity: 2, might: 8, aether: 18, icon: tex_nine_comets, model_hue: {190, 110, 255},
+          flavor: "Each point was once a promise made to the sky.")
+        Item last_light(order: 3, name: "Band of Last Light", slot: 3, rarity: 3, might: 12, haste: 16, icon: tex_last_light, model_hue: {255, 96, 36},
+          flavor: "The final thing the old world ever saw, set in gold.")
+      }
+
+      row_1 {
+        Layout: {direction: Row, spacing: 10}
+        Item tidecaller(order: 4, name: "Tidecaller", slot: 0, rarity: 2, might: 22, aether: 10, icon: tex_tidecaller, model_hue: {80, 170, 255},
+          flavor: "Point it at the horizon, and the horizon comes.")
+        Item moon_prism(order: 5, name: "Moon Prism", slot: 1, rarity: 2, aether: 24, haste: 6, icon: tex_moon_prism, model_hue: {180, 120, 255},
+          flavor: "Bends the moonlight until it confesses.")
+        Item vesper(order: 6, name: "Circlet of Vesper", slot: 2, rarity: 1, ward: 8, aether: 8, start: true, icon: tex_vesper, model_hue: {90, 170, 255},
+          flavor: "Worn by the first star to arrive, and the last to leave.")
+        Item serpent_loop(order: 7, name: "Serpent Loop", slot: 3, rarity: 1, ward: 6, haste: 8, icon: tex_serpent_loop, model_hue: {80, 230, 150},
+          flavor: "It has been swallowing itself for a very long time.")
+      }
+
+      row_2 {
+        Layout: {direction: Row, spacing: 10}
+        Item thornreaver(order: 8, name: "Thornreaver", slot: 0, rarity: 1, might: 14, ward: 6, icon: tex_thornreaver, model_hue: {70, 220, 130},
+          flavor: "Grown, not forged. It would like some water.")
+        Item sun_lens(order: 9, name: "Sun Lens", slot: 1, rarity: 1, aether: 14, might: 2, start: true, icon: tex_sun_lens, model_hue: {80, 190, 255},
+          flavor: "Hold it to the light, and the light holds you.")
+        Item thorn_circlet(order: 10, name: "Thorn Circlet", slot: 2, rarity: 2, ward: 22, might: 4, icon: tex_thorn_circlet, model_hue: {70, 230, 140},
+          flavor: "Everything that would harm you must first ask it.")
+        Item mirror_loop(order: 11, name: "Mirror Loop", slot: 3, rarity: 2, aether: 12, haste: 12, icon: tex_mirror_loop, model_hue: {120, 210, 255},
+          flavor: "Look through it, and something looks through too.")
+      }
+
+      row_3 {
+        Layout: {direction: Row, spacing: 10}
+        Item ash_dirk(order: 12, name: "Ash Dirk", slot: 0, rarity: 0, might: 6, start: true, icon: tex_ash_dirk, model_hue: {190, 190, 200},
+          flavor: "Plain, reliable, and rarely thanked.")
+        Item moth_blade(order: 13, name: "Moth Blade", slot: 0, rarity: 2, might: 18, haste: 14, icon: tex_moth_blade, model_hue: {170, 110, 255},
+          flavor: "It only ever moves toward the light.")
+        Item star_compass(order: 14, name: "Star Compass", slot: 1, rarity: 1, aether: 8, haste: 10, icon: tex_star_compass, model_hue: {255, 196, 80},
+          flavor: "North is a matter of opinion, up here.")
+        Item iron_vow(order: 15, name: "Iron Vow", slot: 3, rarity: 0, ward: 4, start: true, icon: tex_iron_vow, model_hue: {180, 180, 192},
+          flavor: "Worth exactly what you promised on it.")
+      }
+    }
+  }
+
+  template Vital {
+    prop label: string = ""
+    prop value: f32 = 0
+    prop unit: string = ""
+    prop tex: entity = 0
+    prop hue: Rgb = {255, 255, 255}
+
+    Layout: {direction: Row, spacing: 8, v: Middle}
+    LayoutItem: {width: {mode: Grow}}
+    box.spatial.SpatialIgnore
+
+    Icon glyph(tex: tex, size: 15, color: hue)
+    Caption name(text: label, size: 14, color: ui_text)
+    gap {
+      LayoutItem: {width: {mode: Grow}}
+    }
+    Caption amount(text: "{value:.0}{unit}", size: 15, font: font_display, color: ui_pale)
+  }
+
+  template ArmoryLedger {
+    Layout: {direction: Row}
+    LayoutItem: {height: {mode: Grow}}
+
+    Frame frame(title: "Attributes", width: 272, gap: 12) {
+      StatBar might(stat: 0, value: stat_might, delta: preview[0])
+      StatBar ward(stat: 1, value: stat_ward, delta: preview[1])
+      StatBar haste(stat: 2, value: stat_haste, delta: preview[2])
+      StatBar aether(stat: 3, value: stat_aether, delta: preview[3])
+
+      gap_a {
+        LayoutItem: {height: {mode: Fixed, value: 6}}
+      }
+
+      Heading sub(text: "Vitals", size: 14)
+      Divider rule_b()
+
+      vitals {
+        Layout: {direction: Column, spacing: 8}
+        LayoutItem: {width: {mode: Grow}}
+        Vital hp(label: "Vitality", value: hero_hp_max, tex: tex_heart, hue: {255, 96, 106})
+        Vital mp(label: "Aether", value: hero_mp_max, tex: tex_stat_aether, hue: {120, 190, 255})
+        Vital cd(label: "Recharge", value: 100 * haste_scale(stat_haste), unit: "%", tex: tex_stat_haste, hue: {196, 160, 255})
+      }
+
+      gap_b {
+        LayoutItem: {height: {mode: Grow}}
+      }
+
+      Caption hint(text: "Hover an item to weigh it against what you wear. Click to equip.", size: 14, font: font_italic, width: 234, align: Center, color: ui_muted) {
+        LayoutItem: {width: {mode: Grow}}
+      }
+    }
+  }
+
+  template ArmoryPage : Page {
+    Layout: {}
+
+    columns {
+      LayoutItem: {width: {mode: Grow}, height: {mode: Grow}}
+      Layout: {direction: Row, padding: {6, 6, 22, 22}}
+
+      ArmoryLedger ledger()
+      ArmoryCenter center()
+      Satchel satchel()
+    }
+
+    if armory_tip != 0 {
+      ItemTip tip()
+    }
   }
 }

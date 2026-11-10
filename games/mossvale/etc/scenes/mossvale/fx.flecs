@@ -3,335 +3,343 @@ using flecs.script.math
 using box.audio
 using box.particle
 using box.transform
+using state
+using assets
 
-mv_hall { AudioBus: {output: master, kind: AudioChannelReturn, effects: [mv_hall]}; Reverb: {decay: 1.4, damping: 0.5, predelay: 0.02, size: 0.6} }
-mv_sfx { AudioBus: {output: master, kind: AudioChannelSfx, volume: 0.85, sends: [{bus: mv_hall, level: 0.18}]} }
-mv_ui { AudioBus: {output: master, kind: AudioChannelSfx, volume: 0.6} }
-mv_music { AudioBus: {output: master, volume: 0.42, sends: [{bus: mv_hall, level: 0.3}]} }
+assets {
+  mv_hall { AudioBus: {output: master, kind: AudioChannelReturn, effects: [mv_hall]}; Reverb: {decay: 1.4, damping: 0.5, predelay: 0.02, size: 0.6} }
+  mv_sfx { AudioBus: {output: master, kind: AudioChannelSfx, volume: 0.85, sends: [{bus: mv_hall, level: 0.18}]} }
+  mv_ui { AudioBus: {output: master, kind: AudioChannelSfx, volume: 0.6} }
+  mv_music { AudioBus: {output: master, volume: 0.42, sends: [{bus: mv_hall, level: 0.3}]} }
+}
 
 $ {
   ParticleSettings: {effect_max: 24, effect_total: 96, effect_overflow: EffectRecycle}
 }
 
-prefab SfxSpark {
-  AudioOutput: {bus: mv_sfx}
-  SynthSound: {seed: 3, pitch_variance: 0.1, level_variance: 0.1}
-  SynthEnvelope: {attack: 0.002, decay: 0.35}
-  SynthFilter: {kind: SynthBandPass, cutoff: 800, resonance: 0.3}
-  SynthFilterEnvelope: {decay: 0.3, amount: 1.907}
-  crackle { SynthOscillator: {wave: SynthNoise, level: 0.7} }
-  whoomp { SynthOscillator: {wave: SynthSine, frequency: 220, frequency_end: 90, sweep: 0.2, level: 0.5} }
-}
+assets {
+  prefab SfxSpark {
+    AudioOutput: {bus: mv_sfx}
+    SynthSound: {seed: 3, pitch_variance: 0.1, level_variance: 0.1}
+    SynthEnvelope: {attack: 0.002, decay: 0.35}
+    SynthFilter: {kind: SynthBandPass, cutoff: 800, resonance: 0.3}
+    SynthFilterEnvelope: {decay: 0.3, amount: 1.907}
+    crackle { SynthOscillator: {wave: SynthNoise, level: 0.7} }
+    whoomp { SynthOscillator: {wave: SynthSine, frequency: 220, frequency_end: 90, sweep: 0.2, level: 0.5} }
+  }
 
-prefab SfxSplash {
-  AudioOutput: {bus: mv_sfx}
-  SynthSound: {seed: 11, pitch_variance: 0.1}
-  SynthEnvelope: {attack: 0.005, decay: 0.45}
-  SynthFilter: {kind: SynthBandPass, cutoff: 600, resonance: 0.55}
-  SynthFilterEnvelope: {attack: 0.25, sustain: 1, hold: 0.21, amount: 2.415}
-  water { SynthOscillator: {wave: SynthNoise, level: 0.8} }
-  bloop { SynthOscillator: {wave: SynthSine, frequency: 300, frequency_end: 750, sweep: 0.12, level: 0.35} }
-}
+  prefab SfxSplash {
+    AudioOutput: {bus: mv_sfx}
+    SynthSound: {seed: 11, pitch_variance: 0.1}
+    SynthEnvelope: {attack: 0.005, decay: 0.45}
+    SynthFilter: {kind: SynthBandPass, cutoff: 600, resonance: 0.55}
+    SynthFilterEnvelope: {attack: 0.25, sustain: 1, hold: 0.21, amount: 2.415}
+    water { SynthOscillator: {wave: SynthNoise, level: 0.8} }
+    bloop { SynthOscillator: {wave: SynthSine, frequency: 300, frequency_end: 750, sweep: 0.12, level: 0.35} }
+  }
 
-prefab SfxGust {
-  AudioOutput: {bus: mv_sfx}
-  SynthSound: {seed: 5, pitch_variance: 0.08}
-  SynthEnvelope: {attack: 0.08, decay: 0.2, sustain: 0.5, hold: 0.2, release: 0.4}
-  SynthFilter: {kind: SynthBandPass, cutoff: 500, resonance: 0.5}
-  SynthFilterEnvelope: {attack: 0.6, sustain: 1, hold: 0.29, amount: 2.263}
-  air { SynthOscillator: {wave: SynthNoise, level: 0.8} }
-}
+  prefab SfxGust {
+    AudioOutput: {bus: mv_sfx}
+    SynthSound: {seed: 5, pitch_variance: 0.08}
+    SynthEnvelope: {attack: 0.08, decay: 0.2, sustain: 0.5, hold: 0.2, release: 0.4}
+    SynthFilter: {kind: SynthBandPass, cutoff: 500, resonance: 0.5}
+    SynthFilterEnvelope: {attack: 0.6, sustain: 1, hold: 0.29, amount: 2.263}
+    air { SynthOscillator: {wave: SynthNoise, level: 0.8} }
+  }
 
-prefab SfxBloom {
-  AudioOutput: {bus: mv_sfx}
-  SynthSound: {pitch_variance: 0.03}
-  SynthEnvelope: {attack: 0.02, decay: 0.6}
-  SynthFilter: {kind: SynthLowPass, cutoff: 4000}
-  a { SynthOscillator: {wave: SynthTriangle, frequency: 523.25, frequency_end: 784, sweep: 0.3, level: 0.3} }
-  b { SynthOscillator: {wave: SynthSine, frequency: 659.25, frequency_end: 1046.5, sweep: 0.35, level: 0.25} }
-  sparkle { SynthOscillator: {wave: SynthSine, frequency: 1568, level: 0.1}; SynthEnvelope: {attack: 0.1, decay: 0.4} }
-}
+  prefab SfxBloom {
+    AudioOutput: {bus: mv_sfx}
+    SynthSound: {pitch_variance: 0.03}
+    SynthEnvelope: {attack: 0.02, decay: 0.6}
+    SynthFilter: {kind: SynthLowPass, cutoff: 4000}
+    a { SynthOscillator: {wave: SynthTriangle, frequency: 523.25, frequency_end: 784, sweep: 0.3, level: 0.3} }
+    b { SynthOscillator: {wave: SynthSine, frequency: 659.25, frequency_end: 1046.5, sweep: 0.35, level: 0.25} }
+    sparkle { SynthOscillator: {wave: SynthSine, frequency: 1568, level: 0.1}; SynthEnvelope: {attack: 0.1, decay: 0.4} }
+  }
 
-prefab SfxFrost {
-  AudioOutput: {bus: mv_sfx}
-  SynthSound: {seed: 17, pitch_variance: 0.05}
-  SynthEnvelope: {attack: 0.003, decay: 0.5}
-  SynthFilter: {kind: SynthHighPass, cutoff: 2500, resonance: 0.4}
-  crystal { SynthOscillator: {wave: SynthSine, frequency: 2093, frequency_end: 1760, sweep: 0.4, level: 0.35} }
-  crunch { SynthOscillator: {wave: SynthNoise, level: 0.5}; SynthEnvelope: {attack: 0.001, decay: 0.15} }
-  chime { SynthOscillator: {wave: SynthTriangle, frequency: 2637, level: 0.2} }
-}
+  prefab SfxFrost {
+    AudioOutput: {bus: mv_sfx}
+    SynthSound: {seed: 17, pitch_variance: 0.05}
+    SynthEnvelope: {attack: 0.003, decay: 0.5}
+    SynthFilter: {kind: SynthHighPass, cutoff: 2500, resonance: 0.4}
+    crystal { SynthOscillator: {wave: SynthSine, frequency: 2093, frequency_end: 1760, sweep: 0.4, level: 0.35} }
+    crunch { SynthOscillator: {wave: SynthNoise, level: 0.5}; SynthEnvelope: {attack: 0.001, decay: 0.15} }
+    chime { SynthOscillator: {wave: SynthTriangle, frequency: 2637, level: 0.2} }
+  }
 
-prefab SfxLift {
-  AudioOutput: {bus: mv_sfx}
-  SynthSound: {pitch_variance: 0.04}
-  SynthEnvelope: {attack: 0.05, decay: 0.3, sustain: 0.6, hold: 0.3, release: 0.4}
-  SynthFilter: {kind: SynthLowPass, cutoff: 1800}
-  SynthFilterEnvelope: {attack: 0.6, sustain: 1, hold: 0.45, amount: 1}
-  rise { SynthOscillator: {wave: SynthSaw, frequency: 180, frequency_end: 520, sweep: 0.8, level: 0.25} }
-  hum { SynthOscillator: {wave: SynthSine, frequency: 360, frequency_end: 1040, sweep: 0.8, level: 0.3} }
-}
+  prefab SfxLift {
+    AudioOutput: {bus: mv_sfx}
+    SynthSound: {pitch_variance: 0.04}
+    SynthEnvelope: {attack: 0.05, decay: 0.3, sustain: 0.6, hold: 0.3, release: 0.4}
+    SynthFilter: {kind: SynthLowPass, cutoff: 1800}
+    SynthFilterEnvelope: {attack: 0.6, sustain: 1, hold: 0.45, amount: 1}
+    rise { SynthOscillator: {wave: SynthSaw, frequency: 180, frequency_end: 520, sweep: 0.8, level: 0.25} }
+    hum { SynthOscillator: {wave: SynthSine, frequency: 360, frequency_end: 1040, sweep: 0.8, level: 0.3} }
+  }
 
-prefab SfxFizzle {
-  AudioOutput: {bus: mv_sfx}
-  SynthSound: {}
-  SynthEnvelope: {attack: 0.004, decay: 0.05, sustain: 0.5, hold: 0.06, release: 0.08}
-  SynthFilter: {kind: SynthLowPass, cutoff: 800}
-  low { SynthOscillator: {wave: SynthSquare, frequency: 110, level: 0.22} }
-  beat { SynthOscillator: {wave: SynthSquare, frequency: 117, level: 0.18} }
-}
+  prefab SfxFizzle {
+    AudioOutput: {bus: mv_sfx}
+    SynthSound: {}
+    SynthEnvelope: {attack: 0.004, decay: 0.05, sustain: 0.5, hold: 0.06, release: 0.08}
+    SynthFilter: {kind: SynthLowPass, cutoff: 800}
+    low { SynthOscillator: {wave: SynthSquare, frequency: 110, level: 0.22} }
+    beat { SynthOscillator: {wave: SynthSquare, frequency: 117, level: 0.18} }
+  }
 
-prefab SfxCast {
-  AudioOutput: {bus: mv_sfx}
-  SynthSound: {pitch_variance: 0.06}
-  SynthEnvelope: {attack: 0.01, decay: 0.25}
-  SynthFilter: {kind: SynthBandPass, cutoff: 1200, resonance: 0.4}
-  SynthFilterEnvelope: {attack: 0.2, sustain: 1, hold: 0.06, amount: 1.322}
-  swish { SynthOscillator: {wave: SynthNoise, level: 0.4} }
-  tone { SynthOscillator: {wave: SynthSine, frequency: 660, frequency_end: 990, sweep: 0.2, level: 0.15} }
-}
+  prefab SfxCast {
+    AudioOutput: {bus: mv_sfx}
+    SynthSound: {pitch_variance: 0.06}
+    SynthEnvelope: {attack: 0.01, decay: 0.25}
+    SynthFilter: {kind: SynthBandPass, cutoff: 1200, resonance: 0.4}
+    SynthFilterEnvelope: {attack: 0.2, sustain: 1, hold: 0.06, amount: 1.322}
+    swish { SynthOscillator: {wave: SynthNoise, level: 0.4} }
+    tone { SynthOscillator: {wave: SynthSine, frequency: 660, frequency_end: 990, sweep: 0.2, level: 0.15} }
+  }
 
-prefab SfxTalk {
-  AudioOutput: {bus: mv_ui}
-  SynthSound: {pitch_variance: 0.12}
-  SynthEnvelope: {attack: 0.003, decay: 0.08}
-  SynthFilter: {kind: SynthLowPass, cutoff: 2400}
-  blip { SynthOscillator: {wave: SynthTriangle, frequency: 440, frequency_end: 520, sweep: 0.05, level: 0.4} }
-}
+  prefab SfxTalk {
+    AudioOutput: {bus: mv_ui}
+    SynthSound: {pitch_variance: 0.12}
+    SynthEnvelope: {attack: 0.003, decay: 0.08}
+    SynthFilter: {kind: SynthLowPass, cutoff: 2400}
+    blip { SynthOscillator: {wave: SynthTriangle, frequency: 440, frequency_end: 520, sweep: 0.05, level: 0.4} }
+  }
 
-prefab SfxMote {
-  AudioOutput: {bus: mv_sfx}
-  SynthSound: {}
-  SynthEnvelope: {attack: 0.005, decay: 0.7}
-  a { SynthOscillator: {wave: SynthSine, frequency: 1318.5, level: 0.25} }
-  b { SynthOscillator: {wave: SynthSine, frequency: 1975.5, level: 0.18}; SynthEnvelope: {attack: 0.08, decay: 0.6} }
-  c { SynthOscillator: {wave: SynthTriangle, frequency: 2637, level: 0.08}; SynthEnvelope: {attack: 0.16, decay: 0.5} }
-}
+  prefab SfxMote {
+    AudioOutput: {bus: mv_sfx}
+    SynthSound: {}
+    SynthEnvelope: {attack: 0.005, decay: 0.7}
+    a { SynthOscillator: {wave: SynthSine, frequency: 1318.5, level: 0.25} }
+    b { SynthOscillator: {wave: SynthSine, frequency: 1975.5, level: 0.18}; SynthEnvelope: {attack: 0.08, decay: 0.6} }
+    c { SynthOscillator: {wave: SynthTriangle, frequency: 2637, level: 0.08}; SynthEnvelope: {attack: 0.16, decay: 0.5} }
+  }
 
-template Note {
-  prop f: f32 = 440
-  prop len: f32 = 0.5
-  AudioOutput: {bus: mv_ui}
-  SynthSound: {}
-  SynthEnvelope: {attack: 0.01, decay: 0.1, sustain: 0.6, hold: len, release: 0.35}
-  SynthFilter: {kind: SynthLowPass, cutoff: 3600, resonance: 0.15}
-  lead { SynthOscillator: {wave: SynthTriangle, frequency: f, level: 0.35} }
-  air { SynthOscillator: {wave: SynthSine, frequency: f * 2, level: 0.1} }
-}
+  template Note {
+    prop f: f32 = 440
+    prop len: f32 = 0.5
+    AudioOutput: {bus: mv_ui}
+    SynthSound: {}
+    SynthEnvelope: {attack: 0.01, decay: 0.1, sustain: 0.6, hold: len, release: 0.35}
+    SynthFilter: {kind: SynthLowPass, cutoff: 3600, resonance: 0.15}
+    lead { SynthOscillator: {wave: SynthTriangle, frequency: f, level: 0.35} }
+    air { SynthOscillator: {wave: SynthSine, frequency: f * 2, level: 0.1} }
+  }
 
-Note jingle_c5(f: 523.25, len: 0.08)
-Note jingle_e5(f: 659.25, len: 0.08)
-Note jingle_g5(f: 783.99, len: 0.08)
-Note jingle_c6(f: 1046.5, len: 0.4)
-Note jingle_a5(f: 880, len: 0.08)
-Note jingle_d6(f: 1174.66, len: 0.5)
+  Note jingle_c5(f: 523.25, len: 0.08)
+  Note jingle_e5(f: 659.25, len: 0.08)
+  Note jingle_g5(f: 783.99, len: 0.08)
+  Note jingle_c6(f: 1046.5, len: 0.4)
+  Note jingle_a5(f: 880, len: 0.08)
+  Note jingle_d6(f: 1174.66, len: 0.5)
 
-prefab SparkBurst {
-  sparks {
-    Position: {0, 0, 0}
-    ParticleEmitter: {
-      max: 80, rate: 0, shape: EmitterSphere, radius: 0.2,
-      direction: {0, 1, 0}, spread: 70, speed: {2, 5},
-      lifetime: {0.4, 0.9}, size: {0.08, 0.18}, opacity: {1, 1},
-      color: {255, 180, 70}, color_variance: {0, 50, 30}, seed: 3
+  prefab SparkBurst {
+    sparks {
+      Position: {0, 0, 0}
+      ParticleEmitter: {
+        max: 80, rate: 0, shape: EmitterSphere, radius: 0.2,
+        direction: {0, 1, 0}, spread: 70, speed: {2, 5},
+        lifetime: {0.4, 0.9}, size: {0.08, 0.18}, opacity: {1, 1},
+        color: {255, 180, 70}, color_variance: {0, 50, 30}, seed: 3
+      }
+      ParticleAppearance: {blend: ParticleAdditive, stretch: 0.04}
+      ParticleBurst: {count: 60}
+      ParticleForces: {gravity: {0, -6, 0}, drag: 1.5}
     }
-    ParticleAppearance: {blend: ParticleAdditive, stretch: 0.04}
-    ParticleBurst: {count: 60}
-    ParticleForces: {gravity: {0, -6, 0}, drag: 1.5}
-  }
-  flash {
-    Position: {0, 0, 0}
-    ParticleEmitter: {max: 4, rate: 0, shape: EmitterPoint, direction: {0, 0, 0}, speed: {0, 0}, lifetime: {0.25, 0.25}, size: {2.2, 2.2}, opacity: {0.9, 0.9}, color: {255, 170, 80}, seed: 4}
-    ParticleAppearance: {blend: ParticleAdditive}
-    ParticleBurst: {count: 1}
-    ParticleCurves: {size: {keys: [{0, 0.5}, {1, 1.5}]}, opacity: {keys: [{0, 1}, {1, 0}]}}
-  }
-}
-
-prefab SplashBurst {
-  drops {
-    Position: {0, 0, 0}
-    ParticleEmitter: {
-      max: 90, rate: 0, shape: EmitterSphere, radius: 0.3,
-      direction: {0, 1, 0}, spread: 45, speed: {3, 6},
-      lifetime: {0.5, 1.0}, size: {0.1, 0.2}, opacity: {0.7, 1},
-      color: {170, 215, 255}, color_variance: {20, 20, 0}, seed: 5
-    }
-    ParticleBurst: {count: 70}
-    ParticleForces: {gravity: {0, -14, 0}}
-  }
-  mist {
-    Position: {0, 0, 0}
-    ParticleEmitter: {max: 20, rate: 0, shape: EmitterSphere, radius: 0.6, direction: {0, 1, 0}, spread: 80, speed: {0.5, 1.2}, lifetime: {0.8, 1.4}, size: {0.6, 1.0}, opacity: {0.3, 0.5}, color: {220, 240, 255}, seed: 6}
-    ParticleBurst: {count: 14}
-    ParticleCurves: {size: {keys: [{0, 0.6}, {1, 1.8}]}, opacity: {keys: [{0, 1}, {1, 0}]}}
-  }
-}
-
-prefab GustBurst {
-  swirl {
-    Position: {0, 0, 0}
-    ParticleEmitter: {
-      max: 70, rate: 0, shape: EmitterDisc, radius: 0.6,
-      direction: {0, 0, 0}, radial: {4, 7}, speed: {0, 0.5},
-      lifetime: {0.6, 1.1}, size: {0.25, 0.5}, opacity: {0.35, 0.6},
-      color: {230, 245, 240}, seed: 7
-    }
-    ParticleBurst: {count: 50}
-    ParticleForces: {drag: 2.5}
-    ParticleCurves: {opacity: {keys: [{0, 1}, {1, 0}]}, size: {keys: [{0, 0.6}, {1, 2}]}}
-  }
-  leaves {
-    Position: {0, 0, 0}
-    ParticleEmitter: {
-      max: 30, rate: 0, shape: EmitterDisc, radius: 0.5,
-      direction: {0, 1, 0}, spread: 60, radial: {3, 6}, speed: {1, 3},
-      lifetime: {0.8, 1.4}, size: {0.1, 0.18}, opacity: {1, 1},
-      color: {150, 190, 90}, color_variance: {40, 30, 20}, seed: 8
-    }
-    ParticleBurst: {count: 20}
-    ParticleForces: {gravity: {0, -2, 0}, drag: 1.5}
-  }
-}
-
-prefab BloomBurst {
-  petals {
-    Position: {0, 0, 0}
-    ParticleEmitter: {
-      max: 70, rate: 0, shape: EmitterSphere, radius: 0.4,
-      direction: {0, 1, 0}, spread: 60, speed: {1.5, 3.5},
-      lifetime: {0.9, 1.6}, size: {0.1, 0.2}, opacity: {1, 1},
-      color: {250, 160, 200}, color_variance: {10, 60, 40}, seed: 9
-    }
-    ParticleBurst: {count: 50}
-    ParticleForces: {gravity: {0, -1.5, 0}, drag: 1.2}
-  }
-  glow {
-    Position: {0, 0, 0}
-    ParticleEmitter: {max: 40, rate: 0, shape: EmitterSphere, radius: 0.8, direction: {0, 1, 0}, spread: 30, speed: {0.5, 1.5}, lifetime: {0.8, 1.4}, size: {0.1, 0.18}, opacity: {1, 1}, color: {170, 255, 120}, seed: 10}
-    ParticleAppearance: {blend: ParticleAdditive}
-    ParticleBurst: {count: 30}
-  }
-}
-
-prefab FrostBurst {
-  shards {
-    Position: {0, 0, 0}
-    ParticleEmitter: {
-      max: 80, rate: 0, shape: EmitterSphere, radius: 0.3,
-      direction: {0, 1, 0}, spread: 90, speed: {2, 4.5},
-      lifetime: {0.5, 1.0}, size: {0.08, 0.16}, opacity: {1, 1},
-      color: {210, 240, 255}, color_variance: {20, 10, 0}, seed: 11
-    }
-    ParticleAppearance: {blend: ParticleAdditive}
-    ParticleBurst: {count: 60}
-    ParticleForces: {gravity: {0, -3, 0}, drag: 2}
-  }
-  cloud {
-    Position: {0, 0, 0}
-    ParticleEmitter: {max: 20, rate: 0, shape: EmitterDisc, radius: 1, direction: {0, 1, 0}, spread: 80, speed: {0.3, 0.9}, lifetime: {1, 1.6}, size: {0.8, 1.3}, opacity: {0.3, 0.5}, color: {230, 245, 255}, seed: 12}
-    ParticleBurst: {count: 14}
-    ParticleCurves: {opacity: {keys: [{0, 1}, {1, 0}]}, size: {keys: [{0, 0.6}, {1, 1.8}]}}
-  }
-}
-
-prefab LiftBurst {
-  motes {
-    Position: {0, 0, 0}
-    ParticleEmitter: {
-      max: 80, rate: 0, shape: EmitterDisc, radius: 1.2,
-      direction: {0, 1, 0}, spread: 8, speed: {2, 4},
-      lifetime: {0.8, 1.4}, size: {0.1, 0.18}, opacity: {1, 1},
-      color: {220, 160, 255}, color_variance: {30, 40, 0}, seed: 13
-    }
-    ParticleAppearance: {blend: ParticleAdditive, stretch: 0.05}
-    ParticleBurst: {count: 60}
-  }
-  ring {
-    Position: {0, 0, 0}
-    ParticleEmitter: {max: 40, rate: 0, shape: EmitterDisc, radius: 0.3, direction: {0, 0, 0}, radial: {5, 6}, speed: {0, 0}, lifetime: {0.4, 0.6}, size: {0.15, 0.2}, opacity: {1, 1}, color: {200, 150, 255}, seed: 14}
-    ParticleAppearance: {blend: ParticleAdditive}
-    ParticleBurst: {count: 36}
-  }
-}
-
-prefab FizzleBurst {
-  smoke {
-    Position: {0, 0, 0}
-    ParticleEmitter: {max: 20, rate: 0, shape: EmitterSphere, radius: 0.2, direction: {0, 1, 0}, spread: 40, speed: {0.5, 1.2}, lifetime: {0.6, 1.0}, size: {0.3, 0.5}, opacity: {0.4, 0.6}, color: {120, 110, 130}, seed: 15}
-    ParticleBurst: {count: 12}
-    ParticleCurves: {opacity: {keys: [{0, 1}, {1, 0}]}}
-  }
-}
-
-prefab LearnBurst {
-  stars {
-    Position: {0, 0, 0}
-    ParticleEmitter: {
-      max: 160, rate: 0, shape: EmitterSphere, radius: 0.5,
-      direction: {0, 1, 0}, spread: 180, speed: {2, 6},
-      lifetime: {1, 2}, size: {0.1, 0.22}, opacity: {1, 1},
-      color: {255, 230, 150}, color_variance: {0, 30, 100}, seed: 16
-    }
-    ParticleAppearance: {blend: ParticleAdditive, stretch: 0.03}
-    ParticleBurst: {count: 140}
-    ParticleForces: {gravity: {0, -2, 0}, drag: 1.4}
-  }
-}
-
-prefab QuestBurst {
-  stars {
-    Position: {0, 0, 0}
-    ParticleEmitter: {
-      max: 90, rate: 0, shape: EmitterDisc, radius: 0.4,
-      direction: {0, 1, 0}, spread: 30, radial: {2, 4}, speed: {3, 6},
-      lifetime: {0.9, 1.6}, size: {0.12, 0.22}, opacity: {1, 1},
-      color: {255, 220, 120}, color_variance: {0, 40, 60}, seed: 18
-    }
-    ParticleAppearance: {blend: ParticleAdditive, stretch: 0.03}
-    ParticleBurst: {count: 80}
-    ParticleForces: {gravity: {0, -5, 0}, drag: 1.2}
-  }
-  ring {
-    Position: {0, 0, 0}
-    ParticleEmitter: {max: 60, rate: 0, shape: EmitterDisc, radius: 0.2, direction: {0, 0, 0}, radial: {6, 7}, speed: {0, 0}, lifetime: {0.5, 0.7}, size: {0.2, 0.3}, opacity: {1, 1}, color: {255, 240, 190}, seed: 19}
-    ParticleAppearance: {blend: ParticleAdditive}
-    ParticleBurst: {count: 48}
-    ParticleCurves: {opacity: {keys: [{0, 1}, {1, 0}]}}
-  }
-}
-
-prefab MoteBurst {
-  glints {
-    Position: {0, 0, 0}
-    ParticleEmitter: {max: 60, rate: 0, shape: EmitterSphere, radius: 0.3, direction: {0, 1, 0}, spread: 180, speed: {1.5, 3.5}, lifetime: {0.6, 1.2}, size: {0.08, 0.14}, opacity: {1, 1}, color: {170, 230, 255}, seed: 17}
-    ParticleAppearance: {blend: ParticleAdditive}
-    ParticleBurst: {count: 50}
-    ParticleForces: {drag: 2}
-  }
-}
-
-prefab Firework {
-  sparks {
-    Position: {0, 0, 0}
-    ParticleEmitter: {
-      max: 180, rate: 0, shape: EmitterSphere, radius: 0.1,
-      direction: {0, 0, 0}, radial: {6, 9},
-      lifetime: {1.4, 2.2}, size: {0.18, 0.3}, opacity: {1, 1},
-      color: {255, 200, 90}, color_variance: {0, 60, 120}, seed: 23
-    }
-    ParticleAppearance: {blend: ParticleAdditive, stretch: 0.05}
-    ParticleBurst: {count: 160}
-    ParticleForces: {gravity: {0, -3, 0}, drag: 1.1}
-    ParticleCurves: {
-      opacity: {keys: [{0, 1}, {0.6, 0.8}, {1, 0}]},
-      color: {keys: [{0, {255, 255, 255}}, {0.3, {255, 220, 160}}, {0.7, {255, 120, 160}}, {1, {120, 90, 255}}]}
+    flash {
+      Position: {0, 0, 0}
+      ParticleEmitter: {max: 4, rate: 0, shape: EmitterPoint, direction: {0, 0, 0}, speed: {0, 0}, lifetime: {0.25, 0.25}, size: {2.2, 2.2}, opacity: {0.9, 0.9}, color: {255, 170, 80}, seed: 4}
+      ParticleAppearance: {blend: ParticleAdditive}
+      ParticleBurst: {count: 1}
+      ParticleCurves: {size: {keys: [{0, 0.5}, {1, 1.5}]}, opacity: {keys: [{0, 1}, {1, 0}]}}
     }
   }
+
+  prefab SplashBurst {
+    drops {
+      Position: {0, 0, 0}
+      ParticleEmitter: {
+        max: 90, rate: 0, shape: EmitterSphere, radius: 0.3,
+        direction: {0, 1, 0}, spread: 45, speed: {3, 6},
+        lifetime: {0.5, 1.0}, size: {0.1, 0.2}, opacity: {0.7, 1},
+        color: {170, 215, 255}, color_variance: {20, 20, 0}, seed: 5
+      }
+      ParticleBurst: {count: 70}
+      ParticleForces: {gravity: {0, -14, 0}}
+    }
+    mist {
+      Position: {0, 0, 0}
+      ParticleEmitter: {max: 20, rate: 0, shape: EmitterSphere, radius: 0.6, direction: {0, 1, 0}, spread: 80, speed: {0.5, 1.2}, lifetime: {0.8, 1.4}, size: {0.6, 1.0}, opacity: {0.3, 0.5}, color: {220, 240, 255}, seed: 6}
+      ParticleBurst: {count: 14}
+      ParticleCurves: {size: {keys: [{0, 0.6}, {1, 1.8}]}, opacity: {keys: [{0, 1}, {1, 0}]}}
+    }
+  }
+
+  prefab GustBurst {
+    swirl {
+      Position: {0, 0, 0}
+      ParticleEmitter: {
+        max: 70, rate: 0, shape: EmitterDisc, radius: 0.6,
+        direction: {0, 0, 0}, radial: {4, 7}, speed: {0, 0.5},
+        lifetime: {0.6, 1.1}, size: {0.25, 0.5}, opacity: {0.35, 0.6},
+        color: {230, 245, 240}, seed: 7
+      }
+      ParticleBurst: {count: 50}
+      ParticleForces: {drag: 2.5}
+      ParticleCurves: {opacity: {keys: [{0, 1}, {1, 0}]}, size: {keys: [{0, 0.6}, {1, 2}]}}
+    }
+    leaves {
+      Position: {0, 0, 0}
+      ParticleEmitter: {
+        max: 30, rate: 0, shape: EmitterDisc, radius: 0.5,
+        direction: {0, 1, 0}, spread: 60, radial: {3, 6}, speed: {1, 3},
+        lifetime: {0.8, 1.4}, size: {0.1, 0.18}, opacity: {1, 1},
+        color: {150, 190, 90}, color_variance: {40, 30, 20}, seed: 8
+      }
+      ParticleBurst: {count: 20}
+      ParticleForces: {gravity: {0, -2, 0}, drag: 1.5}
+    }
+  }
+
+  prefab BloomBurst {
+    petals {
+      Position: {0, 0, 0}
+      ParticleEmitter: {
+        max: 70, rate: 0, shape: EmitterSphere, radius: 0.4,
+        direction: {0, 1, 0}, spread: 60, speed: {1.5, 3.5},
+        lifetime: {0.9, 1.6}, size: {0.1, 0.2}, opacity: {1, 1},
+        color: {250, 160, 200}, color_variance: {10, 60, 40}, seed: 9
+      }
+      ParticleBurst: {count: 50}
+      ParticleForces: {gravity: {0, -1.5, 0}, drag: 1.2}
+    }
+    glow {
+      Position: {0, 0, 0}
+      ParticleEmitter: {max: 40, rate: 0, shape: EmitterSphere, radius: 0.8, direction: {0, 1, 0}, spread: 30, speed: {0.5, 1.5}, lifetime: {0.8, 1.4}, size: {0.1, 0.18}, opacity: {1, 1}, color: {170, 255, 120}, seed: 10}
+      ParticleAppearance: {blend: ParticleAdditive}
+      ParticleBurst: {count: 30}
+    }
+  }
+
+  prefab FrostBurst {
+    shards {
+      Position: {0, 0, 0}
+      ParticleEmitter: {
+        max: 80, rate: 0, shape: EmitterSphere, radius: 0.3,
+        direction: {0, 1, 0}, spread: 90, speed: {2, 4.5},
+        lifetime: {0.5, 1.0}, size: {0.08, 0.16}, opacity: {1, 1},
+        color: {210, 240, 255}, color_variance: {20, 10, 0}, seed: 11
+      }
+      ParticleAppearance: {blend: ParticleAdditive}
+      ParticleBurst: {count: 60}
+      ParticleForces: {gravity: {0, -3, 0}, drag: 2}
+    }
+    cloud {
+      Position: {0, 0, 0}
+      ParticleEmitter: {max: 20, rate: 0, shape: EmitterDisc, radius: 1, direction: {0, 1, 0}, spread: 80, speed: {0.3, 0.9}, lifetime: {1, 1.6}, size: {0.8, 1.3}, opacity: {0.3, 0.5}, color: {230, 245, 255}, seed: 12}
+      ParticleBurst: {count: 14}
+      ParticleCurves: {opacity: {keys: [{0, 1}, {1, 0}]}, size: {keys: [{0, 0.6}, {1, 1.8}]}}
+    }
+  }
+
+  prefab LiftBurst {
+    motes {
+      Position: {0, 0, 0}
+      ParticleEmitter: {
+        max: 80, rate: 0, shape: EmitterDisc, radius: 1.2,
+        direction: {0, 1, 0}, spread: 8, speed: {2, 4},
+        lifetime: {0.8, 1.4}, size: {0.1, 0.18}, opacity: {1, 1},
+        color: {220, 160, 255}, color_variance: {30, 40, 0}, seed: 13
+      }
+      ParticleAppearance: {blend: ParticleAdditive, stretch: 0.05}
+      ParticleBurst: {count: 60}
+    }
+    ring {
+      Position: {0, 0, 0}
+      ParticleEmitter: {max: 40, rate: 0, shape: EmitterDisc, radius: 0.3, direction: {0, 0, 0}, radial: {5, 6}, speed: {0, 0}, lifetime: {0.4, 0.6}, size: {0.15, 0.2}, opacity: {1, 1}, color: {200, 150, 255}, seed: 14}
+      ParticleAppearance: {blend: ParticleAdditive}
+      ParticleBurst: {count: 36}
+    }
+  }
+
+  prefab FizzleBurst {
+    smoke {
+      Position: {0, 0, 0}
+      ParticleEmitter: {max: 20, rate: 0, shape: EmitterSphere, radius: 0.2, direction: {0, 1, 0}, spread: 40, speed: {0.5, 1.2}, lifetime: {0.6, 1.0}, size: {0.3, 0.5}, opacity: {0.4, 0.6}, color: {120, 110, 130}, seed: 15}
+      ParticleBurst: {count: 12}
+      ParticleCurves: {opacity: {keys: [{0, 1}, {1, 0}]}}
+    }
+  }
+
+  prefab LearnBurst {
+    stars {
+      Position: {0, 0, 0}
+      ParticleEmitter: {
+        max: 160, rate: 0, shape: EmitterSphere, radius: 0.5,
+        direction: {0, 1, 0}, spread: 180, speed: {2, 6},
+        lifetime: {1, 2}, size: {0.1, 0.22}, opacity: {1, 1},
+        color: {255, 230, 150}, color_variance: {0, 30, 100}, seed: 16
+      }
+      ParticleAppearance: {blend: ParticleAdditive, stretch: 0.03}
+      ParticleBurst: {count: 140}
+      ParticleForces: {gravity: {0, -2, 0}, drag: 1.4}
+    }
+  }
+
+  prefab QuestBurst {
+    stars {
+      Position: {0, 0, 0}
+      ParticleEmitter: {
+        max: 90, rate: 0, shape: EmitterDisc, radius: 0.4,
+        direction: {0, 1, 0}, spread: 30, radial: {2, 4}, speed: {3, 6},
+        lifetime: {0.9, 1.6}, size: {0.12, 0.22}, opacity: {1, 1},
+        color: {255, 220, 120}, color_variance: {0, 40, 60}, seed: 18
+      }
+      ParticleAppearance: {blend: ParticleAdditive, stretch: 0.03}
+      ParticleBurst: {count: 80}
+      ParticleForces: {gravity: {0, -5, 0}, drag: 1.2}
+    }
+    ring {
+      Position: {0, 0, 0}
+      ParticleEmitter: {max: 60, rate: 0, shape: EmitterDisc, radius: 0.2, direction: {0, 0, 0}, radial: {6, 7}, speed: {0, 0}, lifetime: {0.5, 0.7}, size: {0.2, 0.3}, opacity: {1, 1}, color: {255, 240, 190}, seed: 19}
+      ParticleAppearance: {blend: ParticleAdditive}
+      ParticleBurst: {count: 48}
+      ParticleCurves: {opacity: {keys: [{0, 1}, {1, 0}]}}
+    }
+  }
+
+  prefab MoteBurst {
+    glints {
+      Position: {0, 0, 0}
+      ParticleEmitter: {max: 60, rate: 0, shape: EmitterSphere, radius: 0.3, direction: {0, 1, 0}, spread: 180, speed: {1.5, 3.5}, lifetime: {0.6, 1.2}, size: {0.08, 0.14}, opacity: {1, 1}, color: {170, 230, 255}, seed: 17}
+      ParticleAppearance: {blend: ParticleAdditive}
+      ParticleBurst: {count: 50}
+      ParticleForces: {drag: 2}
+    }
+  }
+
+  prefab Firework {
+    sparks {
+      Position: {0, 0, 0}
+      ParticleEmitter: {
+        max: 180, rate: 0, shape: EmitterSphere, radius: 0.1,
+        direction: {0, 0, 0}, radial: {6, 9},
+        lifetime: {1.4, 2.2}, size: {0.18, 0.3}, opacity: {1, 1},
+        color: {255, 200, 90}, color_variance: {0, 60, 120}, seed: 23
+      }
+      ParticleAppearance: {blend: ParticleAdditive, stretch: 0.05}
+      ParticleBurst: {count: 160}
+      ParticleForces: {gravity: {0, -3, 0}, drag: 1.1}
+      ParticleCurves: {
+        opacity: {keys: [{0, 1}, {0.6, 0.8}, {1, 0}]},
+        color: {keys: [{0, {255, 255, 255}}, {0.3, {255, 220, 160}}, {0.7, {255, 120, 160}}, {1, {120, 90, 255}}]}
+      }
+    }
+  }
 }
 
-fn impact_y(s: i32) -> f32 {
-  match s { 6: 0.3; 3: 0.8; _: 0.7 }
+state {
+  fn impact_y(s: i32) -> f32 {
+    match s { 6: 0.3; 3: 0.8; _: 0.7 }
+  }
 }
 
 async {
@@ -441,82 +449,86 @@ async {
   }
 }
 
-mv_ambience { AudioBus: {output: master, volume: 0.55} }
+assets {
+  mv_ambience { AudioBus: {output: master, volume: 0.55} }
 
-prefab SfxStep {
-  AudioOutput: {bus: mv_sfx}
-  SynthSound: {seed: 31, pitch_variance: 0.3, level_variance: 0.35}
-  SynthEnvelope: {attack: 0.002, decay: 0.06}
-  SynthFilter: {kind: SynthLowPass, cutoff: 1100, resonance: 0.1}
-  scuff { SynthOscillator: {wave: SynthNoise, level: 0.35} }
-  thud { SynthOscillator: {wave: SynthSine, frequency: 120, frequency_end: 70, sweep: 0.05, level: 0.25} }
+  prefab SfxStep {
+    AudioOutput: {bus: mv_sfx}
+    SynthSound: {seed: 31, pitch_variance: 0.3, level_variance: 0.35}
+    SynthEnvelope: {attack: 0.002, decay: 0.06}
+    SynthFilter: {kind: SynthLowPass, cutoff: 1100, resonance: 0.1}
+    scuff { SynthOscillator: {wave: SynthNoise, level: 0.35} }
+    thud { SynthOscillator: {wave: SynthSine, frequency: 120, frequency_end: 70, sweep: 0.05, level: 0.25} }
+  }
+
+  prefab SfxBirdA {
+    AudioOutput: {bus: mv_ambience}
+    SynthSound: {pitch_variance: 0.12, level_variance: 0.2}
+    SynthEnvelope: {attack: 0.005, decay: 0.09}
+    chirp { SynthOscillator: {wave: SynthSine, frequency: 2900, frequency_end: 3900, sweep: 0.07, level: 0.25} }
+    over { SynthOscillator: {wave: SynthSine, frequency: 5800, frequency_end: 7800, sweep: 0.07, level: 0.04} }
+  }
+
+  prefab SfxBirdB {
+    AudioOutput: {bus: mv_ambience}
+    SynthSound: {pitch_variance: 0.1, level_variance: 0.2}
+    SynthEnvelope: {attack: 0.01, decay: 0.05, sustain: 0.7, hold: 0.12, release: 0.06}
+    whistle { SynthOscillator: {wave: SynthSine, frequency: 2200, frequency_end: 1700, sweep: 0.2, level: 0.22} }
+  }
+
+  prefab SfxCricket {
+    AudioOutput: {bus: mv_ambience}
+    SynthSound: {pitch_variance: 0.05, level_variance: 0.3}
+    SynthEnvelope: {attack: 0.002, decay: 0.03}
+    SynthFilter: {kind: SynthBandPass, cutoff: 4400, resonance: 0.6}
+    buzz { SynthOscillator: {wave: SynthSquare, frequency: 4400, level: 0.12} }
+  }
+
+  prefab SfxWater {
+    AudioOutput: {bus: mv_ambience}
+    SynthSound: {seed: 41}
+    SynthEnvelope: {attack: 0.4, sustain: 1, hold: 3.2, release: 0.4}
+    SynthFilter: {kind: SynthBandPass, cutoff: 700, resonance: 0.35}
+    rush { SynthOscillator: {wave: SynthNoise, level: 0.5} }
+  }
+
+  prefab SfxWind {
+    AudioOutput: {bus: mv_ambience}
+    SynthSound: {seed: 43}
+    SynthEnvelope: {attack: 1.5, sustain: 1, hold: 4, release: 1.5}
+    SynthFilter: {kind: SynthBandPass, cutoff: 380, resonance: 0.3}
+    SynthFilterEnvelope: {attack: 3, sustain: 1, hold: 4, amount: 0.453}
+    air { SynthOscillator: {wave: SynthNoise, level: 0.18} }
+  }
+
+  prefab SfxSelect {
+    AudioOutput: {bus: mv_ui}
+    SynthSound: {pitch_variance: 0.02}
+    SynthEnvelope: {attack: 0.002, decay: 0.12}
+    SynthFilter: {kind: SynthLowPass, cutoff: 4000}
+    ting { SynthOscillator: {wave: SynthTriangle, frequency: 1320, level: 0.25} }
+    bell { SynthOscillator: {wave: SynthSine, frequency: 1980, level: 0.12} }
+  }
 }
 
-prefab SfxBirdA {
-  AudioOutput: {bus: mv_ambience}
-  SynthSound: {pitch_variance: 0.12, level_variance: 0.2}
-  SynthEnvelope: {attack: 0.005, decay: 0.09}
-  chirp { SynthOscillator: {wave: SynthSine, frequency: 2900, frequency_end: 3900, sweep: 0.07, level: 0.25} }
-  over { SynthOscillator: {wave: SynthSine, frequency: 5800, frequency_end: 7800, sweep: 0.07, level: 0.04} }
-}
-
-prefab SfxBirdB {
-  AudioOutput: {bus: mv_ambience}
-  SynthSound: {pitch_variance: 0.1, level_variance: 0.2}
-  SynthEnvelope: {attack: 0.01, decay: 0.05, sustain: 0.7, hold: 0.12, release: 0.06}
-  whistle { SynthOscillator: {wave: SynthSine, frequency: 2200, frequency_end: 1700, sweep: 0.2, level: 0.22} }
-}
-
-prefab SfxCricket {
-  AudioOutput: {bus: mv_ambience}
-  SynthSound: {pitch_variance: 0.05, level_variance: 0.3}
-  SynthEnvelope: {attack: 0.002, decay: 0.03}
-  SynthFilter: {kind: SynthBandPass, cutoff: 4400, resonance: 0.6}
-  buzz { SynthOscillator: {wave: SynthSquare, frequency: 4400, level: 0.12} }
-}
-
-prefab SfxWater {
-  AudioOutput: {bus: mv_ambience}
-  SynthSound: {seed: 41}
-  SynthEnvelope: {attack: 0.4, sustain: 1, hold: 3.2, release: 0.4}
-  SynthFilter: {kind: SynthBandPass, cutoff: 700, resonance: 0.35}
-  rush { SynthOscillator: {wave: SynthNoise, level: 0.5} }
-}
-
-prefab SfxWind {
-  AudioOutput: {bus: mv_ambience}
-  SynthSound: {seed: 43}
-  SynthEnvelope: {attack: 1.5, sustain: 1, hold: 4, release: 1.5}
-  SynthFilter: {kind: SynthBandPass, cutoff: 380, resonance: 0.3}
-  SynthFilterEnvelope: {attack: 3, sustain: 1, hold: 4, amount: 0.453}
-  air { SynthOscillator: {wave: SynthNoise, level: 0.18} }
-}
-
-prefab SfxSelect {
-  AudioOutput: {bus: mv_ui}
-  SynthSound: {pitch_variance: 0.02}
-  SynthEnvelope: {attack: 0.002, decay: 0.12}
-  SynthFilter: {kind: SynthLowPass, cutoff: 4000}
-  ting { SynthOscillator: {wave: SynthTriangle, frequency: 1320, level: 0.25} }
-  bell { SynthOscillator: {wave: SynthSine, frequency: 1980, level: 0.12} }
-}
-
-mv_water_sounds {
-  for i in 0..9 {
-    const zz = -88 + i * 22
-    "river_{i}" {
-      Position: {river_x(zz), 0.5, zz}
-      AudioSource: {sound: SfxWater, loop: true, volume: 0.5}
-      AudioSpatial: {min_distance: 4, max_distance: 22}
+mossvale {
+  mv_water_sounds {
+    for i in 0..9 {
+      const zz = -88 + i * 22
+      "river_{i}" {
+        Position: {river_x(zz), 0.5, zz}
+        AudioSource: {sound: assets.SfxWater, loop: true, volume: 0.5}
+        AudioSpatial: {min_distance: 4, max_distance: 22}
+      }
     }
-  }
-  lake_a {
-    Position: {LAKE_X + 8, 0.5, LAKE_Z + 6}
-    AudioSource: {sound: SfxWater, loop: true, volume: 0.3}
-    AudioSpatial: {min_distance: 8, max_distance: 30}
-  }
-  wind {
-    AudioSource: {sound: SfxWind, loop: true, volume: 0.6}
+    lake_a {
+      Position: {LAKE_X + 8, 0.5, LAKE_Z + 6}
+      AudioSource: {sound: assets.SfxWater, loop: true, volume: 0.3}
+      AudioSpatial: {min_distance: 8, max_distance: 30}
+    }
+    wind {
+      AudioSource: {sound: assets.SfxWind, loop: true, volume: 0.6}
+    }
   }
 }
 
@@ -528,7 +540,7 @@ async {
       const k = floor(walk_phase / PI)
       if k != last_step {
         last_step = k
-        const a = box.audio.play(SfxStep, sprinting ? 0.55 : 0.4)
+        const a = box.audio.play(assets.SfxStep, sprinting ? 0.55 : 0.4)
       }
     }
   }
@@ -543,20 +555,20 @@ async {
       const oz = (hash(clock * 2.1) - 0.5) * 16
       if night {
         for i in 0..3 {
-          const c = box.audio.play_at(SfxCricket, {px + ox, 0.3, pz + oz}, 0.5)
+          const c = box.audio.play_at(assets.SfxCricket, {px + ox, 0.3, pz + oz}, 0.5)
           await delay(0.06)
         }
       } else if pz > WALL_N1 + 2 || hash(clock) > 0.5 {
         if hash(clock * 5.1) > 0.45 {
           const n = 2 + floor(hash(clock * 7.7) * 3)
           for i in 0..n {
-            const c = box.audio.play_at(SfxBirdA, {px + ox, 3, pz + oz}, 0.6)
+            const c = box.audio.play_at(assets.SfxBirdA, {px + ox, 3, pz + oz}, 0.6)
             await delay(0.11 + hash(i + clock) * 0.06)
           }
         } else {
-          const c = box.audio.play_at(SfxBirdB, {px + ox, 3, pz + oz}, 0.5)
+          const c = box.audio.play_at(assets.SfxBirdB, {px + ox, 3, pz + oz}, 0.5)
           await delay(0.3)
-          const d = box.audio.play_at(SfxBirdB, {px + ox, 3, pz + oz}, 0.4)
+          const d = box.audio.play_at(assets.SfxBirdB, {px + ox, 3, pz + oz}, 0.4)
         }
       }
     }
@@ -566,6 +578,6 @@ async {
 async {
   while true {
     await PickSpell
-    const a = box.audio.play(SfxSelect, 0.5)
+    const a = box.audio.play(assets.SfxSelect, 0.5)
   }
 }

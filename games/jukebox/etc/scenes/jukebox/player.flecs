@@ -3,22 +3,28 @@ using flecs.script.math
 using box.audio
 using box.input
 using box.material
+using state
+using assets
 
-jukebox_actions {
-  play { Action: {description: "Play or pause"}; Binding: {key: Space} }
-  crash { Action: {description: "Crash on the next bar"}; Binding: {key: C} }
+state {
+  jukebox_actions {
+    play { Action: {description: "Play or pause"}; Binding: {key: Space} }
+    crash { Action: {description: "Crash on the next bar"}; Binding: {key: C} }
+  }
 }
 
-prefab jb_crash {
-  AudioOutput: {bus: sfx}
-  SynthSound: {seed: 43, level_variance: 0.05}
-  SynthEnvelope: {attack: 0.001, decay: 2.2, curve: 5}
-  SynthFilter: {kind: SynthHighPass, cutoff: 2600, resonance: 0.1}
-  wash { SynthOscillator: {wave: SynthNoise, level: 0.45} }
-  bell {
-    SynthOscillator: {frequency: 3170, level: 0.08, feedback: 0.9}
-    SynthEnvelope: {attack: 0.001, decay: 1.2, curve: 5}
-    shimmer { SynthOscillator: {frequency: 4470, modulation: SynthRing, index: 1} }
+assets {
+  prefab jb_crash {
+    AudioOutput: {bus: sfx}
+    SynthSound: {seed: 43, level_variance: 0.05}
+    SynthEnvelope: {attack: 0.001, decay: 2.2, curve: 5}
+    SynthFilter: {kind: SynthHighPass, cutoff: 2600, resonance: 0.1}
+    wash { SynthOscillator: {wave: SynthNoise, level: 0.45} }
+    bell {
+      SynthOscillator: {frequency: 3170, level: 0.08, feedback: 0.9}
+      SynthEnvelope: {attack: 0.001, decay: 1.2, curve: 5}
+      shimmer { SynthOscillator: {frequency: 4470, modulation: SynthRing, index: 1} }
+    }
   }
 }
 
@@ -38,15 +44,15 @@ $ {
 
 async {
   while true {
-    await on.pressed(jukebox_actions.play)
+    await on.pressed(state.jukebox_actions.play)
     playing = !playing
   }
 }
 
 async {
   while true {
-    await on.pressed(jukebox_actions.crash)
-    const c = box.audio.play_quantized(jb_crash, 0.7, Bar)
+    await on.pressed(state.jukebox_actions.crash)
+    const c = box.audio.play_quantized(assets.jb_crash, 0.7, Bar)
   }
 }
 

@@ -9,298 +9,310 @@ using box.geometry
 using box.material
 using box.camera
 using box.particle
+using state
+using assets
 
-event CastReq(x: f32, z: f32)
-event Advance()
-event PickSpell(s: i32)
+state {
+  event CastReq(x: f32, z: f32)
+  event Advance()
+  event PickSpell(s: i32)
 
-export mut casting = false
-export mut pick_x: f32 = 0
-export mut pick_z: f32 = 0
-export mut talk_cool: f64 = 0
-export mut aim_target: i32 = -1
+  export mut casting = false
+  export mut pick_x: f32 = 0
+  export mut pick_z: f32 = 0
+  export mut talk_cool: f64 = 0
+  export mut aim_target: i32 = -1
+}
 
-template SpellKey {
-  prop s: i32 = 1
-  prop key: Key = Num1
-  Action: {description: "Choose a spell"}
-  Binding: {key: key}
-  async {
-    while true {
-      await on.pressed(this)
-      emit PickSpell(s: s)
+assets {
+  template SpellKey {
+    prop s: i32 = 1
+    prop key: Key = Num1
+    Action: {description: "Choose a spell"}
+    Binding: {key: key}
+    async {
+      while true {
+        await on.pressed(this)
+        emit PickSpell(s: s)
+      }
     }
   }
 }
 
-mv_actions {
-  MoveLeft { Action: {description: "Walk west"}; Binding: {key: A}; alt { Binding: {key: Left} } }
-  MoveRight { Action: {description: "Walk east"}; Binding: {key: D}; alt { Binding: {key: Right} } }
-  MoveUp { Action: {description: "Walk north"}; Binding: {key: W}; alt { Binding: {key: Up} } }
-  MoveDown { Action: {description: "Walk south"}; Binding: {key: S}; alt { Binding: {key: Down} } }
-  Sprint { Action: {description: "Hurry"}; Binding: {key: ShiftLeft}; alt { Binding: {key: ShiftRight} } }
-  CastKey { Action: {description: "Cast at the nearest target"}; Binding: {key: Space} }
-  CastClick { Action: {description: "Cast where the cursor points"}; Binding: {key: MouseLeft} }
-  TalkKey { Action: {description: "Talk"}; Binding: {key: E}; alt { Binding: {key: Enter} } }
-  NextSpell { Action: {description: "Next spell"}; Binding: {key: Q}; alt { Binding: {key: Tab} } }
-  SpellKey key_1(s: 1, key: Num1)
-  SpellKey key_2(s: 2, key: Num2)
-  SpellKey key_3(s: 3, key: Num3)
-  SpellKey key_4(s: 4, key: Num4)
-  SpellKey key_5(s: 5, key: Num5)
-  SpellKey key_6(s: 6, key: Num6)
+state {
+  mv_actions {
+    MoveLeft { Action: {description: "Walk west"}; Binding: {key: A}; alt { Binding: {key: Left} } }
+    MoveRight { Action: {description: "Walk east"}; Binding: {key: D}; alt { Binding: {key: Right} } }
+    MoveUp { Action: {description: "Walk north"}; Binding: {key: W}; alt { Binding: {key: Up} } }
+    MoveDown { Action: {description: "Walk south"}; Binding: {key: S}; alt { Binding: {key: Down} } }
+    Sprint { Action: {description: "Hurry"}; Binding: {key: ShiftLeft}; alt { Binding: {key: ShiftRight} } }
+    CastKey { Action: {description: "Cast at the nearest target"}; Binding: {key: Space} }
+    CastClick { Action: {description: "Cast where the cursor points"}; Binding: {key: MouseLeft} }
+    TalkKey { Action: {description: "Talk"}; Binding: {key: E}; alt { Binding: {key: Enter} } }
+    NextSpell { Action: {description: "Next spell"}; Binding: {key: Q}; alt { Binding: {key: Tab} } }
+    SpellKey key_1(s: 1, key: Num1)
+    SpellKey key_2(s: 2, key: Num2)
+    SpellKey key_3(s: 3, key: Num3)
+    SpellKey key_4(s: 4, key: Num4)
+    SpellKey key_5(s: 5, key: Num5)
+    SpellKey key_6(s: 6, key: Num6)
+  }
+
+  fn aim_ground_x(mx: f64, my: f64, w: f64, h: f64, cx: f64, cdist: f64, pitch: f64, fov: f64) -> f64 {
+    const t = tan(fov * PI / 360)
+    const nx = (2 * mx / w - 1) * t * w / h
+    const ny = (1 - 2 * my / h) * t
+    const dy = ny * cos(pitch) - sin(pitch)
+    const cy = sin(pitch) * cdist
+    const s = 0 - cy / min(dy, -0.01)
+    cx + s * nx
+  }
+
+  fn aim_ground_z(mx: f64, my: f64, w: f64, h: f64, cz: f64, cdist: f64, pitch: f64, fov: f64) -> f64 {
+    const t = tan(fov * PI / 360)
+    const ny = (1 - 2 * my / h) * t
+    const dy = ny * cos(pitch) - sin(pitch)
+    const dz = 0 - ny * sin(pitch) - cos(pitch)
+    const cy = sin(pitch) * cdist
+    const s = 0 - cy / min(dy, -0.01)
+    cz + cos(pitch) * cdist + s * dz
+  }
+
+  export const CAM_FOV: f32 = 40
+  export const CAST_RANGE: f32 = 9
+
+  proc pick_target() {
+    mut best: f64 = CAST_RANGE * CAST_RANGE
+    mut bi: i32 = -1
+    for i in 0..TARGETS {
+      if t_on[i] && t_sp[i] == spell && ts[i] < t_lv[i] && qs[t_q[i]] >= QS_OPEN {
+        if t_req[i] < 0 || ts[t_req[i]] >= t_lv[t_req[i]] {
+          const d = dist2(px, pz, t_x[i], t_z[i])
+          if d < best {
+            best = d
+            bi = i
+          }
+        }
+      }
+    }
+    aim_target = bi
+    if bi >= 0 {
+      pick_x = t_x[bi]
+      pick_z = t_z[bi]
+    } else {
+      pick_x = px + sin(pyaw) * 3.5
+      pick_z = pz + cos(pyaw) * 3.5
+    }
+  }
 }
 
-fn aim_ground_x(mx: f64, my: f64, w: f64, h: f64, cx: f64, cdist: f64, pitch: f64, fov: f64) -> f64 {
-  const t = tan(fov * PI / 360)
-  const nx = (2 * mx / w - 1) * t * w / h
-  const ny = (1 - 2 * my / h) * t
-  const dy = ny * cos(pitch) - sin(pitch)
-  const cy = sin(pitch) * cdist
-  const s = 0 - cy / min(dy, -0.01)
-  cx + s * nx
-}
+assets {
+  template Mage {
+    const legs = sin(walk_phase) * (moving ? 0.6 : 0)
+    const bob = moving ? abs(sin(walk_phase)) * 0.08 : sin(clock * 2.2) * 0.025
+    const sway = moving ? sin(walk_phase) * 0.06 : sin(clock * 1.3) * 0.03
+    const gem: Rgb = {spell_r(spell), spell_g(spell), spell_b(spell)}
 
-fn aim_ground_z(mx: f64, my: f64, w: f64, h: f64, cz: f64, cdist: f64, pitch: f64, fov: f64) -> f64 {
-  const t = tan(fov * PI / 360)
-  const ny = (1 - 2 * my / h) * t
-  const dy = ny * cos(pitch) - sin(pitch)
-  const dz = 0 - ny * sin(pitch) - cos(pitch)
-  const cy = sin(pitch) * cdist
-  const s = 0 - cy / min(dy, -0.01)
-  cz + cos(pitch) * cdist + s * dz
-}
+    Position: {px, 0, pz}
+    Rotation: {0, pyaw, 0}
 
-export const CAM_FOV: f32 = 40
-export const CAST_RANGE: f32 = 9
-
-proc pick_target() {
-  mut best: f64 = CAST_RANGE * CAST_RANGE
-  mut bi: i32 = -1
-  for i in 0..TARGETS {
-    if t_on[i] && t_sp[i] == spell && ts[i] < t_lv[i] && qs[t_q[i]] >= QS_OPEN {
-      if t_req[i] < 0 || ts[t_req[i]] >= t_lv[t_req[i]] {
-        const d = dist2(px, pz, t_x[i], t_z[i])
-        if d < best {
-          best = d
-          bi = i
+    if moving && sprinting {
+      dust {
+        Position: {0, 0.15, -0.3}
+        ParticleEmitter: {max: 40, rate: 18, shape: EmitterSphere, radius: 0.2, direction: {0, 1, -1}, spread: 50, speed: {0.4, 1.0}, lifetime: {0.5, 0.9}, size: {0.25, 0.45}, opacity: {0.3, 0.5}, color: {200, 180, 140}, color_variance: {10, 10, 10}, seed: 17}
+        ParticleCurves: {size: {keys: [{0, 0.6}, {1, 1.8}]}, opacity: {keys: [{0, 1}, {1, 0}]}}
+      }
+    }
+    leg_a {
+      Position: {-0.16, 0.85, 0}
+      Rotation: {legs, 0, 0}
+      shin : MvDark { Position: {0, -0.4, 0}; Capsule: {length: 0.5, radius: 0.09, segments: 8, smooth: true}; Rgb: {60, 44, 70} }
+      boot : MvLeather { Position: {0, -0.76, 0.06}; RoundedBox: {0.2, 0.2, 0.34, 0.08, segments: 2} }
+      cuff : MvLeather { Position: {0, -0.62, 0.02}; Cylinder: {length: 0.08, radius: 0.11, segments: 8}; Rgb: {120, 80, 52} }
+    }
+    leg_b {
+      Position: {0.16, 0.85, 0}
+      Rotation: {0 - legs, 0, 0}
+      shin : MvDark { Position: {0, -0.4, 0}; Capsule: {length: 0.5, radius: 0.09, segments: 8, smooth: true}; Rgb: {60, 44, 70} }
+      boot : MvLeather { Position: {0, -0.76, 0.06}; RoundedBox: {0.2, 0.2, 0.34, 0.08, segments: 2} }
+      cuff : MvLeather { Position: {0, -0.62, 0.02}; Cylinder: {length: 0.08, radius: 0.11, segments: 8}; Rgb: {120, 80, 52} }
+    }
+    torso {
+      Position: {0, bob, 0}
+      robe : MvCloth { Position: {0, 0.26, 0}; Rotation: {0, 0, sway * 0.3}; Lathe: {profile: MvRobeShape, segments: 18, rings: 14}; Rgb: {98, 66, 160}; TextureTransform: {4, 2, 0, 0} }
+      hem : MvGold { Position: {0, 0.29, 0}; Torus: {radius: 0.585, tube: 0.028, segments: 20, rings: 4} }
+      for k in 0..7 {
+        const a = k * 0.8976 + 0.3
+        "star_{k}" : MvGold { Position: {sin(a) * 0.55, 0.42 + fract(k * 0.37) * 0.12, cos(a) * 0.55}; Rotation: {0, a, 0.3}; Scale: {1, 1, 0.4}; IcoSphere: {radius: 0.035, segments: 0}; Emissive: {strength: 0.4, color: {255, 210, 120}} }
+      }
+      belt : MvLeather { Position: {0, 1.19, 0}; Torus: {radius: 0.31, tube: 0.045, segments: 16, rings: 4} }
+      buckle : MvGold { Position: {0, 1.19, 0.34}; Box: {0.11, 0.1, 0.03}; Bevel: {radius: 0.015, segments: 1} }
+      pouch : MvLeather { Position: {0.28, 1.04, 0.18}; Rotation: {0, 0.6, 0}; RoundedBox: {0.16, 0.2, 0.1, 0.04, segments: 2} }
+      pouch_flap : MvLeather { Position: {0.29, 1.12, 0.2}; Rotation: {0, 0.6, 0}; Box: {0.17, 0.06, 0.11}; Rgb: {80, 50, 32} }
+      vial { Position: {-0.26, 1.06, 0.2}; Capsule: {length: 0.08, radius: 0.045, segments: 8, smooth: true}; Rgb: {120, 220, 160}; PbrMaterial: {roughness: 0.1}; ClearCoat: {strength: 1, roughness: 0.05}; Emissive: {strength: 0.6, color: {100, 220, 150}} }
+      cape : MvCloth { Position: {0, 1.05, -0.08}; Rotation: {0.1 + abs(legs) * 0.18, PI, 0}; Tube: {length: 1.45, radius: 0.36, thickness: 0.03, arc: 3.4, segments: 14}; Rgb: {58, 40, 112}; TextureTransform: {2, 2, 0, 0} }
+      mantle : MvCloth { Position: {0, 1.68, -0.02}; Scale: {0.44, 0.17, 0.38}; Sphere: {radius: 1, segments: 16, smooth: true}; Rgb: {70, 48, 128} }
+      clasp : MvGold { Position: {0, 1.72, 0.36}; Sphere: {radius: 0.05, segments: 8, smooth: true} }
+      clasp_gem { Position: {0, 1.72, 0.405}; Sphere: {radius: 0.025, segments: 6}; Rgb: gem; Emissive: {strength: 1.5, color: gem}; NoShadow }
+      arm_l {
+        Position: {-0.36, 1.66, 0}
+        Rotation: {0 - legs * 0.6, 0, 0.22}
+        sleeve : MvCloth { Position: {0, -0.3, 0}; Frustum: {length: 0.6, radius_bottom: 0.15, radius_top: 0.08, segments: 10}; Rgb: {98, 66, 160} }
+        cuff : MvGold { Position: {0, -0.59, 0}; Torus: {radius: 0.14, tube: 0.02, segments: 12, rings: 3} }
+        hand : MvSkin { Position: {0, -0.66, 0}; Sphere: {radius: 0.085, segments: 10, smooth: true} }
+      }
+      arm_r {
+        Position: {0.36, 1.66, 0}
+        Rotation: {cast_anim > 0 ? -2.2 : -0.4 + legs * 0.4, 0, -0.15}
+        Transition: [Rotation: {duration: 0.12}]
+        sleeve : MvCloth { Position: {0, -0.3, 0}; Frustum: {length: 0.6, radius_bottom: 0.15, radius_top: 0.08, segments: 10}; Rgb: {98, 66, 160} }
+        cuff : MvGold { Position: {0, -0.59, 0}; Torus: {radius: 0.14, tube: 0.02, segments: 12, rings: 3} }
+        hand : MvSkin { Position: {0, -0.66, 0}; Sphere: {radius: 0.085, segments: 10, smooth: true} }
+        staff {
+          Position: {0, -0.66, 0.05}
+          Rotation: {0.4, 0, 0}
+          pole : MvBark { Position: {0, 0, 0}; Sweep: {path: MvStaffPath, profile: MvRoundProfile, scale: {0.045, 0.045}, taper: 0.75, rings: 20}; Rgb: {120, 86, 56}; TextureTransform: {1, 3, 0, 0} }
+          knot : MvBark { Position: {0.01, 0.35, 0}; Sphere: {radius: 0.06, segments: 8, smooth: true}; Rgb: {110, 78, 50} }
+          crook : MvBark { Position: {0.0, 1.34, 0}; Rotation: {HALF_PI, 0, 0}; TorusShell: {radius: 0.15, tube: 0.03, ring_start: 4.4, ring_end: 10.6, tube_start: 0, tube_end: 6.283, segments: 14, rings: 5}; Rgb: {120, 86, 56} }
+          leaf_a : MvLeafLight { Position: {0.12, 1.18, 0.02}; Rotation: {0, 0, -0.6}; Scale: {0.5, 1, 0.2}; Sphere: {radius: 0.07, segments: 6, smooth: true} }
+          leaf_b : MvLeaf { Position: {-0.1, 1.22, 0.02}; Rotation: {0, 0, 0.7}; Scale: {0.5, 1, 0.2}; Sphere: {radius: 0.06, segments: 6, smooth: true} }
+          orb_ { Position: {0, 1.36, 0}; Sphere: {radius: 0.11, segments: 12, smooth: true}; Rgb: gem; Emissive: {strength: 3, color: gem}; NoShadow }
+          glow_ { Position: {0, 1.36, 0}; PointLight: {intensity: 1.5, range: 4}; Rgb: gem }
+        }
+      }
+      head {
+        Position: {0, 2.08, 0}
+        face_ : MvSkin { Position: {0, 0, 0}; Sphere: {radius: 0.27, segments: 16, smooth: true} }
+        cheek_a : MvBlush { Position: {-0.15, -0.06, 0.2}; Scale: {1, 0.6, 0.4}; Sphere: {radius: 0.06, segments: 8, smooth: true} }
+        cheek_b : MvBlush { Position: {0.15, -0.06, 0.2}; Scale: {1, 0.6, 0.4}; Sphere: {radius: 0.06, segments: 8, smooth: true} }
+        nose : MvSkin { Position: {0, -0.03, 0.26}; Sphere: {radius: 0.04, segments: 8, smooth: true} }
+        eye_a : MvDark { Position: {-0.09, 0.03, 0.235}; Scale: {0.8, 1.1, 0.6}; Sphere: {radius: 0.045, segments: 8, smooth: true}; PbrMaterial: {roughness: 0.2} }
+        eye_b : MvDark { Position: {0.09, 0.03, 0.235}; Scale: {0.8, 1.1, 0.6}; Sphere: {radius: 0.045, segments: 8, smooth: true}; PbrMaterial: {roughness: 0.2} }
+        shine_a : MvPetalWhite { Position: {-0.08, 0.05, 0.262}; Sphere: {radius: 0.012, segments: 5}; Emissive: {strength: 0.5, color: {255, 255, 255}} }
+        shine_b : MvPetalWhite { Position: {0.1, 0.05, 0.262}; Sphere: {radius: 0.012, segments: 5}; Emissive: {strength: 0.5, color: {255, 255, 255}} }
+        smile : MvDark { Position: {0, -0.11, 0.235}; Rotation: {HALF_PI + 0.3, 0, 0}; TorusShell: {radius: 0.045, tube: 0.008, ring_start: 0.5, ring_end: 2.64, tube_start: 0, tube_end: 6.283, segments: 8, rings: 3}; Rgb: {120, 50, 50} }
+        hair_ { Position: {0, 0.0, -0.05}; Scale: {1.06, 1.1, 1.0}; HemiSphere: {radius: 0.3, segments: 14, smooth: true}; Rgb: {200, 90, 44}; PbrMaterial: {roughness: 0.8} }
+        hair_back { Position: {0, -0.12, -0.12}; Scale: {1.08, 0.9, 0.8}; Sphere: {radius: 0.28, segments: 12, smooth: true}; Rgb: {190, 84, 40}; PbrMaterial: {roughness: 0.8} }
+        bangs { Position: {0, 0.14, 0.16}; Rotation: {0.5, 0, 0}; Scale: {1.1, 0.4, 0.6}; Sphere: {radius: 0.22, segments: 12, smooth: true}; Rgb: {208, 96, 48}; PbrMaterial: {roughness: 0.8} }
+        lock_a { Position: {-0.24, -0.1, 0.05}; Rotation: {0.1, 0, 0.1}; Capsule: {length: 0.2, radius: 0.07, segments: 8, smooth: true}; Rgb: {196, 88, 42}; PbrMaterial: {roughness: 0.8} }
+        lock_b { Position: {0.24, -0.1, 0.05}; Rotation: {0.1, 0, -0.1}; Capsule: {length: 0.2, radius: 0.07, segments: 8, smooth: true}; Rgb: {196, 88, 42}; PbrMaterial: {roughness: 0.8} }
+        hat {
+          Position: {0, 0.15, -0.02}
+          Rotation: {-0.12 - bool_f(moving) * 0.1, 0, sway}
+          brim : MvCloth { Position: {0, 0, 0}; Scale: {1.05, 1, 1.05}; Lathe: {profile: MvBrimShape, segments: 22, rings: 8}; Rgb: {76, 52, 132} }
+          band : MvGold { Position: {0, 0.07, 0}; Cylinder: {length: 0.07, radius: 0.285, segments: 16} }
+          cone : MvCloth { Position: {0, 0.05, 0}; Sweep: {path: MvHatPath, profile: MvRoundProfile, scale: {0.28, 0.28}, taper: 0.08, cap_start: true, cap_end: true, rings: 18}; Rgb: {84, 58, 142}; TextureTransform: {2, 2, 0, 0} }
+          star { Position: {0, 0.08, 0.3}; Rotation: {0, 0, 0.3}; IcoSphere: {radius: 0.05, segments: 0}; Rgb: {255, 220, 120}; PbrMaterial: {metallic: 1, roughness: 0.3}; Emissive: {strength: 0.8, color: {255, 200, 100}} }
+          tip_bell : MvGold { Position: {0, 1.08, -0.44}; Sphere: {radius: 0.04, segments: 8, smooth: true} }
         }
       }
     }
   }
-  aim_target = bi
-  if bi >= 0 {
-    pick_x = t_x[bi]
-    pick_z = t_z[bi]
-  } else {
-    pick_x = px + sin(pyaw) * 3.5
-    pick_z = pz + cos(pyaw) * 3.5
-  }
 }
 
-template Mage {
-  const legs = sin(walk_phase) * (moving ? 0.6 : 0)
-  const bob = moving ? abs(sin(walk_phase)) * 0.08 : sin(clock * 2.2) * 0.025
-  const sway = moving ? sin(walk_phase) * 0.06 : sin(clock * 1.3) * 0.03
-  const gem: Rgb = {spell_r(spell), spell_g(spell), spell_b(spell)}
-
-  Position: {px, 0, pz}
-  Rotation: {0, pyaw, 0}
-
-  if moving && sprinting {
-    dust {
-      Position: {0, 0.15, -0.3}
-      ParticleEmitter: {max: 40, rate: 18, shape: EmitterSphere, radius: 0.2, direction: {0, 1, -1}, spread: 50, speed: {0.4, 1.0}, lifetime: {0.5, 0.9}, size: {0.25, 0.45}, opacity: {0.3, 0.5}, color: {200, 180, 140}, color_variance: {10, 10, 10}, seed: 17}
-      ParticleCurves: {size: {keys: [{0, 0.6}, {1, 1.8}]}, opacity: {keys: [{0, 1}, {1, 0}]}}
+mossvale {
+  mage {
+    Mage body() {
+      Scale: {1.15, 1.15, 1.15}
     }
   }
-  leg_a {
-    Position: {-0.16, 0.85, 0}
-    Rotation: {legs, 0, 0}
-    shin : MvDark { Position: {0, -0.4, 0}; Capsule: {length: 0.5, radius: 0.09, segments: 8, smooth: true}; Rgb: {60, 44, 70} }
-    boot : MvLeather { Position: {0, -0.76, 0.06}; RoundedBox: {0.2, 0.2, 0.34, 0.08, segments: 2} }
-    cuff : MvLeather { Position: {0, -0.62, 0.02}; Cylinder: {length: 0.08, radius: 0.11, segments: 8}; Rgb: {120, 80, 52} }
-  }
-  leg_b {
-    Position: {0.16, 0.85, 0}
-    Rotation: {0 - legs, 0, 0}
-    shin : MvDark { Position: {0, -0.4, 0}; Capsule: {length: 0.5, radius: 0.09, segments: 8, smooth: true}; Rgb: {60, 44, 70} }
-    boot : MvLeather { Position: {0, -0.76, 0.06}; RoundedBox: {0.2, 0.2, 0.34, 0.08, segments: 2} }
-    cuff : MvLeather { Position: {0, -0.62, 0.02}; Cylinder: {length: 0.08, radius: 0.11, segments: 8}; Rgb: {120, 80, 52} }
-  }
-  torso {
-    Position: {0, bob, 0}
-    robe : MvCloth { Position: {0, 0.26, 0}; Rotation: {0, 0, sway * 0.3}; Lathe: {profile: MvRobeShape, segments: 18, rings: 14}; Rgb: {98, 66, 160}; TextureTransform: {4, 2, 0, 0} }
-    hem : MvGold { Position: {0, 0.29, 0}; Torus: {radius: 0.585, tube: 0.028, segments: 20, rings: 4} }
-    for k in 0..7 {
-      const a = k * 0.8976 + 0.3
-      "star_{k}" : MvGold { Position: {sin(a) * 0.55, 0.42 + fract(k * 0.37) * 0.12, cos(a) * 0.55}; Rotation: {0, a, 0.3}; Scale: {1, 1, 0.4}; IcoSphere: {radius: 0.035, segments: 0}; Emissive: {strength: 0.4, color: {255, 210, 120}} }
-    }
-    belt : MvLeather { Position: {0, 1.19, 0}; Torus: {radius: 0.31, tube: 0.045, segments: 16, rings: 4} }
-    buckle : MvGold { Position: {0, 1.19, 0.34}; Box: {0.11, 0.1, 0.03}; Bevel: {radius: 0.015, segments: 1} }
-    pouch : MvLeather { Position: {0.28, 1.04, 0.18}; Rotation: {0, 0.6, 0}; RoundedBox: {0.16, 0.2, 0.1, 0.04, segments: 2} }
-    pouch_flap : MvLeather { Position: {0.29, 1.12, 0.2}; Rotation: {0, 0.6, 0}; Box: {0.17, 0.06, 0.11}; Rgb: {80, 50, 32} }
-    vial { Position: {-0.26, 1.06, 0.2}; Capsule: {length: 0.08, radius: 0.045, segments: 8, smooth: true}; Rgb: {120, 220, 160}; PbrMaterial: {roughness: 0.1}; ClearCoat: {strength: 1, roughness: 0.05}; Emissive: {strength: 0.6, color: {100, 220, 150}} }
-    cape : MvCloth { Position: {0, 1.05, -0.08}; Rotation: {0.1 + abs(legs) * 0.18, PI, 0}; Tube: {length: 1.45, radius: 0.36, thickness: 0.03, arc: 3.4, segments: 14}; Rgb: {58, 40, 112}; TextureTransform: {2, 2, 0, 0} }
-    mantle : MvCloth { Position: {0, 1.68, -0.02}; Scale: {0.44, 0.17, 0.38}; Sphere: {radius: 1, segments: 16, smooth: true}; Rgb: {70, 48, 128} }
-    clasp : MvGold { Position: {0, 1.72, 0.36}; Sphere: {radius: 0.05, segments: 8, smooth: true} }
-    clasp_gem { Position: {0, 1.72, 0.405}; Sphere: {radius: 0.025, segments: 6}; Rgb: gem; Emissive: {strength: 1.5, color: gem}; NoShadow }
-    arm_l {
-      Position: {-0.36, 1.66, 0}
-      Rotation: {0 - legs * 0.6, 0, 0.22}
-      sleeve : MvCloth { Position: {0, -0.3, 0}; Frustum: {length: 0.6, radius_bottom: 0.15, radius_top: 0.08, segments: 10}; Rgb: {98, 66, 160} }
-      cuff : MvGold { Position: {0, -0.59, 0}; Torus: {radius: 0.14, tube: 0.02, segments: 12, rings: 3} }
-      hand : MvSkin { Position: {0, -0.66, 0}; Sphere: {radius: 0.085, segments: 10, smooth: true} }
-    }
-    arm_r {
-      Position: {0.36, 1.66, 0}
-      Rotation: {cast_anim > 0 ? -2.2 : -0.4 + legs * 0.4, 0, -0.15}
-      Transition: [Rotation: {duration: 0.12}]
-      sleeve : MvCloth { Position: {0, -0.3, 0}; Frustum: {length: 0.6, radius_bottom: 0.15, radius_top: 0.08, segments: 10}; Rgb: {98, 66, 160} }
-      cuff : MvGold { Position: {0, -0.59, 0}; Torus: {radius: 0.14, tube: 0.02, segments: 12, rings: 3} }
-      hand : MvSkin { Position: {0, -0.66, 0}; Sphere: {radius: 0.085, segments: 10, smooth: true} }
-      staff {
-        Position: {0, -0.66, 0.05}
-        Rotation: {0.4, 0, 0}
-        pole : MvBark { Position: {0, 0, 0}; Sweep: {path: MvStaffPath, profile: MvRoundProfile, scale: {0.045, 0.045}, taper: 0.75, rings: 20}; Rgb: {120, 86, 56}; TextureTransform: {1, 3, 0, 0} }
-        knot : MvBark { Position: {0.01, 0.35, 0}; Sphere: {radius: 0.06, segments: 8, smooth: true}; Rgb: {110, 78, 50} }
-        crook : MvBark { Position: {0.0, 1.34, 0}; Rotation: {HALF_PI, 0, 0}; TorusShell: {radius: 0.15, tube: 0.03, ring_start: 4.4, ring_end: 10.6, tube_start: 0, tube_end: 6.283, segments: 14, rings: 5}; Rgb: {120, 86, 56} }
-        leaf_a : MvLeafLight { Position: {0.12, 1.18, 0.02}; Rotation: {0, 0, -0.6}; Scale: {0.5, 1, 0.2}; Sphere: {radius: 0.07, segments: 6, smooth: true} }
-        leaf_b : MvLeaf { Position: {-0.1, 1.22, 0.02}; Rotation: {0, 0, 0.7}; Scale: {0.5, 1, 0.2}; Sphere: {radius: 0.06, segments: 6, smooth: true} }
-        orb_ { Position: {0, 1.36, 0}; Sphere: {radius: 0.11, segments: 12, smooth: true}; Rgb: gem; Emissive: {strength: 3, color: gem}; NoShadow }
-        glow_ { Position: {0, 1.36, 0}; PointLight: {intensity: 1.5, range: 4}; Rgb: gem }
-      }
-    }
-    head {
-      Position: {0, 2.08, 0}
-      face_ : MvSkin { Position: {0, 0, 0}; Sphere: {radius: 0.27, segments: 16, smooth: true} }
-      cheek_a : MvBlush { Position: {-0.15, -0.06, 0.2}; Scale: {1, 0.6, 0.4}; Sphere: {radius: 0.06, segments: 8, smooth: true} }
-      cheek_b : MvBlush { Position: {0.15, -0.06, 0.2}; Scale: {1, 0.6, 0.4}; Sphere: {radius: 0.06, segments: 8, smooth: true} }
-      nose : MvSkin { Position: {0, -0.03, 0.26}; Sphere: {radius: 0.04, segments: 8, smooth: true} }
-      eye_a : MvDark { Position: {-0.09, 0.03, 0.235}; Scale: {0.8, 1.1, 0.6}; Sphere: {radius: 0.045, segments: 8, smooth: true}; PbrMaterial: {roughness: 0.2} }
-      eye_b : MvDark { Position: {0.09, 0.03, 0.235}; Scale: {0.8, 1.1, 0.6}; Sphere: {radius: 0.045, segments: 8, smooth: true}; PbrMaterial: {roughness: 0.2} }
-      shine_a : MvPetalWhite { Position: {-0.08, 0.05, 0.262}; Sphere: {radius: 0.012, segments: 5}; Emissive: {strength: 0.5, color: {255, 255, 255}} }
-      shine_b : MvPetalWhite { Position: {0.1, 0.05, 0.262}; Sphere: {radius: 0.012, segments: 5}; Emissive: {strength: 0.5, color: {255, 255, 255}} }
-      smile : MvDark { Position: {0, -0.11, 0.235}; Rotation: {HALF_PI + 0.3, 0, 0}; TorusShell: {radius: 0.045, tube: 0.008, ring_start: 0.5, ring_end: 2.64, tube_start: 0, tube_end: 6.283, segments: 8, rings: 3}; Rgb: {120, 50, 50} }
-      hair_ { Position: {0, 0.0, -0.05}; Scale: {1.06, 1.1, 1.0}; HemiSphere: {radius: 0.3, segments: 14, smooth: true}; Rgb: {200, 90, 44}; PbrMaterial: {roughness: 0.8} }
-      hair_back { Position: {0, -0.12, -0.12}; Scale: {1.08, 0.9, 0.8}; Sphere: {radius: 0.28, segments: 12, smooth: true}; Rgb: {190, 84, 40}; PbrMaterial: {roughness: 0.8} }
-      bangs { Position: {0, 0.14, 0.16}; Rotation: {0.5, 0, 0}; Scale: {1.1, 0.4, 0.6}; Sphere: {radius: 0.22, segments: 12, smooth: true}; Rgb: {208, 96, 48}; PbrMaterial: {roughness: 0.8} }
-      lock_a { Position: {-0.24, -0.1, 0.05}; Rotation: {0.1, 0, 0.1}; Capsule: {length: 0.2, radius: 0.07, segments: 8, smooth: true}; Rgb: {196, 88, 42}; PbrMaterial: {roughness: 0.8} }
-      lock_b { Position: {0.24, -0.1, 0.05}; Rotation: {0.1, 0, -0.1}; Capsule: {length: 0.2, radius: 0.07, segments: 8, smooth: true}; Rgb: {196, 88, 42}; PbrMaterial: {roughness: 0.8} }
-      hat {
-        Position: {0, 0.15, -0.02}
-        Rotation: {-0.12 - bool_f(moving) * 0.1, 0, sway}
-        brim : MvCloth { Position: {0, 0, 0}; Scale: {1.05, 1, 1.05}; Lathe: {profile: MvBrimShape, segments: 22, rings: 8}; Rgb: {76, 52, 132} }
-        band : MvGold { Position: {0, 0.07, 0}; Cylinder: {length: 0.07, radius: 0.285, segments: 16} }
-        cone : MvCloth { Position: {0, 0.05, 0}; Sweep: {path: MvHatPath, profile: MvRoundProfile, scale: {0.28, 0.28}, taper: 0.08, cap_start: true, cap_end: true, rings: 18}; Rgb: {84, 58, 142}; TextureTransform: {2, 2, 0, 0} }
-        star { Position: {0, 0.08, 0.3}; Rotation: {0, 0, 0.3}; IcoSphere: {radius: 0.05, segments: 0}; Rgb: {255, 220, 120}; PbrMaterial: {metallic: 1, roughness: 0.3}; Emissive: {strength: 0.8, color: {255, 200, 100}} }
-        tip_bell : MvGold { Position: {0, 1.08, -0.44}; Sphere: {radius: 0.04, segments: 8, smooth: true} }
-      }
+
+  reticle {
+    if aim_on && game_state == 1 && talk_npc < 0 {
+      Position: {aim_x, 0.08, aim_z}
+      ring { Position: {0, 0, 0}; Torus: {radius: 0.9, tube: 0.05, segments: 28, rings: 4}; Rgb: {spell_r(spell), spell_g(spell), spell_b(spell)}; Emissive: {strength: 1.5, color: {spell_r(spell), spell_g(spell), spell_b(spell)}}; NoShadow }
     }
   }
-}
 
-mage {
-  Mage body() {
-    Scale: {1.15, 1.15, 1.15}
-  }
-}
-
-reticle {
-  if aim_on && game_state == 1 && talk_npc < 0 {
-    Position: {aim_x, 0.08, aim_z}
-    ring { Position: {0, 0, 0}; Torus: {radius: 0.9, tube: 0.05, segments: 28, rings: 4}; Rgb: {spell_r(spell), spell_g(spell), spell_b(spell)}; Emissive: {strength: 1.5, color: {spell_r(spell), spell_g(spell), spell_b(spell)}}; NoShadow }
-  }
-}
-
-target_ring {
-  if aim_target >= 0 && game_state == 1 && talk_npc < 0 {
-    Position: {t_x[aim_target], 0.1, t_z[aim_target]}
-    ring { Position: {0, 0, 0}; Torus: {radius: 1.3, tube: 0.06, segments: 28, rings: 4}; Rgb: {255, 240, 200}; Emissive: {strength: 1.2, color: {255, 230, 170}}; NoShadow }
-  }
-}
-
-orb {
-  if orb_on {
-    Position: {orb_x, orb_y, orb_z}
-    ball { Position: {0, 0, 0}; Sphere: {radius: 0.25, segments: 10, smooth: true}; Rgb: {spell_r(orb_spell), spell_g(orb_spell), spell_b(orb_spell)}; Emissive: {strength: 5, color: {spell_r(orb_spell), spell_g(orb_spell), spell_b(orb_spell)}}; NoShadow }
-    light { Position: {0, 0, 0}; PointLight: {intensity: 4, range: 7}; Rgb: {spell_r(orb_spell), spell_g(orb_spell), spell_b(orb_spell)} }
-    trail {
-      Position: {0, 0, 0}
-      ParticleEmitter: {max: 60, rate: 120, shape: EmitterSphere, radius: 0.12, direction: {0, 0, 0}, speed: {0, 0.2}, lifetime: {0.2, 0.4}, size: {0.12, 0.22}, opacity: {0.7, 1}, color: {spell_r(orb_spell), spell_g(orb_spell), spell_b(orb_spell)}, seed: 3}
-      ParticleAppearance: {blend: ParticleAdditive}
-      ParticleCurves: {size: {keys: [{0, 1}, {1, 0.2}]}}
+  target_ring {
+    if aim_target >= 0 && game_state == 1 && talk_npc < 0 {
+      Position: {t_x[aim_target], 0.1, t_z[aim_target]}
+      ring { Position: {0, 0, 0}; Torus: {radius: 1.3, tube: 0.06, segments: 28, rings: 4}; Rgb: {255, 240, 200}; Emissive: {strength: 1.2, color: {255, 230, 170}}; NoShadow }
     }
   }
-}
 
-ambient_fx {
-  const night = hour > 19 || hour < 5.5
-  const forest = pz < WALL_N1
-  const hills = pz > WALL_S0
-  Position: {px, 0, pz}
-  if game_state >= 1 {
-    if night {
-      fireflies {
-        Position: {0, 1.2, -2}
-        ParticleEmitter: {max: 60, rate: 5, shape: EmitterBox, extents: {16, 1, 11}, direction: {1, 0, 0}, spread: 180, speed: {0.2, 0.5}, lifetime: {3, 5}, size: {0.1, 0.16}, opacity: {1, 1}, color: {210, 255, 120}, color_variance: {20, 0, 30}, seed: 5}
+  orb {
+    if orb_on {
+      Position: {orb_x, orb_y, orb_z}
+      ball { Position: {0, 0, 0}; Sphere: {radius: 0.25, segments: 10, smooth: true}; Rgb: {spell_r(orb_spell), spell_g(orb_spell), spell_b(orb_spell)}; Emissive: {strength: 5, color: {spell_r(orb_spell), spell_g(orb_spell), spell_b(orb_spell)}}; NoShadow }
+      light { Position: {0, 0, 0}; PointLight: {intensity: 4, range: 7}; Rgb: {spell_r(orb_spell), spell_g(orb_spell), spell_b(orb_spell)} }
+      trail {
+        Position: {0, 0, 0}
+        ParticleEmitter: {max: 60, rate: 120, shape: EmitterSphere, radius: 0.12, direction: {0, 0, 0}, speed: {0, 0.2}, lifetime: {0.2, 0.4}, size: {0.12, 0.22}, opacity: {0.7, 1}, color: {spell_r(orb_spell), spell_g(orb_spell), spell_b(orb_spell)}, seed: 3}
         ParticleAppearance: {blend: ParticleAdditive}
-        ParticleCurves: {opacity: {keys: [{0, 0}, {0.2, 1}, {0.35, 0.2}, {0.5, 1}, {0.7, 0.3}, {0.85, 1}, {1, 0}]}}
-        ParticleMotion: {velocity_y: {keys: [{0, 0.2}, {0.25, -0.2}, {0.5, 0.25}, {0.75, -0.15}, {1, 0.1}]}}
+        ParticleCurves: {size: {keys: [{0, 1}, {1, 0.2}]}}
       }
-    } else if forest {
-      leaves {
-        Position: {0, 8, -2}
-        ParticleEmitter: {max: 70, rate: 7, shape: EmitterBox, extents: {16, 1, 11}, direction: {0, -1, 0}, spread: 20, speed: {0.6, 1.0}, lifetime: {6, 9}, size: {0.14, 0.22}, opacity: {1, 1}, color: {200, 140, 60}, color_variance: {50, 50, 20}, seed: 7}
-        ParticleAppearance: {lit: 0.7}
-        ParticleMotion: {velocity_x: {keys: [{0, 0.6}, {0.25, -0.6}, {0.5, 0.6}, {0.75, -0.6}, {1, 0.6}]}}
-        ParticleCurves: {opacity: {keys: [{0, 0}, {0.1, 1}, {0.9, 1}, {1, 0}]}}
+    }
+  }
+
+  ambient_fx {
+    const night = hour > 19 || hour < 5.5
+    const forest = pz < WALL_N1
+    const hills = pz > WALL_S0
+    Position: {px, 0, pz}
+    if game_state >= 1 {
+      if night {
+        fireflies {
+          Position: {0, 1.2, -2}
+          ParticleEmitter: {max: 60, rate: 5, shape: EmitterBox, extents: {16, 1, 11}, direction: {1, 0, 0}, spread: 180, speed: {0.2, 0.5}, lifetime: {3, 5}, size: {0.1, 0.16}, opacity: {1, 1}, color: {210, 255, 120}, color_variance: {20, 0, 30}, seed: 5}
+          ParticleAppearance: {blend: ParticleAdditive}
+          ParticleCurves: {opacity: {keys: [{0, 0}, {0.2, 1}, {0.35, 0.2}, {0.5, 1}, {0.7, 0.3}, {0.85, 1}, {1, 0}]}}
+          ParticleMotion: {velocity_y: {keys: [{0, 0.2}, {0.25, -0.2}, {0.5, 0.25}, {0.75, -0.15}, {1, 0.1}]}}
+        }
+      } else if forest {
+        leaves {
+          Position: {0, 8, -2}
+          ParticleEmitter: {max: 70, rate: 7, shape: EmitterBox, extents: {16, 1, 11}, direction: {0, -1, 0}, spread: 20, speed: {0.6, 1.0}, lifetime: {6, 9}, size: {0.14, 0.22}, opacity: {1, 1}, color: {200, 140, 60}, color_variance: {50, 50, 20}, seed: 7}
+          ParticleAppearance: {lit: 0.7}
+          ParticleMotion: {velocity_x: {keys: [{0, 0.6}, {0.25, -0.6}, {0.5, 0.6}, {0.75, -0.6}, {1, 0.6}]}}
+          ParticleCurves: {opacity: {keys: [{0, 0}, {0.1, 1}, {0.9, 1}, {1, 0}]}}
+        }
+      } else if !hills {
+        butterflies {
+          Position: {0, 0.9, -2}
+          ParticleEmitter: {max: 24, rate: 1.4, shape: EmitterBox, extents: {16, 0.4, 11}, direction: {1, 0, 0}, spread: 180, speed: {0.5, 1.0}, lifetime: {5, 8}, size: {0.18, 0.24}, opacity: {1, 1}, color: {240, 200, 120}, color_variance: {20, 60, 120}, seed: 9}
+          ParticleAppearance: {lit: 0.6}
+          ParticleMotion: {velocity_y: {keys: [{0, 0.5}, {0.08, -0.4}, {0.16, 0.5}, {0.24, -0.4}, {0.32, 0.5}, {0.4, -0.4}, {0.48, 0.5}, {0.56, -0.4}, {0.64, 0.5}, {0.72, -0.4}, {0.8, 0.5}, {0.9, -0.4}, {1, 0.3}]}}
+          ParticleCurves: {opacity: {keys: [{0, 0}, {0.1, 1}, {0.9, 1}, {1, 0}]}}
+        }
       }
-    } else if !hills {
-      butterflies {
-        Position: {0, 0.9, -2}
-        ParticleEmitter: {max: 24, rate: 1.4, shape: EmitterBox, extents: {16, 0.4, 11}, direction: {1, 0, 0}, spread: 180, speed: {0.5, 1.0}, lifetime: {5, 8}, size: {0.18, 0.24}, opacity: {1, 1}, color: {240, 200, 120}, color_variance: {20, 60, 120}, seed: 9}
-        ParticleAppearance: {lit: 0.6}
-        ParticleMotion: {velocity_y: {keys: [{0, 0.5}, {0.08, -0.4}, {0.16, 0.5}, {0.24, -0.4}, {0.32, 0.5}, {0.4, -0.4}, {0.48, 0.5}, {0.56, -0.4}, {0.64, 0.5}, {0.72, -0.4}, {0.8, 0.5}, {0.9, -0.4}, {1, 0.3}]}}
-        ParticleCurves: {opacity: {keys: [{0, 0}, {0.1, 1}, {0.9, 1}, {1, 0}]}}
+    }
+  }
+
+  guide {
+    const dx = obj_x - px
+    const dz = obj_z - pz
+    const far = dx * dx + dz * dz > 10 * 10
+    if obj_on && far && game_state == 1 && talk_npc < 0 {
+      Position: {px, 0.12, pz}
+      Rotation: {0, atan2(dx, dz), 0}
+      arrow {
+        Position: {0, 0, 2.2}
+        head { Position: {0, 0, 0.35}; Rotation: {HALF_PI, 0, 0}; Cone: {length: 0.7, radius: 0.38, segments: 3}; Rgb: {255, 214, 110}; Emissive: {strength: 1.6, color: {255, 200, 90}}; NoShadow }
+        tail { Position: {0, 0, -0.25}; Box: {0.22, 0.04, 0.6}; Rgb: {255, 214, 110}; Emissive: {strength: 1.6, color: {255, 200, 90}}; NoShadow }
       }
+    }
+  }
+
+  objective_beam {
+    if obj_on && game_state == 1 {
+      Position: {obj_x, 0, obj_z}
+      gem {
+        Position: {0, obj_npc ? -6 : 3.6, 0}
+        Rotation: {0, clock * 1.5, 0}
+        top_ { Position: {0, 0.3, 0}; Cone: {length: 0.6, radius: 0.35, segments: 4}; Rgb: {255, 220, 140}; Emissive: {strength: 2, color: {255, 210, 120}}; NoShadow }
+        bot_ { Position: {0, -0.3, 0}; Rotation: {PI, 0, 0}; Cone: {length: 0.6, radius: 0.35, segments: 4}; Rgb: {255, 220, 140}; Emissive: {strength: 2, color: {255, 210, 120}}; NoShadow }
+      }
+      halo { Position: {0, 0.1, 0}; Torus: {radius: 1.6, tube: 0.07, segments: 32, rings: 4}; Rgb: {255, 220, 140}; Emissive: {strength: 1.5, color: {255, 210, 120}}; NoShadow }
     }
   }
 }
 
-guide {
-  const dx = obj_x - px
-  const dz = obj_z - pz
-  const far = dx * dx + dz * dz > 10 * 10
-  if obj_on && far && game_state == 1 && talk_npc < 0 {
-    Position: {px, 0.12, pz}
-    Rotation: {0, atan2(dx, dz), 0}
-    arrow {
-      Position: {0, 0, 2.2}
-      head { Position: {0, 0, 0.35}; Rotation: {HALF_PI, 0, 0}; Cone: {length: 0.7, radius: 0.38, segments: 3}; Rgb: {255, 214, 110}; Emissive: {strength: 1.6, color: {255, 200, 90}}; NoShadow }
-      tail { Position: {0, 0, -0.25}; Box: {0.22, 0.04, 0.6}; Rgb: {255, 214, 110}; Emissive: {strength: 1.6, color: {255, 200, 90}}; NoShadow }
-    }
-  }
-}
-
-objective_beam {
-  if obj_on && game_state == 1 {
-    Position: {obj_x, 0, obj_z}
-    gem {
-      Position: {0, obj_npc ? -6 : 3.6, 0}
-      Rotation: {0, clock * 1.5, 0}
-      top_ { Position: {0, 0.3, 0}; Cone: {length: 0.6, radius: 0.35, segments: 4}; Rgb: {255, 220, 140}; Emissive: {strength: 2, color: {255, 210, 120}}; NoShadow }
-      bot_ { Position: {0, -0.3, 0}; Rotation: {PI, 0, 0}; Cone: {length: 0.6, radius: 0.35, segments: 4}; Rgb: {255, 220, 140}; Emissive: {strength: 2, color: {255, 210, 120}}; NoShadow }
-    }
-    halo { Position: {0, 0.1, 0}; Torus: {radius: 1.6, tube: 0.07, segments: 32, rings: 4}; Rgb: {255, 220, 140}; Emissive: {strength: 1.5, color: {255, 210, 120}}; NoShadow }
-  }
-}
-
-mv_rig {
+camera {
   Position: {cam_x, 0, cam_z}
   arm {
     Rotation: {0 - cam_pitch, 0, 0}
-    camera {
+    eye {
       Position: {0, 0, cam_dist}
       Camera: {fov: CAM_FOV, near_: 0.5, far_: 600}
     }
@@ -309,6 +321,7 @@ mv_rig {
 
 async {
   mut last: f64 = AppStatus[AppStatus].elapsed
+  mut orbit: f64 = 0
   mut nearest_t: f64 = 0
   while true {
     await next_frame()
@@ -320,12 +333,12 @@ async {
     clock += d
 
     const can_move = game_state == 1 && talk_npc < 0
-    const mx = bool_f(mv_actions.MoveRight[ActionState].down) - bool_f(mv_actions.MoveLeft[ActionState].down)
-    const mz = bool_f(mv_actions.MoveDown[ActionState].down) - bool_f(mv_actions.MoveUp[ActionState].down)
+    const mx = bool_f(state.mv_actions.MoveRight[ActionState].down) - bool_f(state.mv_actions.MoveLeft[ActionState].down)
+    const mz = bool_f(state.mv_actions.MoveDown[ActionState].down) - bool_f(state.mv_actions.MoveUp[ActionState].down)
     const len = sqrt(mx * mx + mz * mz)
 
     if can_move && len > 0 {
-      const run = mv_actions.Sprint[ActionState].down
+      const run = state.mv_actions.Sprint[ActionState].down
       const speed = run ? 9.5 : 6
       const vx = mx / len * speed * d
       const vz = mz / len * speed * d
@@ -354,10 +367,15 @@ async {
       walk_phase = 0
     }
 
-    const ease = game_state == 0 ? min(1, d * 0.8) : min(1, d * 5)
     const title = game_state == 0
-    const tx = title ? -4 + sin(clock * 0.07) * 14 : px + sin(pyaw) * 1.5 * bool_f(moving)
-    const tz = title ? 2 + cos(clock * 0.07) * 9 : pz + cos(pyaw) * 1.0 * bool_f(moving)
+    if title {
+      const ox = 14 * cos(orbit)
+      const oz = 9 * sin(orbit)
+      orbit += d * 0.8 / sqrt(ox * ox + oz * oz)
+    }
+    const ease = title ? 1 : min(1, d * 5)
+    const tx = title ? -4 + sin(orbit) * 14 : px + sin(pyaw) * 1.5 * bool_f(moving)
+    const tz = title ? 2 + cos(orbit) * 9 : pz + cos(pyaw) * 1.0 * bool_f(moving)
     if abs(cam_x - tx) > 0.002 || abs(cam_z - tz) > 0.002 {
       cam_x += (tx - cam_x) * ease
       cam_z += (tz - cam_z) * ease
@@ -421,7 +439,7 @@ async {
 
 async {
   while true {
-    await on.pressed(mv_actions.CastKey)
+    await on.pressed(state.mv_actions.CastKey)
     if game_state == 1 && talk_npc >= 0 {
       emit Advance()
     } else if game_state == 1 && talk_npc < 0 && clock > talk_cool {
@@ -433,7 +451,7 @@ async {
 
 async {
   while true {
-    await on.pressed(mv_actions.CastClick)
+    await on.pressed(state.mv_actions.CastClick)
     if game_state == 1 && talk_npc >= 0 {
       emit Advance()
     } else if game_state == 1 && talk_npc < 0 && clock > talk_cool && aim_on {
@@ -444,7 +462,7 @@ async {
 
 async {
   while true {
-    await on.pressed(mv_actions.TalkKey)
+    await on.pressed(state.mv_actions.TalkKey)
     if game_state == 1 {
       if talk_npc >= 0 {
         emit Advance()
@@ -457,7 +475,7 @@ async {
 
 async {
   while true {
-    await on.pressed(mv_actions.NextSpell)
+    await on.pressed(state.mv_actions.NextSpell)
     if game_state == 1 {
       mut s: i32 = spell
       for i in 0..SPELLS {

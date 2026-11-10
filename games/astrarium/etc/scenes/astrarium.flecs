@@ -18,3 +18,7 @@ include astrarium/logic_armory
 include astrarium/logic_cast
 include astrarium/fx
 include astrarium/ui
+
+$ {
+  box.view.Scene: {blend_modes: true, sheen: true, clear_coat: true, anisotropy: true}
+}

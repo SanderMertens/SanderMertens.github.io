@@ -2,20 +2,23 @@ include state
 
 using flecs.script
 using flecs.script.math
+using state
 
-export const SHIP_AWAY: i32 = 0
-export const SHIP_ARRIVING: i32 = 1
-export const SHIP_HOLDING: i32 = 2
-export const SHIP_APPROACH: i32 = 3
-export const SHIP_LANDING: i32 = 4
-export const SHIP_DOCKED: i32 = 5
-export const SHIP_LIFTING: i32 = 6
-export const SHIP_LEAVING: i32 = 7
-export const st_ship_count: i32 = 10
+state {
+  export const SHIP_AWAY: i32 = 0
+  export const SHIP_ARRIVING: i32 = 1
+  export const SHIP_HOLDING: i32 = 2
+  export const SHIP_APPROACH: i32 = 3
+  export const SHIP_LANDING: i32 = 4
+  export const SHIP_DOCKED: i32 = 5
+  export const SHIP_LIFTING: i32 = 6
+  export const SHIP_LEAVING: i32 = 7
+  export const st_ship_count: i32 = 10
 
-proc st_ship_go(s: i32, state: i32, timer: i32) {
-  st_ships[s].state = state
-  st_ships[s].timer = timer
+  proc st_ship_go(s: i32, state: i32, timer: i32) {
+    st_ships[s].state = state
+    st_ships[s].timer = timer
+  }
 }
 
 async {

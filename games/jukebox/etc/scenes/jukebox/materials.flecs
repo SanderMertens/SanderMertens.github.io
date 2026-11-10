@@ -1,18 +1,20 @@
 using box.material
 using box.texture
 
-jb_wood_texture { TexturePath: {path: "etc/scenes/jungle_city/textures/wood.jpg"} }
+assets {
+  jb_wood_texture { TexturePath: {path: "etc/scenes/jungle_city/textures/wood.jpg"} }
 
-prefab JBWood {
-  Rgb: {116, 50, 28}
-  PbrMaterial: {roughness: 0.36}
-  PbrTextures: {albedo: jb_wood_texture}
-  TextureMapping: {mode: MappingObject, size: 0.9, blend: 0.25}
-  ClearCoat: {strength: 0.85, roughness: 0.16}
+  prefab JBWood {
+    Rgb: {116, 50, 28}
+    PbrMaterial: {roughness: 0.36}
+    PbrTextures: {albedo: jb_wood_texture}
+    TextureMapping: {mode: MappingObject, size: 0.9, blend: 0.25}
+    ClearCoat: {strength: 0.85, roughness: 0.16}
+  }
+  prefab JBEnamel { Rgb: {38, 78, 76}; PbrMaterial: {metallic: 0.25, roughness: 0.26}; ClearCoat: {strength: 1, roughness: 0.1} }
+  prefab JBChrome { Rgb: {214, 226, 226}; PbrMaterial: {metallic: 1, roughness: 0.19} }
+  prefab JBBrass { Rgb: {212, 159, 79}; PbrMaterial: {metallic: 0.85, roughness: 0.3}; SpecularAnisotropy: {strength: 0.45} }
+  prefab JBDark { Rgb: {14, 23, 25}; PbrMaterial: {roughness: 0.65} }
+  prefab JBIvory { Rgb: {242, 225, 186}; PbrMaterial: {roughness: 0.3}; ClearCoat: {strength: 0.5, roughness: 0.2} }
+  prefab JBGlass { Rgb: {240, 252, 250}; PbrMaterial: {roughness: 0.025}; Transmission: {transmission_factor: 0.96, thickness_factor: 0.008, ior: 1.46} }
 }
-prefab JBEnamel { Rgb: {38, 78, 76}; PbrMaterial: {metallic: 0.25, roughness: 0.26}; ClearCoat: {strength: 1, roughness: 0.1} }
-prefab JBChrome { Rgb: {214, 226, 226}; PbrMaterial: {metallic: 1, roughness: 0.19} }
-prefab JBBrass { Rgb: {212, 159, 79}; PbrMaterial: {metallic: 0.85, roughness: 0.3}; SpecularAnisotropy: {strength: 0.45} }
-prefab JBDark { Rgb: {14, 23, 25}; PbrMaterial: {roughness: 0.65} }
-prefab JBIvory { Rgb: {242, 225, 186}; PbrMaterial: {roughness: 0.3}; ClearCoat: {strength: 0.5, roughness: 0.2} }
-prefab JBGlass { Rgb: {240, 252, 250}; PbrMaterial: {roughness: 0.025}; Transmission: {transmission_factor: 0.96, thickness_factor: 0.008, ior: 1.46} }

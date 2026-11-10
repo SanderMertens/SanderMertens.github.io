@@ -11,71 +11,87 @@ using box.transition
 using box.particle
 using box.layout
 using box.surface
+using state
+using assets
 
-template Aura {
-  Bloom: {intensity: 0.8 * rite_aura, threshold: 0.42, threshold_softness: 0.3}
+state {
+  fn pose_x(s: i32) -> f32 {
+    match s { 2: -76; 3: 330; _: 0 }
+  }
+
+  fn pose_y(s: i32) -> f32 {
+    match s { 0: 18; 1, 2: STAGE_Y; _: 0 }
+  }
+
+  fn pose_scale(s: i32) -> f32 {
+    match s { 0: 1; 1: 0.31; 2: 0.7; _: 1.25 }
+  }
+
+  fn pose_alpha(s: i32) -> f32 {
+    match s { 0: 0.92; 1: 1; 2: 0.5; _: 0.28 }
+  }
 }
 
-aura_sky { Aura }
-sky_edges { Smaa: {} }
+assets {
+  template Aura {
+    Bloom: {intensity: 0.8 * rite_aura, threshold: 0.42, threshold_softness: 0.3}
+  }
 
-template AstroRing {
-  prop tex: entity = 0
-  prop size: f32 = 760
-  prop spin: f32 = 0.02
-  prop tone: f32 = 1
-  prop z: f32 = 0
+  template AstroRing {
+    prop tex: entity = 0
+    prop size: f32 = 760
+    prop spin: f32 = 0.02
+    prop tone: f32 = 1
+    prop z: f32 = 0
 
-  Position: {0, 0, z}
-  Rect: {size, size}
-  Image: {texture: tex}
-  Rgb: {ui_gold.r * tone, ui_gold.g * tone, ui_gold.b * tone}
-  BlendMode: Additive
-  AngularVelocity: {0, 0, spin * rite_clock}
-  Transition: [Rgb: {duration: 0.5}]
+    Position: {0, 0, z}
+    Rect: {size, size}
+    Image: {texture: tex}
+    Rgb: {ui_gold.r * tone, ui_gold.g * tone, ui_gold.b * tone}
+    BlendMode: Additive
+    AngularVelocity: {0, 0, spin * rite_clock}
+    Transition: [Rgb: {duration: 0.5}]
+  }
+
+  template Astrolabe {
+    const s = pose_scale(screen)
+
+    Position: {pose_x(screen), pose_y(screen), 1}
+    Scale: {s, s, 1}
+    Opacity: {pose_alpha(screen)}
+    Transition: [
+      Position: {duration: 1.2, timing_function: EaseInOut},
+      Scale: {duration: 1.2, timing_function: EaseInOut},
+      Opacity: {duration: 1.2, timing_function: EaseInOut}
+    ]
+
+    Halo bloom(size: 1000, color: {64, 50, 34}, z: -1)
+    AstroRing outer(tex: tex_astro_outer, size: 760, spin: 0.018, tone: 0.8)
+    AstroRing mid(tex: tex_astro_mid, size: 760, spin: -0.045, tone: 0.72)
+    AstroRing inner(tex: tex_astro_inner, size: 760, spin: 0.11, tone: 0.86)
+    AstroRing rose(tex: tex_astro_rose, size: 760, spin: -0.024, tone: 1)
+  }
 }
 
-fn pose_x(s: i32) -> f32 {
-  match s { 2: -76; 3: 330; _: 0 }
+ScreenCamera camera()
+
+view {
+  edges { Smaa: {} }
+
+  aura { Aura }
+
+  View: {
+    camera: camera,
+    order: 0,
+    clear: {enabled: true, color: {3, 4, 12, 255}},
+    lighting: {enabled: false},
+    culling: {enabled: false},
+    effects: [{enabled: true, effect: edges}, {enabled: true, effect: aura}]
+  }
 }
 
-fn pose_y(s: i32) -> f32 {
-  match s { 0: 18; 1, 2: STAGE_Y; _: 0 }
-}
-
-fn pose_scale(s: i32) -> f32 {
-  match s { 0: 1; 1: 0.31; 2: 0.7; _: 1.25 }
-}
-
-fn pose_alpha(s: i32) -> f32 {
-  match s { 0: 0.92; 1: 1; 2: 0.5; _: 0.28 }
-}
-
-template Astrolabe {
-  const s = pose_scale(screen)
-
-  Position: {pose_x(screen), pose_y(screen), 1}
-  Scale: {s, s, 1}
-  Opacity: {pose_alpha(screen)}
-  Transition: [
-    Position: {duration: 1.2, timing_function: EaseInOut},
-    Scale: {duration: 1.2, timing_function: EaseInOut},
-    Opacity: {duration: 1.2, timing_function: EaseInOut}
-  ]
-
-  Halo bloom(size: 1000, color: {64, 50, 34}, z: -1)
-  AstroRing outer(tex: tex_astro_outer, size: 760, spin: 0.018, tone: 0.8)
-  AstroRing mid(tex: tex_astro_mid, size: 760, spin: -0.045, tone: 0.72)
-  AstroRing inner(tex: tex_astro_inner, size: 760, spin: 0.11, tone: 0.86)
-  AstroRing rose(tex: tex_astro_rose, size: 760, spin: -0.024, tone: 1)
-}
-
-template Sky {
-  sky {
-    Scene: {}
-
-    ScreenCamera camera()
-
+assets {
+  template Sky {
     root {
       ScreenRoot: {}
       Layout: {}
@@ -89,82 +105,73 @@ template Sky {
     }
 
     Astrolabe astrolabe()
-  }
 
-  sky_view {
-    View: {
-      camera: sky.camera,
-      order: 0,
-      clear: {enabled: true, color: {3, 4, 12, 255}},
-      lighting: {enabled: false},
-      culling: {enabled: false},
-      effects: [{enabled: true, effect: sky_edges}, {enabled: true, effect: aura_sky}]
-    }
-  }
+    dust {
+      Scene: {}
 
-  dust {
-    Scene: {}
+      ScreenCamera camera()
 
-    ScreenCamera camera()
-
-    motes {
-      Position: {0, 0, 0}
-      ParticleEmitter: {
-        max: 900,
-        rate: rite_drift ? 42 * rite_dust : 0,
-        shape: EmitterBox,
-        extents: {980, 560, 0},
-        direction: {0.3, 1, 0},
-        spread: 40,
-        speed: {3, 16},
-        lifetime: {6, 16},
-        size: {0.8, 2.8},
-        color: {255, 226, 172},
-        color_variance: {30, 60, 90},
-        opacity: {0.25, 0.9},
-        seed: 16
-      }
-      ParticleForces: {gravity: {0, 0, 0}, turbulence: 3, turbulence_scale: 0.01}
-      ParticleAppearance: {shape: ParticleCircle, blend: ParticleAdditive}
-      ParticleCurves: {
-        opacity: {keys: [{0, 0}, {0.33333334, 1}, {0.6666667, 0.7}, {1, 0}]}
-        size: {keys: [{0, 0.6}, {0.33333334, 1}, {0.6666667, 1}, {1, 0.8}]}
+      motes {
+        Position: {0, 0, 0}
+        ParticleEmitter: {
+          max: 900,
+          rate: rite_drift ? 42 * rite_dust : 0,
+          shape: EmitterBox,
+          extents: {980, 560, 0},
+          direction: {0.3, 1, 0},
+          spread: 40,
+          speed: {3, 16},
+          lifetime: {6, 16},
+          size: {0.8, 2.8},
+          color: {255, 226, 172},
+          color_variance: {30, 60, 90},
+          opacity: {0.25, 0.9},
+          seed: 16
+        }
+        ParticleForces: {gravity: {0, 0, 0}, turbulence: 3, turbulence_scale: 0.01}
+        ParticleAppearance: {shape: ParticleCircle, blend: ParticleAdditive}
+        ParticleCurves: {
+          opacity: {keys: [{0, 0}, {0.33333334, 1}, {0.6666667, 0.7}, {1, 0}]}
+          size: {keys: [{0, 0.6}, {0.33333334, 1}, {0.6666667, 1}, {1, 0.8}]}
+        }
       }
     }
-  }
 
-  dust_view {
-    View: {
-      camera: dust.camera,
-      order: 1,
-      lighting: {enabled: false},
-      culling: {enabled: false},
-      effects: [{enabled: true, effect: aura_sky}]
-    }
-  }
-
-  shade {
-    Scene: {}
-
-    ScreenCamera camera()
-
-    root {
-      ScreenRoot: {}
-      Layout: {}
-
-      vignette {
-        LayoutItem: {width: {mode: Grow}, height: {mode: Grow}}
-        Rect: {1, 1}
-        Image: {texture: tex_vignette}
-        Rgb: {255, 255, 255}
-        box.spatial.SpatialIgnore
+    dust_view {
+      View: {
+        camera: dust.camera,
+        order: 1,
+        lighting: {enabled: false},
+        culling: {enabled: false},
+        effects: [{enabled: true, effect: view.aura}]
       }
     }
-  }
 
-  shade_view {
-    View: {camera: shade.camera, order: 2, lighting: {enabled: false}, culling: {enabled: false}}
+    shade {
+      Scene: {}
+
+      ScreenCamera camera()
+
+      root {
+        ScreenRoot: {}
+        Layout: {}
+
+        vignette {
+          LayoutItem: {width: {mode: Grow}, height: {mode: Grow}}
+          Rect: {1, 1}
+          Image: {texture: tex_vignette}
+          Rgb: {255, 255, 255}
+          box.spatial.SpatialIgnore
+        }
+      }
+    }
+
+    shade_view {
+      View: {camera: shade.camera, order: 2, lighting: {enabled: false}, culling: {enabled: false}}
+    }
   }
 }
 
-Sky world_sky()
+astrarium {
+  Sky sky()
+}

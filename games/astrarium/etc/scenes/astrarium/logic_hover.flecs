@@ -1,6 +1,8 @@
 using flecs.script
 using flecs.script.math
 using box.app
+using state
+using assets
 
 async {
   mut last_focus: entity = 0

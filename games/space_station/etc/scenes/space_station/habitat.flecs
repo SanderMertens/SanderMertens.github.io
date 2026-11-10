@@ -6,41 +6,43 @@ using box.light
 using box.material
 using box.movement
 
-template StationHabitatBody {
-  pylon : StationPanel { Position: {0, 0.75, 0}; Cylinder: {radius: 0.8, length: 1.5, segments: 20, smooth: true} }
-  pylon_band : StationDark { Position: {0, 0.8, 0}; Cylinder: {radius: 0.83, length: 0.12, segments: 20, smooth: true} }
-  foot : StationDark { Position: {0, 0.15, 0}; Cylinder: {radius: 1.3, length: 0.3, segments: 20, smooth: true} }
-  foot_light : StationCyanLight { Position: {0, 0.31, 0}; Torus: {radius: 1.15, tube: 0.02, segments: 32, rings: 4} }
-  for i in 0..4 {
-    const a = i * PI / 2 + PI / 4
-    StationHatch "hatch_{i}"(size: 0.7) { Position: {cos(a) * 2, 0.06, sin(a) * 2} }
-  }
-  ring {
-    Position: {0, 1.6, 0}
-    Rotation: {0, 0, 0}
-    AngularVelocity: {0, 0.3, 0}
-    hull : StationHull { Position: {0, 0, 0}; Torus: {radius: 1.9, tube: 0.5, segments: 48, rings: 16, smooth: true} }
-    hub : StationDark { Position: {0, 0, 0}; Cylinder: {radius: 0.5, length: 0.5, segments: 14} }
-    for i in 0..3 {
-      const a = i * PI / 1.5
-      { (IsA, StationTruss); Position: {cos(a) * 0.95, 0, sin(a) * 0.95}; Rotation: {0, -a, 0}; Box: {1.3, 0.14, 0.14} }
+assets {
+  template StationHabitatBody {
+    pylon : StationPanel { Position: {0, 0.75, 0}; Cylinder: {radius: 0.8, length: 1.5, segments: 20, smooth: true} }
+    pylon_band : StationDark { Position: {0, 0.8, 0}; Cylinder: {radius: 0.83, length: 0.12, segments: 20, smooth: true} }
+    foot : StationDark { Position: {0, 0.15, 0}; Cylinder: {radius: 1.3, length: 0.3, segments: 20, smooth: true} }
+    foot_light : StationCyanLight { Position: {0, 0.31, 0}; Torus: {radius: 1.15, tube: 0.02, segments: 32, rings: 4} }
+    for i in 0..4 {
+      const a = i * PI / 2 + PI / 4
+      StationHatch "hatch_{i}"(size: 0.7) { Position: {cos(a) * 2, 0.06, sin(a) * 2} }
     }
-    for i in 0..6 {
-      const a = i * PI / 3 + 0.26
-      { (IsA, StationDark); Position: {cos(a) * 1.9, 0, sin(a) * 1.9}; Rotation: {0, -a, 0}; Box: {1.03, 1.03, 0.08} }
+    ring {
+      Position: {0, 1.6, 0}
+      Rotation: {0, 0, 0}
+      AngularVelocity: {0, 0.3, 0}
+      hull : StationHull { Position: {0, 0, 0}; Torus: {radius: 1.9, tube: 0.5, segments: 48, rings: 16, smooth: true} }
+      hub : StationDark { Position: {0, 0, 0}; Cylinder: {radius: 0.5, length: 0.5, segments: 14} }
+      for i in 0..3 {
+        const a = i * PI / 1.5
+        { (IsA, StationTruss); Position: {cos(a) * 0.95, 0, sin(a) * 0.95}; Rotation: {0, -a, 0}; Box: {1.3, 0.14, 0.14} }
+      }
+      for i in 0..6 {
+        const a = i * PI / 3 + 0.26
+        { (IsA, StationDark); Position: {cos(a) * 1.9, 0, sin(a) * 1.9}; Rotation: {0, -a, 0}; Box: {1.03, 1.03, 0.08} }
+      }
+      for i in 0..14 {
+        const a = i * PI / 7
+        { (IsA, StationDark); Position: {cos(a) * 2.385, 0, sin(a) * 2.385}; Rotation: {0, -a, 0}; Box: {0.03, 0.22, 0.38} }
+        { (IsA, StationWindow); Position: {cos(a) * 2.395, 0, sin(a) * 2.395}; Rotation: {0, -a, 0}; Box: {0.03, 0.16, 0.32} }
+      }
     }
-    for i in 0..14 {
-      const a = i * PI / 7
-      { (IsA, StationDark); Position: {cos(a) * 2.385, 0, sin(a) * 2.385}; Rotation: {0, -a, 0}; Box: {0.03, 0.22, 0.38} }
-      { (IsA, StationWindow); Position: {cos(a) * 2.395, 0, sin(a) * 2.395}; Rotation: {0, -a, 0}; Box: {0.03, 0.16, 0.32} }
+    garden : StationGlass { Position: {0, 1.9, 0}; HemiSphere: {radius: 0.72, segments: 20, smooth: true} }
+    tree : StationLeaf { Position: {0, 2.1, 0}; IcoSphere: {radius: 0.4, segments: 2} }
+    trunk : StationSoil { Position: {0, 1.86, 0}; Cylinder: {radius: 0.06, length: 0.3, segments: 6} }
+    glow {
+      Position: {0, 2.4, 0}
+      PointLight: {intensity: 4, range: 6}
+      Rgb: {255, 214, 160}
     }
-  }
-  garden : StationGlass { Position: {0, 1.9, 0}; HemiSphere: {radius: 0.72, segments: 20, smooth: true} }
-  tree : StationLeaf { Position: {0, 2.1, 0}; IcoSphere: {radius: 0.4, segments: 2} }
-  trunk : StationSoil { Position: {0, 1.86, 0}; Cylinder: {radius: 0.06, length: 0.3, segments: 6} }
-  glow {
-    Position: {0, 2.4, 0}
-    PointLight: {intensity: 4, range: 6}
-    Rgb: {255, 214, 160}
   }
 }

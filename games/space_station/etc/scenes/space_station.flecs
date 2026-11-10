@@ -35,25 +35,51 @@ using box.surface
 using box.controllers
 using box.layout
 using box.widgets
+using state
+using assets
 
 window { Surface: {width: 1600, height: 1000, vsync: true} }
-station_contact { Gtao: {radius: 0.8, final_value_power: 2.2} }
-station_bloom { Bloom: {intensity: 0.2, threshold: 1.15, threshold_softness: 0.4} }
-station_film { Tonemap: {operator_: TonyMcMapface} }
-station_edges { Smaa: {} }
-station_stars { EnvironmentImage: {path: "etc/scenes/space_station/assets/space.hdr"}; Environment: {resolution: 1024} }
+
+camera {
+  Position: {0, 37, 53}
+  Rotation: {-0.62, 0, 0}
+  Camera: {fov: 38, near_: 0.5, far_: 1500}
+  CameraController: {speed: 22}
+}
+
+sky {
+  Rotation: {0.95, -0.55, 0}
+  DirectionalLight: {intensity: 6.5}
+  Rgb: {255, 244, 226}
+}
+
+assets {
+  station_stars { EnvironmentImage: {path: "etc/scenes/space_station/assets/space.hdr"}; Environment: {resolution: 1024} }
+}
+
+$ {
+  Scene: {reflections: true, environment: true, blend_modes: true, transmission: true,
+    triplanar: true, clear_coat: true, diffuse_transmission: true}
+  AmbientLight: {sky: {128, 150, 190}, ground: {66, 96, 150}, intensity: 0.55}
+  ReflectionBake: {resolution: 128, budget_ms: 2, scene_probe: true, scene_probe_height: 12, environment: assets.station_stars}
+}
+
+view {
+  station_contact { Gtao: {radius: 0.8, final_value_power: 2.2} }
+  station_bloom { Bloom: {intensity: 0.2, threshold: 1.15, threshold_softness: 0.4} }
+  station_film { Tonemap: {operator_: TonyMcMapface} }
+  station_edges { Smaa: {} }
+
+  View: {
+    camera: camera,
+    clear: {enabled: true, color: {3, 5, 10, 255}},
+    shadows: {enabled: true, resolution: 4096, max_distance: 180},
+    lighting: {reflections: true, baked: false, environment: {source: assets.station_stars, intensity: 1, background: true}},
+    effects: [{effect: station_contact}, {effect: station_bloom}, {effect: station_film}, {effect: station_edges}]
+  }
+}
 
 space_station {
-  Scene: {}
-  AmbientLight: {sky: {128, 150, 190}, ground: {66, 96, 150}, intensity: 0.55}
-  ReflectionBake: {resolution: 128, budget_ms: 2, scene_probe: true, scene_probe_height: 12, environment: station_stars}
-
-  camera {
-    Position: {0, 37, 53}
-    Rotation: {-0.62, 0, 0}
-    Camera: {fov: 38, near_: 0.5, far_: 1500}
-    CameraController: {speed: 22}
-  }
   dock_camera {
     Position: {-26, 13, 25}
     Rotation: {-0.32, -0.72, 0}
@@ -67,11 +93,6 @@ space_station {
     CameraController: {speed: 10}
   }
 
-  sun {
-    Rotation: {0.95, -0.55, 0}
-    DirectionalLight: {intensity: 6.5}
-    Rgb: {255, 244, 226}
-  }
   rim {
     Rotation: {0.35, 2.4, 0}
     DirectionalLight: {intensity: 1.6}
@@ -95,14 +116,4 @@ space_station {
   }
 }
 
-StationHud station_hud()
-
-main_view {
-  View: {
-    camera: space_station.camera,
-    clear: {enabled: true, color: {3, 5, 10, 255}},
-    shadows: {enabled: true, resolution: 4096, max_distance: 180},
-    lighting: {reflections: true, baked: false, environment: {source: station_stars, intensity: 1, background: true}},
-    effects: [{effect: station_contact}, {effect: station_bloom}, {effect: station_film}, {effect: station_edges}]
-  }
-}
+assets.StationHud hud()

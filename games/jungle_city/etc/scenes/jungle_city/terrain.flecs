@@ -4,88 +4,90 @@ using box.geometry
 using box.material
 using box.transition
 
-template CanopyReeds {
-  prop seed: f32 = 0
-  for i in 0..9 {
-    const a = i * 2.399963 + seed
-    const r = 0.1 + (i % 5) * 0.14
-    const tall = 0.9 + (i % 4) * 0.28
-    { (IsA, CanopyLime); Rgb: {126, 142, 70}; Position: {math.sin(a) * r, tall / 2, math.cos(a) * r}; Rotation: {math.sin(a * 3) * 0.08, 0, math.cos(a * 2) * 0.08}; Frustum: {radius_bottom: 0.022, radius_top: 0.008, length: tall, segments: 3} }
-    if i % 3 == 0 {
-      { (IsA, CanopyBark); Position: {math.sin(a) * r, tall * 0.92, math.cos(a) * r}; Capsule: {radius: 0.032, length: 0.14, segments: 3} }
+assets {
+  template CanopyReeds {
+    prop seed: f32 = 0
+    for i in 0..9 {
+      const a = i * 2.399963 + seed
+      const r = 0.1 + (i % 5) * 0.14
+      const tall = 0.9 + (i % 4) * 0.28
+      { (IsA, CanopyLime); Rgb: {126, 142, 70}; Position: {math.sin(a) * r, tall / 2, math.cos(a) * r}; Rotation: {math.sin(a * 3) * 0.08, 0, math.cos(a * 2) * 0.08}; Frustum: {radius_bottom: 0.022, radius_top: 0.008, length: tall, segments: 3} }
+      if i % 3 == 0 {
+        { (IsA, CanopyBark); Position: {math.sin(a) * r, tall * 0.92, math.cos(a) * r}; Capsule: {radius: 0.032, length: 0.14, segments: 3} }
+      }
     }
   }
-}
 
-template CanopyTerrain {
-  prop width: f32 = 112
-  prop depth: f32 = 95
-  prop seed: i32 = 17
-  mut flowing = false
-  const bank = width / 2 - 6
-  const bank_x = 6 + bank / 2
-  const edge: math.Rng = {seed: seed + 557}
-  async {
-    await next_frame()
-    flowing = true
-  }
-  bedrock : CanopyStrata { Position: {0, -3.1, 0}; RoundedBox: {width, 4.4, depth, 2, segments: 2}; TextureTransform: {scale_x: width / 36, scale_y: 1} }
-  for side in 0..2 {
-    { (IsA, CanopyGround); Position: {(side - 0.5) * 2 * bank_x, -0.35, 0}; RoundedBox: {bank, 1.1, depth - 0.3, 1.2, segments: 2} }
-    { (IsA, CanopyAshlar); Position: {(side - 0.5) * 11.6, -0.31, 0}; Box: {1.6, 1.16, depth - 0.2} }
-    { (IsA, CanopyPaver); Rgb: {150, 146, 124}; Position: {(side - 0.5) * 11.6, 0.3, 0}; Box: {1.64, 0.06, depth - 0.2} }
-    for i in 0..math.floor(depth / 6) {
-      const z = -depth / 2 + (i + 0.5) * depth / math.floor(depth / 6)
-      { (IsA, CanopyMetal); Position: {(side - 0.5) * 10.05, 0.05, z}; Torus: {radius: 0.08, tube: 0.015, segments: 4, rings: 4} }
-      { (IsA, CanopyTimberDark); Position: {(side - 0.5) * 10.1, 0.0, z + 1.5}; Cylinder: {radius: 0.09, length: 1, segments: 3} }
-      if i % 4 == 2 {
-        for s in 0..4 {
-          { (IsA, CanopyConcrete); Position: {(side - 0.5) * (10.4 - s * 0.36), -0.2 - s * 0.14, z - 2}; Box: {0.36, 0.14, 1.4} }
+  template CanopyTerrain {
+    prop width: f32 = 112
+    prop depth: f32 = 95
+    prop seed: i32 = 17
+    mut flowing = false
+    const bank = width / 2 - 6
+    const bank_x = 6 + bank / 2
+    const edge: math.Rng = {seed: seed + 557}
+    async {
+      await next_frame()
+      flowing = true
+    }
+    bedrock : CanopyStrata { Position: {0, -3.1, 0}; RoundedBox: {width, 4.4, depth, 2, segments: 2}; TextureTransform: {scale_x: width / 36, scale_y: 1} }
+    for side in 0..2 {
+      { (IsA, CanopyGround); Position: {(side - 0.5) * 2 * bank_x, -0.35, 0}; RoundedBox: {bank, 1.1, depth - 0.3, 1.2, segments: 2} }
+      { (IsA, CanopyAshlar); Position: {(side - 0.5) * 11.6, -0.31, 0}; Box: {1.6, 1.16, depth - 0.2} }
+      { (IsA, CanopyPaver); Rgb: {150, 146, 124}; Position: {(side - 0.5) * 11.6, 0.3, 0}; Box: {1.64, 0.06, depth - 0.2} }
+      for i in 0..math.floor(depth / 6) {
+        const z = -depth / 2 + (i + 0.5) * depth / math.floor(depth / 6)
+        { (IsA, CanopyMetal); Position: {(side - 0.5) * 10.05, 0.05, z}; Torus: {radius: 0.08, tube: 0.015, segments: 4, rings: 4} }
+        { (IsA, CanopyTimberDark); Position: {(side - 0.5) * 10.1, 0.0, z + 1.5}; Cylinder: {radius: 0.09, length: 1, segments: 3} }
+        if i % 4 == 2 {
+          for s in 0..4 {
+            { (IsA, CanopyConcrete); Position: {(side - 0.5) * (10.4 - s * 0.36), -0.2 - s * 0.14, z - 2}; Box: {0.36, 0.14, 1.4} }
+          }
+        }
+        if i % 2 == 0 {
+          CanopyVine(length: 1 + i % 3 * 0.3, phase: i) { Position: {(side - 0.5) * 10.0, 0.2, z - 0.8} }
+        }
+        if i % 3 == 0 {
+          CanopyReeds(seed: i + side * 7) { Position: {(side - 0.5) * 9.2, -0.42, z + 0.7} }
         }
       }
-      if i % 2 == 0 {
-        CanopyVine(length: 1 + i % 3 * 0.3, phase: i) { Position: {(side - 0.5) * 10.0, 0.2, z - 0.8} }
-      }
-      if i % 3 == 0 {
-        CanopyReeds(seed: i + side * 7) { Position: {(side - 0.5) * 9.2, -0.42, z + 0.7} }
+    }
+    bed : CanopySoil { Position: {0, -0.86, 0}; Box: {10.3, 0.06, depth - 0.2} }
+    canal_water : CanopyWater {
+      Position: {0, -0.35, 0}
+      Box: {10.3, 0.04, depth - 0.08}
+      TextureTransform: {scale_x: 2, scale_y: depth / 5, offset_x: flowing ? 180 : 0, offset_y: flowing ? 840 : 0}
+      Transition: [TextureTransform: {duration: 14400, timing_function: Linear}]
+    }
+    spill : CanopyFoam {
+      Position: {0, -2.4, depth / 2 + 0.03}
+      Box: {10, 4.1, 0.06}
+      TextureTransform: {scale_x: 2, scale_y: 1, offset_y: flowing ? 3600 : 0}
+      Transition: [TextureTransform: {duration: 14400, timing_function: Linear}]
+      Opacity: {0.85}
+    }
+    headwall : CanopyAshlar { Position: {0, 0.15, -depth / 2 + 0.7}; Box: {13.2, 2.1, 1.4} }
+    headwall_cap : CanopyTrim { Position: {0, 1.24, -depth / 2 + 0.7}; Box: {13.5, 0.1, 1.6} }
+    for i in 0..3 {
+      const x = (i - 1) * 3.4
+      { (IsA, CanopyTimberDark); Position: {x, 0.15, -depth / 2 + 1.41}; Box: {1.6, 1.3, 0.04} }
+      { (IsA, CanopyIron); Position: {x, 0.82, -depth / 2 + 1.42}; Box: {1.8, 0.1, 0.06} }
+      for b in 0..5 {
+        { (IsA, CanopyMetal); Position: {x - 0.64 + b * 0.32, 0.15, -depth / 2 + 1.45}; Box: {0.03, 1.3, 0.03} }
       }
     }
-  }
-  bed : CanopySoil { Position: {0, -0.86, 0}; Box: {10.3, 0.06, depth - 0.2} }
-  canal_water : CanopyWater {
-    Position: {0, -0.35, 0}
-    Box: {10.3, 0.04, depth - 0.08}
-    TextureTransform: {scale_x: 2, scale_y: depth / 5, offset_x: flowing ? 180 : 0, offset_y: flowing ? 840 : 0}
-    Transition: [TextureTransform: {duration: 14400, timing_function: Linear}]
-  }
-  spill : CanopyFoam {
-    Position: {0, -2.4, depth / 2 + 0.03}
-    Box: {10, 4.1, 0.06}
-    TextureTransform: {scale_x: 2, scale_y: 1, offset_y: flowing ? 3600 : 0}
-    Transition: [TextureTransform: {duration: 14400, timing_function: Linear}]
-    Opacity: {0.85}
-  }
-  headwall : CanopyAshlar { Position: {0, 0.15, -depth / 2 + 0.7}; Box: {13.2, 2.1, 1.4} }
-  headwall_cap : CanopyTrim { Position: {0, 1.24, -depth / 2 + 0.7}; Box: {13.5, 0.1, 1.6} }
-  for i in 0..3 {
-    const x = (i - 1) * 3.4
-    { (IsA, CanopyTimberDark); Position: {x, 0.15, -depth / 2 + 1.41}; Box: {1.6, 1.3, 0.04} }
-    { (IsA, CanopyIron); Position: {x, 0.82, -depth / 2 + 1.42}; Box: {1.8, 0.1, 0.06} }
-    for b in 0..5 {
-      { (IsA, CanopyMetal); Position: {x - 0.64 + b * 0.32, 0.15, -depth / 2 + 1.45}; Box: {0.03, 1.3, 0.03} }
-    }
-  }
-  for i in 0..math.floor((width + depth) / 2.4) {
-    const t = i / math.floor((width + depth) / 2.4)
-    const sx = i % 2 == 0 ? -1.0 : 1.0
-    const front_x = (t / 0.52 - 0.5) * (width - 4)
-    if t < 0.52 {
-      if front_x < -6.8 || front_x > 6.8 {
-        CanopyVine(length: 1.8 + edge.f(2.4), phase: i) { Position: {front_x, 0.18, depth / 2 + 0.05} }
+    for i in 0..math.floor((width + depth) / 2.4) {
+      const t = i / math.floor((width + depth) / 2.4)
+      const sx = i % 2 == 0 ? -1.0 : 1.0
+      const front_x = (t / 0.52 - 0.5) * (width - 4)
+      if t < 0.52 {
+        if front_x < -6.8 || front_x > 6.8 {
+          CanopyVine(length: 1.8 + edge.f(2.4), phase: i) { Position: {front_x, 0.18, depth / 2 + 0.05} }
+        }
+        CanopyVine(length: 1.2 + edge.f(1.8), phase: i + 3) { Position: {(t / 0.52 - 0.5) * (width - 4), 0.18, -depth / 2 - 0.05}; Rotation: {0, math.PI, 0} }
+      } else {
+        { Position: {sx * (width / 2 + 0.05), 0.18, ((t - 0.52) / 0.48 - 0.5) * (depth - 4)}; Rotation: {0, sx * math.PI / 2, 0}; CanopyVine(length: 1.4 + edge.f(2.2), phase: i) {} }
       }
-      CanopyVine(length: 1.2 + edge.f(1.8), phase: i + 3) { Position: {(t / 0.52 - 0.5) * (width - 4), 0.18, -depth / 2 - 0.05}; Rotation: {0, math.PI, 0} }
-    } else {
-      { Position: {sx * (width / 2 + 0.05), 0.18, ((t - 0.52) / 0.48 - 0.5) * (depth - 4)}; Rotation: {0, sx * math.PI / 2, 0}; CanopyVine(length: 1.4 + edge.f(2.2), phase: i) {} }
     }
   }
 }

@@ -11,65 +11,71 @@ using box.transform
 using box.camera
 using box.picking
 using box.surface
+using state
+using assets
 
-// An action that picks tool t
-template ToolKey {
-  prop t: i32 = 1
-  prop key: Key = Num1
+assets {
+  // An action that picks tool t
+  template ToolKey {
+    prop t: i32 = 1
+    prop key: Key = Num1
 
-  Action: {description: "Pick the tool {kind_name(t)}"}
-  Binding: {key: key}
+    Action: {description: "Pick the tool {kind_name(t)}"}
+    Binding: {key: key}
 
-  async {
-    while true {
-      await on.pressed(this)
-      emit PickTool(t: t)
+    async {
+      while true {
+        await on.pressed(this)
+        emit PickTool(t: t)
+      }
     }
   }
 }
 
-castle_actions {
-  PanLeft { Action: {description: "Move the view left"}; Binding: {key: A}; alt { Binding: {key: Left} } }
-  PanRight { Action: {description: "Move the view right"}; Binding: {key: D}; alt { Binding: {key: Right} } }
-  PanUp { Action: {description: "Move the view forward"}; Binding: {key: W}; alt { Binding: {key: Up} } }
-  PanDown { Action: {description: "Move the view back"}; Binding: {key: S}; alt { Binding: {key: Down} } }
-  TurnLeft { Action: {description: "Turn the view left"}; Binding: {key: Q} }
-  TurnRight { Action: {description: "Turn the view right"}; Binding: {key: E} }
-  ZoomIn { Action: {description: "Zoom in"}; Binding: {key: Equal}; alt { Binding: {key: KpAdd} } }
-  ZoomOut { Action: {description: "Zoom out"}; Binding: {key: Minus}; alt { Binding: {key: KpSubtract} } }
-  Orbit { Action: {description: "Drag to turn the view"}; Binding: {key: MouseRight} }
-  Paint { Action: {description: "Drag walls and paths across the plot"}; Binding: {key: MouseLeft} }
+state {
+  castle_actions {
+    PanLeft { Action: {description: "Move the view left"}; Binding: {key: A}; alt { Binding: {key: Left} } }
+    PanRight { Action: {description: "Move the view right"}; Binding: {key: D}; alt { Binding: {key: Right} } }
+    PanUp { Action: {description: "Move the view forward"}; Binding: {key: W}; alt { Binding: {key: Up} } }
+    PanDown { Action: {description: "Move the view back"}; Binding: {key: S}; alt { Binding: {key: Down} } }
+    TurnLeft { Action: {description: "Turn the view left"}; Binding: {key: Q} }
+    TurnRight { Action: {description: "Turn the view right"}; Binding: {key: E} }
+    ZoomIn { Action: {description: "Zoom in"}; Binding: {key: Equal}; alt { Binding: {key: KpAdd} } }
+    ZoomOut { Action: {description: "Zoom out"}; Binding: {key: Minus}; alt { Binding: {key: KpSubtract} } }
+    Orbit { Action: {description: "Drag to turn the view"}; Binding: {key: MouseRight} }
+    Paint { Action: {description: "Drag walls and paths across the plot"}; Binding: {key: MouseLeft} }
 
-  ToolKey Tool1(t: 1, key: Num1)
-  ToolKey Tool2(t: 2, key: Num2)
-  ToolKey Tool3(t: 3, key: Num3)
-  ToolKey Tool4(t: 4, key: Num4)
-  ToolKey Tool5(t: 5, key: Num5)
-  ToolKey Tool6(t: 6, key: Num6)
-  ToolKey Tool7(t: 7, key: Num7)
-  ToolKey Tool8(t: 8, key: Num8)
-  ToolKey Tool9(t: 9, key: Num9)
-  ToolKey Tool10(t: 10, key: Num0)
-  ToolKey Tool11(t: 11, key: P)
-  ToolKey Tool12(t: 12, key: X)
-  PutDown { Action: {description: "Put the tool down and clear the selection"}; Binding: {key: Escape} }
-  UpgradeKey { Action: {description: "Upgrade the selected piece"}; Binding: {key: U} }
-  RotateKey { Action: {description: "Turn the piece before placing it"}; Binding: {key: R} }
+    ToolKey Tool1(t: 1, key: Num1)
+    ToolKey Tool2(t: 2, key: Num2)
+    ToolKey Tool3(t: 3, key: Num3)
+    ToolKey Tool4(t: 4, key: Num4)
+    ToolKey Tool5(t: 5, key: Num5)
+    ToolKey Tool6(t: 6, key: Num6)
+    ToolKey Tool7(t: 7, key: Num7)
+    ToolKey Tool8(t: 8, key: Num8)
+    ToolKey Tool9(t: 9, key: Num9)
+    ToolKey Tool10(t: 10, key: Num0)
+    ToolKey Tool11(t: 11, key: P)
+    ToolKey Tool12(t: 12, key: X)
+    PutDown { Action: {description: "Put the tool down and clear the selection"}; Binding: {key: Escape} }
+    UpgradeKey { Action: {description: "Upgrade the selected piece"}; Binding: {key: U} }
+    RotateKey { Action: {description: "Turn the piece before placing it"}; Binding: {key: R} }
+  }
+
+  // Where the view eases to; the keys, the mouse and scripts move these
+  export mut view_x: f32 = 0
+  export mut view_z: f32 = 1
+  export mut view_yaw: f32 = 0.55
+  export mut view_pitch: f32 = 0.74
+  export mut view_dist: f32 = 36
+
+  // Where the view is, read by the camera rig of the scene
+  export mut cam_x: f32 = 0
+  export mut cam_z: f32 = 1
+  export mut cam_yaw: f32 = 0.55
+  export mut cam_pitch: f32 = 0.74
+  export mut cam_dist: f32 = 36
 }
-
-// Where the view eases to; the keys, the mouse and scripts move these
-export mut view_x: f32 = 0
-export mut view_z: f32 = 1
-export mut view_yaw: f32 = 0.55
-export mut view_pitch: f32 = 0.74
-export mut view_dist: f32 = 36
-
-// Where the view is, read by the camera rig of the scene
-export mut cam_x: f32 = 0
-export mut cam_z: f32 = 1
-export mut cam_yaw: f32 = 0.55
-export mut cam_pitch: f32 = 0.74
-export mut cam_dist: f32 = 36
 
 async {
   while true {
