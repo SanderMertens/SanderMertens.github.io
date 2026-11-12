@@ -59,7 +59,7 @@ state {
     here_fac + here_kind * 1000
   }
 
-  proc here_scan(poi: i32) {
+  fn here_scan(poi: i32) {
     const lvl: i32 = depot_level(stock_total(poi))
     mut fleet: i32 = 0
     mut doz: i32 = 0
@@ -87,7 +87,7 @@ state {
     }
   }
 
-  proc nav_build(poi: i32) {
+  fn nav_build(poi: i32) {
     mut n: i32 = 0
     for i in 0..10 {
       const r = plan_room(poi, i)
@@ -135,7 +135,7 @@ state {
     nav_n = n
   }
 
-  proc col_check(x: f32, z: f32) {
+  fn col_check(x: f32, z: f32) {
     mut ok: bool = false
     mut hit: bool = false
     mut room: i32 = -1
@@ -158,7 +158,7 @@ state {
     col_room = room
   }
 
-  proc talk_leave() {
+  fn talk_leave() {
     if amb_cur >= 0 {
       amb_cur = -1
       amb_n = 0

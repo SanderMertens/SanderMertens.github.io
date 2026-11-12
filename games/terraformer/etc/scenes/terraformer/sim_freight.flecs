@@ -177,7 +177,7 @@ state {
     }
   }
 
-  proc freight_manifest(g: i32, delta: i32) {
+  fn freight_manifest(g: i32, delta: i32) {
     if !freight_here() {
       toast_as(ship_block_text(1), TOAST_BAD)
     } else if g >= 0 && g < N_GOODS {
@@ -188,7 +188,7 @@ state {
     }
   }
 
-  proc freight_dest(poi: i32) {
+  fn freight_dest(poi: i32) {
     if poi < 0 {
       manifest_dest = -1
     } else if manifest_dest_ok(poi) {
@@ -198,7 +198,7 @@ state {
     }
   }
 
-  proc freight_ship(f: i32) {
+  fn freight_ship(f: i32) {
     const code = ship_block(f)
     if code != 0 {
       toast_as(ship_block_text(code), TOAST_BAD)
@@ -231,7 +231,7 @@ state {
     }
   }
 
-  proc shipments_arrive(t: f64) {
+  fn shipments_arrive(t: f64) {
     for i in 0..N_SHIPMENTS {
       if shipments[i].status == 1 && shipments[i].eta <= t {
         const to = shipments[i].to
@@ -255,7 +255,7 @@ state {
     }
   }
 
-  proc yard_buy_freighter(tier: i32) {
+  fn yard_buy_freighter(tier: i32) {
     const code = yard_block_freighter(tier)
     if code != 0 {
       toast_as(yard_block_text(code), TOAST_BAD)
@@ -269,7 +269,7 @@ state {
     }
   }
 
-  proc yard_buy_dozer() {
+  fn yard_buy_dozer() {
     const code = yard_block_dozer()
     if code != 0 {
       toast_as(yard_block_text(code), TOAST_BAD)

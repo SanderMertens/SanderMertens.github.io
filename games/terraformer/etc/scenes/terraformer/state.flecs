@@ -275,13 +275,13 @@ state {
     poi >= 0 && poi < N_POI ? stock[poi * 8] + stock[poi * 8 + 1] + stock[poi * 8 + 2] + stock[poi * 8 + 3] + stock[poi * 8 + 4] + stock[poi * 8 + 5] + stock[poi * 8 + 6] + stock[poi * 8 + 7] : 0
   }
 
-  proc stock_add(poi: i32, g: i32, delta: f32) {
+  fn stock_add(poi: i32, g: i32, delta: f32) {
     if poi >= 0 && poi < N_POI && g >= 0 && g < N_GOODS {
       stock[poi * 8 + g] = max(stock[poi * 8 + g] + delta, 0)
     }
   }
 
-  proc toast_as(text: string, kind: i32) {
+  fn toast_as(text: string, kind: i32) {
     toast_text = text
     toast_kind = kind
     toast_seq += 1
@@ -289,11 +289,11 @@ state {
     emit Toast(kind: kind)
   }
 
-  proc toast(text: string) {
+  fn toast(text: string) {
     toast_as(text, 0)
   }
 
-  proc say(name: string, tag: string, text: string, more: bool) {
+  fn say(name: string, tag: string, text: string, more: bool) {
     say_name = name
     say_tag = tag
     say_text = text
@@ -302,7 +302,7 @@ state {
     say_on = true
   }
 
-  proc say_end() {
+  fn say_end() {
     if say_on {
       say_on = false
     }

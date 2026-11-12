@@ -88,7 +88,7 @@ state {
     }
   }
 
-  proc manifest_clamp() {
+  fn manifest_clamp() {
     for g in 0..N_GOODS {
       const have = stock_at(at_poi, g)
       if manifest[g] > have {
@@ -97,7 +97,7 @@ state {
     }
   }
 
-  proc market_buy(g: i32, qty: i32) {
+  fn market_buy(g: i32, qty: i32) {
     const code = buy_block(g)
     if code != 0 {
       toast_as(buy_block_text(code), TOAST_BAD)
@@ -116,7 +116,7 @@ state {
     }
   }
 
-  proc market_sell(g: i32, qty: i32) {
+  fn market_sell(g: i32, qty: i32) {
     if sold_day != today {
       sold_today = {}
       sold_day = today

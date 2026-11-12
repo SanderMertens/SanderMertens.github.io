@@ -24,7 +24,7 @@ state {
     Speed4 { Action: {description: "Fast"}; Binding: {key: Num3} }
   }
 
-  proc reset_core() {
+  fn reset_core() {
     clock_reset()
     mode = MODE_STATION
     screen = SCREEN_NONE
@@ -78,7 +78,7 @@ state {
     cam_z = 0
   }
 
-  proc screen_open(scr: i32) {
+  fn screen_open(scr: i32) {
     if mode == MODE_STATION && screen != SCREEN_GAMEOVER && scr >= SCREEN_PANEL && scr <= SCREEN_SITE {
       const fac = screen_fac(scr)
       if fac == 0 || poi_has(at_poi, fac) {
@@ -87,7 +87,7 @@ state {
     }
   }
 
-  proc screen_close() {
+  fn screen_close() {
     if screen != SCREEN_GAMEOVER {
       screen = SCREEN_NONE
     }

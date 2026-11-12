@@ -38,7 +38,7 @@ state {
     "{nav_wp(from)},{nav_wp(from + 1)},{nav_wp(from + 2)},{nav_wp(from + 3)},{nav_wp(from + 4)},{nav_wp(from + 5)},{nav_wp(from + 6)},{nav_wp(from + 7)},{nav_wp(from + 8)},{nav_wp(from + 9)},{nav_wp(from + 10)},{nav_wp(from + 11)}"
   }
 
-  proc nav_route_clear() {
+  fn nav_route_clear() {
     if route_n != 0 || route_seq_n != 0 {
       route_n = 0
       route_poi = ROUTE_EMPTY
@@ -52,13 +52,13 @@ state {
     }
   }
 
-  proc nav_plan_request() {
+  fn nav_plan_request() {
     nav_plan_seq += 1
     nav_busy = true
     emit NavPlan(seq: nav_plan_seq)
   }
 
-  proc nav_dest_clear() {
+  fn nav_dest_clear() {
     nav_plan_seq += 1
     nav_busy = false
     nav_dest = -1

@@ -253,7 +253,7 @@ state {
     }
   }
 
-  proc dozer_send(d: i32, poi: i32) {
+  fn dozer_send(d: i32, poi: i32) {
     const code = dozer_send_block(d, poi)
     if code != 0 {
       toast_as(dozer_send_block_text(code), TOAST_BAD)
@@ -273,7 +273,7 @@ state {
     }
   }
 
-  proc site_create(p: i32, d: i32) {
+  fn site_create(p: i32, d: i32) {
     const s = pl_sys(p)
     const slot = site_free_slot()
     if pl_exists(p) && s >= 0 && s < N_SYS && sys_site[s] == 0 && slot >= 0 && slot < N_SITES {
@@ -288,7 +288,7 @@ state {
     }
   }
 
-  proc dozers_arrive(t: f64) {
+  fn dozers_arrive(t: f64) {
     for d in 0..N_DOZERS {
       if dozers[d].status == 2 && dozers[d].eta <= t {
         const poi = dozers[d].dest
@@ -310,7 +310,7 @@ state {
     }
   }
 
-  proc site_build(k: i32) {
+  fn site_build(k: i32) {
     const i = pl_site(poi_planet(at_poi))
     const code = mode != MODE_STATION ? 1 : build_block(at_poi, k)
     if code != 0 {
@@ -337,7 +337,7 @@ state {
     }
   }
 
-  proc sites_construct() {
+  fn sites_construct() {
     for i in 0..N_SITES {
       if sites[i].used {
         const poi = planet_poi(sites[i].planet)
@@ -373,7 +373,7 @@ state {
     }
   }
 
-  proc sites_run() {
+  fn sites_run() {
     mut buf: Site[16] = sites
     mut dirty: bool = false
     for i in 0..N_SITES {
@@ -426,7 +426,7 @@ state {
     }
   }
 
-  proc sites_upkeep(day: i32) {
+  fn sites_upkeep(day: i32) {
     for i in 0..N_SITES {
       if sites[i].used && site_struct[i * 16] >= 2 {
         const poi = planet_poi(sites[i].planet)
@@ -452,7 +452,7 @@ state {
     }
   }
 
-  proc sites_income() {
+  fn sites_income() {
     for i in 0..N_SITES {
       if sites[i].used && site_struct[i * 16] >= 2 {
         const v = site_income(i)
@@ -463,7 +463,7 @@ state {
     }
   }
 
-  proc sim_reset() {
+  fn sim_reset() {
     sim_day = 0
     offer_seq = 0
     offer_next = 1
@@ -477,7 +477,7 @@ state {
     dozer_t0 = {}
   }
 
-  proc sim_daily(day: i32) {
+  fn sim_daily(day: i32) {
     shipments_arrive(day)
     dozers_arrive(day)
     jobs_relink()

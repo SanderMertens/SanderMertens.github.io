@@ -563,13 +563,13 @@ state {
     "{bar_npc_name(poi, npc)} / {bar_npc_tag(poi, npc)} / {bar_npc_pose(poi, npc)} # {bar_line(poi, npc, 0, day)} # {bar_line(poi, npc, 1, day)} # {bar_line(poi, npc, 2, day)} # {bar_line(poi, npc, 3, day)} # {bar_line(poi, npc, 4, day)} # {bar_line(poi, npc, 5, day)}"
   }
 
-  proc talk_say() {
+  fn talk_say() {
     if talk_npc >= 0 && talk_npc < BAR_PATRONS {
       say(bar_npc_name(at_poi, talk_npc), bar_npc_tag(at_poi, talk_npc), bar_line(at_poi, talk_npc, talk_line, today), talk_line < bar_line_count(at_poi, talk_npc) - 1)
     }
   }
 
-  proc talk_clear() {
+  fn talk_clear() {
     if talk_npc != -1 {
       talk_npc = -1
     }
@@ -578,7 +578,7 @@ state {
     }
   }
 
-  proc talk_stop() {
+  fn talk_stop() {
     talk_clear()
     say_end()
   }

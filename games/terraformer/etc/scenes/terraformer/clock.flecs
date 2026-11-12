@@ -6,7 +6,7 @@ using box.app
 using state
 
 state {
-  proc clock_advance(days: f64) {
+  fn clock_advance(days: f64) {
     if days > 0 && screen != SCREEN_GAMEOVER {
       now += min(days, 400)
       mut guard: i32 = 0
@@ -18,7 +18,7 @@ state {
     }
   }
 
-  proc clock_reset() {
+  fn clock_reset() {
     now = 0
     today = 0
     speed = 1

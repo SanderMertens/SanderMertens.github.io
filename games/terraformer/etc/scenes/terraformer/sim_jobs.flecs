@@ -37,14 +37,14 @@ state {
   export mut ledger: f64[12] = {}
   export mut retired: bool = false
 
-  proc earn(account: i32, amount: f64) {
+  fn earn(account: i32, amount: f64) {
     money += amount
     if account >= 0 && account < 12 {
       ledger[account] += amount
     }
   }
 
-  proc pay(account: i32, amount: f64) {
+  fn pay(account: i32, amount: f64) {
     money -= amount
     if account >= 0 && account < 12 {
       ledger[account] += amount
@@ -287,7 +287,7 @@ state {
     offers_over() && offer.status == 0 && jobs_idle()
   }
 
-  proc jobs_relink() {
+  fn jobs_relink() {
     for i in 0..N_SITES {
       if sites[i].used {
         const j = job_on_planet(sites[i].planet)
@@ -304,7 +304,7 @@ state {
     }
   }
 
-  proc offer_accept() {
+  fn offer_accept() {
     const code = offer_block()
     if code != 0 {
       toast_as(offer_block_text(code), TOAST_BAD)
@@ -322,14 +322,14 @@ state {
     }
   }
 
-  proc offer_decline() {
+  fn offer_decline() {
     if offer.status == 1 {
       offer = JOB_NONE
       toast_as("Declined. They sounded relieved.", TOAST_INFO)
     }
   }
 
-  proc offer_roll(day: i32) {
+  fn offer_roll(day: i32) {
     if offer.status == 0 && day >= offer_next && job_free_slot() >= 0 && sites_used() + jobs_unsited() < N_SITES {
       const seq = offer_seq
       const first = seq == 0
@@ -400,7 +400,7 @@ state {
     }
   }
 
-  proc offers_daily(day: i32) {
+  fn offers_daily(day: i32) {
     if offer.status == 1 && day > offer_expires {
       offer = JOB_NONE
       toast_as("Offer withdrawn. They found someone cheaper.", TOAST_INFO)
@@ -408,7 +408,7 @@ state {
     offer_roll(day)
   }
 
-  proc jobs_check(day: i32) {
+  fn jobs_check(day: i32) {
     for j in 0..N_JOBS {
       const st = jobs[j].status
       if st == 1 {
@@ -438,18 +438,18 @@ state {
     jobs_relink()
   }
 
-  proc overhead_daily() {
+  fn overhead_daily() {
     pay(LED_OVERHEAD, OVERHEAD_DAILY)
   }
 
-  proc bankruptcy_check() {
+  fn bankruptcy_check() {
     if money < 0 && screen != SCREEN_GAMEOVER {
       screen = SCREEN_GAMEOVER
       toast_as("Chapter 11. Literally.", TOAST_BAD)
     }
   }
 
-  proc retire_check() {
+  fn retire_check() {
     if screen != SCREEN_GAMEOVER && retire_due() {
       retired = true
       screen = SCREEN_GAMEOVER

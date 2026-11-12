@@ -21,13 +21,13 @@ state {
     i < 0 || i >= 16 || i >= fl_stop_n ? "" : fl_stop_kind[i] == 2 ? sys_name(poi_sys(fl_stop_poi[i])) : poi_name(fl_stop_poi[i])
   }
 
-  proc fl_announce(text: string) {
+  fn fl_announce(text: string) {
     say(line_title(fl_line_a, fl_line_b, fl_cls), ship_class_name(fl_cls), text, false)
     fl_say_mine = say_seq
     fl_say_left = 6.5
   }
 
-  proc fl_board() {
+  fn fl_board() {
     if mode == MODE_STATION && !trav_active && !fl_req && !fl_on && screen != SCREEN_GAMEOVER {
       const n: i32 = clamp(route_n, 0, ROUTE_MAX)
       mut ok: bool = n >= 2
