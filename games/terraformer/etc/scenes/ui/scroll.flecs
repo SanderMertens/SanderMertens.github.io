@@ -1,0 +1,628 @@
+// ScrollView and ListView: content larger than its view, moved with the wheel, scroll bars and
+// keys.
+
+module box.widgets
+
+using flecs.script
+using flecs.script.math
+using box.ui
+using box.input
+using box.picking
+using box.layout
+using box.geometry
+using box.material
+using box.text
+using box.transform
+using box.transition
+
+// Length of the thumb of a scroll bar on a track of length track: the visible fraction of the
+// content, at least 20 points, the whole track when everything fits
+fn scroll_thumb(track: f64, view: f64, content: f64) -> f64 {
+  content > view ? clamp(track * view / content, min(20, track), track) : track
+}
+
+// Offset of the thumb from the start of its track for a scroll offset of at out of most
+fn scroll_thumb_at(track: f64, thumb: f64, at: f64, most: f64) -> f64 {
+  most > 0 ? (track - thumb) * clamp(at / most, 0, 1) : 0
+}
+
+// Length of the track of a scroll bar along a view of length size: the view less edge points at
+// either end and the room other (the thickness of the bar across it, 0 without one) takes at the
+// far end
+fn scroll_track(size: f64, edge: f64, other: f64) -> f64 {
+  max(size - edge * 2 - other, 0)
+}
+
+// Behavior of a scroll view: its children are the content, shifted by the offset in the muts x
+// and y (LayoutScroll), which the input clamps to 0..LayoutContent.max_x/max_y. The content is
+// clipped to the view (ClipChildren), so the part outside it is not drawn or picked.
+//
+// The wheel scrolls step points per wheel step, shift turns a vertical step horizontal. The
+// scroll bars are bar points thick along the right and the bottom edge, edge points inside them
+// (clear of the border of the view), while the content does not fit on their axis; the vertical
+// track ends above the horizontal bar. A press on a thumb drags it, a press on a track moves a
+// page (the size of the view) toward the press. While the view itself is focused and keys is
+// set, the arrow keys scroll a step, PageUp and PageDown a page, Home and End to the start and the
+// end. The wheel goes to the innermost scroll view under the cursor, the first Interactive element
+// on its path. drag is the thumb held and over the thumb under the pointer: 1 vertical,
+// 2 horizontal, 0 none.
+// Without focusable the view is only Interactive: it is no Tab stop and a press on it clears the
+// focus, as for a page that scrolls the widgets in it into view while Tab moves through them.
+template HeadlessScrollView {
+  prop width: f32 = 0
+  prop height: f32 = 0
+  prop horizontal: bool = false
+  prop vertical: bool = true
+  prop bar: f32 = 0
+  prop edge: f32 = 0
+  prop step: f32 = 40
+  prop keys: bool = true
+  prop focusable: bool = true
+
+  mut x: f32 = 0
+  mut y: f32 = 0
+  mut drag: i32 = 0
+  mut grab: f32 = 0
+  mut over: i32 = 0
+  mut focused = false
+
+  // The body reads no component: flecs script restarts the async blocks of a template when a
+  // component it reads changes, in the body or in an async block. The blocks read LayoutBounds
+  // and LayoutContent, which only change when the layout runs, after the events of a frame.
+  if focusable {
+    Focusable
+  } else {
+    Interactive
+  }
+  ClipChildren
+  LayoutScroll: {x: x, y: y, horizontal: horizontal, vertical: vertical}
+
+  async {
+    while true {
+      const e = await on.focus(this)
+      if e.target == this {
+        focused = true
+      }
+    }
+  }
+
+  async {
+    while true {
+      const e = await on.blur(this)
+      if e.target == this {
+        focused = false
+      }
+    }
+  }
+
+  // A descendant that gets the focus, such as by Tab, is scrolled into view. The world matrices
+  // give its offset from the center of the view, y up, in the units of the bounds. A focus
+  // before the first layout, which has placed nothing yet, scrolls nothing.
+  async {
+    while true {
+      const e = await on.focus(this)
+      const placed = this.has(LayoutContent) && this.has(WorldTransform) &&
+        e.target.has(LayoutBounds) && e.target.has(WorldTransform)
+      if e.target != this && placed {
+        const b = this[LayoutBounds]
+        const content = this[LayoutContent]
+        const tb = e.target[LayoutBounds]
+        const vm = this[WorldTransform].m.v
+        const tm = e.target[WorldTransform].m.v
+        const dx = tm[12] - vm[12]
+        const dy = vm[13] - tm[13]
+        if vertical {
+          if dy - tb.height / 2 < -b.height / 2 {
+            y = clamp(content.y + dy - tb.height / 2 + b.height / 2, 0, content.max_y)
+          } else if dy + tb.height / 2 > b.height / 2 {
+            y = clamp(content.y + dy + tb.height / 2 - b.height / 2, 0, content.max_y)
+          }
+        }
+        if horizontal {
+          if dx - tb.width / 2 < -b.width / 2 {
+            x = clamp(content.x + dx - tb.width / 2 + b.width / 2, 0, content.max_x)
+          } else if dx + tb.width / 2 > b.width / 2 {
+            x = clamp(content.x + dx + tb.width / 2 - b.width / 2, 0, content.max_x)
+          }
+        }
+      }
+    }
+  }
+
+  async {
+    while true {
+      const e = await on.scroll(this)
+      const content = this[LayoutContent]
+      const dx = e.shift ? e.delta_x + e.delta_y : e.delta_x
+      const dy = e.shift ? 0 : e.delta_y
+      if horizontal && dx != 0 {
+        x = clamp(content.x - dx * step, 0, content.max_x)
+      }
+      if vertical && dy != 0 {
+        y = clamp(content.y - dy * step, 0, content.max_y)
+      }
+    }
+  }
+
+  // A press on a bar: grab its thumb or page toward the press
+  async {
+    while true {
+      const e = await on.press(this)
+      const b = this[LayoutBounds]
+      const content = this[LayoutContent]
+      const on_v = vertical && content.max_y > 0
+      const on_h = horizontal && content.max_x > 0
+      const vtrack = scroll_track(b.height, edge, on_h ? bar : 0)
+      const htrack = scroll_track(b.width, edge, on_v ? bar : 0)
+      const vthumb = scroll_thumb(vtrack, b.height, content.height)
+      const hthumb = scroll_thumb(htrack, b.width, content.width)
+      const vat = scroll_thumb_at(vtrack, vthumb, content.y, content.max_y)
+      const hat = scroll_thumb_at(htrack, hthumb, content.x, content.max_x)
+      const down = b.height / 2 - edge - e.local_y
+      const right = e.local_x + b.width / 2 - edge
+      if on_v && e.local_x >= b.width / 2 - edge - bar && down < vtrack {
+        if down >= vat && down <= vat + vthumb {
+          drag = 1
+          grab = down - vat
+        } else if down < vat {
+          y = clamp(content.y - b.height, 0, content.max_y)
+        } else {
+          y = clamp(content.y + b.height, 0, content.max_y)
+        }
+      } else if on_h && e.local_y <= edge + bar - b.height / 2 && right < htrack {
+        if right >= hat && right <= hat + hthumb {
+          drag = 2
+          grab = right - hat
+        } else if right < hat {
+          x = clamp(content.x - b.width, 0, content.max_x)
+        } else {
+          x = clamp(content.x + b.width, 0, content.max_x)
+        }
+      }
+    }
+  }
+
+  // The thumb under the pointer, which the look of a bar lightens
+  async {
+    while true {
+      const e = await on.move(this)
+      const b = this[LayoutBounds]
+      const content = this[LayoutContent]
+      const on_v = vertical && content.max_y > 0
+      const on_h = horizontal && content.max_x > 0
+      const vtrack = scroll_track(b.height, edge, on_h ? bar : 0)
+      const htrack = scroll_track(b.width, edge, on_v ? bar : 0)
+      const vthumb = scroll_thumb(vtrack, b.height, content.height)
+      const hthumb = scroll_thumb(htrack, b.width, content.width)
+      const vat = scroll_thumb_at(vtrack, vthumb, content.y, content.max_y)
+      const hat = scroll_thumb_at(htrack, hthumb, content.x, content.max_x)
+      const down = b.height / 2 - edge - e.local_y
+      const right = e.local_x + b.width / 2 - edge
+      const in_v = on_v && e.local_x >= b.width / 2 - edge - bar && down >= vat &&
+        down <= vat + vthumb
+      const in_h = on_h && e.local_y <= edge + bar - b.height / 2 && right >= hat &&
+        right <= hat + hthumb
+      const at = in_v ? 1 : in_h ? 2 : 0
+      if over != at {
+        over = at
+      }
+    }
+  }
+
+  async {
+    while true {
+      await on.leave(this)
+      over = 0
+    }
+  }
+
+  async {
+    while true {
+      const e = await on.drag(this)
+      const b = this[LayoutBounds]
+      const content = this[LayoutContent]
+      if drag == 1 {
+        const vtrack = scroll_track(b.height, edge, horizontal && content.max_x > 0 ? bar : 0)
+        const vthumb = scroll_thumb(vtrack, b.height, content.height)
+        const at = b.height / 2 - edge - e.local_y - grab
+        y = clamp(at / max(vtrack - vthumb, 1) * content.max_y, 0, content.max_y)
+      } else if drag == 2 {
+        const htrack = scroll_track(b.width, edge, vertical && content.max_y > 0 ? bar : 0)
+        const hthumb = scroll_thumb(htrack, b.width, content.width)
+        const at = e.local_x + b.width / 2 - edge - grab
+        x = clamp(at / max(htrack - hthumb, 1) * content.max_x, 0, content.max_x)
+      }
+    }
+  }
+
+  async {
+    while true {
+      await on.release(this)
+      drag = 0
+    }
+  }
+
+  async {
+    while true {
+      const e = await on.key_down(this)
+      if keys && focused {
+        const b = this[LayoutBounds]
+        const content = this[LayoutContent]
+        if vertical {
+          const ty = match e.key {
+            "ArrowUp": content.y - step
+            "ArrowDown": content.y + step
+            "PageUp": content.y - b.height
+            "PageDown": content.y + b.height
+            "Home": 0
+            "End": content.max_y
+            _: content.y
+          }
+          if ty != content.y {
+            y = clamp(ty, 0, content.max_y)
+          }
+        }
+        if horizontal {
+          const tx = match e.key {
+            "ArrowLeft": content.x - step
+            "ArrowRight": content.x + step
+            "Home": vertical ? content.x : 0
+            "End": vertical ? content.x : content.max_x
+            _: content.x
+          }
+          if tx != content.x {
+            x = clamp(tx, 0, content.max_x)
+          }
+        }
+      }
+    }
+  }
+}
+
+// The look of a scroll bar, centered on its Position: an opaque track length points long and
+// size points thick, its corners rounded by radius, with a thumb of length thumb at offset at from
+// the start of the track (its top or its left end). The thumb lightens toward the text color
+// while the pointer is over it (hover) and takes that color while it is dragged (active). ring is
+// the part of the focus ring of the view the bar lies over, in points from its outer side (the
+// right or the bottom): that strip takes the focus color, so the ring keeps its width along the
+// bar. The pointer shows a hand over the bar.
+template ScrollBar {
+  prop vertical: bool = true
+  prop length: f32 = 0
+  prop thumb: f32 = 0
+  prop at: f32 = 0
+  prop size: f32 = 10
+  prop radius: f32 = 0
+  prop active: bool = false
+  prop hover: bool = false
+  prop ring: f32 = 0
+
+  const t = box.ui.theme[UiTheme]
+  const inset = 2
+  const w = vertical ? size : length
+  const h = vertical ? length : size
+
+  Rect: {w, h}
+  Rgb: t.surface
+  Border: {radius: radius}
+  Cursor: {CursorPointer}
+
+  if ring > 0 {
+    ring_edge {
+      if vertical {
+        Position: {w / 2 - ring / 2, 0, 0}
+        Rect: {ring, h}
+      } else {
+        Position: {0, ring / 2 - h / 2, 0}
+        Rect: {w, ring}
+      }
+      Rgb: t.focus
+    }
+  }
+
+  knob {
+    if vertical {
+      Position: {0, h / 2 - at - thumb / 2, 0}
+      Rect: {size - inset * 2, thumb - inset * 2}
+    } else {
+      Position: {at + thumb / 2 - w / 2, 0, 0}
+      Rect: {thumb - inset * 2, size - inset * 2}
+    }
+    Border: {radius: (size - inset * 2) / 2}
+    Rgb: active ? t.text : t.text_muted
+    Tint: {t.text.r, t.text.g, t.text.b, hover && !active ? 128 : 0}
+    Transition: [Rgb: WidgetFade, Tint: WidgetFade]
+  }
+}
+
+// A scroll view: a surface whose children are laid out in a column and scroll, with scroll bars
+// inside the right and bottom edges while the content does not fit; the padding leaves room for a
+// bar while it shows. width and height fix the view, 0 grows it to the space its parent gives.
+// Without frame it has no border or padding and the background of the theme, so only its content
+// and its bars show.
+//
+// The bars are in scrollbars, a clipped overlay (LayoutFloat with clip) of no size on the center
+// of the view: the column leaves it out of its flow and the scroll offset does not move it, yet
+// the view and the clips around it clip it, and it draws and picks over the content wherever it
+// is among the children, so content added after the bars show stays under them.
+template ScrollView : HeadlessScrollView {
+  prop bar: f32 = 10
+  prop edge: f32 = 1
+  prop frame: bool = true
+
+  const t = box.ui.theme[UiTheme]
+  const ring = focused && FocusStatus[FocusStatus].visible
+  const pad = frame ? t.padding : 0
+  const b = this[LayoutBounds]
+  const c = this[LayoutContent]
+  const vbar = vertical && c.max_y > 0
+  const hbar = horizontal && c.max_x > 0
+  const bars = vbar || hbar
+  const pad_right = pad + (vbar ? bar : 0)
+  const pad_bottom = pad + (hbar ? bar : 0)
+
+  Layout: {direction: Column, spacing: t.spacing, padding: {pad, pad_bottom, pad, pad_right}}
+  LayoutItem: {}
+  if width > 0 {
+    LayoutItem = {width: {mode: Fixed, value: width}}
+  } else {
+    LayoutItem = {width: {mode: Grow}}
+  }
+  if height > 0 {
+    LayoutItem = {height: {mode: Fixed, value: height}}
+  } else {
+    LayoutItem = {height: {mode: Grow}}
+  }
+  Rect: {1, 1}
+  Rgb: frame ? t.surface_alt : t.background
+
+  if ring {
+    Border: {
+      width: t.focus_width, radius: t.radius,
+      color: {t.focus.r, t.focus.g, t.focus.b, 255}
+    }
+  } else if frame {
+    Border: {width: 1, radius: t.radius, color: {t.border.r, t.border.g, t.border.b, 255}}
+  }
+
+  if bars {
+    const vtrack = scroll_track(b.height, edge, hbar ? bar : 0)
+    const htrack = scroll_track(b.width, edge, vbar ? bar : 0)
+    const vthumb = scroll_thumb(vtrack, b.height, c.height)
+    const hthumb = scroll_thumb(htrack, b.width, c.width)
+    const radius = max(t.radius - edge, 0)
+    const ring_under = ring ? max(t.focus_width - edge, 0) : 0
+
+    scrollbars {
+      LayoutFloat: {h: Center, v: Middle, anchor_h: Center, anchor_v: Middle, clip: true}
+      LayoutItem: {width: {mode: Fixed, value: 0}, height: {mode: Fixed, value: 0}}
+
+      // Both tracks run the whole length of their edge and cover the corner between them
+      if vbar {
+        ScrollBar vscroll(
+          vertical: true, length: b.height - edge * 2, thumb: vthumb, size: bar,
+          radius: radius, active: drag == 1, hover: over == 1, ring: ring_under,
+          at: scroll_thumb_at(vtrack, vthumb, c.y, c.max_y)) {
+          Position: {b.width / 2 - edge - bar / 2, 0, 0}
+        }
+      }
+
+      if hbar {
+        ScrollBar hscroll(
+          vertical: false, length: b.width - edge * 2, thumb: hthumb, size: bar,
+          radius: radius, active: drag == 2, hover: over == 2, ring: ring_under,
+          at: scroll_thumb_at(htrack, hthumb, c.x, c.max_x)) {
+          Position: {0, edge + bar / 2 - b.height / 2, 0}
+        }
+      }
+    }
+  }
+}
+
+// Behavior of a list view: rows of row points with the strings of items in a vertical scroll
+// view, one of which is selected. current is the index of the selected row, -1 for none. A press
+// on a row selects it; Up and Down select the next and the previous row, PageUp and PageDown move
+// a page, Home and End select the first and the last row, and the scroll offset follows so the
+// selected row stays in view. Each change of the selection reports a change. hover is the row
+// under the pointer, -1 for none and while disabled. The rows start inset points below the top of the content. The
+// pointer shows a hand over the list, a crossed circle while it is disabled.
+template HeadlessListView : HeadlessScrollView {
+  prop items = ["Item"]
+  prop value: i32 = -1
+  prop row: f32 = 0
+  prop inset: f32 = 0
+  prop keys: bool = false
+  prop disabled: bool = false
+
+  mut current: i32 = clamp(value, -1, items.count() - 1)
+  mut last_value: i32 = value
+  mut hover: i32 = -1
+
+  const count = items.count()
+
+  if disabled {
+    Cursor: {CursorNotAllowed}
+  } else {
+    Cursor: {CursorPointer}
+  }
+
+  async {
+    if value != last_value {
+      last_value = value
+      current = clamp(value, -1, count - 1)
+    }
+  }
+
+  async {
+    while true {
+      const e = await on.move(this)
+      const b = this[LayoutBounds]
+      const content = this[LayoutContent]
+      const along = b.height / 2 - e.local_y + content.y - inset
+      const i = floor(along / max(row, 1))
+      const over_bar = content.max_y > 0 && e.local_x >= b.width / 2 - edge - bar
+      const h = !disabled && !over_bar && along >= 0 && i < count ? i : -1
+      if h != hover {
+        hover = h
+      }
+    }
+  }
+
+  async {
+    while true {
+      await on.leave(this)
+      hover = -1
+    }
+  }
+
+  async {
+    while true {
+      const e = await on.press(this)
+      const b = this[LayoutBounds]
+      const content = this[LayoutContent]
+      const along = b.height / 2 - e.local_y + content.y - inset
+      const i = floor(along / max(row, 1))
+      const over_bar = content.max_y > 0 && e.local_x >= b.width / 2 - edge - bar
+      if !disabled && !over_bar && along >= 0 && i < count && i != current {
+        current = i
+        await ui.changed(this)
+      }
+    }
+  }
+
+  async {
+    while true {
+      const e = await on.key_down(this)
+      if !disabled && count > 0 && focused {
+        const b = this[LayoutBounds]
+        const content = this[LayoutContent]
+        const page = max(floor(b.height / max(row, 1)) - 1, 1)
+        const target = match e.key {
+          "ArrowDown": current < 0 ? 0 : current + 1
+          "ArrowUp": current < 0 ? 0 : current - 1
+          "PageDown": current + page
+          "PageUp": current - page
+          "Home": 0
+          "End": count - 1
+          _: current
+        }
+        const i = clamp(target, 0, count - 1)
+        if target != current && i != current {
+          current = i
+          const top = inset + i * row
+          if top < content.y + inset {
+            y = top - inset
+          } else if top + row + inset > content.y + b.height {
+            y = min(top + row - b.height + inset, content.max_y)
+          }
+          await ui.changed(this)
+        }
+      }
+    }
+  }
+}
+
+// A list view: a column of rows on a surface with a scroll bar while the rows do not fit, the
+// selected row on the selection color and the row under the pointer on the hover color. A width
+// fixes it, 0 grows it; height fixes the view, 0 makes it 200 points.
+template ListView : HeadlessListView {
+  prop row: f32 = 28
+  prop inset: f32 = 4
+  prop bar: f32 = 10
+  prop edge: f32 = 1
+
+  const t = box.ui.theme[UiTheme]
+  const ring = focused && FocusStatus[FocusStatus].visible
+  const view_h = height == 0 ? 200 : height
+
+  const b = this[LayoutBounds]
+  const c = this[LayoutContent]
+  const vbar = c.max_y > 0
+
+  // Without a direction, so the bar keeps its Position while the rows scroll. The rows stay
+  // inside the border on the left and right and left of the bar while it shows.
+  Layout: {padding: {inset, inset, edge, edge + (vbar ? bar : 0)}}
+  if width > 0 {
+    LayoutItem: {
+      width: {mode: Fixed, value: width}, height: {mode: Fixed, value: view_h}
+    }
+  } else {
+    LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: view_h}}
+  }
+  Rect: {1, 1}
+
+  const count = items.count()
+  const vtrack = scroll_track(b.height, edge, 0)
+  const vthumb = scroll_thumb(vtrack, b.height, c.height)
+  Rgb: t.surface_alt
+
+  if ring {
+    Border: {
+      width: t.focus_width, radius: t.radius,
+      color: {t.focus.r, t.focus.g, t.focus.b, 255}
+    }
+  } else {
+    Border: {width: 1, radius: t.radius, color: {t.border.r, t.border.g, t.border.b, 255}}
+  }
+
+  // The bars behind the rows show the selection and the hover without touching the rows. They
+  // stay while hidden, so a press on one never deletes the entity it went to.
+  selected_row {
+    LayoutItem: {
+      h: Left, v: Top, y: -max(current, 0) * row,
+      width: {mode: Grow}, height: {mode: Fixed, value: row}
+    }
+    if current >= 0 {
+      Rect: {1, 1}
+      Rgb: t.selection
+    }
+  }
+
+  hover_row {
+    LayoutItem: {
+      h: Left, v: Top, y: -max(hover, 0) * row,
+      width: {mode: Grow}, height: {mode: Fixed, value: row}
+    }
+    if hover >= 0 && hover != current {
+      Rect: {1, 1}
+      Rgb: t.hover
+    }
+  }
+
+  rows {
+    Layout: {direction: Column}
+    LayoutItem: {h: Left, v: Top, width: {mode: Grow}}
+
+    for i in 0..count {
+      "row_{i}" {
+        Layout: {direction: Row, padding: {0, 0, t.padding, t.padding}, v: Middle}
+        LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: row}}
+
+        caption {
+          Text: {value: items[i], size: t.font_size}
+          Rgb: t.text
+        }
+      }
+    }
+  }
+
+  // The bar sits edge points inside the right, top and bottom edges, clear of the border. It is
+  // in scrollbars, which has no LayoutItem, so it does not scroll, and no size or Layout, so the
+  // layout does not measure the bar into the content: a child without a LayoutItem needs twice
+  // its distance from the center, which would widen the list by the padding of the rows.
+  if vbar {
+    scrollbars {
+      ScrollBar vscroll(
+        vertical: true, length: vtrack, thumb: vthumb, size: bar,
+        radius: max(t.radius - edge, 0), active: drag == 1, hover: over == 1,
+        ring: ring ? max(t.focus_width - edge, 0) : 0,
+        at: scroll_thumb_at(vtrack, vthumb, c.y, c.max_y)) {
+        Position: {b.width / 2 - edge - bar / 2, 0, 0}
+      }
+    }
+  }
+
+  if disabled {
+    Opacity: {t.disabled_opacity}
+  }
+}

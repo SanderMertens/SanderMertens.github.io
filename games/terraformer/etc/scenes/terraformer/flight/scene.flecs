@@ -1,0 +1,241 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.camera
+using box.view
+using box.light
+using box.effects
+using box.surface
+using box.movement
+using box.particle
+using box.transition
+using box.spatial
+using state
+using terra
+
+terra {
+  prefab FlStreakRing { Torus: {radius: 520, tube: 330, segments: 24, rings: 8} }
+
+  template FlBody {
+    prop sys: i32 = 44
+    prop k: i32 = 0
+    prop hero: bool = false
+
+    const p: i32 = sys * 6 + k
+
+    SpatialIgnore
+    Planet body(kind: pl_type(p), seed: pl_seed(p), atm: pl_atm(p), water: pl_water(p), temp: pl_temp(p), bio: pl_bio(p), radius: 1000, lights: pl_lights(p), rings: pl_rings(p), detail: hero ? 2 : 1, spin: 0.0012)
+  }
+
+  template FlSun {
+    prop kind: i32 = 2
+
+    const cr: f32 = star_color_r(kind)
+    const cg: f32 = star_color_g(kind)
+    const cb: f32 = star_color_b(kind)
+
+    SpatialIgnore
+    core {
+      Position: {0, 0, 0}
+      Sphere: {radius: 1000, segments: 32, smooth: true}
+      Rgb: {0, 0, 0}
+      PbrMaterial: {metallic: 0, roughness: 1}
+      Emissive: {strength: 60, color: {cr, cg, cb}}
+      NoShadow
+      SpatialIgnore
+    }
+    halo {
+      Position: {0, 0, 0}
+      Sphere: {radius: 1350, segments: 32, smooth: true}
+      Rgb: {0, 0, 0}
+      PbrMaterial: {metallic: 0, roughness: 1}
+      Emissive: {strength: 5, color: {cr, cg, cb}}
+      Fresnel: {color: {cr, cg, cb}, strength: 0, power: 1.5, opacity: 0}
+      BlendMode: Additive
+      Opacity: {0.35}
+      NoShadow
+      SpatialIgnore
+    }
+  }
+
+  template FlLane {
+    prop port: bool = true
+
+    SpatialIgnore
+    if port {
+      for i in 0..FL_HOOPS {
+        "hoop_{i}" {
+          Position: {0, 0, fl_hoop[i]}
+          FlHoop hoop(lit: 1)
+        }
+        "back_{i}" {
+          Position: {-760, 0, fl_hoop[i]}
+          FlHoop hoop(lit: 0.5)
+        }
+        "buoy_{i}" {
+          Position: {-380, -40, fl_hoop[i]}
+          FlBuoy buoy(lit: 1)
+        }
+      }
+      pass_a {
+        Position: {-760, 0, fl_pass[0]}
+        Rotation: {0, PI, 0}
+        FlLiner ship(thrust: 0.8, livery: {120, 170, 255})
+      }
+      pass_b {
+        Position: {-760, 0, fl_pass[1]}
+        Rotation: {0, PI, 0}
+        FlFreighter ship(thrust: 0.8, cap: 3, livery: {206, 96, 40})
+      }
+    }
+  }
+}
+
+flight {
+  Scene: {environment: true, blend_modes: true, fresnel: true, transmission: true, clear_coat: true, triplanar: true}
+  AmbientLight: {sky: {34, 40, 60}, ground: {16, 18, 26}, intensity: 0.1}
+
+  eye {
+    Position: {fl_cx, fl_cy, fl_cz}
+    Rotation: {fl_cpitch, fl_cyaw, 0}
+    Camera: {fov: fl_cfov, near_: 2, far_: 520000}
+  }
+
+  sun {
+    Rotation: {fl_sun_pitch, fl_sun_yaw, 0}
+    DirectionalLight: {intensity: 6.5}
+    Rgb: {255 - (255 - star_color_r(sys_star(fl_sys))) * 0.4, 250 - (250 - star_color_g(sys_star(fl_sys))) * 0.4, 244 - (244 - star_color_b(sys_star(fl_sys))) * 0.4}
+  }
+
+  fill {
+    Rotation: {0.9, fl_sun_yaw + 2.5, 0}
+    DirectionalLight: {intensity: 0.9}
+    Rgb: {150, 176, 235}
+  }
+
+  kick {
+    Rotation: {-0.5, fl_sun_yaw - 2.2, 0}
+    DirectionalLight: {intensity: 0.35}
+    Rgb: {235, 200, 170}
+  }
+
+  for i in 0..8 {
+    "pad_{i}" {
+      Position: {i * 10, -9000000, 0}
+      PointLight: {intensity: 0.001, range: 0.5}
+      Rgb: {255, 255, 255}
+    }
+  }
+
+  if fl_on {
+    sky {
+      Position: {0, 0, 0}
+      SkyDome dome(sys: fl_sys, radius: FL_SKY)
+    }
+
+    star {
+      Position: {fl_body[0], fl_body[1], fl_body[2]}
+      Scale: {fl_body[3], fl_body[3], fl_body[3]}
+      FlSun body(kind: sys_star(fl_sys))
+    }
+
+    for k in 0..6 {
+      if k < sys_planets(fl_sys) {
+        "planet_{k}" {
+          Position: {fl_body[4 + k * 4], fl_body[5 + k * 4], fl_body[6 + k * 4]}
+          Scale: {fl_body[7 + k * 4], fl_body[7 + k * 4], fl_body[7 + k * 4]}
+          FlBody body(sys: fl_sys, k: k, hero: (fl_hero_mask >> k) % 2 == 1)
+        }
+      }
+    }
+
+    for i in 0..2 {
+      if fl_spi[i * 8] >= 0 {
+        "place_{i}" {
+          Position: {fl_sp[i * 4], 0, fl_sp[i * 4 + 1]}
+          Rotation: {0, fl_sp[i * 4 + 2], 0}
+          FlPlace place(poi: fl_spi[i * 8], gl: fl_spi[i * 8 + 1], gla: fl_spi[i * 8 + 2], gs: fl_spi[i * 8 + 3], gsa: fl_spi[i * 8 + 4], own: fl_spi[i * 8 + 5], busy: fl_spi[i * 8 + 6] == 1)
+        }
+      }
+    }
+
+    hero {
+      Position: {fl_sx, fl_sy, fl_sz}
+      Rotation: {0, fl_syaw, fl_sroll}
+      FlAnyShip ship(cls: fl_cls, line: fl_liv_sys, thrust: fl_thrust, rcs: fl_rcs)
+
+      if fl_lane_on {
+        lane {
+          Position: {0, 0, 0}
+          FlLane hoops(port: fl_lane_port)
+        }
+      }
+
+      streaks {
+        Position: {0, 0, 9000}
+        Rotation: {PI / 2, 0, 0}
+        ParticleEmitter: {
+          max: 1200, rate: fl_warp ? 520 : 0, shape: EmitterMesh, source: FlStreakRing,
+          direction: {0, -1, 0}, spread: 0, speed: {6000, 9500},
+          lifetime: {1.2, 1.9}, size: {2.5, 6}, color: {200, 222, 255},
+          color_variance: {30, 20, 0}, opacity: {0.25, 0.8}, seed: 31
+        }
+        ParticleForces: {gravity: {0, 0, 0}}
+        ParticleAppearance: {shape: ParticleCircle, blend: ParticleAdditive, stretch: 0.012}
+        SpatialIgnore
+      }
+    }
+  }
+}
+
+flight_fx {
+  Scene: {}
+
+  camera {
+    Position: {0, 0, 100}
+    Camera: {ortho: true, ortho_scale: 1}
+  }
+
+  sheet {
+    Position: {0, 0, 0}
+    Rect: {8000, 8000}
+    Rgb: {0, 0, 0}
+    Opacity: {fl_fade ? 1 : 0}
+    Transition: [Opacity: {duration: fl_fade_t, timing_function: EaseInOut}]
+    SpatialIgnore
+  }
+
+  wink {
+    Position: {0, 0, 1}
+    Rect: {8000, 8000}
+    Rgb: {0, 0, 0}
+    Opacity: {fl_blink ? 1 : 0}
+    Transition: [Opacity: {duration: 0.16, timing_function: EaseInOut}]
+    SpatialIgnore
+  }
+}
+
+flight_views {
+  bloom { Bloom: {intensity: 0.3, threshold: 1.05, threshold_softness: 0.5} }
+  film { Tonemap: {operator_: TonyMcMapface} }
+  edges { Smaa: {} }
+
+  if view_layer == LAYER_FLIGHT {
+    view {
+      View: {
+        camera: flight.eye,
+        order: 1,
+        clear: {enabled: true, color: {1, 2, 5, 255}},
+        shadows: {enabled: true, cascades: 4, resolution: 2048, max_distance: 4500},
+        lighting: {baked: false, reflections: false, environment: {source: terra.space_env, intensity: 0.12, background: false}},
+        culling: {enabled: true, occlusion: false, min_dimension_px: 0},
+        effects: [{effect: bloom}, {effect: film}, {effect: edges}]
+      }
+    }
+    veil {
+      View: {camera: flight_fx.camera, order: 2, lighting: {enabled: false}, culling: {enabled: false}}
+    }
+  }
+}

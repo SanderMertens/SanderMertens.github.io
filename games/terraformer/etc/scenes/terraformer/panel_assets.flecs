@@ -1,0 +1,572 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.layout
+using box.text
+using box.picking
+using box.transition
+using box.input
+using box.ui
+using box.widgets
+using state
+using terra
+
+state {
+  export const ASSETS_DEPOTS: i32 = 24
+  export const ASSETS_FAINT: i32 = 7
+
+  export mut assets_depots: i32[24] = {}
+  export mut assets_depot_n: i32 = 0
+  export mut assets_sum: f32[8] = {}
+  export mut assets_scan: i32[24] = {}
+  export mut assets_scan_sum: f32[8] = {}
+
+  fn assets_good_caps(g: i32) -> string {
+    match g {
+      0: "ALLOY"
+      1: "MACH"
+      2: "FOOD"
+      3: "AIR"
+      4: "ICE"
+      5: "BIO"
+      6: "REAG"
+      _: "LUX"
+    }
+  }
+
+  fn assets_good_rgb(g: i32) -> Rgb {
+    {good_r(g), good_g(g), good_b(g)}
+  }
+
+  fn assets_units(v: f32) -> string {
+    v >= 0.5 ? "{v:.0}" : "·"
+  }
+
+  fn assets_eta_text(eta: f64, day: i32) -> string {
+    const d = max(ceil(eta - day), 0)
+    d <= 0 ? "TODAY" : "{d:.0} d"
+  }
+
+  fn assets_one(st: i32, want: i32) -> i32 {
+    st == want ? 1 : 0
+  }
+
+  fn assets_site_count(i: i32, want: i32) -> i32 {
+    i < 0 || i >= N_SITES ? 0 : assets_one(site_struct[i * 16], want) + assets_one(site_struct[i * 16 + 1], want) + assets_one(site_struct[i * 16 + 2], want) + assets_one(site_struct[i * 16 + 3], want) + assets_one(site_struct[i * 16 + 4], want) + assets_one(site_struct[i * 16 + 5], want) + assets_one(site_struct[i * 16 + 6], want) + assets_one(site_struct[i * 16 + 7], want) + assets_one(site_struct[i * 16 + 8], want) + assets_one(site_struct[i * 16 + 9], want) + assets_one(site_struct[i * 16 + 10], want) + assets_one(site_struct[i * 16 + 11], want) + assets_one(site_struct[i * 16 + 12], want)
+  }
+
+  fn assets_building(i: i32, k: i32) -> i32 {
+    i < 0 || i >= N_SITES || k < 0 || k > 12 ? -1 : site_struct[i * 16 + k] == 1 ? k : assets_building(i, k + 1)
+  }
+
+  fn assets_listed(i: i32) -> i32 {
+    i < 0 || i >= assets_depot_n || i >= ASSETS_DEPOTS ? 0 : (assets_depots[i] != at_poi ? 1 : 0) + assets_listed(i + 1)
+  }
+
+  fn assets_rows(n: i32, row: i32, head: i32) -> i32 {
+    22 + (n > 0 ? head + n * row : 28)
+  }
+
+  fn assets_height() -> f32 {
+    const here = poi_has_depot(at_poi) || stock_total(at_poi) > 0.01
+    const listed = assets_listed(0)
+    const depots = assets_depot_n == 0 && !here ? 50 : 22 + 18 + (here ? 26 : 0) + listed * 26 + (assets_depot_n > 0 ? 31 : 0)
+    30 + 80 + assets_rows(dozers_owned(), 32, 0) + assets_rows(freighters_owned(0), 26, 18) + assets_rows(sites_used(), 28, 18) + assets_rows(shipments_active(), 26, 18) + depots
+  }
+
+  fn assets_send_tag(d: i32, poi: i32) -> string {
+    poi < 0 ? "NO DESTINATION" : dozer_send_block_tag(dozer_send_block(d, poi))
+  }
+
+  fn assets_cap_text(poi: i32) -> string {
+    const c = depot_cap(poi)
+    c >= 100000 ? "∞" : "{c:.0}"
+  }
+}
+
+terra {
+  template AssetsHead {
+    prop title: string = ""
+    prop note: string = ""
+
+    Layout: {direction: Row, spacing: 8, v: Middle}
+    LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: 22}}
+    tick {
+      LayoutItem: {width: {mode: Fixed, value: 3}, height: {mode: Fixed, value: 12}}
+      Rect: {1, 1}
+      Rgb: T_ACCENT
+      box.spatial.SpatialIgnore
+    }
+    name {
+      Text: {value: title, size: 12}
+      Rgb: T_TEXT
+      box.spatial.SpatialIgnore
+    }
+    line {
+      LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: 1}}
+      Rect: {1, 1}
+      Rgb: T_LINE
+      box.spatial.SpatialIgnore
+    }
+    count {
+      Text: {value: note, size: 11}
+      Rgb: T_MUTED
+      box.spatial.SpatialIgnore
+    }
+  }
+
+  template AssetsCell {
+    prop text: string = ""
+    prop width: f32 = 60
+    prop tone: i32 = 0
+    prop size: f32 = 12
+    prop right: bool = false
+
+    Layout: {direction: Row, h: right ? Right : Left, v: Middle}
+    LayoutItem: {width: {mode: width > 0 ? Fixed : Grow, value: width > 0 ? width : 1}}
+    box.spatial.SpatialIgnore
+    text {
+      Text: {value: text, size: size}
+      Rgb: tone == ASSETS_FAINT ? T_FAINT : tone_rgb(tone)
+      box.spatial.SpatialIgnore
+    }
+  }
+
+  template AssetsNone {
+    prop text: string = ""
+
+    Layout: {direction: Row, padding: {0, 0, 11, 0}, v: Middle}
+    LayoutItem: {height: {mode: Fixed, value: 28}}
+    line {
+      Text: {value: text, size: 12}
+      Rgb: T_FAINT
+      box.spatial.SpatialIgnore
+    }
+  }
+
+  template AssetsFleetHead {
+    Layout: {direction: Row, spacing: 8, padding: {0, 0, 11, 0}, v: Middle}
+    LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: 18}}
+    AssetsCell num(text: "", width: 14)
+    AssetsCell kind(text: "CLASS", width: 110, tone: TONE_MUTED, size: 10)
+    AssetsCell cap(text: "CAPACITY", width: 64, tone: TONE_MUTED, size: 10, right: true)
+    AssetsCell pad(text: "", width: 16)
+    AssetsCell place(text: "LOCATION", width: 0, tone: TONE_MUTED, size: 10)
+    AssetsCell status(text: "STATUS", width: 70, tone: TONE_MUTED, size: 10, right: true)
+  }
+
+  template AssetsFreighter {
+    prop idx: i32 = 0
+
+    const f = freighters[clamp(idx, 0, 7)]
+    const s = f.status == SHIP_BUSY ? shipment_of(idx) : -1
+    const busy = f.status == SHIP_BUSY
+
+    Layout: {direction: Row, spacing: 8, padding: {0, 0, 11, 0}, v: Middle}
+    LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: 26}}
+    AssetsCell num(text: "{idx + 1}", width: 14, tone: TONE_MUTED)
+    AssetsCell kind(text: freighter_name(freighter_tier(f.cap)), width: 110)
+    AssetsCell cap(text: "{f.cap} u", width: 64, right: true)
+    AssetsCell pad(text: "", width: 16)
+    AssetsCell place(text: busy && s >= 0 ? "→  {poi_name(shipments[clamp(s, 0, 15)].to)}" : poi_name(f.poi), width: 0, tone: busy ? TONE_TEXT : TONE_MUTED)
+    AssetsCell status(text: busy ? (s >= 0 ? assets_eta_text(shipments[clamp(s, 0, 15)].eta, today) : "BUSY") : "IDLE", width: 70, tone: busy ? TONE_ACCENT : TONE_GOOD, right: true)
+  }
+
+  template AssetsFleet {
+    const n = freighters_owned(0)
+
+    Layout: {direction: Column}
+    LayoutItem: {width: {mode: Grow}}
+    AssetsHead head(title: "FLEET", note: "{n} / {N_FREIGHTERS}")
+    cols {
+      Layout: {direction: Column}
+      LayoutItem: {width: {mode: Grow}}
+      if n > 0 {
+        AssetsFleetHead row()
+      }
+    }
+    for i in 0..N_FREIGHTERS {
+      "slot_{i}" {
+        Layout: {direction: Column}
+        LayoutItem: {width: {mode: Grow}}
+        if freighters[i].status != SHIP_NONE {
+          AssetsFreighter row(idx: i)
+        }
+      }
+    }
+    none {
+      Layout: {direction: Column}
+      if n == 0 {
+        AssetsNone line(text: "No freighters. Everything ships at someone else's rates.")
+      }
+    }
+  }
+
+  template AssetsDozer {
+    prop idx: i32 = 0
+
+    const d = dozers[clamp(idx, 0, 3)]
+    const code = dozer_send_block(idx, nav_dest)
+    const site = pl_site(poi_planet(d.poi))
+    const k = d.status == DOZER_BUILDING ? assets_building(site, 0) : -1
+    const purpose = site_cost_purpose(site)
+
+    Layout: {direction: Row, spacing: 10, padding: {0, 0, 11, 0}, v: Middle}
+    LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: 32}}
+    AssetsCell num(text: "DOZER {idx + 1}", width: 64)
+    AssetsCell status(text: d.status == SHIP_IDLE ? "IDLE" : d.status == SHIP_BUSY ? "EN ROUTE" : "BUILDING", width: 64, tone: d.status == SHIP_IDLE ? TONE_GOOD : TONE_ACCENT, size: 11)
+    AssetsCell place(text: d.status == SHIP_BUSY ? "→ {poi_name(d.dest)}" : poi_name(d.poi), width: 250, tone: TONE_TEXT)
+    AssetsCell doing(text: d.status == SHIP_BUSY ? assets_eta_text(d.eta, today) : d.status == DOZER_BUILDING && k >= 0 ? "{struct_name(k, purpose)}  {clamp(hud_struct_part(site, k), 0, 1) * 100:.0}%" : "", width: 0, tone: TONE_MUTED)
+    send {
+      Layout: {direction: Row, h: Right, v: Middle}
+      LayoutItem: {width: {mode: Fixed, value: 230}}
+      if d.status == SHIP_IDLE {
+        OpButton go(label: code == 0 ? "SEND  ·  {hud_cash(dozer_send_cost(idx, nav_dest))}  ·  {dozer_send_days(idx, nav_dest):.1} d" : assets_send_tag(idx, nav_dest), op: OP_DOZER_SEND, a: idx, b: nav_dest, kind: code == 0 ? BTN_PRIMARY : BTN_PLAIN, disabled: code != 0, width: 230, height: 26, size: 12)
+      }
+    }
+  }
+
+  template AssetsDozers {
+    const aim = nav_dest
+
+    Layout: {direction: Column}
+    LayoutItem: {width: {mode: Grow}}
+    AssetsHead head(title: "DOZERS", note: aim >= 0 ? "DESTINATION  {poi_name(aim)}     {dozers_owned()} / {N_DOZERS}" : "{dozers_owned()} / {N_DOZERS}")
+    for i in 0..N_DOZERS {
+      "slot_{i}" {
+        Layout: {direction: Column}
+        LayoutItem: {width: {mode: Grow}}
+        if dozers[i].status != SHIP_NONE {
+          AssetsDozer row(idx: i)
+        }
+      }
+    }
+    none {
+      Layout: {direction: Column}
+      if dozers_owned() == 0 {
+        AssetsNone line(text: "No dozers. Planets remain as found.")
+      }
+    }
+  }
+
+  template AssetsSiteHead {
+    Layout: {direction: Row, spacing: 8, padding: {0, 0, 11, 0}, v: Middle}
+    LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: 18}}
+    AssetsCell place(text: "SITE", width: 0, tone: TONE_MUTED, size: 10)
+    AssetsCell job(text: "JOB", width: 96, tone: TONE_MUTED, size: 10)
+    AssetsCell atm(text: "ATM", width: 40, tone: TONE_MUTED, size: 10, right: true)
+    AssetsCell water(text: "WATER", width: 40, tone: TONE_MUTED, size: 10, right: true)
+    AssetsCell temp(text: "TEMP", width: 40, tone: TONE_MUTED, size: 10, right: true)
+    AssetsCell bio(text: "BIO", width: 40, tone: TONE_MUTED, size: 10, right: true)
+    AssetsCell active(text: "ACTIVE", width: 52, tone: TONE_MUTED, size: 10, right: true)
+    AssetsCell building(text: "BUILDING", width: 58, tone: TONE_MUTED, size: 10, right: true)
+    AssetsCell stalled(text: "STALLED", width: 52, tone: TONE_MUTED, size: 10, right: true)
+    AssetsCell depot(text: "DEPOT", width: 176, tone: TONE_MUTED, size: 10, right: true)
+  }
+
+  template AssetsSite {
+    prop idx: i32 = 0
+
+    const s = sites[clamp(idx, 0, 15)]
+    const poi = planet_poi(s.planet)
+    const live = site_live_purpose(idx)
+    const made = live < 0 && site_has(idx, S_PURPOSE)
+    const n_active = assets_site_count(idx, ST_ACTIVE)
+    const n_build = assets_site_count(idx, ST_BUILDING)
+    const n_stall = assets_site_count(idx, ST_STALLED)
+    const cap = depot_cap(poi)
+    const held = stock_total(poi)
+    const fill = cap > 0 ? held / cap : 0
+
+    Layout: {direction: Row, spacing: 8, padding: {0, 0, 11, 0}, v: Middle}
+    LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: 28}}
+    AssetsCell place(text: pl_name(s.planet), width: 0)
+    AssetsCell job(text: live >= 0 ? hud_purpose_caps(live) : made ? hud_purpose_caps(site_purpose_of(idx)) : "—", width: 96, tone: live >= 0 ? TONE_ACCENT : TONE_MUTED, size: 11)
+    AssetsCell atm(text: "{s.atm:.0}", width: 40, right: true)
+    AssetsCell water(text: "{s.water:.0}", width: 40, right: true)
+    AssetsCell temp(text: "{s.temp:.0}", width: 40, right: true)
+    AssetsCell bio(text: "{s.bio:.0}", width: 40, right: true)
+    AssetsCell active(text: "{n_active}", width: 52, tone: n_active > 0 ? TONE_GOOD : TONE_MUTED, right: true)
+    AssetsCell building(text: "{n_build}", width: 58, tone: n_build > 0 ? TONE_ACCENT : TONE_MUTED, right: true)
+    AssetsCell stalled(text: "{n_stall}", width: 52, tone: n_stall > 0 ? TONE_BAD : TONE_MUTED, right: true)
+    depot {
+      Layout: {direction: Row, spacing: 8, h: Right, v: Middle}
+      LayoutItem: {width: {mode: Fixed, value: 176}}
+      if cap > 0 {
+        Bar meter(value: fill, width: 84, height: 5, tone: fill > 0.9 ? TONE_WARN : TONE_INFO)
+        AssetsCell amount(text: "{held:.0} / {cap:.0}", width: 76, tone: TONE_MUTED, right: true)
+      } else {
+        AssetsCell amount(text: "no depot", width: 76, tone: ASSETS_FAINT, right: true)
+      }
+    }
+  }
+
+  template AssetsSites {
+    Layout: {direction: Column}
+    LayoutItem: {width: {mode: Grow}}
+    AssetsHead head(title: "SITES", note: "{sites_used()} / {N_SITES}")
+    cols {
+      Layout: {direction: Column}
+      LayoutItem: {width: {mode: Grow}}
+      if sites_used() > 0 {
+        AssetsSiteHead row()
+      }
+    }
+    for i in 0..N_SITES {
+      "slot_{i}" {
+        Layout: {direction: Column}
+        LayoutItem: {width: {mode: Grow}}
+        if sites[i].used {
+          AssetsSite row(idx: i)
+        }
+      }
+    }
+    none {
+      Layout: {direction: Column}
+      if sites_used() == 0 {
+        AssetsNone line(text: "No sites. The galaxy is as nature left it.")
+      }
+    }
+  }
+
+  template AssetsShipHead {
+    Layout: {direction: Row, spacing: 8, padding: {0, 0, 11, 0}, v: Middle}
+    LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: 18}}
+    AssetsCell origin(text: "FROM", width: 270, tone: TONE_MUTED, size: 10)
+    AssetsCell dest(text: "TO", width: 0, tone: TONE_MUTED, size: 10)
+    AssetsCell carrier(text: "CARRIER", width: 110, tone: TONE_MUTED, size: 10)
+    AssetsCell units(text: "UNITS", width: 50, tone: TONE_MUTED, size: 10, right: true)
+    AssetsCell eta(text: "ETA", width: 56, tone: TONE_MUTED, size: 10, right: true)
+  }
+
+  template AssetsShipment {
+    prop idx: i32 = 0
+
+    const s = shipments[clamp(idx, 0, 15)]
+    const own = s.freighter >= 0 && s.freighter < N_FREIGHTERS
+
+    Layout: {direction: Row, spacing: 8, padding: {0, 0, 11, 0}, v: Middle}
+    LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: 26}}
+    AssetsCell origin(text: poi_name(s.from), width: 270, tone: TONE_MUTED)
+    AssetsCell dest(text: "→  {poi_name(s.to)}", width: 0)
+    AssetsCell carrier(text: own ? "Freighter {s.freighter + 1}" : "Contract carrier", width: 110, tone: own ? TONE_INFO : TONE_MUTED)
+    AssetsCell units(text: "{shipment_units(idx):.0}", width: 50, right: true)
+    AssetsCell eta(text: assets_eta_text(s.eta, today), width: 56, tone: TONE_ACCENT, right: true)
+  }
+
+  template AssetsShipments {
+    const n = shipments_active()
+
+    Layout: {direction: Column}
+    LayoutItem: {width: {mode: Grow}}
+    AssetsHead head(title: "IN FLIGHT", note: "{n} / {N_SHIPMENTS}")
+    cols {
+      Layout: {direction: Column}
+      LayoutItem: {width: {mode: Grow}}
+      if n > 0 {
+        AssetsShipHead row()
+      }
+    }
+    for i in 0..N_SHIPMENTS {
+      "slot_{i}" {
+        Layout: {direction: Column}
+        LayoutItem: {width: {mode: Grow}}
+        if shipments[i].status != 0 {
+          AssetsShipment row(idx: i)
+        }
+      }
+    }
+    none {
+      Layout: {direction: Column}
+      if n == 0 {
+        AssetsNone line(text: "Nothing in flight.")
+      }
+    }
+  }
+
+  template AssetsDepotHead {
+    Layout: {direction: Row, spacing: 8, padding: {0, 0, 11, 0}, v: Middle}
+    LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: 18}}
+    AssetsCell place(text: "DEPOT", width: 0, tone: TONE_MUTED, size: 10)
+    for g in 0..N_GOODS {
+      "good_{g}" {
+        Layout: {direction: Row, h: Right, v: Middle}
+        LayoutItem: {width: {mode: Fixed, value: 46}}
+        text {
+          Text: {value: assets_good_caps(g), size: 10}
+          Rgb: assets_good_rgb(g)
+          box.spatial.SpatialIgnore
+        }
+      }
+    }
+    AssetsCell total(text: "TOTAL", width: 54, tone: TONE_MUTED, size: 10, right: true)
+    AssetsCell cap(text: "CAP", width: 46, tone: TONE_MUTED, size: 10, right: true)
+  }
+
+  template AssetsDepot {
+    prop poi: i32 = 0
+    prop here: bool = false
+
+    const total = stock_total(poi)
+
+    Layout: {direction: Row, spacing: 8, padding: {0, 0, 11, 0}, v: Middle}
+    LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: 26}}
+    place {
+      Layout: {direction: Row, spacing: 8, v: Middle}
+      LayoutItem: {width: {mode: Grow}}
+      name {
+        Text: {value: poi_name(poi), size: 12}
+        Rgb: T_TEXT
+        box.spatial.SpatialIgnore
+      }
+      tag {
+        Layout: {direction: Row}
+        if here {
+          HudCap cap(text: "HERE", tone: TONE_ACCENT)
+        }
+      }
+    }
+    for g in 0..N_GOODS {
+      AssetsCell "good_{g}"(text: assets_units(stock_at(poi, g)), width: 46, tone: stock_at(poi, g) >= 0.5 ? TONE_TEXT : ASSETS_FAINT, right: true)
+    }
+    AssetsCell total(text: "{total:.0}", width: 54, tone: TONE_ACCENT, right: true)
+    AssetsCell cap(text: assets_cap_text(poi), width: 46, tone: TONE_MUTED, right: true)
+  }
+
+  template AssetsDepotSum {
+    Layout: {direction: Row, spacing: 8, padding: {0, 0, 11, 0}, v: Middle}
+    LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: 30}}
+    AssetsCell place(text: "ALL DEPOTS", width: 0, tone: TONE_MUTED, size: 10)
+    for g in 0..N_GOODS {
+      AssetsCell "good_{g}"(text: assets_units(assets_sum[g]), width: 46, tone: TONE_MUTED, right: true)
+    }
+    AssetsCell total(text: "{assets_sum[0] + assets_sum[1] + assets_sum[2] + assets_sum[3] + assets_sum[4] + assets_sum[5] + assets_sum[6] + assets_sum[7]:.0}", width: 54, tone: TONE_ACCENT, right: true)
+    AssetsCell cap(text: "", width: 46)
+  }
+
+  template AssetsDepots {
+    const here_any = poi_has_depot(at_poi) || stock_total(at_poi) > 0.01
+    const empty = assets_depot_n == 0 && !here_any
+
+    Layout: {direction: Column}
+    LayoutItem: {width: {mode: Grow}}
+    AssetsHead head(title: "DEPOTS", note: "{assets_depot_n} stocked")
+    cols {
+      Layout: {direction: Column}
+      LayoutItem: {width: {mode: Grow}}
+      if !empty {
+        AssetsDepotHead row()
+      }
+    }
+    here {
+      Layout: {direction: Column}
+      LayoutItem: {width: {mode: Grow}}
+      if here_any {
+        AssetsDepot row(poi: at_poi, here: true)
+      }
+    }
+    for i in 0..ASSETS_DEPOTS {
+      "slot_{i}" {
+        Layout: {direction: Column}
+        LayoutItem: {width: {mode: Grow}}
+        if i < assets_depot_n && assets_depots[i] != at_poi {
+          AssetsDepot row(poi: assets_depots[i])
+        }
+      }
+    }
+    sum {
+      Layout: {direction: Column}
+      LayoutItem: {width: {mode: Grow}}
+      if assets_depot_n > 0 {
+        Rule line()
+        AssetsDepotSum row()
+      }
+    }
+    none {
+      Layout: {direction: Column}
+      if empty {
+        AssetsNone line(text: "No stock anywhere. Minimalism.")
+      }
+    }
+  }
+
+  template PanelAssets {
+    LayoutItem: {h: Center, v: Top, y: -154}
+    Layout: {direction: Column}
+
+    Frame card(title: "ASSETS", width: 920, spacing: 12) {
+      body {
+        Layout: {direction: Column, spacing: 12}
+        LayoutItem: {width: {mode: Grow}}
+
+        ScrollView list(height: min(assets_height(), 744), frame: false, focusable: false, keys: false) {
+          body {
+            Layout: {direction: Column, spacing: 20, padding: {14, 16, 6, 16}}
+            LayoutItem: {width: {mode: Grow}}
+
+            AssetsDozers dozer_list()
+            AssetsFleet fleet()
+            AssetsSites site_list()
+            AssetsShipments flights()
+            AssetsDepots depots()
+          }
+        }
+      }
+    }
+  }
+}
+
+async {
+  mut cur: i32 = 0
+  mut n: i32 = 0
+  while true {
+    await next_frame()
+    if cur == 0 {
+      n = 0
+      for g in 0..N_GOODS {
+        assets_scan_sum[g] = 0
+      }
+    }
+    for k in 0..POI_SLOTS {
+      const poi = cur * POI_SLOTS + k
+      if stock_total(poi) > 0.01 {
+        if n < ASSETS_DEPOTS {
+          assets_scan[n] = poi
+          n += 1
+        }
+        for g in 0..N_GOODS {
+          assets_scan_sum[g] += stock_at(poi, g)
+        }
+      }
+    }
+    cur += 1
+    if cur >= N_SYS {
+      cur = 0
+      mut diff: bool = n != assets_depot_n
+      for i in 0..n {
+        if assets_depots[i] != assets_scan[i] {
+          diff = true
+        }
+      }
+      if diff {
+        for i in 0..n {
+          assets_depots[i] = assets_scan[i]
+        }
+        assets_depot_n = n
+      }
+      mut drift: bool = false
+      for g in 0..N_GOODS {
+        if abs(assets_sum[g] - assets_scan_sum[g]) > 0.01 {
+          drift = true
+        }
+      }
+      if drift {
+        for g in 0..N_GOODS {
+          assets_sum[g] = assets_scan_sum[g]
+        }
+      }
+    }
+  }
+}

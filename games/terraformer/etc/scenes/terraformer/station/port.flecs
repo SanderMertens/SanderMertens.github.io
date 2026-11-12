@@ -1,0 +1,881 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.movement
+using box.animation
+using box.light
+using box.text
+using state
+using terra
+
+state {
+  fn std_dock_spot(w: f32, d: f32, q: f32, k: i32) -> Spot {
+    match k {
+      0: spot(q * (w / 2 - 2.6), 1.2 - d / 2, 1.2, 0.8)
+      1: spot(0 - q, d / 2 - 1.2, 1.2, 0.45)
+      2: spot(q * (w / 2 - 1.2), d / 2 - 1.4, 0.3, 0.3)
+      3: w >= 10 ? spot(0 - q * (w / 2 - 1.4), 1.1 - d / 2, 0.7, 0.5) : SPOT_NONE
+      4: w >= 10 ? spot(0 - q * (w / 2 - 1.1), d / 2 - 1.1, 0.7, 0.7) : SPOT_NONE
+      5: w >= 10 ? spot(0 - q * 2.8, d / 2 - 1.3, 0.3, 0.3) : SPOT_NONE
+      _: SPOT_NONE
+    }
+  }
+
+  fn std_bar_spot(w: f32, d: f32, k: i32) -> Spot {
+    const big = w >= 8
+    const sx = (big ? 2.75 : 2.15) - w / 2
+    match k {
+      0: spot((big ? 1.4 : 1.15) - w / 2, 0, big ? 1.2 : 1.0, d / 2 - 1.1)
+      1: big ? spot(sx, -1.0, 0.3, 0.3) : spot(sx, -1.3, 0.3, 0.3)
+      2: big ? spot(w * 0.24, 0 - d * 0.2, 0.55, 0.55) : spot(sx, 0, 0.3, 0.3)
+      3: big ? spot(w * 0.24, 0 - d * 0.2 - 0.95, 0.3, 0.3) : spot(sx, 1.3, 0.3, 0.3)
+      4: big ? spot(w * 0.24, d * 0.24, 0.55, 0.55) : spot(w / 2 - 0.8, d / 2 - 0.8, 0.35, 0.35)
+      5: big ? spot(w * 0.24, d * 0.24 - 0.95, 0.3, 0.3) : spot(w / 2 - 0.8, 0.8 - d / 2, 0.35, 0.35)
+      6: big ? spot(w / 2 - 0.7, 0.8 - d / 2, 0.45, 0.4) : SPOT_NONE
+      7: w >= 10 ? spot(w / 2 - 1.2, d / 2 - 1.0, 0.9, 0.6) : SPOT_NONE
+      _: SPOT_NONE
+    }
+  }
+
+  fn std_bar_seat(w: f32, d: f32, n: i32) -> Spot {
+    std_bar_spot(w, d, w >= 8 ? n * 2 + 1 : n + 1)
+  }
+
+  fn std_trade_spot(w: f32, d: f32, k: i32) -> Spot {
+    match k {
+      0: spot(w / 2 - 1.2, 0, 1.0, min(1.3, d / 2 - 1.6))
+      1: spot(1.0 - w / 2, 0 - d * 0.24, 0.8, min(1.0, d * 0.2))
+      2: spot(1.0 - w / 2, d * 0.24, 0.8, min(1.0, d * 0.2))
+      _: SPOT_NONE
+    }
+  }
+
+  fn std_yard_spot(w: f32, d: f32, k: i32) -> Spot {
+    const big = w >= 8
+    match k {
+      0: big ? spot(0 - w * 0.24, 0, 1.4, 1.4) : spot(-1.6, -0.3, 1.0, 1.0)
+      1: spot(w / 2 - 1.2, -0.8, 1.0, big ? 1.2 : 1.0)
+      2: big ? spot(w / 2 - 1.2, d / 2 - 1.2, 0.85, 0.8) : SPOT_NONE
+      _: SPOT_NONE
+    }
+  }
+
+  fn std_bay_spot(w: f32, d: f32, o: f32, k: i32) -> Spot {
+    const hz = min(1.4, d / 2 - 2.1)
+    match k {
+      0: spot(0 - o * (w / 2 - 2.0), 1.1 - d / 2, 1.3, 0.9)
+      1: spot(o * 0.4, d / 2 - 0.5 - hz, w / 2 - 1.9, hz)
+      2: spot(o * (w / 2 - 2.6), 0.8 - d / 2, 1.9, 0.6)
+      3: spot(o * (w / 2 - 1.0), 2.3 - d / 2, 0.3, 0.3)
+      _: SPOT_NONE
+    }
+  }
+
+  fn std_spot(role: i32, w: f32, d: f32, o: f32, k: i32) -> Spot {
+    match role {
+      1: std_dock_spot(w, d, o, k)
+      3: std_bar_spot(w, d, k)
+      4: std_trade_spot(w, d, k)
+      5: std_bay_spot(w, d, o, k)
+      6: std_yard_spot(w, d, k)
+      _: SPOT_NONE
+    }
+  }
+
+  fn std_act(role: i32, w: f32, d: f32, o: f32, fac: i32, k: i32) -> Act {
+    match role {
+      1: match k {
+        0: act(o * (w / 2 - 2.6), 1.65 - d / 2, 1, 8)
+        1: act(o * (w / 2 - 1.2), d / 2 - 1.4, 3, 0)
+        2: w >= 10 ? act(0 - o * 2.8, d / 2 - 1.3, 3, 1) : ACT_NONE
+        _: ACT_NONE
+      }
+      3: match k {
+        0: act(std_bar_seat(w, d, 0).x, std_bar_seat(w, d, 0).z, 2, 0)
+        1: act(std_bar_seat(w, d, 1).x, std_bar_seat(w, d, 1).z, 2, 1)
+        2: act(std_bar_seat(w, d, 2).x, std_bar_seat(w, d, 2).z, 2, 2)
+        3: w >= 8 ? act(2.3 - w / 2, 1.5, 3, 4) : ACT_NONE
+        _: ACT_NONE
+      }
+      4: match k {
+        0: act(w / 2 - 1.85, 0, 1, 2)
+        1: w >= 8 ? act(1.8 - w / 2, 0 - d * 0.24, 3, 5) : ACT_NONE
+        _: ACT_NONE
+      }
+      5: match k {
+        0: (fac & 4) != 0 ? act(0 - o * (w / 2 - 2.0), 1.65 - d / 2, 1, 4) : ACT_NONE
+        1: act(o * (w / 2 - 1.0), 2.3 - d / 2, 3, 6)
+        _: ACT_NONE
+      }
+      6: k == 0 ? act(w / 2 - 1.85, -0.8, 1, 32) : ACT_NONE
+      _: ACT_NONE
+    }
+  }
+
+  fn room_mirror(r: Room, dir: f32) -> Room {
+    dir > 0 ? r : mk_room(r.role, r.kind, 0 - r.x, r.z, r.w, r.d, r.wn, r.ww, r.ws, r.we)
+  }
+
+  fn link_mirror(l: Link, dir: f32) -> Link {
+    dir > 0 ? l : mk_link(l.a, l.b, 0 - l.x, l.z, l.w, l.d, l.kind)
+  }
+
+  fn cul_kind(c: i32) -> i32 {
+    c < 0 || c > 6 ? 7 : c
+  }
+
+  fn port_dir(poi: i32) -> f32 {
+    hash01(poi, 101) < 0.5 ? -1 : 1
+  }
+
+  fn port_big(poi: i32) -> bool {
+    poi_tier(poi) >= 1
+  }
+
+  fn port_item(poi: i32, slot: i32) -> i32 {
+    (slot + hash_int(poi, 210, 3)) % 3
+  }
+
+  fn port_slot_x(poi: i32, slot: i32) -> f32 {
+    port_big(poi) ? -15 + slot * 13 : -8 + slot * 8
+  }
+
+  fn port_slot_room(poi: i32, slot: i32) -> Room {
+    const big = port_big(poi)
+    const fac = stn_fac(poi)
+    const x = port_slot_x(poi, slot)
+    const w: f32 = big ? 10 : 6
+    const d: f32 = big ? 8 : 6
+    const z: f32 = big ? -10 : -8
+    match port_item(poi, slot) {
+      0: mk_room(3, 0, x, z, w, d, 2, 1, 1, 1)
+      1: mk_room(4, 0, x, z, w, d, 3, 1, 1, 1)
+      _: (fac & 32) != 0 ? mk_room(6, 0, x, z, w, d, 3, 1, 1, 1) : big ? mk_room(8, 20, x, z, w, d, 3, 1, 1, 1) : ROOM_NONE
+    }
+  }
+
+  fn port_room_raw(poi: i32, i: i32) -> Room {
+    const big = port_big(poi)
+    const fac = stn_fac(poi)
+    match i {
+      0: big ? mk_room(1, 0, -30, 0, 10, 10, 3, 1, 4, 4) : mk_room(1, 0, -18, 0, 8, 8, 3, 1, 4, 4)
+      1: big ? mk_room(2, 0, 0, 0, 44, 8, 4, 1, 4, 1) : mk_room(2, 0, 0, 0, 24, 6, 4, 1, 4, 1)
+      2: port_slot_room(poi, 0)
+      3: port_slot_room(poi, 1)
+      4: port_slot_room(poi, 2)
+      5: big ? mk_room(8, cul_kind(poi_culture(poi)), -12, 9.5, 8, 7, 1, 1, 4, 1) : mk_room(8, cul_kind(poi_culture(poi)), -6, 7.5, 6, 5, 1, 1, 4, 1)
+      6: poi == HOME_POI ? mk_room(8, 100, 8, 9.5, 8, 7, 1, 1, 4, 1) : ROOM_NONE
+      7: (fac & 20) == 0 ? ROOM_NONE : big ? mk_room(5, 0, 31, 0, 12, 12, 2, 1, 1, 1) : mk_room(5, 0, 18, 0, 8, 8, 2, 1, 1, 1)
+      _: ROOM_NONE
+    }
+  }
+
+  fn port_link_raw(poi: i32, j: i32) -> Link {
+    const big = port_big(poi)
+    const zn: f32 = big ? -5 : -4
+    match j {
+      0: big ? mk_link(0, 1, -23.5, 0, 3, 4, 1) : mk_link(0, 1, -13, 0, 2, 2, 1)
+      1: port_slot_room(poi, 0).role != 0 ? mk_link(1, 2, port_slot_x(poi, 0), zn, 2, 2, 0) : LINK_NONE
+      2: port_slot_room(poi, 1).role != 0 ? mk_link(1, 3, port_slot_x(poi, 1), zn, 2, 2, 0) : LINK_NONE
+      3: port_slot_room(poi, 2).role != 0 ? mk_link(1, 4, port_slot_x(poi, 2), zn, 2, 2, 0) : LINK_NONE
+      4: big ? mk_link(1, 5, -12, 5, 2, 2, 0) : mk_link(1, 5, -6, 4, 2, 2, 0)
+      5: poi == HOME_POI ? mk_link(1, 6, 8, 5, 2, 2, 0) : LINK_NONE
+      6: port_room_raw(poi, 7).role == 0 ? LINK_NONE : big ? mk_link(1, 7, 23.5, 0, 3, 4, 1) : mk_link(1, 7, 13, 0, 2, 2, 1)
+      7: big ? mk_link(0, -1, -36.5, 0, 3, 2, 2) : mk_link(0, -1, -23.5, 0, 3, 2, 2)
+      8: big ? mk_link(0, -1, -30, -6.5, 2, 3, 2) : LINK_NONE
+      9: port_room_raw(poi, 7).role == 0 ? LINK_NONE : big ? mk_link(7, -1, 37, 0, 1, 4, 3) : mk_link(7, -1, 22, 0, 1, 4, 3)
+      _: LINK_NONE
+    }
+  }
+
+  fn port_room(poi: i32, i: i32) -> Room {
+    room_mirror(port_room_raw(poi, i), port_dir(poi))
+  }
+
+  fn port_link(poi: i32, j: i32) -> Link {
+    link_mirror(port_link_raw(poi, j), port_dir(poi))
+  }
+
+  fn port_out(poi: i32, i: i32) -> f32 {
+    port_room(poi, i).x > 0 ? 1 : -1
+  }
+
+  fn port_hall_x(poi: i32, k: i32) -> f32 {
+    port_dir(poi) * (port_big(poi) ? match k {
+      0: -19.5
+      1: -19
+      2: -7.5
+      3: -4
+      4: 4.5
+      5: 2.5
+      6: 17
+      _: 16
+    } : match k {
+      0: -3.8
+      1: -10.3
+      2: 4
+      3: 2
+      5: 6.5
+      6: 10.5
+      _: 0
+    })
+  }
+
+  fn port_hall_z(poi: i32, k: i32) -> f32 {
+    (k == 0 || k == 2 || k == 4 || k == 6 ? -1 : 1) * (port_big(poi) ? 3.0 : 2.1)
+  }
+
+  fn port_hall_on(poi: i32, k: i32) -> bool {
+    port_big(poi) || (k != 4 && k != 7)
+  }
+
+  fn port_hall_spot(poi: i32, k: i32) -> Spot {
+    const bench = k == 1 || k == 3
+    const wide = k == 2 || k == 5
+    !port_hall_on(poi, k) || k > 7 ? SPOT_NONE : spot(port_hall_x(poi, k), port_hall_z(poi, k), bench ? 1.2 : wide ? 1.0 : k == 6 ? 0.3 : 0.65, bench ? 0.45 : k == 6 ? 0.3 : 0.6)
+  }
+
+  fn port_spot(poi: i32, i: i32, k: i32) -> Spot {
+    const r = port_room(poi, i)
+    r.role == 2 ? port_hall_spot(poi, k) : r.role == 8 ? (k == 0 ? spot(1.1 - r.w / 2, -0.2, 0.9, 1.3) : k == 1 ? spot(r.w / 2 - 1.1, -0.2, 0.9, 1.3) : SPOT_NONE) : std_spot(r.role, r.w, r.d, port_out(poi, i), k)
+  }
+
+  fn port_act(poi: i32, i: i32, k: i32) -> Act {
+    const r = port_room(poi, i)
+    r.role == 2 ? (k == 0 ? act(port_hall_x(poi, 6), port_hall_z(poi, 6), 3, 2) : ACT_NONE) : std_act(r.role, r.w, r.d, port_out(poi, i), stn_fac(poi), k)
+  }
+
+  fn port_spawn(poi: i32) -> Act {
+    const r = port_room(poi, 0)
+    act(r.x + port_out(poi, 0) * (r.w / 2 - 1.5), r.z, 0, 0)
+  }
+
+  fn bar_sign(seed: i32) -> string {
+    match hash_int(seed, 115, 8) {
+      0: "THE LEAKY AIRLOCK"
+      1: "LAST CALL"
+      2: "THE DRY DOCK"
+      3: "OXYGEN & TONIC"
+      4: "THE GRAVITY WELL"
+      5: "ESCAPE VELOCITY"
+      6: "THE VOID & FIDDLE"
+      _: "BAR (LICENSED)"
+    }
+  }
+
+  fn bar_note(seed: i32) -> string {
+    match hash_int(seed, 116, 4) {
+      0: "HAPPY HOUR: PENDING"
+      1: "NO TABS. NO REFUNDS."
+      2: "EST. RECENTLY"
+      _: "ASK ABOUT THE SPECIAL"
+    }
+  }
+
+  fn gate_status(seed: i32) -> string {
+    match hash_int(seed, 117, 6) {
+      0: "BOARDING"
+      1: "ON TIME"
+      2: "DELAYED"
+      3: "EVENTUALLY"
+      4: "ON TIME-ISH"
+      _: "ASK AT DESK"
+    }
+  }
+
+  fn extra_title(kind: i32) -> string {
+    match kind {
+      0: "TICKET OFFICE"
+      1: "EXPERIENCE CENTRE"
+      2: "SEED LIBRARY"
+      3: "PROCESSING"
+      4: "EXHIBIT"
+      5: "SHRINE OF THE TREE"
+      6: "CHECKPOINT"
+      7: "LOST PROPERTY"
+      20: "VIEWING LOUNGE"
+      _: "TERRAFORMING? SURE. LLC"
+    }
+  }
+
+  fn extra_note(kind: i32) -> string {
+    match kind {
+      0: "NOW SERVING: 0000"
+      1: "YOUR EXPERIENCE MATTERS. TO US."
+      2: "DO NOT EAT THE CATALOGUE"
+      3: "DO NOT LOITER. DO NOT NOT LOITER."
+      4: "A THING. DO NOT ASK."
+      5: "ARMED. LEAVES ONLY."
+      6: "CHECKS NOTHING. THOROUGHLY."
+      7: "FINDERS KEEPERS. LITERALLY."
+      20: "THE VIEW IS COMPLIMENTARY"
+      _: "HEAD OFFICE. ALSO ONLY OFFICE."
+    }
+  }
+
+  fn world_note(w: i32) -> string {
+    match w {
+      1: "LOCAL FISH. DO NOT NAME THEM."
+      2: "SUNSCREEN. SPF 9000."
+      3: "WARMTH. WHILE STOCKS LAST."
+      4: "IT GROWS. WE LET IT."
+      _: "FOUNTAIN (DECORATIVE)"
+    }
+  }
+}
+
+terra {
+  std_belt {
+    AnimationClip: {duration: 6}
+    slide { AnimationTrack: {component: Position, member: "x", curve: {keys: [{0, -1}, {6, 1}]}} }
+  }
+
+  std_fly {
+    AnimationClip: {duration: 40}
+    slide { AnimationTrack: {component: Position, member: "x", curve: {keys: [{0, -160}, {40, 160}]}} }
+  }
+
+  std_weld {
+    AnimationClip: {duration: 0.9}
+    strength { AnimationTrack: {component: Emissive, member: "strength", curve: {keys: [{0, 0}, {0.1, 9}, {0.16, 1}, {0.24, 8}, {0.34, 0}, {0.9, 0}]}} }
+  }
+
+  template StdDock {
+    prop poi: i32 = 0
+    prop w: f32 = 10
+    prop d: f32 = 10
+    prop q: f32 = -1
+    prop th: Theme
+    prop seed: i32 = 0
+
+    const s = poi_sys(poi)
+    const lanes = sys_lanes(s)
+    const dx = q * (w / 2 - 2.6)
+    const ink: Rgb = fac_ink(8)
+
+    KitDesk desk(len: 2.2, tint: th.trim, ink: ink) { Position: {dx, 0, 1.6 - d / 2} }
+    Person agent(seed: seed + 61, garb: 6) { Position: {dx - 0.3, 0, 0.8 - d / 2} }
+    KitSign title(text: "DEPARTURES", sub: lanes == 1 ? "ONE WAY OUT. THIS ONE." : "MIND THE VACUUM", w: 3.2, ink: ink, size: 0.8) { Position: {dx, 2.75, 0.34 - d / 2}; Rotation: {-0.7, 0, 0} }
+    KitBoard panel(w: 3.2, h: 1.1) { Position: {0 - q * (w * 0.2), 1.55, 0.3 - d / 2}; Rotation: {-0.25, 0, 0} }
+    for dir in 0..4 {
+      if sys_lane(s, dir) {
+        "row_{dir}" {
+          Position: {0 - q * (w * 0.2), 1.55 + (1.5 - dir) * 0.24, 0.36 - d / 2 + (1.5 - dir) * 0.06}
+          Rotation: {-0.25, 0, 0}
+          KitNote dest_(text: sys_name(sys_nb(s, dir)), ink: ink, size: 0.9, glow: 2) { Position: {-0.55, 0, 0} }
+          KitNote stat_(text: gate_status(seed + dir * 5 + (today >> 2)), ink: {214, 220, 230}, size: 0.6, glow: 1.4) { Position: {1.05, 0, 0} }
+        }
+      }
+    }
+    KitBench bench(len: 2.2, tint: th.trim) { Position: {0 - q, 0, d / 2 - 1.15} }
+    if lanes == 1 {
+      cat : KitMatte { Position: {0 - q - 0.5, 0.62, d / 2 - 1.1}; Scale: {1, 0.7, 1.6}; Sphere: {radius: 0.14, segments: 8, smooth: true}; Rgb: {60, 54, 50} }
+      cat_head : KitMatte { Position: {0 - q - 0.5, 0.7, d / 2 - 0.86}; Sphere: {radius: 0.09, segments: 8, smooth: true}; Rgb: {60, 54, 50} }
+    } else {
+      Person waiter(seed: seed + 62, pose: 1) { Position: {0 - q + 0.4, 0.26, d / 2 - 1.1} }
+    }
+    Person crew(seed: seed + 63, garb: 1) { Position: {q * (w / 2 - 1.2), 0, d / 2 - 1.4}; Rotation: {0, 0 - q * 0.8 + 3.1416, 0} }
+    if lanes >= 3 {
+      KitRope rope_a(len: 2.2) { Position: {dx, 0, 2.7 - d / 2} }
+      KitRope rope_b(len: 2.2) { Position: {dx, 0, 3.5 - d / 2} }
+    }
+    for k in 0..4 {
+      "arrow_{k}" : KitPaint { Position: {q * (w / 2 - 2.6 - k * 1.3), 0.006, 0}; Rotation: {0, 0.7854, 0}; Box: {0.4, 0.01, 0.4}; Rgb: ink }
+    }
+    if w >= 10 {
+      cart : KitSteel { Position: {0 - q * (w / 2 - 1.4), 0.3, 1.1 - d / 2}; Box: {1.3, 0.1, 0.9} }
+      KitCrate bag_a(sx: 0.5, sy: 0.4, sz: 0.36, tint: {150, 60, 50}) { Position: {0 - q * (w / 2 - 1.15), 0.35, 1.1 - d / 2} }
+      KitCrate bag_b(sx: 0.5, sy: 0.5, sz: 0.36, tint: {60, 90, 150}) { Position: {0 - q * (w / 2 - 1.7), 0.35, 1.05 - d / 2} }
+      KitPlanter pot(seed: seed + 3, tub: th.wall, trim: th.trim) { Position: {0 - q * (w / 2 - 1.1), 0, d / 2 - 1.1} }
+      Person traveller(seed: seed + 64) { Position: {0 - q * 2.8, 0, d / 2 - 1.3}; Rotation: {0, 2.6, 0} }
+    }
+  }
+
+  template StdBar {
+    prop poi: i32 = 0
+    prop w: f32 = 10
+    prop d: f32 = 8
+    prop th: Theme
+    prop seed: i32 = 0
+
+    const big = w >= 8
+    const xw = 0 - w / 2
+    const cx = xw + (big ? 1.95 : 1.55)
+    const len = d - 2.4
+    const s0 = std_bar_seat(w, d, 0)
+    const s1 = std_bar_seat(w, d, 1)
+    const s2 = std_bar_seat(w, d, 2)
+    const wood: Rgb = rgb_mix(th.trim, {110, 70, 44}, 0.6)
+    const garb = cul_garb(th.culture)
+
+    KitShelf back(len: len, tint: wood, seed: seed) { Position: {xw + 0.36, 0, 0}; Rotation: {0, 1.5708, 0} }
+    counter : KitGloss { Position: {cx, 0.5, 0}; Box: {0.6, 1.0, len}; Rgb: wood }
+    worktop : KitGloss { Position: {cx, 1.035, 0}; RoundedBox: {0.78, 0.07, len + 0.16, 0.03, segments: 2}; Rgb: {48, 44, 48} }
+    line { Position: {cx + 0.305, 0.78, 0}; Box: {0.02, 0.04, len - 0.2}; KitGlow: {ink: th.ink, power: 2.4} }
+    taps : KitBrass { Position: {cx, 1.2, len * 0.3}; Box: {0.1, 0.26, 0.34} }
+    Person keeper(seed: seed + 3, garb: 5) { Position: {xw + (big ? 0.95 : 0.8), 0, 0.6}; Rotation: {0, 1.5708, 0} }
+    for k in 0..4 {
+      const sz = 0 - len / 2 + 0.5 + k * (len - 1) / 3
+      KitStool "stool_{k}"(tint: th.ink) { Position: {cx + 0.75, 0, sz} }
+    }
+    Person patron_0(seed: seed + 100, pose: 1, garb: garb) { Position: {s0.x, 0.16, s0.z}; Rotation: {0, -1.5708, 0} }
+    if big {
+      KitTable table_a(tint: wood) { Position: {w * 0.24, 0, 0 - d * 0.2} }
+      KitTable table_b(tint: wood) { Position: {w * 0.24, 0, d * 0.24} }
+      Person patron_1(seed: seed + 101, pose: 1, garb: 0) { Position: {s1.x, 0, s1.z} }
+      Person patron_2(seed: seed + 102, pose: 1, garb: 3) { Position: {s2.x, 0, s2.z} }
+      Person extra_a(seed: seed + 103, pose: 1) { Position: {w * 0.24 + 0.95, 0, 0 - d * 0.2}; Rotation: {0, -1.5708, 0} }
+      mug_a : KitGlass { Position: {w * 0.24 - 0.15, 0.88, 0.1 - d * 0.2}; Cylinder: {length: 0.14, radius: 0.045, segments: 8, smooth: true} }
+      mug_b : KitGlass { Position: {w * 0.24 + 0.1, 0.88, d * 0.24 - 0.12}; Cylinder: {length: 0.14, radius: 0.045, segments: 8, smooth: true} }
+      juke : KitGloss { Position: {w / 2 - 0.7, 0.75, 0.8 - d / 2}; RoundedBox: {0.9, 1.5, 0.7, 0.2, segments: 3}; Rgb: {60, 20, 70} }
+      juke_face { Position: {w / 2 - 0.7, 0.95, 1.16 - d / 2}; Box: {0.6, 0.7, 0.02}; KitGlow: {ink: {255, 80, 200}, power: 3}; Animator: {clip: kit_glow_pulse, speed: 2, mode: AnimationPingPong} }
+      juke_top { Position: {w / 2 - 0.7, 1.52, 0.8 - d / 2}; Box: {0.7, 0.04, 0.5}; KitGlow: {ink: {80, 220, 255}, power: 3}; Animator: {clip: kit_glow_pulse, time: 0.5, speed: 2, mode: AnimationPingPong} }
+      KitRug rug(w: 2.6, d: d - 2.6, tint: rgb_dim(th.wall, 1.4), trim: th.trim) { Position: {w * 0.24, 0, 0} }
+    } else {
+      Person patron_1(seed: seed + 101, pose: 1, garb: 0) { Position: {s1.x, 0.16, s1.z}; Rotation: {0, -1.5708, 0} }
+      Person patron_2(seed: seed + 102, pose: 1, garb: 3) { Position: {s2.x, 0.16, s2.z}; Rotation: {0, -1.5708, 0} }
+      KitBarrel keg_a(tint: wood) { Position: {w / 2 - 0.8, 0, d / 2 - 0.8} }
+      KitBarrel keg_b(tint: {60, 110, 150}) { Position: {w / 2 - 0.8, 0, 0.8 - d / 2} }
+    }
+    if w >= 10 {
+      stage : KitMatte { Position: {w / 2 - 1.2, 0.12, d / 2 - 1.0}; Box: {1.8, 0.24, 1.2}; Rgb: {40, 30, 34} }
+      amp : KitDark { Position: {w / 2 - 0.7, 0.54, d / 2 - 0.8}; Box: {0.6, 0.6, 0.4} }
+      drum : KitGloss { Position: {w / 2 - 1.5, 0.5, d / 2 - 0.9}; Cylinder: {length: 0.4, radius: 0.3, segments: 14, smooth: true}; Rgb: {200, 40, 50} }
+      mic : KitSteel { Position: {w / 2 - 1.2, 0.9, d / 2 - 1.4}; Box: {0.04, 1.3, 0.04} }
+    }
+    KitSign name_(text: bar_sign(seed), sub: bar_note(seed), w: min(w - 1.5, 4.6), ink: th.ink, size: big ? 0.95 : 0.7) { Position: {0.6, 2.8, 0.3 - d / 2}; Rotation: {-0.7, 0, 0} }
+    neon_a { Position: {0.6, 1.9, 0.16 - d / 2}; Box: {w - 3, 0.07, 0.05}; KitGlow: {ink: {255, 80, 200}, power: 4} }
+    neon_b { Position: {0.6, 1.6, 0.16 - d / 2}; Box: {w - 4, 0.07, 0.05}; KitGlow: {ink: {80, 220, 255}, power: 4} }
+    for k in 0..3 {
+      "pend_{k}" { Position: {cx, 2.0, (k - 1) * len * 0.3}; Sphere: {radius: 0.12, segments: 10, smooth: true}; KitGlow: {ink: {255, 196, 120}, power: 4} }
+    }
+    warm { Position: {w * 0.2, 2.2, 0}; PointLight: {intensity: 7 * th.level, range: 6}; Rgb: {255, 120, 170} }
+  }
+
+  template StdTrade {
+    prop poi: i32 = 0
+    prop w: f32 = 10
+    prop d: f32 = 8
+    prop th: Theme
+    prop seed: i32 = 0
+
+    const ink: Rgb = fac_ink(2)
+    const day = today
+    const cheap = trade_cheap(poi)
+    const dear = trade_dear(poi)
+    const sh = min(1.0, d * 0.2)
+
+    KitDesk desk(len: min(2.4, d - 3.4), tint: th.trim, ink: ink) { Position: {w / 2 - 1.55, 0, 0}; Rotation: {0, -1.5708, 0} }
+    Person clerk(seed: seed + 11, garb: cul_garb(th.culture)) { Position: {w / 2 - 0.75, 0, 0.2}; Rotation: {0, -1.5708, 0} }
+    KitSign title(text: "EXCHANGE", sub: "ALL SALES FINAL-ISH", w: 2.8, ink: ink, size: 0.7) { Position: {w / 2 - 1.9, 2.8, 0.3 - d / 2}; Rotation: {-0.7, 0, 0} }
+    easel : KitDark { Position: {0, 1.6, 0.2 - d / 2}; Rotation: {-0.3, 0, 0}; Box: {1.6, 1.4, 0.06}; Rgb: {16, 20, 24} }
+    for g in 0..8 {
+      const rel = clamp(here_kind == 3 ? 1 : kind_factor(here_kind, g) * region_factor(poi_sys(poi), g) * price_drift(poi_sys(poi), g, day), 0.4, 1.9)
+      "tick_{g}" { Position: {-0.66 + rel * 0.34, 1.6 + (3.5 - g) * 0.15, 0.25 - d / 2 + (3.5 - g) * 0.046}; Rotation: {-0.3, 0, 0}; Box: {rel * 0.68, 0.08, 0.02}; Rgb: good_ink(g); Emissive: {strength: stn_sells(g) ? 2.4 : 0.25, color: good_ink(g)}; NoShadow }
+    }
+    for side in 0..2 {
+      const z0 = (side * 2 - 1) * d * 0.24
+      const g = side == 0 ? cheap : dear
+      "stall_{side}" {
+        Position: {1.0 - w / 2, 0, z0}
+        table : KitGloss { Position: {0.1, 0.42, 0}; Box: {1.0, 0.84, sh * 2}; Rgb: rgb_mix(th.trim, {120, 78, 48}, 0.5) }
+        for k in 0..3 {
+          "awn_{k}" : KitMatte { Position: {-0.2, 2.0, (k - 1) * sh * 0.66}; Rotation: {0, 0, 0.2}; Box: {1.3, 0.05, sh * 0.66 + 0.01}; Rgb: k % 2 == 0 ? good_ink(g) : th.wall }
+        }
+        pole_a : KitSteel { Position: {0.5, 0.95, 0 - sh}; Box: {0.05, 1.9, 0.05} }
+        pole_b : KitSteel { Position: {0.5, 0.95, sh}; Box: {0.05, 1.9, 0.05} }
+        if side == 0 {
+          for k in 0..3 {
+            "heap_{k}" : KitPaint { Position: {0.15, 0.98, (k - 1) * sh * 0.6}; Box: {0.6, 0.28, sh * 0.5}; Rgb: good_ink(g) }
+            "pile_{k}" : KitPaint { Position: {0.15, 1.2, (k - 1) * sh * 0.6}; Box: {0.45, 0.2, sh * 0.4}; Rgb: good_ink(g) }
+          }
+          KitNote tag(text: "{good_name(g)}: PLENTY", ink: {250, 250, 240}, size: 0.6, glow: 1.5) { Position: {0.64, 0.6, 0}; Rotation: {0, 1.5708, 0} }
+          Person seller(seed: seed + 12, garb: 0) { Position: {-0.4, 0, 0}; Rotation: {0, 1.5708, 0} }
+        } else {
+          KitNote tag(text: "{good_name(g)}: SOON", ink: {255, 200, 120}, size: 0.6, glow: 1.5) { Position: {0.64, 0.6, 0}; Rotation: {0, 1.5708, 0} }
+          dust : KitMatte { Position: {0.15, 0.9, 0}; Box: {0.7, 0.1, sh}; Rgb: {214, 210, 200} }
+        }
+      }
+    }
+    KitCrate crate_a(sx: 0.7, sy: 0.55, sz: 0.7, tint: good_ink(cheap)) { Position: {w / 2 - 0.7, 0, d / 2 - 0.7} }
+    KitCrate crate_b(sx: 0.6, sy: 0.45, sz: 0.6, tint: crate_tint(seed + 2)) { Position: {w / 2 - 0.7, 0, 0.7 - d / 2}; Rotation: {0, 0.3, 0} }
+  }
+
+  template StdYard {
+    prop poi: i32 = 0
+    prop w: f32 = 10
+    prop d: f32 = 8
+    prop th: Theme
+    prop seed: i32 = 0
+
+    const big = w >= 8
+    const ink: Rgb = fac_ink(32)
+    const t = std_yard_spot(w, d, 0)
+
+    plinth : KitGloss { Position: {t.x, 0.15, t.z}; Cylinder: {length: 0.3, radius: t.hx, segments: 32, smooth: true}; Rgb: {30, 30, 38} }
+    aura { Position: {t.x, 0.31, t.z}; Tube: {radius: t.hx - 0.05, thickness: 0.07, length: 0.02, segments: 40}; KitGlow: {ink: ink, power: 3} }
+    turntable {
+      Position: {t.x, 0.3, t.z}
+      Rotation: {0, 0, 0}
+      AngularVelocity: {0, 0.4, 0}
+      stem : KitSteel { Position: {0, 0.3, 0}; Cylinder: {length: 0.6, radius: 0.07, segments: 8, smooth: true} }
+      KitShip model(tint: {236, 238, 242}, trim: th.ink) { Position: {0, 0.95, 0}; Rotation: {0.14, 0, 0.12}; Scale: {t.hx * 0.6, t.hx * 0.6, t.hx * 0.6} }
+    }
+    spot_ { Position: {t.x, 2.8, t.z + 0.6}; PointLight: {intensity: 9, range: 5}; Rgb: {255, 244, 230} }
+    KitDesk desk(len: 2.0, tint: th.trim, ink: ink) { Position: {w / 2 - 1.55, 0, -0.8}; Rotation: {0, -1.5708, 0} }
+    Person sales(seed: seed + 21, garb: 3) { Position: {w / 2 - 0.75, 0, -0.6}; Rotation: {0, -1.5708, 0} }
+    KitSign title(text: "SHIPYARD", sub: "NO TEST FLIGHTS", w: 2.8, ink: ink, size: 0.75) { Position: {0, 2.8, 0.3 - d / 2}; Rotation: {-0.7, 0, 0} }
+    tag_a : KitPaint { Position: {t.x, 0.5, t.z + t.hx + 0.3}; Rotation: {-0.8, 0, 0}; Box: {1.0, 0.34, 0.03}; Rgb: {250, 250, 244} }
+    KitNote price_a(text: "FROM {money_text(freighter_price(0))}", size: 0.7) { Position: {t.x, 0.515, t.z + t.hx + 0.315}; Rotation: {-0.8, 0, 0} }
+    if big {
+      stand : KitGloss { Position: {w / 2 - 1.2, 0.16, d / 2 - 1.2}; Box: {1.6, 0.32, 1.5}; Rgb: {30, 30, 38} }
+      KitDozer dozer_() { Position: {w / 2 - 1.2, 0.32, d / 2 - 1.2}; Rotation: {0, -0.6, 0}; Scale: {0.45, 0.45, 0.45} }
+      KitNote price_b(text: "DOZER {money_text(DOZER_PRICE)}", ink: {250, 250, 244}, size: 0.6, glow: 1.5) { Position: {w / 2 - 1.2, 0.2, d / 2 - 0.42}; Rotation: {-0.5, 0, 0} }
+      KitRope rope(len: 2.6) { Position: {t.x, 0, t.z + t.hx + 0.7} }
+    }
+    yard {
+      Position: {0, -1.5, 0 - d / 2 - 7}
+      slab : KitPlate { Position: {0, -0.4, 0}; Box: {w + 4, 0.4, 8}; Rgb: {110, 114, 124} }
+      for k in 0..5 {
+        "rib_{k}" : KitPaint { Position: {(k - 2) * 2.2, 2.2, 0}; Box: {0.2, 4.4, 6.4}; Rgb: {250, 196, 30} }
+      }
+      keel : KitSteel { Position: {0, 1.2, 0}; Rotation: {0, 0, 1.5708}; Capsule: {length: 7, radius: 1.3, segments: 16, smooth: true}; Rgb: {150, 158, 170} }
+      skin : KitGloss { Position: {-2.2, 1.9, 0}; Rotation: {0, 0, 1.5708}; Scale: {1, 1, 0.9}; Cylinder: {length: 3.4, radius: 1.42, segments: 16, smooth: true}; Rgb: {236, 238, 242} }
+      weld_a { Position: {1.4, 2.6, 1.0}; Sphere: {radius: 0.16, segments: 8}; KitGlow: {ink: {200, 230, 255}, power: 0}; Animator: {clip: std_weld} }
+      weld_b { Position: {3.0, 2.2, -0.9}; Sphere: {radius: 0.16, segments: 8}; KitGlow: {ink: {200, 230, 255}, power: 0}; Animator: {clip: std_weld, time: 0.45} }
+      flash { Position: {2, 3, 0}; PointLight: {intensity: 14, range: 10}; Rgb: {200, 230, 255} }
+    }
+  }
+
+  template StdBay {
+    prop poi: i32 = 0
+    prop w: f32 = 12
+    prop d: f32 = 12
+    prop o: f32 = 1
+    prop th: Theme
+    prop seed: i32 = 0
+
+    const fac = stn_fac(poi)
+    const ink: Rgb = fac_ink(4)
+    const bx = 0 - o * (w / 2 - 2.0)
+    const dp = std_bay_spot(w, d, o, 1)
+    const cv = std_bay_spot(w, d, o, 2)
+    const lvl: i32 = here_stock
+    const cols: i32 = max(2, floor((dp.hx * 2 - 0.6) / 1.15))
+    const native = stn_kind(poi) != KIND_PLAYER_PORT && stn_kind(poi) != KIND_CAMP
+
+    if (fac & 4) != 0 {
+      KitDesk desk(len: 2.4, tint: {250, 196, 30}, ink: ink) { Position: {bx, 0, 1.55 - d / 2} }
+      Person clerk(seed: seed + 31, garb: 1) { Position: {bx + 0.3, 0, 0.75 - d / 2} }
+      KitSign title(text: "FREIGHT", sub: "HANDLE WITH CARE (OPTIONAL)", w: 2.8, ink: ink, size: 0.75) { Position: {bx, 2.8, 0.3 - d / 2}; Rotation: {-0.7, 0, 0} }
+      frame_ : KitDark { Position: {cv.x, 0.28, cv.z}; Box: {cv.hx * 2, 0.56, 0.84} }
+      belt : KitRubber { Position: {cv.x, 0.58, cv.z}; Box: {cv.hx * 2, 0.05, 0.66} }
+      hood_a : KitPaint { Position: {cv.x - cv.hx + 0.3, 0.88, cv.z}; Box: {0.6, 0.62, 0.9}; Rgb: ink }
+      hood_b : KitPaint { Position: {cv.x + cv.hx - 0.3, 0.88, cv.z}; Box: {0.6, 0.62, 0.9}; Rgb: ink }
+      lane {
+        Position: {cv.x, 0.61, cv.z}
+        Scale: {cv.hx - 0.3, 1, 1}
+        for k in 0..3 {
+          "parcel_{k}" { Position: {0, 0.16, 0}; Scale: {1 / (cv.hx - 0.3), 1, 1}; Animator: {clip: std_belt, time: k * 2}; Box: {0.42, 0.3 + (k % 2) * 0.1, 0.4}; Rgb: crate_tint(seed + k * 3); PbrMaterial: {roughness: 0.7} }
+        }
+      }
+      crane {
+        Position: {o * (w / 2 - 1.3), 0, 1.2}
+        foot : KitPaint { Position: {0, 0.2, 0}; Cylinder: {length: 0.4, radius: 0.34, segments: 14, smooth: true}; Rgb: {250, 196, 30} }
+        turret {
+          Position: {0, 0.4, 0}
+          Rotation: {0, -0.9, 0}
+          Animator: {clip: kit_arm_swing, time: hash01(seed, 126) * 3, mode: AnimationPingPong}
+          mast : KitPaint { Position: {0, 0.5, 0}; Box: {0.22, 1.0, 0.22}; Rgb: {250, 196, 30} }
+          shoulder {
+            Position: {0, 1.0, 0}
+            Rotation: {0, 0, -0.5}
+            Animator: {clip: kit_arm_reach, mode: AnimationPingPong}
+            boom : KitPaint { Position: {-0.6, 0, 0}; Box: {1.3, 0.16, 0.16}; Rgb: {250, 196, 30} }
+            wrist : KitDark { Position: {-1.25, -0.1, 0}; Box: {0.14, 0.3, 0.14} }
+            load : KitPaint { Position: {-1.25, -0.36, 0}; Box: {0.24, 0.22, 0.22}; Rgb: {255, 170, 40} }
+          }
+        }
+      }
+      Person loader(seed: seed + 32, garb: 1) { Position: {o * (w / 2 - 1.0), 0, 2.3 - d / 2}; Rotation: {0, 0 - o * 1.2, 0} }
+    }
+
+    KitFence fence_n(len: dp.hx * 2, ink: {250, 196, 30}) { Position: {dp.x, 0, dp.z - dp.hz} }
+    KitFence fence_s(len: dp.hx * 2, ink: {250, 196, 30}) { Position: {dp.x, 0, dp.z + dp.hz} }
+    KitFence fence_w(len: dp.hz * 2, ink: {250, 196, 30}) { Position: {dp.x - dp.hx, 0, dp.z}; Rotation: {0, 1.5708, 0} }
+    KitFence fence_e(len: dp.hz * 2, ink: {250, 196, 30}) { Position: {dp.x + dp.hx, 0, dp.z}; Rotation: {0, 1.5708, 0} }
+    KitSign depot(text: "DEPOT", sub: "STAFF ONLY. YOU ARE STAFF.", w: 2.3, ink: fac_ink(16), size: 0.6) { Position: {dp.x, 1.3, dp.z - dp.hz}; Rotation: {-0.6, 0, 0} }
+    KitStack stock_(level: lvl, cols: cols) { Position: {dp.x - dp.hx + 0.75, 0, dp.z + dp.hz - 0.75} }
+    if native {
+      const na: i32 = floor(dp.hx * 2 / 1.8)
+      for k in 0..na {
+        KitCargo "amb_{k}"(len: 1.5, tint: crate_tint(seed + k * 3)) { Position: {dp.x + dp.hx - 0.95 - k * 1.7, 0, dp.z - dp.hz + 0.7}; Rotation: {0, hash01(seed + k, 129) * 0.1, 0} }
+      }
+      KitFreighter hauler(rows: 4, seed: seed) { Position: {o * (w / 2 + 3.8), 0.6, 0}; Rotation: {0, 3.1416, 0} }
+    }
+    for f in 0..8 {
+      if ((here_fleet >> (f * 3)) & 7) != 0 {
+        KitFreighter "own_{f}"(rows: (here_fleet >> (f * 3)) & 7, own: true, seed: f) { Position: {o * (w / 2 + 3.4 + (f % 4) * 8), 0.2, 0 - d / 2 - 7 - floor(f / 4) * 14}; Rotation: {0, 1.5708, 0} }
+      }
+    }
+    apron : KitPlate { Position: {0, -0.4, d / 2 + 3}; Box: {w, 0.3, 4.4}; Rgb: {110, 114, 124} }
+    for k in 0..4 {
+      if ((here_dozers >> k) & 1) != 0 {
+        KitDozer "dozer_{k}"() { Position: {(k - 1.5) * 2.7, -0.25, d / 2 + 3}; Rotation: {0, 0.3, 0}; Scale: {1.1, 1.1, 1.1} }
+      }
+    }
+    const nh: i32 = floor(w / 0.8)
+    for k in 0..nh {
+      "haz_{k}" : KitPaint { Position: {o * (w / 2 - 0.6), 0.006, 0.4 - d / 2 + k * 0.8 * d / w}; Box: {0.5, 0.01, 0.3}; Rgb: {250, 196, 30} }
+    }
+  }
+
+  template PortHall {
+    prop poi: i32 = 0
+    prop th: Theme
+    prop seed: i32 = 0
+
+    const big = port_big(poi)
+    const r = port_room(poi, 1)
+    const cul = poi_culture(poi)
+    const wld = poi_world(poi)
+    const hx = port_hall_x(poi, 2)
+    const hz = port_hall_z(poi, 2)
+    const wx = port_hall_x(poi, 5)
+    const wz = port_hall_z(poi, 5)
+    const tier = poi_tier(poi)
+
+    for k in 0..8 {
+      if port_hall_on(poi, k) {
+        if k == 0 || k == 4 || k == 7 {
+          KitPlanter "pot_{k}"(seed: seed + k, tub: th.wall, trim: th.trim) { Position: {port_hall_x(poi, k), 0, port_hall_z(poi, k)}; Scale: {0.9, 1, 0.85} }
+        } else if k == 1 || k == 3 {
+          KitBench "bench_{k}"(len: 2.2, tint: th.trim) { Position: {port_hall_x(poi, k), 0, port_hall_z(poi, k)}; Rotation: {0, 3.1416, 0} }
+          if tier > 0 || k == 1 {
+            Person "sitter_{k}"(seed: seed + 40 + k, pose: 1, garb: cul_garb(cul)) { Position: {port_hall_x(poi, k) + 0.4, 0.26, port_hall_z(poi, k) - 0.1}; Rotation: {0, 3.1416, 0} }
+          }
+        }
+      }
+    }
+    Person info(seed: seed + 46, garb: cul_garb(cul)) { Position: {port_hall_x(poi, 6), 0, port_hall_z(poi, 6)} }
+    KitSign info_sign(text: "INFORMATION", sub: "ACCURACY EXTRA", w: 2.0, ink: th.ink, size: 0.5) { Position: {port_hall_x(poi, 6), 2.1, port_hall_z(poi, 6) - 0.5}; Rotation: {-0.6, 0, 0} }
+    stand_ : KitDark { Position: {port_hall_x(poi, 6), 1.0, port_hall_z(poi, 6) - 0.52}; Box: {0.06, 2.0, 0.06} }
+
+    hero {
+      Position: {hx, 0, hz}
+      if cul == 0 {
+        KitRope rope_a(len: 1.8) { Position: {0, 0, 0.3} }
+        ticket : KitPaint { Position: {0, 0.6, -0.2}; Box: {0.4, 1.2, 0.3}; Rgb: {200, 60, 50} }
+        slot_ { Position: {0, 0.9, -0.04}; Box: {0.24, 0.06, 0.02}; KitGlow: {ink: {255, 240, 200}, power: 3} }
+      } else if cul == 1 {
+        trunk : KitMatte { Position: {0, 1.0, 0}; Rotation: {0, 0, 0.08}; Cylinder: {length: 2.0, radius: 0.1, segments: 8, smooth: true}; Rgb: {150, 110, 70} }
+        for k in 0..6 {
+          "frond_{k}" : KitLeaf { Position: {cos(k * 1.047) * 0.5, 2.0, sin(k * 1.047) * 0.5}; Rotation: {0, 0 - k * 1.047, -0.5}; Box: {1.1, 0.04, 0.3} }
+        }
+        tub : KitBrass { Position: {0, 0.25, 0}; Cylinder: {length: 0.5, radius: 0.45, segments: 14, smooth: true} }
+      } else if cul == 2 {
+        KitCrate crate_a(sx: 0.8, sy: 0.5, sz: 0.7, tint: {150, 190, 90}) { Position: {-0.45, 0, 0} }
+        plinth : KitPaint { Position: {0.5, 0.35, 0}; Box: {0.6, 0.7, 0.6}; Rgb: {240, 240, 236} }
+        marrow : KitLeaf { Position: {0.5, 0.86, 0}; Rotation: {0, 0.4, 1.5708}; Capsule: {length: 0.5, radius: 0.16, segments: 10, smooth: true}; Rgb: {90, 150, 60} }
+        ribbon { Position: {0.5, 0.74, 0.31}; Box: {0.16, 0.2, 0.02}; KitGlow: {ink: {90, 150, 255}, power: 2} }
+      } else if cul == 3 {
+        pole : KitDark { Position: {0, 1.2, 0}; Box: {0.08, 2.4, 0.08} }
+        cam : KitDark { Position: {0, 2.3, 0.2}; Rotation: {0.5, 0, 0}; Box: {0.2, 0.16, 0.4} }
+        eye { Position: {0, 2.2, 0.4}; Sphere: {radius: 0.05, segments: 6}; KitGlow: {ink: {255, 60, 50}, power: 5}; Animator: {clip: kit_glow_pulse, mode: AnimationPingPong} }
+        line_a : KitPaint { Position: {0, 0.006, 0.55}; Box: {2.0, 0.01, 0.1}; Rgb: {240, 200, 40} }
+      } else if cul == 4 {
+        sheet : KitMatte { Position: {0, 0.6, 0}; Scale: {1, 1.25, 0.8}; IcoSphere: {radius: 0.6, segments: 1}; Rgb: {236, 238, 240} }
+        skirt : KitMatte { Position: {0, 0.15, 0}; Box: {1.5, 0.3, 1.1}; Rgb: {236, 238, 240} }
+      } else if cul == 5 {
+        tub : KitMatte { Position: {0, 0.3, 0}; Cylinder: {length: 0.6, radius: 0.6, segments: 12, smooth: true}; Rgb: {120, 90, 60} }
+        trunk : KitMatte { Position: {0, 1.3, 0}; Cylinder: {length: 1.6, radius: 0.13, segments: 8, smooth: true}; Rgb: {96, 70, 50} }
+        crown_a : KitLeaf { Position: {0, 2.4, 0}; IcoSphere: {radius: 0.85, segments: 1} }
+        crown_b : KitLeaf { Position: {0.4, 2.0, 0.3}; IcoSphere: {radius: 0.5, segments: 1}; Rgb: {84, 170, 84} }
+      } else {
+        for k in 0..4 {
+          "bag_{k}" : KitMatte { Position: {-0.6 + (k % 2) * 0.62 + floor(k / 2) * 0.3, 0.16 + floor(k / 2) * 0.3, 0}; Rotation: {0, 0, 1.5708}; Capsule: {length: 0.3, radius: 0.16, segments: 8, smooth: true}; Rgb: {150, 140, 110} }
+        }
+        flag_pole : KitDark { Position: {0.7, 1.1, 0}; Box: {0.05, 2.2, 0.05} }
+        flag : KitMatte { Position: {0.98, 2.0, 0}; Box: {0.5, 0.34, 0.02}; Rgb: {255, 120, 80} }
+      }
+    }
+    world {
+      Position: {wx, 0, wz}
+      if wld == 1 {
+        tank : KitGlass { Position: {0, 0.9, 0}; Box: {1.8, 1.0, 0.9} }
+        water { Position: {0, 0.85, 0}; Box: {1.7, 0.86, 0.8}; Rgb: {0, 0, 0}; Emissive: {strength: 0.6, color: {60, 160, 255}}; BlendMode: Additive; Opacity: {0.4}; NoShadow }
+        base : KitDark { Position: {0, 0.2, 0}; Box: {1.9, 0.4, 1.0} }
+        fish_a { Position: {-0.3, 0.9, 0}; Scale: {1.6, 1, 0.5}; Sphere: {radius: 0.09, segments: 8}; KitGlow: {ink: {255, 150, 60}, power: 2} }
+        fish_b { Position: {0.4, 0.7, 0.1}; Scale: {1.6, 1, 0.5}; Sphere: {radius: 0.07, segments: 8}; KitGlow: {ink: {255, 230, 90}, power: 2} }
+      } else if wld == 2 {
+        table : KitMatte { Position: {0, 0.4, 0}; Box: {1.7, 0.8, 0.8}; Rgb: {214, 170, 110} }
+        awn : KitMatte { Position: {0, 1.9, 0}; Rotation: {0.2, 0, 0}; Box: {1.9, 0.05, 1.2}; Rgb: {230, 120, 60} }
+        pole_a : KitSteel { Position: {-0.85, 0.95, 0}; Box: {0.05, 1.9, 0.05} }
+        pole_b : KitSteel { Position: {0.85, 0.95, 0}; Box: {0.05, 1.9, 0.05} }
+        for k in 0..4 {
+          "tube_{k}" : KitGloss { Position: {-0.6 + k * 0.4, 0.92, 0}; Cylinder: {length: 0.24, radius: 0.07, segments: 8, smooth: true}; Rgb: {255, 200, 60} }
+        }
+      } else if wld == 3 {
+        stove : KitDark { Position: {0, 0.5, 0}; Cylinder: {length: 1.0, radius: 0.4, segments: 12, smooth: true} }
+        fire { Position: {0, 0.45, 0.38}; Box: {0.4, 0.3, 0.06}; KitGlow: {ink: {255, 130, 50}, power: 5}; Animator: {clip: kit_glow_pulse, speed: 3, mode: AnimationPingPong} }
+        flue : KitDark { Position: {0, 1.6, 0}; Cylinder: {length: 1.4, radius: 0.1, segments: 8, smooth: true} }
+        heat { Position: {0, 1, 0.8}; PointLight: {intensity: 8, range: 5}; Rgb: {255, 140, 70} }
+      } else if wld == 4 {
+        bed : KitMatte { Position: {0, 0.25, 0}; Box: {1.9, 0.5, 1.0}; Rgb: {96, 70, 50} }
+        for k in 0..5 {
+          "shrub_{k}" : KitLeaf { Position: {-0.7 + k * 0.35, 0.7 + (k % 2) * 0.3, (k % 3) * 0.2 - 0.2}; IcoSphere: {radius: 0.3 + (k % 2) * 0.12, segments: 1}; Rgb: {60 + k * 8, 150 + k * 6, 76} }
+        }
+      } else {
+        bowl : KitGloss { Position: {0, 0.25, 0}; Cylinder: {length: 0.5, radius: 0.8, segments: 20, smooth: true}; Rgb: {214, 214, 220} }
+        pool { Position: {0, 0.51, 0}; Cylinder: {length: 0.02, radius: 0.7, segments: 20}; KitGlow: {ink: {90, 170, 255}, power: 1.4} }
+        jet : KitGlass { Position: {0, 0.9, 0}; Cone: {length: 0.8, radius: 0.12, segments: 8, smooth: true} }
+      }
+      KitNote note(text: world_note(wld), ink: {250, 250, 240}, size: 0.5, glow: 1.6) { Position: {0, 0.3, wz > 0 ? -0.72 : 0.72}; Rotation: {-0.4, 0, 0} }
+    }
+
+    KitSign name_(text: here_name, sub: "ARRIVALS, DEPARTURES, SECOND THOUGHTS", w: big ? 8.4 : 6, ink: th.ink, size: big ? 1.1 : 0.8) { Position: {port_dir(poi) * (big ? 5 : 4), 2.5, 0.2 - r.d / 2}; Rotation: {-0.7, 0, 0} }
+    stay_a : KitDark { Position: {port_dir(poi) * (big ? 5 : 4) - 2, 1.2, 0.1 - r.d / 2}; Box: {0.08, 2.4, 0.08} }
+    stay_b : KitDark { Position: {port_dir(poi) * (big ? 5 : 4) + 2, 1.2, 0.1 - r.d / 2}; Box: {0.08, 2.4, 0.08} }
+    sweep {
+      Position: {0, 0, 0.9}
+      KitRobot robot(x0: 2 - r.w / 2, x1: r.w / 2 - 2, period: big ? 22 : 13)
+    }
+    const nl: i32 = big ? 4 : 2
+    for k in 0..nl {
+      KitLamp "lamp_{k}"(ink: th.lamp, power: 9 * th.level, reach: 8) { Position: {(k + 0.5) * r.w / (big ? 4 : 2) - r.w / 2, 0, (k % 2) * 2 * (r.d / 2 - 0.5) - (r.d / 2 - 0.5)} }
+    }
+    if tier > 0 {
+      Person walker_a(seed: seed + 51) { Position: {port_dir(poi) * -12.5, 0, 1.4}; Rotation: {0, 1.2, 0} }
+      Person walker_b(seed: seed + 52) { Position: {port_dir(poi) * -11.6, 0, 1.6}; Rotation: {0, -1.4, 0} }
+      Person walker_c(seed: seed + 53, garb: cul_garb(cul)) { Position: {port_dir(poi) * 9.4, 0, -1.6}; Rotation: {0, 0.4, 0} }
+    }
+  }
+
+  template PortExtra {
+    prop poi: i32 = 0
+    prop kind: i32 = 0
+    prop w: f32 = 8
+    prop d: f32 = 7
+    prop th: Theme
+    prop seed: i32 = 0
+
+    const xl = 1.1 - w / 2
+    const xr = w / 2 - 1.1
+    const done: i32 = clamp(jobs_done, 0, 8)
+    const lost: i32 = clamp(jobs_failed, 0, 5)
+    const rep: i32 = clamp(reputation, 0, 4)
+
+    KitSign title(text: extra_title(kind), sub: extra_note(kind), w: min(w - 1, 4.6), ink: th.ink, size: 0.62) { Position: {0, 1.25, d / 2 - 0.3}; Rotation: {-0.9, 0, 0} }
+    if kind == 100 {
+      KitDesk desk(len: 2.0, tint: {120, 78, 48}, ink: {255, 190, 84}) { Position: {xr + 0.2, 0, -0.2}; Rotation: {0, -1.5708, 0} }
+      chair : KitDark { Position: {xr + 0.75, 0.3, -0.2}; Box: {0.5, 0.6, 0.5} }
+      KitBoard wall_(w: 2.6, h: 1.4) { Position: {xl - 0.5, 1.0, -0.2}; Rotation: {0, 1.5708, -0.3} }
+      for k in 0..done {
+        "frame_{k}" { Position: {xl - 0.45 + floor(k / 4) * 0.1, 1.25 - floor(k / 4) * 0.5, -1.1 + (k % 4) * 0.6}; Rotation: {0, 1.5708, -0.3}; Box: {0.42, 0.34, 0.03}; KitGlow: {ink: {255, 200, 90}, power: 1.6} }
+      }
+      shelf : KitGloss { Position: {xl + 0.4, 0.4, 2.2}; Box: {1.6, 0.8, 0.5}; Rgb: {120, 78, 48} }
+      for k in 0..lost {
+        "lesson_{k}" : KitMatte { Position: {xl - 0.2 + k * 0.32, 0.92, 2.2}; Rotation: {k, k * 2, 0}; IcoSphere: {radius: 0.12, segments: 0}; Rgb: {110, 110, 116} }
+      }
+      pot : KitGloss { Position: {xr + 0.4, 0.25, 2.3}; Cylinder: {length: 0.5, radius: 0.3, segments: 12, smooth: true}; Rgb: {255, 150, 40} }
+      stem : KitMatte { Position: {xr + 0.4, 0.75, 2.3}; Cylinder: {length: 0.6, radius: 0.03, segments: 6}; Rgb: {96, 70, 50} }
+      const nleaf: i32 = rep + 1
+      for k in 0..nleaf {
+        "leaf_{k}" : KitLeaf { Position: {xr + 0.4 + cos(k * 1.3) * 0.2, 0.9 + k * 0.14, 2.3 + sin(k * 1.3) * 0.2}; IcoSphere: {radius: 0.16, segments: 1}; Rgb: rep == 0 ? {150, 130, 70} : {64, 150, 72} }
+      }
+      KitRug rug(w: 2.4, d: 3.4, tint: {150, 60, 40}, trim: {255, 190, 84}) { Position: {0, 0, 0.2} }
+    } else if kind == 0 {
+      KitDesk desk(len: 2.0, tint: th.trim, ink: th.ink) { Position: {xr - 0.2, 0, -0.6}; Rotation: {0, -1.5708, 0} }
+      KitRope rope_a(len: 2.0) { Position: {xl + 0.2, 0, -0.9} }
+      KitRope rope_b(len: 2.0) { Position: {xl + 0.2, 0, 0.3} }
+      ticket : KitPaint { Position: {xl - 0.3, 0.6, -1.3}; Box: {0.4, 1.2, 0.3}; Rgb: {200, 60, 50} }
+    } else if kind == 1 || kind == 20 {
+      KitBench sofa_a(len: 2.2, tint: th.trim) { Position: {xl + 0.1, 0, -0.2}; Rotation: {0, 1.5708, 0} }
+      KitBench sofa_b(len: 2.2, tint: th.trim) { Position: {xr - 0.1, 0, -0.2}; Rotation: {0, -1.5708, 0} }
+      Person guest(seed: seed + 71, pose: 1) { Position: {xl + 0.2, 0.26, 0.2}; Rotation: {0, 1.5708, 0} }
+      KitRug rug(w: 2.4, d: 3.0, tint: rgb_dim(th.ink, 0.6), trim: th.trim) { Position: {0, 0, -0.2} }
+      scope : KitGloss { Position: {0, 0.9, 1.6}; Rotation: {1.1, 0, 0}; Cylinder: {length: 1.2, radius: 0.12, segments: 10, smooth: true}; Rgb: {236, 240, 244} }
+    } else if kind == 2 {
+      for k in 0..3 {
+        "rack_l{k}" { Position: {xl, 0.5 + k * 0.5, -0.2}; Box: {0.6, 0.08, 2.4}; KitGlow: {ink: {150, 255, 120}, power: 1.6} }
+        "rack_r{k}" { Position: {xr, 0.5 + k * 0.5, -0.2}; Box: {0.6, 0.08, 2.4}; KitGlow: {ink: {255, 120, 220}, power: 1.6} }
+      }
+      post_l : KitSteel { Position: {xl, 0.8, -0.2}; Box: {0.7, 1.6, 0.06} }
+      post_r : KitSteel { Position: {xr, 0.8, -0.2}; Box: {0.7, 1.6, 0.06} }
+    } else if kind == 7 {
+      KitShelf rack(len: 2.4, tint: {110, 84, 60}, seed: seed) { Position: {xl - 0.4, 0, -0.2}; Rotation: {0, 1.5708, 0} }
+      KitCrate box_a(sx: 0.8, sy: 0.6, sz: 0.7, tint: crate_tint(seed)) { Position: {xr, 0, -0.8} }
+      KitCrate box_b(sx: 0.6, sy: 0.5, sz: 0.6, tint: crate_tint(seed + 1)) { Position: {xr + 0.1, 0, 0.3}; Rotation: {0, 0.4, 0} }
+      KitBarrel keg(tint: {176, 96, 52}) { Position: {xr - 0.2, 0, 1.2} }
+    } else if kind == 3 {
+      KitBench bench_a(len: 2.4, tint: {120, 124, 130}) { Position: {xl + 0.1, 0, -0.2}; Rotation: {0, 1.5708, 0} }
+      KitDesk desk(len: 2.0, tint: {120, 124, 130}, ink: {255, 220, 90}) { Position: {xr - 0.2, 0, -0.2}; Rotation: {0, -1.5708, 0} }
+      Person guard(seed: seed + 72, garb: 6) { Position: {xr + 0.5, 0, 0}; Rotation: {0, -1.5708, 0} }
+      line_a : KitPaint { Position: {0, 0.006, 1.2}; Box: {w - 2.4, 0.01, 0.1}; Rgb: {240, 200, 40} }
+    } else if kind == 4 {
+      sheet : KitMatte { Position: {xl + 0.1, 0.7, -0.2}; Scale: {1, 1.3, 1.5}; IcoSphere: {radius: 0.7, segments: 1}; Rgb: {236, 238, 240} }
+      slate : KitPaint { Position: {xr + 0.4, 1.1, -0.2}; Rotation: {0, -1.5708, 0.2}; Box: {2.2, 1.3, 0.05}; Rgb: {244, 246, 244} }
+      KitNote sums(text: "x = ?!", ink: {200, 40, 40}, size: 1.4) { Position: {xr + 0.36, 1.1, -0.2}; Rotation: {0, -1.5708, 0.2} }
+      Person boffin(seed: seed + 73, garb: 4) { Position: {xr - 0.5, 0, 0.9}; Rotation: {0, 1.2, 0} }
+    } else if kind == 5 {
+      tub : KitMatte { Position: {xl + 0.2, 0.35, -0.2}; Cylinder: {length: 0.7, radius: 0.8, segments: 14, smooth: true}; Rgb: {120, 90, 60} }
+      trunk : KitMatte { Position: {xl + 0.2, 1.5, -0.2}; Cylinder: {length: 1.8, radius: 0.16, segments: 8, smooth: true}; Rgb: {96, 70, 50} }
+      crown_a : KitLeaf { Position: {xl + 0.2, 2.8, -0.2}; IcoSphere: {radius: 1.1, segments: 1} }
+      crown_b : KitLeaf { Position: {xl + 0.8, 2.3, 0.3}; IcoSphere: {radius: 0.7, segments: 1}; Rgb: {84, 170, 84} }
+      Person guard(seed: seed + 74, garb: 1) { Position: {xr, 0, -0.2}; Rotation: {0, -1.2, 0} }
+    } else {
+      for k in 0..6 {
+        "bag_{k}" : KitMatte { Position: {xl - 0.3 + (k % 3) * 0.62, 0.16 + floor(k / 3) * 0.3, -0.2}; Rotation: {0, 0, 1.5708}; Capsule: {length: 0.3, radius: 0.16, segments: 8, smooth: true}; Rgb: {150, 140, 110} }
+      }
+      bar_ : KitPaint { Position: {xr - 0.3, 0.9, -0.2}; Rotation: {0, 0, 0.5}; Box: {2.4, 0.1, 0.1}; Rgb: {230, 60, 50} }
+      post : KitDark { Position: {xr + 0.5, 0.5, -0.2}; Box: {0.2, 1.0, 0.2} }
+      Person guard(seed: seed + 75, garb: 1) { Position: {xr + 0.4, 0, 0.8}; Rotation: {0, -1.5708, 0} }
+    }
+  }
+
+  template PortRoom {
+    prop poi: i32 = 0
+    prop i: i32 = 0
+
+    const r = port_room(poi, i)
+    const th = theme_role(theme_base(poi), r.role)
+    const seed = plan_seed(poi) + i * 31
+    const o = port_out(poi, i)
+
+    if r.role == 1 {
+      StdDock body(poi: poi, w: r.w, d: r.d, q: o, th: th, seed: seed) { Position: {0, 0, 0} }
+    } else if r.role == 2 {
+      PortHall body(poi: poi, th: th, seed: seed) { Position: {0, 0, 0} }
+    } else if r.role == 3 {
+      StdBar body(poi: poi, w: r.w, d: r.d, th: th, seed: seed) { Position: {0, 0, 0} }
+    } else if r.role == 4 {
+      StdTrade body(poi: poi, w: r.w, d: r.d, th: th, seed: seed) { Position: {0, 0, 0} }
+    } else if r.role == 5 {
+      StdBay body(poi: poi, w: r.w, d: r.d, o: o, th: th, seed: seed) { Position: {0, 0, 0} }
+    } else if r.role == 6 {
+      StdYard body(poi: poi, w: r.w, d: r.d, th: th, seed: seed) { Position: {0, 0, 0} }
+    } else if r.role == 8 {
+      PortExtra body(poi: poi, kind: r.kind, w: r.w, d: r.d, th: th, seed: seed) { Position: {0, 0, 0} }
+    }
+  }
+
+  template PortOutside {
+    prop poi: i32 = 0
+
+    const r = port_room(poi, 0)
+    const q = port_out(poi, 0)
+    const big = port_big(poi)
+
+    KitLiner liner(trim: cul_ink(poi_culture(poi))) { Position: {r.x + q * (r.w / 2 + 5.5), 0.7, r.z + 2.5}; Rotation: {0, 3.1416, 0} }
+    if big {
+      KitShip shuttle(tint: {214, 220, 230}, trim: {90, 160, 255}) { Position: {r.x + q * 0.5, 0.9, r.z - r.d / 2 - 5.2}; Rotation: {0, q * 1.5708, 0}; Scale: {3.6, 3.6, 3.6} }
+    }
+    traffic {
+      Position: {-160, -9, -46}
+      Animator: {clip: std_fly, time: hash01(poi, 220) * 30}
+      KitShip flyer(tint: {200, 206, 216}, trim: {255, 150, 40}) { Position: {0, 0, 0}; Rotation: {0, 1.5708, 0}; Scale: {3, 3, 3} }
+    }
+  }
+}

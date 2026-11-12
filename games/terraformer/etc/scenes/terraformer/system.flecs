@@ -1,0 +1,890 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.light
+using box.movement
+using box.particle
+using box.transition
+using box.picking
+using box.input
+using box.spatial
+using box.projection
+using box.layout
+using box.text
+using box.surface
+using state
+using terra
+
+state {
+  export const SP_NAV_DIST: f32 = 205
+  export const SP_NAV_Z: f32 = 6
+  export const SP_NAV_NEAR: f32 = 20
+  export const SP_NAV_FAR: f32 = 225
+  export const SP_NAV_PITCH: f32 = 1.0
+  export const SP_FOV_TAN: f32 = 0.36397
+
+  export mut sp_hover: i32 = -1
+  export mut sp_labels_on: bool = false
+  export mut sp_cam_free: bool = false
+  export mut sp_sx: f32 = 0
+  export mut sp_sy: f32 = 0
+  export mut sp_sz: f32 = 0
+  export mut sp_syaw: f32 = 0
+  export mut sp_spitch: f32 = 0
+  export mut sp_ship: i32 = 0
+  export mut sp_burn: bool = false
+  export mut sp_warp: f32 = 0
+  export mut sp_lunge: f32 = 0
+
+  fn sp_pr(p: i32) -> f32 {
+    0.9 + pl_radius(p) * 0.9
+  }
+
+  fn sp_wrap(a: f32) -> f32 {
+    a - 2 * PI * floor((a + PI) / (2 * PI))
+  }
+
+  fn sp_smooth(x: f32) -> f32 {
+    const c: f32 = clamp(x, 0, 1)
+    c * c * (3 - 2 * c)
+  }
+
+  fn sp_tx(poi: i32) -> f32 {
+    0 - sin(poi_a(poi))
+  }
+
+  fn sp_tz(poi: i32) -> f32 {
+    0 - cos(poi_a(poi))
+  }
+
+  fn sp_port_state(p: i32) -> i32 {
+    const i = pl_site(p)
+    pl_native(p) ? 3 : i >= 0 && i < N_SITES ? site_struct[i * 16] : 0
+  }
+
+  fn sp_hull_r(st: i32) -> f32 {
+    match st { 0: 0; 3: 3.2; _: 2.1 }
+  }
+
+  fn sp_hull_off(poi: i32) -> f32 {
+    const p = poi_planet(poi)
+    sp_pr(p) + 1 + sp_hull_r(sp_port_state(p))
+  }
+
+  fn sp_camp_off(poi: i32) -> f32 {
+    sp_pr(poi_planet(poi)) + 2.4
+  }
+
+  fn sp_dock_side(poi: i32) -> f32 {
+    const p = poi_planet(poi)
+    const st = sp_port_state(p)
+    st > 0 ? sp_pr(p) + 1.8 + 2 * sp_hull_r(st) : dozer_at(poi) >= 0 ? 0 - sp_pr(p) - 4.6 : sp_pr(p) + 1.7
+  }
+
+  fn sp_dock_x(poi: i32) -> f32 {
+    const k = poi_slot(poi)
+    k < 6 ? poi_x(poi) + sp_tx(poi) * sp_dock_side(poi) : k < 10 ? poi_x(poi) * (1 - 2 / RIM_R) : poi_x(poi) + sp_tx(poi) * 3.6
+  }
+
+  fn sp_dock_z(poi: i32) -> f32 {
+    const k = poi_slot(poi)
+    k < 6 ? poi_z(poi) + sp_tz(poi) * sp_dock_side(poi) : k < 10 ? poi_z(poi) * (1 - 2 / RIM_R) : poi_z(poi) + sp_tz(poi) * 3.6
+  }
+
+  fn sp_dock_y(poi: i32) -> f32 {
+    const k = poi_slot(poi)
+    k < 6 ? 0.4 : k < 10 ? 0 : 1.8
+  }
+
+  fn sp_arc(len: f32) -> f32 {
+    len > 0.5 ? 1.5 + len * 0.13 : 0
+  }
+
+  fn sp_bigstop(poi: i32) -> bool {
+    const k = poi_kind(poi)
+    k == KIND_GATE || k == KIND_PORT || k == KIND_PLAYER_PORT
+  }
+
+  fn sp_near(poi: i32) -> f32 {
+    const k = poi_slot(poi)
+    k < 6 ? 13 + sp_pr(poi_planet(poi)) * 2.4 : k < 10 ? 19 : 18
+  }
+
+  fn sp_frame_yaw(poi: i32, side: f32) -> f32 {
+    const k = poi_slot(poi)
+    const x = poi_x(poi)
+    const z = poi_z(poi)
+    const r: f32 = max(sqrt(x * x + z * z), 0.01)
+    k >= 6 && k < 10 ? atan2(x, z) + PI - 0.6 : atan2(sp_tx(poi) * side * 0.87 - x / r * 0.5, sp_tz(poi) * side * 0.87 - z / r * 0.5)
+  }
+
+  fn sp_job_at(p: i32) -> bool {
+    (jobs[0].status == JOB_ACTIVE && jobs[0].planet == p) || (jobs[1].status == JOB_ACTIVE && jobs[1].planet == p) || (jobs[2].status == JOB_ACTIVE && jobs[2].planet == p) || (jobs[3].status == JOB_ACTIVE && jobs[3].planet == p)
+  }
+
+  fn sp_crowd(p: i32) -> bool {
+    pl_k(p) < 5 && pl_exists(p) && pl_exists(p + 1) && abs(sp_wrap(pl_angle(p + 1) - pl_angle(p))) * pl_orbit(p) < 13
+  }
+
+  fn sp_label_up(poi: i32) -> bool {
+    const k = poi_slot(poi)
+    const p = poi_planet(poi)
+    const flip = k >= 1 && k < 6 && sp_crowd(p) && !sp_crowd(p - 1)
+    k >= 6 && k < 10 ? false : flip ? poi_z(poi) >= 0 : poi_z(poi) < 0
+  }
+
+  fn sp_drop(poi: i32) -> f32 {
+    const k = poi_slot(poi)
+    k < 6 ? sp_pr(poi_planet(poi)) * 2.4 + 3.2 : k < 10 ? 8.8 : 5.4
+  }
+
+  fn sp_pick_r(poi: i32) -> f32 {
+    const k = poi_slot(poi)
+    k < 6 ? sp_pr(poi_planet(poi)) + 1.6 : k < 10 ? 4.6 : 4.2
+  }
+
+  fn sp_title(poi: i32) -> string {
+    const s = poi_sys(poi)
+    const k = poi_slot(poi)
+    k < 6 ? pl_name(poi_planet(poi)) : k < 10 ? sys_name(sys_nb(s, k - 6)) : k == 10 ? mine_name(s) : oddity_name(oddity_kind(s))
+  }
+
+  fn sp_sub_short(poi: i32) -> string {
+    const t = pl_type_name(pl_type(poi_planet(poi)))
+    match poi_kind(poi) {
+      1: "{t} / Camp"
+      2: "{t} / Port"
+      3: "{t} / Site"
+      _: t
+    }
+  }
+
+  fn sp_sub(poi: i32) -> string {
+    const k = poi_slot(poi)
+    const t = pl_type_name(pl_type(poi_planet(poi)))
+    k >= 10 ? "" : k >= 6 ? "Gate" : match poi_kind(poi) {
+      1: "{t} / Dozer camp"
+      2: "{t} / Spaceport"
+      3: "{t} / Site office"
+      _: t
+    }
+  }
+}
+
+terra {
+  sp_origin {
+    Position: {0, 0, 0}
+  }
+
+  fn sp_ink(t: i32) -> Rgb {
+    match t {
+      0: T_ACCENT
+      1: T_INFO
+      2: SX_WHITE
+      3: T_TEXT
+      4: T_MUTED
+      5: SX_LANE
+      _: T_FAINT
+    }
+  }
+
+  template SpPick {
+    prop poi: i32 = 0
+    prop size: f32 = 3
+
+    Position: {0, 0, 0}
+    Interactive
+    Cursor: {CursorPointer}
+    Sphere: {radius: size, segments: 10}
+    Rgb: {0, 0, 0}
+    Opacity: {0}
+    BlendMode: Additive
+    NoShadow
+
+    async {
+      while true {
+        await on.enter(this)
+        sp_hover = poi
+      }
+    }
+    async {
+      while true {
+        await on.leave(this)
+        if sp_hover == poi {
+          sp_hover = -1
+        }
+      }
+    }
+    async {
+      while true {
+        await on.click(this)
+        emit Request(op: OP_NAV_DEST, a: poi, b: 0)
+      }
+    }
+  }
+
+  template SpMark {
+    prop poi: i32 = 0
+    prop size: f32 = 3
+
+    const sel: bool = nav_dest == poi
+    const here: bool = at_poi == poi
+    const hov: bool = sp_hover == poi
+    const job: bool = poi_slot(poi) < 6 && sp_job_at(poi_planet(poi))
+
+    SpatialIgnore
+    if sel {
+      ring {
+        Position: {0, 0, 0}
+        Torus: {radius: size + 0.5, tube: 0.13, segments: 48, rings: 4}
+        Rgb: {0, 0, 0}
+        Emissive: {strength: 5, color: {255, 170, 40}}
+        NoShadow
+      }
+      ring_b {
+        Position: {0, 0, 0}
+        Torus: {radius: size + 1.1, tube: 0.05, segments: 48, rings: 4}
+        Rgb: {0, 0, 0}
+        Emissive: {strength: 3, color: {255, 170, 40}}
+        NoShadow
+      }
+    } else if hov {
+      ring {
+        Position: {0, 0, 0}
+        Torus: {radius: size + 0.5, tube: 0.08, segments: 48, rings: 4}
+        Rgb: {0, 0, 0}
+        Emissive: {strength: 3, color: {226, 232, 240}}
+        NoShadow
+      }
+    }
+    if here {
+      pin {
+        Position: {0, size * 0.8 + 3.4, 0}
+        Scale: {1.7, 1.7, 1.7}
+        AngularVelocity: {0, 1.2, 0}
+        top { Position: {0, 0.45, 0}; Cone: {length: 0.9, radius: 0.42, segments: 4}; Rgb: {0, 0, 0}; Emissive: {strength: 5, color: {110, 220, 255}}; NoShadow }
+        bottom { Position: {0, -0.45, 0}; Rotation: {PI, 0, 0}; Cone: {length: 0.9, radius: 0.42, segments: 4}; Rgb: {0, 0, 0}; Emissive: {strength: 5, color: {110, 220, 255}}; NoShadow }
+      }
+      base {
+        Position: {0, 0, 0}
+        Torus: {radius: size + 0.1, tube: 0.07, segments: 48, rings: 4}
+        Rgb: {0, 0, 0}
+        Emissive: {strength: 4, color: {110, 220, 255}}
+        NoShadow
+      }
+    }
+    if job {
+      target {
+        Position: {0, 0, 0}
+        AngularVelocity: {0, 0.5, 0}
+        for i in 0..6 {
+          "dash_{i}" {
+            Position: {0, 0, 0}
+            Rotation: {0, i * PI / 3, 0}
+            Tube: {radius: size + 1.9, thickness: 0.16, length: 0.08, arc: 0.62, segments: 48}
+            Rgb: {0, 0, 0}
+            Emissive: {strength: 5, color: {255, 170, 40}}
+            NoShadow
+          }
+        }
+      }
+    }
+  }
+
+  template SpPlanetNode {
+    prop p: i32 = 0
+    prop nav: bool = false
+
+    const poi: i32 = planet_poi(p)
+    const r: f32 = sp_pr(p)
+    const st: i32 = sp_port_state(p)
+    const site: i32 = pl_site(p)
+    const doz: i32 = dozer_at(poi)
+    const off: f32 = sp_hull_off(poi)
+    const tx: f32 = sp_tx(poi)
+    const tz: f32 = sp_tz(poi)
+    const step: i32 = site >= 0 && site < N_SITES ? floor(site_progress[site * 16] * 8) : 0
+
+    Position: {poi_x(poi), 0, poi_z(poi)}
+    globe {
+      Position: {0, 0, 0}
+      SpatialIgnore
+      Planet body(kind: pl_type(p), seed: pl_seed(p), atm: pl_atm(p), water: pl_water(p), temp: pl_temp(p), bio: pl_bio(p), radius: r, lights: pl_lights(p), rings: pl_rings(p), detail: 1)
+    }
+    if st == 3 {
+      port {
+        Position: {tx * off, 0.3, tz * off}
+        Scale: {0.8, 0.8, 0.8}
+        SpPort hull(tier: pl_sys(p) == HOME ? 2 : hash_int(pl_sys(p), 110, 3), accent: sx_accent(hash_int(pl_sys(p), 111, 5)), detail: 0)
+      }
+    } else if st >= 2 {
+      port {
+        Position: {tx * off, 0.3, tz * off}
+        SpSite hull(done: true, bar: site_has(site, 1), trade: site_has(site, 2), terminal: site_has(site, 3), depot: site_has(site, 4))
+      }
+    } else if st == 1 {
+      port {
+        Position: {tx * off, 0.3, tz * off}
+        SpSite hull(done: false, progress: (step + 0.5) / 8)
+      }
+    }
+    if doz >= 0 {
+      camp {
+        Position: {0 - tx * sp_camp_off(poi), 0.2, 0 - tz * sp_camp_off(poi)}
+        Rotation: {0, poi_a(poi) + 0.6, 0}
+        if st >= 2 {
+          SpDozer hull(busy: dozers[doz].status == DOZER_BUILDING)
+        } else {
+          SpCamp hull(busy: dozers[doz].status == DOZER_BUILDING)
+        }
+      }
+    }
+    if nav {
+      SpPick pick(poi: poi, size: sp_pick_r(poi))
+      SpMark mark(poi: poi, size: r + 0.9)
+    }
+  }
+
+  template SpLane {
+    prop hot: bool = false
+
+    SpatialIgnore
+    for i in 0..8 {
+      "dash_{i}" {
+        Position: {0, 0, 6.5 + i * 3.6}
+        Box: {hot ? 0.28 : 0.13, 0.05, 2}
+        Rgb: {0, 0, 0}
+        Emissive: {strength: (hot ? 6 : 2.6) * (1 - i * 0.11), color: sp_ink(hot ? 0 : 5)}
+        Transition: [Emissive: {duration: 0.3}]
+        NoShadow
+      }
+    }
+  }
+
+  template SpGateNode {
+    prop poi: i32 = 0
+    prop nav: bool = false
+
+    const live: bool = trav_active && (trav_to == poi || trav_from == poi)
+
+    Position: {poi_x(poi), 0, poi_z(poi)}
+    turn {
+      Rotation: {0, poi_a(poi) + PI / 2, 0}
+      SpGateStation hull(charge: live ? 0.7 : 0, detail: 0)
+      SpLane lane(hot: false)
+    }
+    if nav {
+      SpPick pick(poi: poi, size: sp_pick_r(poi))
+      SpMark mark(poi: poi, size: 5)
+    }
+  }
+
+  template SpBeltNode {
+    prop poi: i32 = 0
+    prop nav: bool = false
+
+    const s: i32 = poi_sys(poi)
+    const mine: bool = poi_slot(poi) == SLOT_MINE
+
+    Position: {poi_x(poi), 0, poi_z(poi)}
+    if mine {
+      SpMine hull(seed: s)
+    } else {
+      turn {
+        Rotation: {0, poi_a(poi) + 0.8, 0}
+        SpOddity hull(kind: oddity_kind(s))
+      }
+    }
+    if nav {
+      SpPick pick(poi: poi, size: sp_pick_r(poi))
+      SpMark mark(poi: poi, size: 4.4)
+    }
+  }
+
+  template SpRouteLeg {
+    prop a: i32 = 0
+    prop b: i32 = 0
+
+    const ax: f32 = sp_dock_x(a)
+    const ay: f32 = sp_dock_y(a)
+    const az: f32 = sp_dock_z(a)
+    const dx: f32 = sp_dock_x(b) - ax
+    const dy: f32 = sp_dock_y(b) - ay
+    const dz: f32 = sp_dock_z(b) - az
+    const len: f32 = sqrt(dx * dx + dz * dz)
+    const h: f32 = sp_arc(len)
+    const n: i32 = clamp(floor(len / 2.2), 3, 60)
+
+    SpatialIgnore
+    for i in 1..n {
+      const t: f32 = i * 1.0 / n
+      "dot_{i}" {
+        Position: {ax + dx * t, ay + dy * t + 4 * h * t * (1 - t), az + dz * t}
+        Sphere: {radius: 0.24, segments: 6}
+        Rgb: {0, 0, 0}
+        Emissive: {strength: 5, color: {255, 170, 40}}
+        NoShadow
+      }
+    }
+  }
+
+  template SpLaneHot {
+    prop poi: i32 = 0
+
+    Position: {poi_x(poi), 0.05, poi_z(poi)}
+    Rotation: {0, poi_a(poi) + PI / 2, 0}
+    SpLane lane(hot: true)
+  }
+
+  template SpNavMarks {
+    prop sys: i32 = 0
+
+    for i in 0..ROUTE_MAX - 1 {
+      if i + 1 < route_n && route_poi[i] >= 0 && route_poi[i + 1] >= 0 {
+        const a = route_poi[i]
+        const b = route_poi[i + 1]
+        if poi_sys(a) == sys && poi_sys(b) == sys {
+          SpRouteLeg "leg_{i}"(a: a, b: b)
+        } else if poi_sys(a) == sys && poi_slot(a) >= 6 && poi_slot(a) < 10 {
+          SpLaneHot "out_{i}"(poi: a)
+        } else if poi_sys(b) == sys && poi_slot(b) >= 6 && poi_slot(b) < 10 {
+          SpLaneHot "in_{i}"(poi: b)
+        }
+      }
+    }
+  }
+
+  template SpTravelShip {
+    SpatialIgnore
+    Position: {sp_sx, sp_sy, sp_sz}
+    Rotation: {sp_spitch, sp_syaw, 0}
+    body {
+      Position: {0, 0, sp_lunge}
+      Scale: {1 - sp_warp * 0.6, 1 - sp_warp * 0.6, 1 + sp_warp * 9}
+      if sp_ship == 1 {
+        SpLiner hull(thrust: sp_burn ? 1 : 0, detail: 0)
+      } else {
+        SpShuttle hull(thrust: sp_burn ? 1 : 0, detail: 0)
+      }
+    }
+    trail {
+      Position: {0, 0, sp_ship == 1 ? -2.6 : -1.1}
+      ParticleEmitter: {
+        max: 600, rate: sp_burn ? 700 : 0, shape: EmitterDisc, radius: sp_ship == 1 ? 0.24 : 0.1,
+        direction: {0, 0, -1}, spread: 2, speed: {1, 30},
+        lifetime: {0.2, 0.5}, size: sp_ship == 1 ? {0.26, 0.5} : {0.14, 0.28}, opacity: {0.05, 0.14},
+        color: {130, 200, 255}, seed: 41
+      }
+      ParticleForces: {gravity: {0, 0, 0}}
+      ParticleAppearance: {blend: ParticleAdditive, stretch: 0.03}
+      ParticleCurves: {
+        size: {keys: [{0, 1}, {1, 0.2}]}
+        opacity: {keys: [{0, 1}, {1, 0}]}
+      }
+    }
+    motes {
+      Position: {0, 0, 0}
+      ParticleEmitter: {
+        max: 500, rate: 120, shape: EmitterBox, extents: {26, 9, 26},
+        direction: {0, 0, 0}, speed: {0, 0},
+        lifetime: {1.5, 3.5}, size: {0.04, 0.1}, opacity: {0.2, 0.7},
+        color: {200, 220, 255}, seed: 43
+      }
+      ParticleForces: {gravity: {0, 0, 0}}
+      ParticleAppearance: {blend: ParticleAdditive}
+      ParticleCurves: {opacity: {keys: [{0, 0}, {0.25, 1}, {0.75, 1}, {1, 0}]}}
+    }
+  }
+
+  template SystemScene {
+    prop sys: i32 = 44
+    prop nav: bool = false
+
+    Star star(kind: sys_star(sys), radius: STAR_R)
+    SpStarfield stars(seed: 1)
+    fill {
+      Rotation: {0.75, PI, 0}
+      DirectionalLight: {intensity: 0.7}
+      Rgb: {150, 180, 255}
+    }
+
+    for k in 0..sys_planets(sys) {
+      "orbit_{k}" {
+        Position: {0, -0.02, 0}
+        Rotation: {0 - PI / 2, 0, 0}
+        Circle: {pl_orbit(sys * 6 + k)}
+        Rgb: {0, 0, 0}
+        BlendMode: Additive
+        Border: {width: 0.11, color: {58, 80, 128, 255}}
+        SpatialIgnore
+      }
+      SpPlanetNode "planet_{k}"(p: sys * 6 + k, nav: nav)
+    }
+
+    for d in 0..4 {
+      if sys_lane(sys, d) {
+        SpGateNode "gate_{d}"(poi: sys * 12 + 6 + d, nav: nav)
+      }
+    }
+    if sys_has_mine(sys) {
+      SpBeltNode mine(poi: sys * 12 + SLOT_MINE, nav: nav)
+      SpBelt belt(seed: sys, count: 80, radius: BELT_R, angle: poi_a(sys * 12 + SLOT_MINE))
+    }
+    if sys_has_oddity(sys) {
+      SpBeltNode oddity(poi: sys * 12 + SLOT_ODDITY, nav: nav)
+    }
+    if nav {
+      SpNavMarks marks(sys: sys)
+    }
+    if !nav && trav_active {
+      SpTravelShip ship()
+    }
+  }
+
+  template SpLabel {
+    prop poi: i32 = 0
+    prop nav: bool = true
+
+    const slot: i32 = poi_slot(poi)
+    const st: i32 = slot < 6 ? sp_port_state(poi_planet(poi)) : 0
+    const hx: f32 = st > 0 ? sp_tx(poi) * sp_hull_off(poi) : 0
+    const hz: f32 = st > 0 ? sp_tz(poi) * sp_hull_off(poi) : 0
+    const up: bool = st > 0 ? sp_tz(poi) < 0 : sp_label_up(poi)
+    const drop: f32 = st == 3 ? 5.6 : st > 0 ? 4.6 : sp_drop(poi)
+    const sel: bool = nav && nav_dest == poi
+    const here: bool = nav && at_poi == poi
+    const hov: bool = nav && sp_hover == poi
+    const job: bool = slot < 6 && sp_job_at(poi_planet(poi))
+    const sub: string = sp_sub(poi)
+    const ink: i32 = sel ? 0 : here ? 1 : hov ? 2 : nav ? 3 : 4
+    const big: bool = slot >= 6 || sel || here || hov
+
+    ProjectedAnchor: {target: sp_origin, view: #0.lookup("views.space_view"), offset: {poi_x(poi) + hx, up ? drop : 0 - drop, poi_z(poi) + hz}}
+    Position: {0, 0, 2}
+    plate {
+      Position: {0, (up ? 1 : -1) * (big ? 16 : 9), 0}
+      Layout: {direction: big ? Column : Row, h: Center, v: Middle, spacing: big ? 1 : 5, padding: {2, 2, 6, 6}}
+      Rect: {1, 1}
+      Rgb: {0, 0, 0}
+      BlendMode: Additive
+      if nav {
+        Interactive
+        Cursor: {CursorPointer}
+      } else {
+        SpatialIgnore
+      }
+      title {
+        Text: {value: big ? sp_title(poi) : roman(slot), size: 12, align: Center}
+        Rgb: sp_ink(ink)
+        SpatialIgnore
+      }
+      if sub != "" {
+        note {
+          Text: {value: big ? sub : sp_sub_short(poi), size: 10, align: Center}
+          Rgb: sp_ink(job && !big ? 0 : nav ? 4 : 6)
+          SpatialIgnore
+        }
+      }
+      if job && big {
+        tag {
+          Text: {value: "CONTRACT", size: 9, align: Center}
+          Rgb: T_ACCENT
+          SpatialIgnore
+        }
+      }
+      if here {
+        spot {
+          Text: {value: "YOU", size: 9, align: Center}
+          Rgb: T_INFO
+          SpatialIgnore
+        }
+      }
+
+      async {
+        while true {
+          await on.enter(this)
+          sp_hover = poi
+        }
+      }
+      async {
+        while true {
+          await on.leave(this)
+          if sp_hover == poi {
+            sp_hover = -1
+          }
+        }
+      }
+      async {
+        while true {
+          await on.click(this)
+          emit Request(op: OP_NAV_DEST, a: poi, b: 0)
+        }
+      }
+    }
+  }
+
+  template SpLabels {
+    prop sys: i32 = 44
+    prop nav: bool = true
+
+    for k in 0..POI_SLOTS {
+      if poi_exists(sys * 12 + k) {
+        SpLabel "l_{k}"(poi: sys * 12 + k, nav: nav)
+      }
+    }
+  }
+}
+
+hud {
+  sp_labels {
+    if sp_labels_on {
+      SpLabels all(sys: view_sys, nav: view_nav)
+    }
+  }
+}
+
+async {
+  mut was_nav: bool = false
+  mut was_trav: bool = false
+  mut was_jump: bool = false
+  mut nav_sys_seen: i32 = -1
+  mut trav_sys_seen: i32 = -1
+  mut nx: f32 = 0
+  mut nz: f32 = 0
+  mut nd: f32 = SP_NAV_DIST
+  mut arrived: bool = false
+  mut ship_yaw: f32 = 0
+  mut ship_pitch: f32 = 0
+  mut warp: f32 = 0
+  mut warp_dir: f32 = 0
+  mut c_x: f32 = 0
+  mut c_y: f32 = 0
+  mut c_z: f32 = 0
+  mut c_d: f32 = 30
+  mut c_p: f32 = 0.45
+  mut c_yaw: f32 = 0
+  mut hold_spin: f32 = 0
+  mut bestd: f32 = 1000
+  mut bi: i32 = -1
+  while true {
+    await next_frame()
+    const nav_on = view_layer == LAYER_SPACE && view_nav
+    if sp_labels_on != (view_layer == LAYER_SPACE) {
+      sp_labels_on = view_layer == LAYER_SPACE
+    }
+    const trav_on = mode == MODE_TRAVEL && !nav_on
+    if nav_on {
+      if !was_nav || nav_sys_seen != view_sys {
+        nav_sys_seen = view_sys
+        nx = 0
+        nz = SP_NAV_Z
+        nd = SP_NAV_DIST
+        scam_x = 0
+        scam_z = SP_NAV_Z
+        scam_dist = SP_NAV_DIST + 60
+        scam_pitch = SP_NAV_PITCH
+        scam_yaw = 0
+        if sp_hover != -1 {
+          sp_hover = -1
+        }
+      }
+      const inp = Input[Input]
+      const wheel = inp.mouse.scroll.y
+      if wheel != 0 {
+        const win = #0.lookup("window")
+        const sw: f32 = inp.size.x > 0 ? inp.size.x : win[Surface].width
+        const sh: f32 = inp.size.y > 0 ? inp.size.y : win[Surface].height
+        const aspect: f32 = sw / max(sh, 1)
+        const mx = inp.mouse.position.x / max(sw, 1)
+        const my = inp.mouse.position.y / max(sh, 1)
+        const nd2: f32 = clamp(nd * pow(0.85, wheel), SP_NAV_NEAR, SP_NAV_FAR)
+        if mx > 0 && mx < 1 && my > 0 && my < 1 {
+          const a = (mx * 2 - 1) * SP_FOV_TAN * aspect
+          const b = (1 - my * 2) * SP_FOV_TAN
+          const sp = sin(SP_NAV_PITCH)
+          const cp = cos(SP_NAV_PITCH)
+          const den = sp - b * cp
+          if den > 0.05 {
+            const tt = sp / den
+            nx += (nd - nd2) * tt * a
+            nz += (nd - nd2) * (cp - tt * (cp + b * sp))
+          }
+        }
+        nd = nd2
+        const lim: f32 = SYSTEM_R * 1.1 * clamp((SP_NAV_FAR - nd) / (SP_NAV_FAR - SP_NAV_NEAR - 60), 0, 1)
+        const l: f32 = sqrt(nx * nx + nz * nz)
+        if l > lim && l > 0.001 {
+          nx = nx * lim / l
+          nz = nz * lim / l
+        }
+      }
+      const k = min(1, dt * 8)
+      if abs(scam_dist - nd) > 0.02 {
+        scam_dist += (nd - scam_dist) * k
+      }
+      if abs(scam_x - nx) > 0.005 {
+        scam_x += (nx - scam_x) * k
+      }
+      if abs(scam_z - nz) > 0.005 {
+        scam_z += (nz - scam_z) * k
+      }
+    } else if trav_on {
+      const s = trav_sys
+      const fa = poi_exists(trav_from) && poi_sys(trav_from) == s
+      const fb = poi_exists(trav_to) && poi_sys(trav_to) == s
+      const a = fa ? trav_from : trav_to
+      const b = fb ? trav_to : a
+      if poi_exists(a) && poi_sys(a) == s {
+        const cut = !was_trav || trav_sys_seen != s
+        const jumped = was_trav && trav_sys_seen != s
+        const jump = trav_jump
+        const moving = a != b
+        const t: f32 = moving ? clamp(trav_t, 0, 1) : 0
+        const ax = sp_dock_x(a)
+        const ay = sp_dock_y(a)
+        const az = sp_dock_z(a)
+        const dx = sp_dock_x(b) - ax
+        const dy = sp_dock_y(b) - ay
+        const dz = sp_dock_z(b) - az
+        const len: f32 = sqrt(dx * dx + dz * dz)
+        const h = moving ? sp_arc(len) : 0
+        const x: f32 = ax + dx * t
+        const y: f32 = ay + dy * t + 4 * h * t * (1 - t)
+        const z: f32 = az + dz * t
+        const vy = dy + 4 * h * (1 - 2 * t)
+        const gate = poi_slot(a) >= 6 && poi_slot(a) < 10
+        if jumped || (cut && jump) {
+          arrived = true
+        }
+        if moving {
+          arrived = false
+        }
+        const yaw_t: f32 = moving && len > 0.01 ? atan2(dx, dz) : gate ? (arrived ? atan2(0 - poi_x(a), 0 - poi_z(a)) : atan2(poi_x(a), poi_z(a))) : ship_yaw
+        const pitch_t: f32 = moving && len > 0.01 ? 0 - atan2(vy, len) : 0
+        if cut {
+          ship_yaw = yaw_t
+          ship_pitch = pitch_t
+        } else {
+          ship_yaw += sp_wrap(yaw_t - ship_yaw) * min(1, dt * 5)
+          ship_pitch += (pitch_t - ship_pitch) * min(1, dt * 5)
+        }
+
+        if jump && !was_jump && !cut {
+          warp_dir = 1
+        }
+        if !jump && was_jump {
+          warp = 1
+          warp_dir = -1
+        }
+        if jumped || (cut && jump) {
+          warp = 1
+          warp_dir = 0
+        }
+        if cut && !jump {
+          warp = 0
+          warp_dir = 0
+        }
+        warp = clamp(warp + warp_dir * dt / 0.4, 0, 1)
+        const lunge: f32 = (arrived ? -9 : 9) * warp * warp
+        if abs(sp_warp - warp) > 0.0005 {
+          sp_warp = warp
+        }
+        if abs(sp_lunge - lunge) > 0.0005 {
+          sp_lunge = lunge
+        }
+
+        const kind = sp_bigstop(a) && sp_bigstop(b) ? 1 : 0
+        if (moving || cut) && sp_ship != kind {
+          sp_ship = kind
+        }
+        const burn = (moving && t > 0.005 && t < 0.97) || (warp_dir > 0 && warp > 0)
+        if sp_burn != burn {
+          sp_burn = burn
+        }
+        if abs(sp_sx - x) > 0.0005 || abs(sp_sy - y) > 0.0005 || abs(sp_sz - z) > 0.0005 {
+          sp_sx = x
+          sp_sy = y
+          sp_sz = z
+        }
+        if abs(sp_syaw - ship_yaw) > 0.0005 || abs(sp_spitch - ship_pitch) > 0.0005 {
+          sp_syaw = ship_yaw
+          sp_spitch = ship_pitch
+        }
+
+        bestd = 1000
+        bi = -1
+        for k in 0..sys_planets(s) {
+          const qx = poi_x(s * 12 + k) - x
+          const qz = poi_z(s * 12 + k) - z
+          const d = sqrt(qx * qx + qz * qz) - sp_pr(s * 6 + k)
+          if d < bestd {
+            bestd = d
+            bi = k
+          }
+        }
+        const ws: f32 = bi >= 0 ? sp_smooth(1 - (bestd - 3) / 11) : 0
+        const lx: f32 = bi >= 0 ? poi_x(s * 12 + bi) : x
+        const lz: f32 = bi >= 0 ? poi_z(s * 12 + bi) : z
+        const lr: f32 = bi >= 0 ? sp_pr(s * 6 + bi) : 1
+        const fx: f32 = x + (lx - x) * 0.42 * ws
+        const fy: f32 = y * (1 - 0.42 * ws)
+        const fz: f32 = z + (lz - z) * 0.42 * ws
+
+        const u0 = sp_smooth(t / 0.3)
+        const u1 = sp_smooth((1 - t) / 0.3)
+        const dc: f32 = clamp(15 + len * 0.12, 17, 29)
+        const na = sp_near(a)
+        const nb = sp_near(b)
+        const leg_d: f32 = moving ? (na + (dc - na) * u0) * u1 + nb * (1 - u1) : na
+        const look_d: f32 = leg_d + (min(leg_d, 12 + lr * 3) - leg_d) * ws * 0.7
+        const rush = jump && !arrived
+        const d_t: f32 = rush ? 8 : look_d
+        const p_t: f32 = moving ? 0.3 + 0.14 * (1 - min(u0, u1)) : arrived ? 0.3 : 0.44
+        if moving {
+          hold_spin = 0
+        } else {
+          hold_spin += dt * 0.07
+        }
+        const chase: f32 = yaw_t + PI - 0.85 + 0.6 * (t - 0.5)
+        const end_ref: f32 = yaw_t + PI - 0.55
+        const yb1 = sp_frame_yaw(b, 1)
+        const yb2 = sp_frame_yaw(b, -1)
+        const yb: f32 = abs(sp_wrap(yb1 - end_ref)) < abs(sp_wrap(yb2 - end_ref)) ? yb1 : yb2
+        const yaw_c: f32 = moving ? chase + sp_wrap(yb - chase) * sp_smooth((t - 0.5) / 0.42) : gate ? atan2(poi_x(a), poi_z(a)) + (arrived ? 0.45 : PI - 0.6) + hold_spin : cut ? yb1 : c_yaw + dt * 0.05
+
+        if cut {
+          c_x = fx
+          c_y = fy
+          c_z = fz
+          c_d = arrived ? d_t * 0.55 : d_t
+          c_p = p_t
+          c_yaw = yaw_c
+        } else {
+          const kf = min(1, dt * 7)
+          c_x += (fx - c_x) * kf
+          c_y += (fy - c_y) * kf
+          c_z += (fz - c_z) * kf
+          c_d += (d_t - c_d) * min(1, dt * (rush ? 4 : 1.6))
+          c_p += (p_t - c_p) * min(1, dt * 1.6)
+          c_yaw += sp_wrap(yaw_c - c_yaw) * min(1, dt * 1.2)
+        }
+        const sp = max(sin(c_p), 0.15)
+        const cot = cos(c_p) / sp
+        const shake: f32 = rush ? warp * 0.3 : 0
+        if !sp_cam_free {
+          scam_x = c_x - c_y * cot * sin(c_yaw) + perlin2(real_time * 31, 1.7) * shake
+          scam_z = c_z - c_y * cot * cos(c_yaw) + perlin2(real_time * 29, 7.3) * shake
+          scam_dist = c_d + c_y / sp
+          scam_pitch = c_p
+          scam_yaw = c_yaw
+        }
+        trav_sys_seen = s
+      }
+      was_jump = trav_jump
+    }
+    was_nav = nav_on
+    was_trav = trav_on
+  }
+}

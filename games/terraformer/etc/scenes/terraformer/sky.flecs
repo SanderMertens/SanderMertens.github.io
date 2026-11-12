@@ -1,0 +1,248 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.texture
+using state
+
+state {
+  export const SKY_H: f32 = 26
+  export const SKY_REACH: f32 = 48
+  export const SKY_STARS: i32 = 520
+  export const SKY_WISPS: i32 = 4
+
+  export mut sky_nx: f32[124] = {}
+  export mut sky_ny: f32[124] = {}
+  export mut sky_ready: bool = false
+}
+
+terra {
+  sky_cloud_field_0 {
+    TextureGen: {width: 512, height: 512, seed: 5, layers: [
+      {kind: GenNoise, frequency: 3, octaves: 6, gain: 0.58, amount: 0.6, seed: 11}
+      {kind: GenCells, count: 1, amount: -1, seed: 2}
+    ]}
+  }
+
+  sky_cloud_field_1 {
+    TextureGen: {width: 512, height: 512, seed: 5, layers: [
+      {kind: GenNoise, frequency: 2, octaves: 6, gain: 0.62, amount: 0.65, seed: 12}
+      {kind: GenCells, count: 1, amount: -1, seed: 2}
+    ]}
+  }
+
+  sky_cloud_field_2 {
+    TextureGen: {width: 512, height: 512, seed: 5, layers: [
+      {kind: GenNoise, frequency: 4, octaves: 6, gain: 0.55, amount: 0.55, seed: 13}
+      {kind: GenCells, count: 1, amount: -1, seed: 2}
+    ]}
+  }
+
+  sky_cloud_field_3 {
+    TextureGen: {width: 512, height: 512, seed: 5, layers: [
+      {kind: GenNoise, frequency: 3, octaves: 6, gain: 0.65, amount: 0.75, seed: 14}
+      {kind: GenCells, count: 1, amount: -1, seed: 2}
+    ]}
+  }
+
+  sky_cloud_0 {
+    TextureGen: {source: sky_cloud_field_0, output: GenAlbedo, colors: [{0, {0, 0, 0}}, {0.5, {0, 0, 0}}, {0.7, {96, 96, 96}}, {0.86, {150, 150, 150}}, {1, {255, 255, 255}}]}
+  }
+
+  sky_cloud_1 {
+    TextureGen: {source: sky_cloud_field_1, output: GenAlbedo, colors: [{0, {0, 0, 0}}, {0.5, {0, 0, 0}}, {0.7, {96, 96, 96}}, {0.86, {150, 150, 150}}, {1, {255, 255, 255}}]}
+  }
+
+  sky_cloud_2 {
+    TextureGen: {source: sky_cloud_field_2, output: GenAlbedo, colors: [{0, {0, 0, 0}}, {0.5, {0, 0, 0}}, {0.7, {96, 96, 96}}, {0.86, {150, 150, 150}}, {1, {255, 255, 255}}]}
+  }
+
+  sky_cloud_3 {
+    TextureGen: {source: sky_cloud_field_3, output: GenAlbedo, colors: [{0, {0, 0, 0}}, {0.5, {0, 0, 0}}, {0.7, {96, 96, 96}}, {0.86, {150, 150, 150}}, {1, {255, 255, 255}}]}
+  }
+
+  sky_dust {
+    TextureGen: {source: sky_cloud_field_1, output: GenAlbedo, colors: [
+      {0, {255, 255, 255}}, {0.56, {255, 255, 255}}, {0.76, {150, 150, 150}}, {0.9, {84, 84, 84}}, {1, {56, 56, 56}}
+    ]}
+  }
+
+  fn sky_cloud_tex(kind: i32) -> entity {
+    match kind {
+      0: sky_cloud_0
+      1: sky_cloud_1
+      2: sky_cloud_2
+      _: sky_cloud_3
+    }
+  }
+
+  template SkyCloud {
+    prop i: i32 = 0
+    prop dx: f32 = 0
+    prop dy: f32 = 0
+    prop radius: f32 = 1200
+    prop flip: bool = false
+
+    const span: f32 = neb_size(i) * 2.15
+    const gain: f32 = neb_gain(i) * (flip ? 0.25 : 0.5)
+    const hue: Rgb = {neb_r(i), neb_g(i), neb_b(i)}
+    const roll: f32 = neb_rot(i)
+    const h: f32 = flip ? SKY_H * 1.6 : SKY_H
+    const d: f32 = sqrt(dx * dx + dy * dy + h * h)
+    const ux: f32 = dx / d
+    const uy: f32 = (flip ? h : 0 - h) / d
+    const uz: f32 = 0 - dy / d
+    const size: f32 = min(radius * span / d * (0.55 + 0.45 * SKY_H / d), radius * 1.6)
+    const k: f32 = gain * clamp(1.25 * SKY_H / d, 0.2, 1)
+
+    Position: {ux * radius, uy * radius, uz * radius}
+    Rotation: {asin(uy), atan2(0 - ux, 0 - uz), roll}
+    Scale: {neb_stretch(i), 1, 1}
+    Rect: {size, size}
+    Image: {texture: sky_cloud_tex(neb_kind(i))}
+    Rgb: {hue.r * k, hue.g * k, hue.b * k}
+    BlendMode: Additive
+    NoShadow
+    box.spatial.SpatialIgnore
+
+    if !flip && i % 3 == 0 {
+      murk {
+        Position: {size * 0.2, size * 0.14, size * 0.02}
+        Rotation: {0, 0, 1.3}
+        Rect: {size * 0.8, size * 0.8}
+        Image: {texture: sky_dust}
+        Rgb: {255, 255, 255}
+        BlendMode: Multiply
+        NoShadow
+        box.spatial.SpatialIgnore
+      }
+    }
+  }
+
+  template SkyWisp {
+    prop sys: i32 = 44
+    prop j: i32 = 0
+    prop radius: f32 = 1200
+
+    const seed: i32 = sys * 7 + j
+    const r: i32 = sys_region(sys)
+    const uy: f32 = hash_range(seed, 151, -0.95, -0.3)
+    const a: f32 = hash01(seed, 152) * 6.2832
+    const c: f32 = sqrt(max(1 - uy * uy, 0))
+    const ux: f32 = cos(a) * c
+    const uz: f32 = sin(a) * c
+    const size: f32 = radius * hash_range(seed, 153, 0.5, 1.1)
+    const k: f32 = hash_range(seed, 154, 0.1, 0.24)
+    const alt: bool = hash01(seed, 155) < 0.5
+
+    Position: {ux * radius * 1.05, uy * radius * 1.05, uz * radius * 1.05}
+    Rotation: {asin(uy), atan2(0 - ux, 0 - uz), hash01(seed, 156) * 6.2832}
+    Scale: {hash_range(seed, 157, 1, 2), 1, 1}
+    Rect: {size, size}
+    Image: {texture: sky_cloud_tex(hash_int(seed, 158, 4))}
+    Rgb: {(alt ? region2_r(r) : region_r(r)) * k, (alt ? region2_g(r) : region_g(r)) * k, (alt ? region2_b(r) : region_b(r)) * k}
+    BlendMode: Additive
+    NoShadow
+    box.spatial.SpatialIgnore
+  }
+
+  template SkyStar {
+    prop i: i32 = 0
+    prop radius: f32 = 1200
+
+    const uy: f32 = hash_range(i, 141, -1, 0.55)
+    const a: f32 = hash01(i, 142) * 6.2832
+    const c: f32 = sqrt(max(1 - uy * uy, 0))
+    const ux: f32 = cos(a) * c
+    const uz: f32 = sin(a) * c
+    const v: f32 = hash01(i, 143)
+    const tint: f32 = hash01(i, 144)
+
+    Position: {ux * radius, uy * radius, uz * radius}
+    Rotation: {asin(uy), atan2(0 - ux, 0 - uz), 0}
+    Circle: {radius * (0.0006 + v * v * v * 0.0019)}
+    Rgb: {200 + tint * 55, 214 + tint * 20, 255 - tint * 60}
+    Emissive: {strength: v > 0.85 ? 2.5 : 0.2, color: {255, 240, 220}}
+    NoShadow
+    box.spatial.SpatialIgnore
+  }
+
+  template SkyDome {
+    prop sys: i32 = 44
+    prop radius: f32 = 1200
+
+    const sx: f32 = sys_x(sys)
+    const sy: f32 = sys_y(sys)
+
+    Position: {0, 0, 0}
+    box.spatial.SpatialIgnore
+
+    const far: f32 = radius * 1.8
+    const tint: Rgb = {region_r(sys_region(sys)) * 0.03 + 2, region_g(sys_region(sys)) * 0.03 + 3, region_b(sys_region(sys)) * 0.03 + 5}
+
+    shell {
+      Position: {0, 0, 0}
+      EllipsoidShell: {radius: {far, far, far}, longitude_start: 0, longitude_end: 2 * PI, latitude_start: 0 - PI / 2, latitude_end: PI / 2, thickness: 1, segments: 48, rings: 24}
+      Rgb: {0, 0, 0}
+      PbrMaterial: {metallic: 1, roughness: 1}
+      Emissive: {strength: 1, color: tint}
+      NoShadow
+      box.spatial.SpatialIgnore
+    }
+    stars {
+      Position: {0, 0, 0}
+      Rotation: {hash01(sys, 145) * 0.6, hash01(sys, 146) * 6.2832, 0}
+      box.spatial.SpatialIgnore
+      for i in 0..SKY_STARS {
+        SkyStar "s_{i}"(i: i, radius: radius * 1.6)
+      }
+    }
+    if sky_ready {
+      for i in 0..N_NEB {
+        const dx: f32 = sky_nx[i] - sx
+        const dy: f32 = sky_ny[i] - sy
+        if dx * dx + dy * dy < SKY_REACH * SKY_REACH {
+          SkyCloud "c_{i}"(i: i, dx: dx, dy: dy, radius: radius)
+        }
+      }
+      for r in 0..N_REGIONS {
+        SkyCloud "u_{r}"(i: N_SYS + r * 3, dx: sky_nx[N_SYS + r * 3] - sx, dy: sky_ny[N_SYS + r * 3] - sy, radius: radius, flip: true)
+      }
+    }
+    for j in 0..SKY_WISPS {
+      SkyWisp "w_{j}"(sys: sys, j: j, radius: radius)
+    }
+  }
+}
+
+async {
+  mut xs: f32[124] = {}
+  mut ys: f32[124] = {}
+  mut i: i32 = 0
+  while i < N_NEB && i < 124 {
+    xs[i] = neb_x(i)
+    ys[i] = neb_y(i)
+    i += 1
+    if i % 31 == 0 {
+      await next_frame()
+    }
+  }
+  sky_nx = xs
+  sky_ny = ys
+  sky_ready = true
+}
+
+station {
+  sky_mount {
+    Position: {0, 0, 0}
+    terra.SkyDome dome(sys: poi_sys(at_poi))
+  }
+}
+
+space {
+  sky_mount {
+    Position: {0, 0, 0}
+    terra.SkyDome dome(sys: view_sys)
+  }
+}

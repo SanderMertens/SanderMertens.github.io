@@ -1,0 +1,194 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.camera
+using box.view
+using box.light
+using box.effects
+using box.surface
+using box.layout
+using box.text
+using box.picking
+using box.ui
+using state
+using terra
+
+window {}
+
+station {
+  Scene: {environment: true, blend_modes: true, fresnel: true, transmission: true, clear_coat: true, triplanar: true}
+  AmbientLight: {sky: {120, 140, 180}, ground: {60, 70, 96}, intensity: 0.5}
+
+  rig {
+    Position: {cam_x, 0, cam_z}
+    Rotation: {0, cam_yaw, 0}
+    arm {
+      Rotation: {0 - cam_pitch, 0, 0}
+      camera {
+        Position: {0, 0, cam_dist}
+        Camera: {fov: 38, near_: 0.3, far_: 4000}
+      }
+    }
+  }
+
+  sun {
+    Rotation: {0.95, -0.55, 0}
+    DirectionalLight: {intensity: 5}
+    Rgb: {255, 244, 226}
+  }
+
+  rim {
+    Rotation: {0.35, 2.4, 0}
+    DirectionalLight: {intensity: 1.2}
+    Rgb: {120, 170, 255}
+  }
+
+  if mode == MODE_STATION {
+    StationDeck deck(poi: at_poi)
+    Avatar avatar()
+  }
+}
+
+space {
+  Scene: {environment: true, blend_modes: true, fresnel: true, transmission: true, clear_coat: true, triplanar: true}
+  AmbientLight: {sky: {60, 70, 96}, ground: {30, 34, 48}, intensity: 0.35}
+
+  rig {
+    Position: {scam_x, 0, scam_z}
+    Rotation: {0, scam_yaw, 0}
+    arm {
+      Rotation: {0 - scam_pitch, 0, 0}
+      camera {
+        Position: {0, 0, scam_dist}
+        Camera: {fov: 40, near_: 0.5, far_: 6000}
+      }
+    }
+  }
+
+  if view_layer == LAYER_SPACE {
+    SystemScene system(sys: view_sys, nav: view_nav)
+  }
+  TunnelFx tunnel()
+}
+
+galaxy {
+  Scene: {blend_modes: true}
+
+  camera {
+    Position: {gcam_x, gcam_y, 100}
+    Camera: {ortho: true, ortho_height: gcam_h, near_: 1, far_: 400}
+  }
+
+  GalaxyMap map()
+}
+
+views {
+  station_ao { Gtao: {radius: 0.6, final_value_power: 2.2} }
+  station_bloom { Bloom: {intensity: 0.2, threshold: 1.1, threshold_softness: 0.4} }
+  space_bloom { Bloom: {intensity: 0.32, threshold: 1, threshold_softness: 0.5} }
+  galaxy_bloom { Bloom: {intensity: 0.35, threshold: 0.75, threshold_softness: 0.4} }
+  film { Tonemap: {operator_: TonyMcMapface} }
+  edges { Smaa: {} }
+
+  if view_layer == LAYER_STATION {
+    station_view {
+      View: {
+        camera: station.rig.arm.camera,
+        clear: {enabled: true, color: {3, 5, 10, 255}},
+        shadows: {enabled: true, resolution: 2048, max_distance: 90},
+        lighting: {baked: false, reflections: false, environment: {source: terra.space_env, intensity: 0.8, background: true}},
+        effects: [{effect: station_ao}, {effect: station_bloom}, {effect: film}, {effect: edges}]
+      }
+    }
+  } else if view_layer == LAYER_SPACE {
+    space_view {
+      View: {
+        camera: space.rig.arm.camera,
+        clear: {enabled: true, color: {2, 3, 8, 255}},
+        lighting: {baked: false, reflections: false, environment: {source: terra.space_env, intensity: 0.6, background: true}},
+        culling: {enabled: true, occlusion: false, min_dimension_px: 0},
+        effects: [{effect: space_bloom}, {effect: film}, {effect: edges}]
+      }
+    }
+  } else if view_layer == LAYER_GALAXY {
+    galaxy_view {
+      View: {
+        camera: galaxy.camera,
+        clear: {enabled: true, color: {5, 7, 12, 255}},
+        lighting: {enabled: false},
+        culling: {enabled: false},
+        effects: [{effect: galaxy_bloom}, {effect: edges}]
+      }
+    }
+  }
+}
+
+hud {
+  Scene: {}
+
+  camera {
+    Position: {0, 0, 100}
+    Camera: {ortho: true, ortho_scale: 1}
+  }
+
+  back {
+    Position: {0, 0, 0}
+    LayoutFill: {surface: window}
+    Layout: {}
+    PickThrough
+    if view_dim {
+      Dim dim()
+    }
+  }
+
+  main {
+    Position: {0, 0, 10}
+    LayoutFill: {surface: window}
+    Layout: {}
+    PickThrough
+
+    if screen == SCREEN_PANEL {
+      tabs {
+        LayoutItem: {h: Center, v: Top, y: -100}
+        Layout: {direction: Column}
+        TabBar bar()
+      }
+      if tab == TAB_NAV {
+        NavUi nav_ui()
+      } else if tab == TAB_JOBS {
+        PanelJobs panel_jobs()
+      } else {
+        PanelAssets panel_assets()
+      }
+    } else if screen == SCREEN_BAR {
+      MenuBar menu_bar()
+    } else if screen == SCREEN_TRADE {
+      MenuTrade menu_trade()
+    } else if screen == SCREEN_FREIGHT {
+      MenuFreight menu_freight()
+    } else if screen == SCREEN_PASSENGER {
+      MenuPassenger menu_passenger()
+    } else if screen == SCREEN_SHIPYARD {
+      MenuShipyard menu_shipyard()
+    } else if screen == SCREEN_SITE {
+      MenuSite menu_site()
+    } else if screen == SCREEN_GAMEOVER {
+      GameOver gameover()
+    }
+  }
+
+  top {
+    Position: {0, 0, 20}
+    LayoutFill: {surface: window}
+    Layout: {}
+    PickThrough
+
+    HudStrip strip()
+  }
+
+  view {
+    View: {camera: camera, order: 10, lighting: {enabled: false}, culling: {enabled: false}}
+  }
+}

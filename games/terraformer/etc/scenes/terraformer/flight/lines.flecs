@@ -1,0 +1,204 @@
+using flecs.script
+using flecs.script.math
+using box.material
+using state
+
+state {
+  export const CLS_LINER: i32 = 0
+  export const CLS_SHUTTLE: i32 = 1
+  export const CLS_CHARTER: i32 = 2
+
+  fn fl_tier(s: i32) -> i32 {
+    const score = clamp(1 - sys_dist(s, HOME) / 9, 0, 1) * 1.5 + sys_lanes(s) * 0.18
+    s == HOME ? 2 : score > 1.45 ? 2 : score > 1.0 ? 1 : 0
+  }
+
+  fn fl_culture(s: i32) -> i32 {
+    region_faction(sys_region(s))
+  }
+
+  fn line_step(s: i32, d: i32) -> i32 {
+    sys_ok(s) && d >= 0 && d < 4 && sys_lane(s, d) ? sys_nb(s, d) : -1
+  }
+
+  fn line_no(a: i32, b: i32) -> i32 {
+    const d = sys_dir_to(a, b)
+    d < 0 || !sys_lane(a, d) ? 0 : (d == 1 || d == 3) ? (sys_gy(a) == 0 ? 110 : sys_gy(a) * 11) : 101 + sys_gx(a) * 11
+  }
+
+  fn line_end(a: i32, b: i32) -> i32 {
+    const d = sys_dir_to(a, b)
+    const c1 = line_step(b, d)
+    const c2 = line_step(c1, d)
+    c2 >= 0 ? c2 : c1 >= 0 ? c1 : b
+  }
+
+  fn line_trunk(a: i32, b: i32) -> bool {
+    sys_ok(a) && sys_ok(b) && sys_region(a) != sys_region(b)
+  }
+
+  fn line_ship(a: i32, b: i32) -> i32 {
+    a == b ? CLS_SHUTTLE : sys_has_port(a) && sys_has_port(b) ? CLS_LINER : CLS_CHARTER
+  }
+
+  fn ship_class_name(c: i32) -> string {
+    match c {
+      0: "LINER"
+      1: "SHUTTLE"
+      _: "CHARTER"
+    }
+  }
+
+  fn ship_class_len(c: i32) -> f32 {
+    match c {
+      0: 360
+      1: 30
+      _: 46
+    }
+  }
+
+  fn line_operator(a: i32) -> string {
+    match sys_region(a) {
+      0: "Commuter Belt Transit"
+      1: "Accrual Reach Lines"
+      2: "Miscellaneous Rail (Space)"
+      3: "Outer Escrow Conveyance"
+      4: "Deductible Mutual"
+      5: "Lower Overhead Express"
+      6: "Fine Print Carriers"
+      _: "Pending Transit"
+    }
+  }
+
+  fn line_code(a: i32, b: i32, cls: i32) -> string {
+    cls == CLS_SHUTTLE ? "S{sys_gx(a) + 1}" : cls == CLS_CHARTER || line_no(a, b) == 0 ? "CH" : "{line_no(a, b)}"
+  }
+
+  fn line_title(a: i32, b: i32, cls: i32) -> string {
+    cls == CLS_SHUTTLE ? "Shuttle S{sys_gx(a) + 1}" : cls == CLS_CHARTER || line_no(a, b) == 0 ? "Charter" : line_trunk(a, b) ? "Trunk {line_no(a, b)}" : "Line {line_no(a, b)}"
+  }
+
+  fn line_name(a: i32, b: i32) -> string {
+    const cls = line_ship(a, b)
+    const e = line_end(a, b)
+    cls == CLS_SHUTTLE ? "Shuttle S{sys_gx(a) + 1} · {sys_name(a)} local" : cls == CLS_CHARTER || line_no(a, b) == 0 ? "Charter · {sys_name(b)}" : line_trunk(a, b) ? "Trunk {line_no(a, b)} · {sys_name(b)}, {region_name(sys_region(b))}" : e != b ? "Line {line_no(a, b)} · {sys_name(e)} via {sys_name(b)}" : "Line {line_no(a, b)} · {sys_name(b)}"
+  }
+
+  fn line_status(a: i32, b: i32, day: i32) -> string {
+    match hash_int(a * 131 + b * 7 + day * 3, 207, 8) {
+      0: "On time"
+      1: "On time"
+      2: "Boarding"
+      3: "On time, allegedly"
+      4: "Delayed by a form"
+      5: "Boarding"
+      6: "Queueing at the gate"
+      _: "On time"
+    }
+  }
+
+  fn line_departs(a: i32, b: i32, day: i32) -> i32 {
+    5 + hash_int(a * 131 + b * 7 + day * 3, 208, 50)
+  }
+
+  fn fl_rgb(r: f32, g: f32, b: f32) -> Rgb {
+    {r, g, b}
+  }
+
+  fn line_livery(a: i32, cls: i32) -> Rgb {
+    const r = sys_region(a)
+    cls == CLS_LINER ? fl_rgb(region_r(r), region_g(r), region_b(r)) : cls == CLS_SHUTTLE ? fl_rgb(238, 198, 60) : fl_rgb(170 - hash_int(a, 209, 60), 96 + hash_int(a, 210, 50), 70 + hash_int(a, 211, 40))
+  }
+
+  fn fl_ordinal(n: i32) -> string {
+    match n {
+      1: "next"
+      2: "second"
+      3: "third"
+      4: "fourth"
+      _: "somewhere"
+    }
+  }
+
+  fn fl_say_depart(code: string, dest: string, via: string, v: i32) -> string {
+    match v % 4 {
+      0: "This is the {code} to {dest}. {via}Please keep your limbs inside the fare zone."
+      1: "This is the {code} to {dest}. {via}Complaints may be filed at the destination, which is far."
+      2: "Welcome aboard the {code} to {dest}. {via}Mind the gap. It is mostly gap out here."
+      _: "This is the {code} to {dest}. {via}We know you had a choice of carriers. You did not, but thank you."
+    }
+  }
+
+  fn fl_say_shuttle(dest: string, v: i32) -> string {
+    match v % 3 {
+      0: "Shuttle to {dest}. Hold on to something that is not the pilot."
+      1: "Shuttle to {dest}. Journey time: brief. Legroom: also brief."
+      _: "This shuttle goes to {dest}. It has always gone to {dest}."
+    }
+  }
+
+  fn fl_say_charter(dest: string, v: i32) -> string {
+    match v % 3 {
+      0: "Charter to {dest}. No schedule, no lane, no refunds. The noise is normal."
+      1: "You have chartered a boat to {dest}. The boat has opinions about this."
+      _: "Charter service to {dest}. Uncharted space ahead. The chart was extra."
+    }
+  }
+
+  fn fl_say_gate(q: i32, v: i32) -> string {
+    q <= 0 ? match v % 3 {
+      0: "Next stop: the gate. No queue. The gate finds this suspicious."
+      1: "Approaching the gate. Please have your atoms ready for inspection."
+      _: "Next stop: the gate. We are cleared straight through."
+    } : match v % 3 {
+      0: "Next stop: the gate. We are {fl_ordinal(q + 1)} in the queue. The gate thanks you for your patience, which it has measured."
+      1: "Approaching the gate. We are {fl_ordinal(q + 1)} in the queue. Queueing is a core service."
+      _: "Next stop: the gate. We are {fl_ordinal(q + 1)} in line. The ship ahead is also {fl_ordinal(q + 1)} in line, emotionally."
+    }
+  }
+
+  fn fl_say_enter(sysn: string, next: string, port: bool, v: i32) -> string {
+    port ? match v % 3 {
+      0: "Now entering {sysn}. Next stop: {next}."
+      1: "This is {sysn}. Next stop: {next}. Local time is whatever they say it is."
+      _: "{sysn}. Next stop: {next}. Please do not wave at the freighters. They wave back."
+    } : match v % 3 {
+      0: "Now crossing {sysn}. There is no port here. Please do not look directly at the nothing."
+      1: "{sysn}. Uncharted. The surcharge you are feeling is real."
+      _: "This is {sysn}. Nobody lives here yet. Next stop: {next}."
+    }
+  }
+
+  fn fl_say_region(region: string, sysn: string, v: i32) -> string {
+    match v % 3 {
+      0: "Welcome to {region}. This is {sysn}. Fares are unchanged. Everything else is different."
+      1: "You are now in {region}. Local customs apply. So do ours."
+      _: "{sysn}, {region}. The trunk line thanks you for crossing a great deal of nothing."
+    }
+  }
+
+  fn fl_say_call(place: string, pass: bool, v: i32) -> string {
+    pass ? match v % 2 {
+      0: "Passing {place}. This service does not stop here. It slows down respectfully."
+      _: "{place} on the port side. We are not calling. They have been informed."
+    } : match v % 2 {
+      0: "Calling at {place}. Doors will open on the side with the station."
+      _: "This is {place}. Please let passengers off the liner before becoming one."
+    }
+  }
+
+  fn fl_say_change(place: string, to: string, v: i32) -> string {
+    match v % 2 {
+      0: "{place}. Change here for the {to}. It is the large one."
+      _: "All change at {place}. Your onward service is the {to}, across the concourse of space."
+    }
+  }
+
+  fn fl_say_arrive(place: string, kind: i32, v: i32) -> string {
+    kind == KIND_ORBIT ? "This is {place}. There is no station. The boat will hold very still and call it one." : kind == KIND_CAMP ? "{place}. Mind the dozer. It does not mind you." : match v % 3 {
+      0: "This is {place}, where this service terminates. Take your belongings and your liabilities."
+      1: "{place}. End of the line. Thank you for travelling like this."
+      _: "Now arriving at {place}. Please remain seated until the station has stopped moving."
+    }
+  }
+}

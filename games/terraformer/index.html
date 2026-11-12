@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0e13">
+<meta name="description" content="Terraformer">
+<title>Terraformer</title>
+<link rel="icon" href="/flecs.png">
+<style>
+  :root { --bg: #0b0e13; --bg2: #10141b; --fg: #e7ecf2; --muted: #8b95a3; --green: #42b983; --green-soft: #a2d8b4; --border: #232935; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg); color: var(--fg); font-family: Inter, -apple-system, system-ui, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+  #canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+  #canvas:focus { outline: none; }
+  #overlay { position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; padding: 24px; text-align: center; background: radial-gradient(1200px 600px at 50% -10%, rgba(66,185,131,0.10), transparent 60%), linear-gradient(180deg, var(--bg2), var(--bg)); transition: opacity .5s ease; }
+  #overlay.hidden { opacity: 0; pointer-events: none; }
+  .title { font-size: clamp(2.2rem, 7vw, 3.4rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1; background: linear-gradient(180deg, #ffffff, #b9c4d0); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  #bar { width: min(260px, 60vw); height: 4px; background: var(--border); border-radius: 999px; overflow: hidden; }
+  #bar > div { width: 100%; height: 100%; background: linear-gradient(90deg, var(--green), var(--green-soft)); transform: scaleX(0); transform-origin: left center; transition: transform .18s linear; }
+  #bar.hidden { visibility: hidden; }
+  #message { font-size: 0.95rem; font-weight: 500; }
+  #detail { font-size: 0.82rem; color: var(--muted); max-width: 30em; line-height: 1.5; }
+</style>
+</head>
+<body>
+<canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+<div id="overlay">
+  <div class="title">Terraformer</div>
+  <div id="bar"><div></div></div>
+  <div id="message">Starting&hellip;</div>
+  <div id="detail"></div>
+</div>
+<script>window.BOX_GAME = {"scene":"etc/scenes/terraformer.flecs","files":[{"path":"etc/scenes/dust_merchant/assets/rings.png","size":734610},{"path":"etc/scenes/space_station/assets/clouds.png","size":718019},{"path":"etc/scenes/space_station/assets/space.hdr","size":1179656},{"path":"etc/scenes/terraformer.flecs","size":1089},{"path":"etc/scenes/terraformer/bodies.flecs","size":65941},{"path":"etc/scenes/terraformer/clock.flecs","size":869},{"path":"etc/scenes/terraformer/dev.flecs","size":5841},{"path":"etc/scenes/terraformer/flight.flecs","size":231},{"path":"etc/scenes/terraformer/flight/camera.flecs","size":10181},{"path":"etc/scenes/terraformer/flight/core.flecs","size":6800},{"path":"etc/scenes/terraformer/flight/lines.flecs","size":7557},{"path":"etc/scenes/terraformer/flight/models.flecs","size":84},{"path":"etc/scenes/terraformer/flight/models_gate.flecs","size":12577},{"path":"etc/scenes/terraformer/flight/models_kit.flecs","size":18830},{"path":"etc/scenes/terraformer/flight/models_ships.flecs","size":39939},{"path":"etc/scenes/terraformer/flight/models_stations.flecs","size":53770},{"path":"etc/scenes/terraformer/flight/readout.flecs","size":4737},{"path":"etc/scenes/terraformer/flight/scene.flecs","size":6536},{"path":"etc/scenes/terraformer/flight/seq.flecs","size":45988},{"path":"etc/scenes/terraformer/flight/space.flecs","size":6360},{"path":"etc/scenes/terraformer/frame.flecs","size":4461},{"path":"etc/scenes/terraformer/galaxy.flecs","size":19842},{"path":"etc/scenes/terraformer/gameover.flecs","size":2232},{"path":"etc/scenes/terraformer/hud.flecs","size":20097},{"path":"etc/scenes/terraformer/layers.flecs","size":4810},{"path":"etc/scenes/terraformer/menu_bar.flecs","size":3735},{"path":"etc/scenes/terraformer/menu_freight.flecs","size":12913},{"path":"etc/scenes/terraformer/menu_passenger.flecs","size":8253},{"path":"etc/scenes/terraformer/menu_shipyard.flecs","size":3936},{"path":"etc/scenes/terraformer/menu_site.flecs","size":15607},{"path":"etc/scenes/terraformer/menu_trade.flecs","size":8729},{"path":"etc/scenes/terraformer/nav_ui.flecs","size":16744},{"path":"etc/scenes/terraformer/navmap.flecs","size":24665},{"path":"etc/scenes/terraformer/panel_assets.flecs","size":19945},{"path":"etc/scenes/terraformer/panel_jobs.flecs","size":15649},{"path":"etc/scenes/terraformer/planet.flecs","size":18440},{"path":"etc/scenes/terraformer/player.flecs","size":15563},{"path":"etc/scenes/terraformer/route.flecs","size":11351},{"path":"etc/scenes/terraformer/rules.flecs","size":13064},{"path":"etc/scenes/terraformer/sim_bar.flecs","size":27415},{"path":"etc/scenes/terraformer/sim_freight.flecs","size":10955},{"path":"etc/scenes/terraformer/sim_jobs.flecs","size":14222},{"path":"etc/scenes/terraformer/sim_market.flecs","size":4682},{"path":"etc/scenes/terraformer/sim_sites.flecs","size":16699},{"path":"etc/scenes/terraformer/sky.flecs","size":7469},{"path":"etc/scenes/terraformer/state.flecs","size":10177},{"path":"etc/scenes/terraformer/station.flecs","size":5358},{"path":"etc/scenes/terraformer/station/gate.flecs","size":10060},{"path":"etc/scenes/terraformer/station/kit.flecs","size":36618},{"path":"etc/scenes/terraformer/station/mine.flecs","size":745},{"path":"etc/scenes/terraformer/station/odd.flecs","size":738},{"path":"etc/scenes/terraformer/station/people.flecs","size":13316},{"path":"etc/scenes/terraformer/station/plan.flecs","size":13127},{"path":"etc/scenes/terraformer/station/port.flecs","size":45467},{"path":"etc/scenes/terraformer/station/site.flecs","size":745},{"path":"etc/scenes/terraformer/system.flecs","size":26000},{"path":"etc/scenes/terraformer/theme.flecs","size":9402},{"path":"etc/scenes/terraformer/tunnel.flecs","size":6296},{"path":"etc/scenes/ui/button.flecs","size":3324},{"path":"etc/scenes/ui/collapsible.flecs","size":4062},{"path":"etc/scenes/ui/dropdown.flecs","size":8083},{"path":"etc/scenes/ui/label.flecs","size":2160},{"path":"etc/scenes/ui/progress.flecs","size":1551},{"path":"etc/scenes/ui/radio.flecs","size":5182},{"path":"etc/scenes/ui/scroll.flecs","size":21698},{"path":"etc/scenes/ui/slider.flecs","size":6014},{"path":"etc/scenes/ui/stepper.flecs","size":5076},{"path":"etc/scenes/ui/tabs.flecs","size":6675},{"path":"etc/scenes/ui/text_input.flecs","size":3838},{"path":"etc/scenes/ui/theme.flecs","size":1883},{"path":"etc/scenes/ui/toggle.flecs","size":4202},{"path":"etc/scenes/ui/widgets.flecs","size":3703}]};</script>
+<script src="../box/loader.js"></script>
+</body>
+</html>

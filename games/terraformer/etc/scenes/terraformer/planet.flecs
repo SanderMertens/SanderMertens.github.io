@@ -1,0 +1,433 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.movement
+using box.texture
+using box.transition
+using box.spatial
+
+terra {
+  struct Col(r: f32, g: f32, b: f32)
+
+  fn h01(seed: i32, salt: i32) -> f32 {
+    const x: f64 = sin(seed * 127.1 + salt * 311.7 + 1.3) * 43758.5453
+    x - floor(x)
+  }
+
+  fn sat(x: f32) -> f32 { clamp(x, 0, 1) }
+
+  fn mixc(a: Col, b: Col, t: f32) -> Col {
+    {a.r + (b.r - a.r) * t, a.g + (b.g - a.g) * t, a.b + (b.b - a.b) * t}
+  }
+
+  fn mulc(a: Col, b: Col) -> Col { {a.r * b.r / 255, a.g * b.g / 255, a.b * b.b / 255} }
+
+  fn pal_a(i: i32) -> Col {
+    match i {
+      0: {66, 62, 62}; 1: {112, 104, 98}; 2: {156, 148, 138}; 3: {194, 188, 180}
+      4: {168, 112, 66}; 5: {212, 158, 96}; 6: {190, 124, 76}; 7: {142, 88, 60}
+      8: {120, 156, 192}; 9: {176, 202, 224}; 10: {214, 228, 240}; 11: {240, 246, 252}
+      12: {34, 24, 24}; 13: {54, 42, 40}; 14: {74, 60, 56}; 15: {98, 86, 80}
+      20: {156, 136, 96}; 21: {146, 120, 84}; 22: {128, 112, 96}; 23: {150, 146, 142}
+      _: {128, 128, 128}
+    }
+  }
+
+  fn pal_b(i: i32) -> Col {
+    match i {
+      0: {92, 60, 48}; 1: {140, 92, 66}; 2: {176, 128, 96}; 3: {204, 172, 148}
+      4: {190, 150, 84}; 5: {228, 196, 128}; 6: {204, 160, 96}; 7: {160, 116, 70}
+      8: {108, 168, 176}; 9: {168, 214, 216}; 10: {208, 236, 236}; 11: {238, 250, 250}
+      12: {30, 28, 36}; 13: {48, 46, 56}; 14: {68, 66, 76}; 15: {92, 90, 100}
+      20: {170, 120, 86}; 21: {150, 104, 76}; 22: {120, 100, 92}; 23: {156, 150, 150}
+      _: {128, 128, 128}
+    }
+  }
+
+  fn pal(kind: i32, lvl: i32, v: f32) -> Col { mixc(pal_a(kind * 4 + lvl), pal_b(kind * 4 + lvl), v) }
+
+  fn terrain(kind: i32, v: f32, e: f32) -> Col {
+    const lo: Col = mixc(pal(kind, 0, v), pal(kind, 1, v), sat(e / 0.22))
+    const mid: Col = mixc(lo, pal(kind, 2, v), sat((e - 0.22) / 0.33))
+    mixc(mid, pal(kind, 3, v), sat((e - 0.55) / 0.4))
+  }
+
+  fn veg(vv: f32, e: f32) -> Col {
+    const lo: Col = mixc({78, 132, 52}, {44, 124, 96}, vv)
+    const mid: Col = mixc({30, 84, 38}, {24, 76, 66}, vv)
+    const hi: Col = mixc({96, 104, 56}, {70, 96, 78}, vv)
+    mixc(mixc(lo, mid, sat(e * 3.2)), hi, sat((e - 0.34) * 3.5))
+  }
+
+  fn land(kind: i32, v: f32, vv: f32, e: f32, bio: f32, hot: f32, wet: f32) -> Col {
+    const base: Col = mixc(terrain(kind, v, e), {112, 92, 70}, wet * 0.35 * sat(1 - e * 2))
+    const cover: f32 = sat((bio * 0.85 - e) * 4.5 + bio * 0.3) * (bio > 0 ? 1 : 0)
+    const green: Col = mixc(veg(vv, e), {158, 146, 78}, sat(hot * 1.2))
+    const grown: Col = mixc(base, green, cover * 0.94)
+    const parched: Col = mixc(grown, {150, 84, 50}, hot * 0.4)
+    mixc(parched, {52, 34, 30}, sat(hot * 2.5 - 1.5) * 0.7)
+  }
+
+  fn sea_col(depth: i32, vs: f32, frozen: f32, hot: f32) -> Col {
+    const a: Col = match depth { 0: {4, 14, 52}; 1: {8, 38, 96}; 2: {12, 60, 122}; _: {26, 96, 140} }
+    const b: Col = match depth { 0: {4, 26, 52}; 1: {8, 56, 88}; 2: {14, 84, 108}; _: {36, 122, 136} }
+    const ice: Col = match depth { 0: {150, 186, 216}; 1: {176, 206, 228}; 2: {200, 222, 238}; _: {222, 236, 246} }
+    const w: Col = mixc(mixc(a, b, vs), {70, 96, 84}, hot * 0.5)
+    mixc(w, ice, frozen)
+  }
+
+  fn gas_col(p: i32, i: i32) -> Col {
+    match p * 5 + i {
+      0: {214, 186, 148}; 1: {168, 118, 82}; 2: {236, 220, 190}; 3: {142, 92, 66}; 4: {198, 152, 110}
+      5: {70, 110, 190}; 6: {40, 66, 150}; 7: {120, 170, 226}; 8: {30, 48, 120}; 9: {86, 136, 206}
+      10: {226, 204, 140}; 11: {196, 168, 104}; 12: {240, 228, 180}; 13: {170, 140, 90}; 14: {214, 190, 128}
+      15: {104, 176, 168}; 16: {58, 128, 132}; 17: {160, 216, 200}; 18: {40, 96, 110}; 19: {120, 190, 176}
+      20: {186, 132, 170}; 21: {120, 78, 140}; 22: {226, 184, 196}; 23: {88, 56, 116}; 24: {170, 112, 160}
+      _: {200, 200, 200}
+    }
+  }
+
+  fn haze(kind: i32) -> Col {
+    match kind {
+      0: {170, 150, 130}; 1: {232, 160, 96}; 2: {170, 214, 240}; 3: {255, 104, 48}; 4: {190, 200, 220}
+      _: {150, 180, 230}
+    }
+  }
+
+  cloud_tex { TexturePath: {path: "etc/scenes/space_station/assets/clouds.png"} }
+  ring_tex { TexturePath: {path: "etc/scenes/dust_merchant/assets/rings.png"} }
+
+  template Planet {
+    prop kind: i32 = 0
+    prop seed: i32 = 0
+    prop atm: f32 = 0
+    prop water: f32 = 0
+    prop temp: f32 = 50
+    prop bio: f32 = 0
+    prop radius: f32 = 1
+    prop lights: bool = false
+    prop rings: bool = false
+    prop detail: i32 = 1
+    prop spin: f32 = 0.05
+
+    const qa: i32 = clamp(floor(atm / 5 + 0.5), 0, 20)
+    const qw: i32 = clamp(floor(water / 5 + 0.5), 0, 20)
+    const qt: i32 = clamp(floor(temp / 5 + 0.5), 0, 20)
+    const qb: i32 = clamp(floor(bio / 5 + 0.5), 0, 20)
+    const is_gas: bool = kind == 4
+    const k: i32 = (kind < 0 || kind > 5) ? 0 : kind
+    const a: f32 = qa / 20
+    const w: f32 = is_gas ? 0 : qw / 20
+    const t: f32 = qt / 20
+    const b: f32 = is_gas ? 0 : qb / 20
+
+    const sd: i32 = seed < 0 ? 0 - seed : seed
+    const v1: f32 = h01(sd, 1)
+    const v2: f32 = h01(sd, 2)
+    const v3: f32 = h01(sd, 3)
+    const v4: f32 = h01(sd, 4)
+
+    const cold: f32 = sat((0.42 - t) / 0.42)
+    const hot: f32 = sat((t - 0.62) / 0.38)
+    const frozen: f32 = max(smoothstep(0.2, 0.5, cold), sat(1 - a * 8))
+    const sea: f32 = qw > 0 ? 0.035 + 0.82 * min(w, 0.25) + 0.575 * clamp(w - 0.25, 0, 0.4) + 0.698 * clamp(w - 0.65, 0, 0.15) + 1.435 * max(w - 0.8, 0) : -0.08
+    const damp: f32 = sat(w * 4 + a * 1.2)
+    const snow: f32 = max(0.365 + 0.936 * t + (1 - damp) * 0.8 + hot * 1.9, sea + 0.01)
+    const span: f32 = max(snow - sea - 0.006, 0.003)
+    const top: f32 = max(0.95 - max(sea, 0), 0.2)
+    const l0: f32 = sea + 0.006
+    const l1: f32 = l0 + span * 0.06
+    const l2: f32 = l0 + span * 0.16
+    const l3: f32 = l0 + span * 0.3
+    const l4: f32 = l0 + span * 0.48
+    const l5: f32 = l0 + span * 0.7
+    const l6: f32 = l0 + span
+    const c0: Col = mixc(land(k, v1, v2, 0, b, hot, w), {214, 200, 150}, qw > 0 ? 0.5 * (1 - frozen) : 0)
+    const c1: Col = land(k, v1, v2, sat((l1 - sea) / top), b, hot, w)
+    const c2: Col = land(k, v1, v2, sat((l2 - sea) / top), b, hot, w)
+    const c3: Col = land(k, v1, v2, sat((l3 - sea) / top), b, hot, w)
+    const c4: Col = land(k, v1, v2, sat((l4 - sea) / top), b, hot, w)
+    const c5: Col = land(k, v1, v2, sat((l5 - sea) / top), b, hot, w)
+    const c6: Col = land(k, v1, v2, sat((l6 - sea) / top), b, hot, w)
+    const s0: Col = sea_col(0, v3, frozen, hot)
+    const s1: Col = sea_col(1, v3, frozen, hot)
+    const s2: Col = sea_col(2, v3, frozen, hot)
+    const s3: Col = sea_col(3, v3, frozen, hot)
+
+    const gp: i32 = sd % 5
+    const gtint: Col = mixc(mixc({255, 255, 255}, {255, 196, 150}, hot * 0.5), {170, 200, 255}, cold * 0.5)
+    const g0: Col = mulc(mixc(gas_col(gp, 0), gas_col((gp + 1) % 5, 0), v2 * 0.35), gtint)
+    const g1: Col = mulc(mixc(gas_col(gp, 1), gas_col((gp + 1) % 5, 1), v2 * 0.35), gtint)
+    const g2: Col = mulc(mixc(gas_col(gp, 2), gas_col((gp + 1) % 5, 2), v2 * 0.35), gtint)
+    const g3: Col = mulc(mixc(gas_col(gp, 3), gas_col((gp + 1) % 5, 3), v2 * 0.35), gtint)
+    const g4: Col = mulc(mixc(gas_col(gp, 4), gas_col((gp + 1) % 5, 4), v2 * 0.35), gtint)
+
+    const heat: f32 = sat((t - (k == 3 ? 0.55 : 0.8)) / 0.2) * sat(1 - w * 8)
+    const lava_lvl: f32 = heat * (k == 3 ? 0.16 : 0.14)
+    const lava_on: bool = !is_gas && detail > 0 && lava_lvl > 0
+    const city_on: bool = !is_gas && detail > 0 && lights && !lava_on
+
+    const cover: f32 = is_gas ? 0 : sat(a * (0.3 + 1.25 * w)) * (1 - hot * 0.3)
+    const breath: f32 = smoothstep(0.3, 0.8, a) * sat(0.25 + w + b)
+    const airc: Col = mixc(mixc(haze(k), {96, 160, 255}, breath), mixc(g2, g1, 0.4), is_gas ? 1 : 0)
+    const air_k: f32 = is_gas ? 0.5 : a
+    const ringc: Col = mixc(mixc({214, 204, 184}, {196, 170, 140}, v1), mixc(g2, {255, 255, 255}, 0.4), is_gas ? 0.35 : 0)
+    const mist: Col = mixc(mixc(haze(k), {255, 255, 255}, 0.25), {255, 255, 255}, sat(w * 4))
+    const far: Col = mixc(mixc(c2, s1, sat(w * 1.3)), {236, 242, 250}, sat(0.9 - snow) * 0.9 + cover * 0.15)
+    const flat: Col = mixc(far, g0, is_gas ? 1 : 0)
+
+    const tw: i32 = detail > 1 ? 1024 : 512
+    const seg: i32 = detail > 1 ? 96 : (detail > 0 ? 48 : 20)
+    const oct: i32 = detail > 1 ? 6 : 5
+    const polar: f32 = 0.45
+    const f1: i32 = match k { 0: 2 + sd % 3; 5: 2 + sd % 3; 1: 2 + sd % 2; _: 3 + sd % 2 }
+    const amt: f32 = match f1 { 2: 1.5; 3: 1; _: 0.86 }
+    const g1n: f32 = match k { 0: 0.58; 1: 0.47; 2: 0.5; 3: 0.56; _: 0.52 }
+    const a3: f32 = match k { 2: 0.05; 3: 0.17; _: 0 }
+    const cn: i32 = match k { 2: 90 + sd % 60; 3: 50 + sd % 40; _: 64 }
+    const crack: bool = k == 2 || k == 3
+    const lean: f32 = (rings || is_gas) ? 0.2 + v3 * 0.2 : 0.8 + v3 * 0.3
+    const tilt: f32 = (v4 - 0.5) * 0.5 + (v4 > 0.5 ? 0.1 : -0.1)
+    const floor_raw: f32 = (amt - 1) * 0.5 - 0.14 + (crack ? a3 * 1.3 : 0)
+    const ceil_raw: f32 = floor_raw + 0.5
+    const sea_raw: f32 = floor_raw + max(sea, 0) * 0.5
+    const town_sea: f32 = sea_raw + 0.004 - (crack ? a3 * 1.3 : 0)
+
+    geo {
+      if detail > 0 && is_gas {
+        TextureGen: {
+          width: tw / 32, height: tw, seed: 0, output: GenNormal, strength: 0.5
+          layers: [
+            {kind: GenNoise, frequency: 1, octaves: 3, gain: 0.4, amount: 1, seed: sd * 8 + 1}
+          ]
+        }
+      } else if detail > 0 && crack {
+        TextureGen: {
+          width: tw, height: tw / 2, seed: 0, output: GenNormal, strength: 1.4
+          layers: [
+            {kind: GenBlocks, courses: 1, per_course: 1, softness: 0.12, amount: 1}
+            {kind: GenBlocks, courses: 1, per_course: 1, softness: 0.12, jitter: 0.5, seed: 52, amount: 1, op: GenMax}
+            {kind: GenBlocks, courses: 1, per_course: 1, op: GenMultiply, amount: 0 - polar}
+            {kind: GenNoise, frequency: f1, octaves: oct, gain: g1n, amount: amt, seed: sd * 8 + 1}
+            {kind: GenCells, count: cn, distance: GenEdge, edge: 0.3, amount: a3, seed: sd * 8 + 3}
+            {kind: GenCells, count: cn * 7, distance: GenEdge, edge: 0.3, amount: a3 * 0.5, seed: sd * 8 + 4}
+            {kind: GenBlocks, courses: 1, per_course: 1, amount: floor_raw, op: GenMax}
+            {kind: GenBlocks, courses: 1, per_course: 1, amount: -1, op: GenMultiply}
+            {kind: GenBlocks, courses: 1, per_course: 1, amount: 0 - ceil_raw, op: GenMax}
+            {kind: GenBlocks, courses: 1, per_course: 1, amount: -1, op: GenMultiply}
+          ]
+        }
+      } else if detail > 0 {
+        TextureGen: {
+          width: tw, height: tw / 2, seed: 0, output: GenNormal, strength: 1.4
+          layers: [
+            {kind: GenBlocks, courses: 1, per_course: 1, softness: 0.12, amount: 1}
+            {kind: GenBlocks, courses: 1, per_course: 1, softness: 0.12, jitter: 0.5, seed: 52, amount: 1, op: GenMax}
+            {kind: GenBlocks, courses: 1, per_course: 1, op: GenMultiply, amount: 0 - polar}
+            {kind: GenNoise, frequency: f1, octaves: oct, gain: g1n, amount: amt, seed: sd * 8 + 1}
+            {kind: GenBlocks, courses: 1, per_course: 1, amount: floor_raw, op: GenMax}
+            {kind: GenBlocks, courses: 1, per_course: 1, amount: -1, op: GenMultiply}
+            {kind: GenBlocks, courses: 1, per_course: 1, amount: 0 - ceil_raw, op: GenMax}
+            {kind: GenBlocks, courses: 1, per_course: 1, amount: -1, op: GenMultiply}
+          ]
+        }
+      }
+    }
+
+    alb {
+      if detail > 0 && is_gas {
+        TextureGen: {source: geo, output: GenAlbedo, colors: [
+          {0.12, {g3.r, g3.g, g3.b}}
+          {0.26, {g0.r, g0.g, g0.b}}
+          {0.33, {g1.r, g1.g, g1.b}}
+          {0.4, {g2.r, g2.g, g2.b}}
+          {0.46, {g4.r, g4.g, g4.b}}
+          {0.52, {g1.r, g1.g, g1.b}}
+          {0.58, {g2.r, g2.g, g2.b}}
+          {0.65, {g0.r, g0.g, g0.b}}
+          {0.74, {g3.r, g3.g, g3.b}}
+          {0.88, {g1.r, g1.g, g1.b}}
+        ]}
+      } else if detail > 0 {
+        TextureGen: {source: geo, output: GenAlbedo, colors: [
+          {sea - 0.45, {s0.r, s0.g, s0.b}}
+          {sea - 0.16, {s1.r, s1.g, s1.b}}
+          {sea - 0.035, {s2.r, s2.g, s2.b}}
+          {sea - 0.005, {s3.r, s3.g, s3.b}}
+          {l0, {c0.r, c0.g, c0.b}}
+          {l1, {c1.r, c1.g, c1.b}}
+          {l2, {c2.r, c2.g, c2.b}}
+          {l3, {c3.r, c3.g, c3.b}}
+          {l4, {c4.r, c4.g, c4.b}}
+          {l5, {c5.r, c5.g, c5.b}}
+          {l6, {c6.r, c6.g, c6.b}}
+          {l6 + 0.02, {226, 234, 244}}
+          {l6 + 0.5, {255, 255, 255}}
+        ]}
+      }
+    }
+
+    orm {
+      if detail > 1 && qw > 0 && !is_gas && !crack {
+        TextureGen: {
+          width: tw / 2, height: tw / 4, seed: 0, output: GenAlbedo
+          layers: [
+            {kind: GenBlocks, courses: 1, per_course: 1, softness: 0.12, amount: 1}
+            {kind: GenBlocks, courses: 1, per_course: 1, softness: 0.12, jitter: 0.5, seed: 52, amount: 1, op: GenMax}
+            {kind: GenBlocks, courses: 1, per_course: 1, op: GenMultiply, amount: 0 - polar}
+            {kind: GenNoise, frequency: f1, octaves: oct - 1, gain: g1n, amount: amt, seed: sd * 8 + 1}
+            {kind: GenBlocks, courses: 1, per_course: 1, amount: floor_raw, op: GenMax}
+          ]
+          colors: [
+            {sea * 0.63 - 0.006, {255, 120 + 110 * frozen, 0}}
+            {sea * 0.63 + 0.006, {255, 255, 0}}
+          ]
+        }
+      }
+    }
+
+    glow {
+      if lava_on {
+        TextureGen: {source: geo, output: GenAlbedo, colors: [
+          {0, {255, 176, 70}}
+          {lava_lvl * 0.5, {250, 96, 18}}
+          {lava_lvl * 0.9, {160, 28, 6}}
+          {lava_lvl, {36, 4, 0}}
+          {lava_lvl + 0.02, {0, 0, 0}}
+          {1, {0, 0, 0}}
+        ]}
+      }
+    }
+
+    town {
+      if city_on {
+        TextureGen: {
+          width: tw, height: tw / 2, seed: 0, output: GenAlbedo
+          layers: [
+            {kind: GenBlocks, courses: 1, per_course: 1, softness: 0.12, amount: 1}
+            {kind: GenBlocks, courses: 1, per_course: 1, softness: 0.12, jitter: 0.5, seed: 52, amount: 1, op: GenMax}
+            {kind: GenBlocks, courses: 1, per_course: 1, op: GenMultiply, amount: 0 - polar}
+            {kind: GenNoise, frequency: f1, octaves: oct - 1, gain: g1n, amount: amt, seed: sd * 8 + 1}
+            {kind: GenBlocks, courses: 1, per_course: 1, amount: 0 - town_sea}
+            {kind: GenBlocks, courses: 1, per_course: 1, amount: 0.000001, op: GenMax}
+            {kind: GenCells, count: tw * tw / 110, amount: -5.5, id_amount: 1, seed: sd * 8 + 5, op: GenMultiply}
+            {kind: GenNoise, frequency: 6, octaves: 3, gain: 0.6, amount: 1, seed: sd * 8 + 6, op: GenMultiply}
+            {kind: GenBlocks, courses: 1, per_course: 1, amount: 0.000001, op: GenMax}
+          ]
+          colors: [
+            {0, {0, 0, 0}}
+            {0.008, {0, 0, 0}}
+            {0.04, {255, 170, 90}}
+            {0.25, {255, 220, 150}}
+            {1, {255, 246, 214}}
+          ]
+        }
+      }
+    }
+
+    const ready: bool = detail > 0 && alb[TextureStatus].revision > 0
+    const lava_ready: bool = lava_on && glow[TextureStatus].revision > 0
+    const city_ready: bool = city_on && town[TextureStatus].revision > 0
+
+    axis {
+      Position: {0, 0, 0}
+      Rotation: {0 - lean, 0, tilt}
+
+      body {
+        Position: {0, 0, 0}
+        AngularVelocity: {0, spin, 0}
+        Sphere: {radius: radius, segments: seg, smooth: true}
+        PbrMaterial: {roughness: is_gas ? 0.8 : 0.92}
+        NoShadow
+        if ready {
+          Rgb: {255, 255, 255}
+          PbrTextures: {albedo: alb, normal: geo, orm: orm, emissive: glow}
+        } else {
+          Rgb: {flat.r, flat.g, flat.b}
+        }
+        if detail <= 0 && air_k > 0.1 {
+          Fresnel: {color: {airc.r, airc.g, airc.b}, strength: 0.6 * air_k, power: 2.5}
+        }
+        if lava_ready {
+          Emissive: {strength: 1.8, color: {255, 200, 150}}
+        } else if detail <= 0 && heat > 0 && !is_gas {
+          Emissive: {strength: 0.3 * heat, color: {255, 96, 32}}
+        }
+        if city_ready {
+          city {
+            Position: {0, 0, 0}
+            Sphere: {radius: radius * 1.002, segments: seg, smooth: true}
+            Rgb: {0, 0, 0}
+            PbrMaterial: {roughness: 1}
+            Emissive: {strength: 0.6, color: {255, 224, 176}}
+            PbrTextures: {emissive: town}
+            BlendMode: Max
+            NoShadow
+            SpatialIgnore
+          }
+        }
+      }
+
+      if detail > 0 && cover > 0.02 {
+        clouds {
+          Position: {0, 0, 0}
+          AngularVelocity: {0, spin * 1.25 + 0.004, 0}
+          Sphere: {radius: radius * 1.012, segments: seg, smooth: true}
+          Rgb: {mist.r, mist.g, mist.b}
+          PbrMaterial: {roughness: 1}
+          PbrTextures: {albedo: cloud_tex}
+          TextureTransform: {offset_x: v3}
+          BlendMode: AlphaBlend
+          Opacity: {cover}
+          Transition: [Opacity: {duration: 2}, Rgb: {duration: 2}]
+          NoShadow
+          SpatialIgnore
+        }
+      }
+
+      if rings {
+        ring {
+          Position: {0, 0, 0}
+          Rotation: {0 - PI / 2, 0, 0}
+          Quad: {radius * 4.6, radius * 4.6}
+          Rgb: {ringc.r * 0.6, ringc.g * 0.6, ringc.b * 0.6}
+          PbrMaterial: {roughness: 1}
+          Emissive: {strength: 0.4, color: {ringc.r, ringc.g, ringc.b}}
+          PbrTextures: {albedo: ring_tex, emissive: ring_tex}
+          BlendMode: AlphaBlend
+          NoShadow
+          SpatialIgnore
+        }
+        ring_back {
+          Position: {0, 0, 0}
+          Rotation: {PI / 2, 0, 0}
+          Quad: {radius * 4.6, radius * 4.6}
+          Rgb: {ringc.r * 0.6, ringc.g * 0.6, ringc.b * 0.6}
+          PbrMaterial: {roughness: 1}
+          Emissive: {strength: 0.4, color: {ringc.r, ringc.g, ringc.b}}
+          PbrTextures: {albedo: ring_tex, emissive: ring_tex}
+          BlendMode: AlphaBlend
+          NoShadow
+          SpatialIgnore
+        }
+      }
+    }
+
+    if detail > 0 && air_k > 0.02 {
+      air {
+        Position: {0, 0, 0}
+        Sphere: {radius: radius * 1.03, segments: seg, smooth: true}
+        Rgb: {airc.r, airc.g, airc.b}
+        PbrMaterial: {roughness: 1}
+        BlendMode: Additive
+        Opacity: {0.035 * air_k}
+        Fresnel: {color: {airc.r, airc.g, airc.b}, strength: 0.03 * air_k, power: 2, opacity: 0.9 * air_k}
+        Transition: [Opacity: {duration: 2}, Rgb: {duration: 2}]
+        NoShadow
+        SpatialIgnore
+      }
+    }
+  }
+}

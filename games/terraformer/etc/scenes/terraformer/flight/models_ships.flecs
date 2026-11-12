@@ -1,0 +1,562 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.light
+using box.movement
+using box.texture
+using box.particle
+using box.animation
+using box.spatial
+using box.text
+using state
+
+using terra
+
+terra {
+  template FlLiner {
+    prop thrust: f32 = 0
+    prop rcs: f32 = 0
+    prop livery: Rgb = {255, 150, 30}
+    prop lights: f32 = 1
+
+    const win: f32 = 2.2 * lights
+
+    SpatialIgnore
+    hull : FlHull {
+      Position: {0, 0, 3}
+      Box: {44, 40, 210}
+      Bevel: {top_left: 8, top_right: 8, bottom_left: 8, bottom_right: 8, segments: 1}
+    }
+    bow : FlHull {
+      Position: {0, 0, 144}
+      Scale: {1, 1, 2.4}
+      Box: {44, 40, 30}
+      Bevel: {top_left: 8, top_right: 8, bottom_left: 8, bottom_right: 8, front_left: 16, front_right: 16, top_front: 13, bottom_front: 17, segments: 1}
+    }
+    keel : FlHullDark {
+      Position: {0, -25, 6}
+      Box: {18, 12, 196}
+      Bevel: {bottom_left: 4, bottom_right: 4, bottom_front: 8, bottom_back: 6, segments: 1}
+    }
+    keel_bay : FlHullGrey { Position: {0, -31.2, 20}; Box: {11, 0.8, 60} }
+    upper : FlHull {
+      Position: {0, 23.5, 18}
+      Box: {30, 7, 150}
+      Bevel: {top_left: 3, top_right: 3, top_front: 4, top_back: 5, segments: 1}
+    }
+    for s in 0..2 {
+      const sx: f32 = s == 0 ? -1 : 1
+      "win_lo_{s}" : FlWin { Position: {sx * 22.05, -5.5, 6}; Box: {0.5, 12, 200}; Emissive: {strength: win, color: {255, 232, 200}} }
+      "win_hi_{s}" : FlWin { Position: {sx * 22.05, 7.5, 18}; Box: {0.5, 6, 224}; TextureTransform: {1, 1, 0.37, 0.25}; Emissive: {strength: win, color: {255, 232, 200}} }
+      "win_up_{s}" : FlWin { Position: {sx * 15.05, 23, 18}; Box: {0.5, 3, 138}; TextureTransform: {1, 1, 0.61, 0.53125}; Emissive: {strength: win, color: {255, 232, 200}} }
+      "stripe_{s}" { Position: {sx * 22.1, 2.5, 18}; Box: {0.6, 3, 226}; Rgb: livery; PbrMaterial: {metallic: 0.3, roughness: 0.4} }
+      "pin_{s}" { Position: {sx * 22.1, 11.2, 18}; Box: {0.6, 0.5, 226}; Rgb: livery; PbrMaterial: {metallic: 0.3, roughness: 0.4} }
+      "tail_band_{s}" { Position: {sx * 22.1, 0, -97.5}; Box: {0.7, 24, 5}; Rgb: livery; PbrMaterial: {metallic: 0.3, roughness: 0.4} }
+      "pipe_{s}" : FlSteel { Position: {sx * 19, 17.6, 10}; Rotation: {PI / 2, 0, 0}; Cylinder: {length: 216, radius: 0.9, segments: 8, smooth: true} }
+      "gutter_{s}" : FlIron { Position: {sx * 19.6, -17.6, 10}; Rotation: {PI / 2, 0, 0}; Cylinder: {length: 216, radius: 1.3, segments: 8, smooth: true} }
+      for i in 0..8 {
+        "rib_{s}_{i}" : FlHullGrey { Position: {sx * 22.4, 0, -94 + i * 32}; Box: {0.9, 24.6, 1.2} }
+      }
+      for i in 0..10 {
+        "boat_{s}_{i}" : FlOrange { Position: {sx * 20.4, -15.4, -78 + i * 19}; Rotation: {PI / 2, 0, 0}; Capsule: {length: 6, radius: 1.5, segments: 10, smooth: true} }
+      }
+      "wing_{s}" : FlHull { Position: {sx * 19.5, 29.5, 100}; Box: {9, 3.6, 8}; Bevel: {top_front: 1.5, segments: 1}; TextureMapping: {MappingObject, size: 20, blend: 0.2} }
+      "wing_win_{s}" : FlGlass { Position: {sx * 19.5, 29.9, 104.1}; Box: {8.4, 1.2, 0.3}; Emissive: {strength: 1.5 * lights, color: {255, 214, 160}} }
+      "wing_end_{s}" : FlGlass { Position: {sx * 24.1, 29.9, 100}; Box: {0.3, 1.2, 6}; Emissive: {strength: 1.5 * lights, color: {255, 214, 160}} }
+      "tank_{s}" : FlWhite { Position: {sx * 20.5, 0, -110}; Rotation: {PI / 2, 0, 0}; Capsule: {length: 10, radius: 6, segments: 16, smooth: true} }
+      "tank_strap_{s}" : FlIron { Position: {sx * 20.5, 0, -110}; Rotation: {PI / 2, 0, 0}; Cylinder: {length: 1.4, radius: 6.2, segments: 16, smooth: true} }
+      "rad_top_{s}" : FlHullDark { Position: {sx * 13, 29, -141}; Box: {1.2, 13, 40}; Bevel: {top_front: 6, top_back: 3, segments: 1} }
+      "rad_bot_{s}" : FlHullDark { Position: {sx * 13, -29, -141}; Box: {1.2, 13, 40}; Bevel: {bottom_front: 6, bottom_back: 3, segments: 1} }
+      "rad_top_hot_{s}" { Position: {sx * 13, 27.5, -143}; Box: {1.5, 5, 30}; Rgb: {26, 10, 8}; Emissive: {strength: 0.06 + 1.5 * thrust, color: {255, 70, 30}}; NoShadow }
+      "rad_bot_hot_{s}" { Position: {sx * 13, -27.5, -143}; Box: {1.5, 5, 30}; Rgb: {26, 10, 8}; Emissive: {strength: 0.06 + 1.5 * thrust, color: {255, 70, 30}}; NoShadow }
+      "block_pipe_{s}" : FlSteel { Position: {sx * 27.2, 12, -140}; Rotation: {PI / 2, 0, 0}; Cylinder: {length: 40, radius: 1.6, segments: 10, smooth: true} }
+      "block_pipe_lo_{s}" : FlSteel { Position: {sx * 27.2, -12, -140}; Rotation: {PI / 2, 0, 0}; Cylinder: {length: 40, radius: 1.6, segments: 10, smooth: true} }
+      "block_vent_{s}" : FlBlack { Position: {sx * 26.1, 0, -134}; Box: {0.6, 12, 22} }
+    }
+    stripe_bow { Position: {0, 2.5, 173}; Box: {12.6, 3, 16.4}; Rgb: livery; PbrMaterial: {metallic: 0.3, roughness: 0.4} }
+    lounge : FlPane {
+      Position: {0, 27, 54}
+      Rotation: {PI / 2, 0, 0}
+      Scale: {1, 1, 0.62}
+      Cylinder: {length: 56, radius: 10.5, segments: 20, smooth: true}
+      TextureTransform: {5, 4, 0, 0}
+      Emissive: {strength: 1.6 * lights, color: {255, 226, 190}}
+    }
+    lounge_cap_a : FlPane { Position: {0, 27, 82}; Scale: {1, 0.62, 0.8}; Sphere: {radius: 10.5, segments: 20, smooth: true}; TextureTransform: {5, 3, 0, 0}; Emissive: {strength: 1.6 * lights, color: {255, 226, 190}} }
+    lounge_cap_b : FlHull { Position: {0, 27, 25}; Box: {22, 8, 3}; Bevel: {top_left: 3, top_right: 3, segments: 1} }
+    for i in 0..7 {
+      "lounge_rib_{i}" : FlWhite { Position: {0, 27, 28 + i * 8.6}; Rotation: {PI / 2, 0, 0}; Scale: {1, 1, 0.62}; Torus: {radius: 10.6, tube: 0.32, segments: 20, rings: 4} }
+    }
+    lounge_spine : FlWhite { Position: {0, 33.4, 54}; Box: {1.2, 0.5, 58} }
+    bridge : FlHull { Position: {0, 29.5, 100}; Box: {30, 5, 12}; Bevel: {top_front: 2.4, top_left: 1, top_right: 1, segments: 1} }
+    bridge_win : FlGlass { Position: {0, 29.9, 106.1}; Box: {28, 1.2, 0.3}; Emissive: {strength: 1.5 * lights, color: {255, 214, 160}} }
+    bridge_roof : FlHullGrey { Position: {0, 32.4, 98}; Box: {14, 0.8, 8} }
+    mast : FlSteel { Position: {0, 36.5, 96}; Box: {0.7, 8, 0.7} }
+    mast_yard : FlSteel { Position: {0, 38, 96}; Box: {9, 0.4, 0.4} }
+    radar {
+      Position: {0, 33.6, 101}
+      AngularVelocity: {0, 0.9, 0}
+      bar : FlWhite { Position: {0, 0, 0}; Box: {7, 0.8, 1} }
+    }
+    dish_post : FlSteel { Position: {0, 29, -44}; Box: {1, 5, 1} }
+    dish : FlWhite { Position: {0, 33, -44}; Rotation: {-0.7, 0.4, 0}; HemiSphere: {radius: 5.5, segments: 16, smooth: true} }
+    funnel {
+      Position: {0, 31.5, -30}
+      Box: {12, 9, 20}
+      Bevel: {top_front: 7, top_back: 2, top_left: 2, top_right: 2, segments: 1}
+      Rgb: livery
+      PbrMaterial: {metallic: 0.3, roughness: 0.4}
+    }
+    funnel_cap : FlBlack { Position: {0, 35.4, -33}; Box: {9, 1.4, 10} }
+    for i in 0..9 {
+      "roof_box_{i}" : FlHullGrey { Position: {(i % 3 - 1) * 7.5, 27.7, -52 + i * 2.6 + (i % 2) * 2}; Box: {4 + (i % 3), 1.4 + (i % 2) * 0.8, 2} }
+    }
+    for i in 0..6 {
+      "hatch_{i}" : FlHullGrey { Position: {(i % 2 == 0 ? -1 : 1) * 9, 20.3, -92 + i * 6}; Box: {8, 0.6, 4} }
+    }
+    for s in 0..2 {
+      const sx: f32 = s == 0 ? -1 : 1
+      "bow_stripe_{s}" { Position: {sx * 14.15, 2.5, 160.8}; Rotation: {0, sx * -0.3948, 0}; Box: {0.6, 3, 41.8}; Rgb: livery; PbrMaterial: {metallic: 0.3, roughness: 0.4} }
+      "bow_win_{s}" : FlWin { Position: {sx * 14.1, 7.5, 158}; Rotation: {0, sx * -0.3948, 0}; Box: {0.5, 6, 30}; TextureTransform: {1, 1, 0.13, 0.25}; Emissive: {strength: win, color: {255, 232, 200}} }
+      "name_{s}" {
+        Position: {sx * 22.5, -5, 122}
+        Rotation: {0, sx * PI / 2, 0}
+        Scale: {0.42, 0.42, 0.42}
+        Text: {value: "INTERSYSTEM", size: 16}
+        Rgb: livery
+        NoShadow
+      }
+    }
+    nose_cap : FlHullGrey { Position: {0, -2, 179.6}; Box: {10, 8, 1.6}; Bevel: {radius: 0.6, segments: 1} }
+    nose_eye : FlGlassCool { Position: {0, -2, 180.5}; Box: {7, 2, 0.4}; Emissive: {strength: 2 * lights, color: {110, 180, 240}} }
+    fwd_lounge : FlPane { Position: {0, 13.4, 163.6}; Rotation: {-1.176, 0, 0}; Box: {18, 20, 0.5}; TextureTransform: {1.5, 1.5, 0, 0}; Emissive: {strength: 1.6 * lights, color: {255, 226, 190}} }
+
+    for i in 0..10 {
+      "top_hatch_{i}" : FlHullGrey { Position: {(i % 2 == 0 ? -1 : 1) * 18.4, 20.3, -88 + i * 19.6}; Box: {5, 0.6, 9}; TextureMapping: {MappingObject, size: 20, blend: 0.2} }
+    }
+    for i in 0..4 {
+      "bow_hatch_{i}" : FlHullGrey { Position: {(i % 2 == 0 ? -1 : 1) * 8, 20.3, 114 + floor(i / 2) * 16}; Box: {9, 0.6, 10}; TextureMapping: {MappingObject, size: 20, blend: 0.2} }
+    }
+    bow_winch_a : FlIron { Position: {-5, 21.4, 144}; Rotation: {0, 0, PI / 2}; Cylinder: {length: 5, radius: 1.6, segments: 10, smooth: true} }
+    bow_winch_b : FlIron { Position: {5, 21.4, 144}; Rotation: {0, 0, PI / 2}; Cylinder: {length: 5, radius: 1.6, segments: 10, smooth: true} }
+    bow_mast : FlSteel { Position: {0, 24, 136}; Box: {0.5, 8, 0.5} }
+    bow_chev_a { Position: {-6, 20.25, 128}; Rotation: {0, 0.6, 0}; Box: {12, 0.5, 2.4}; Rgb: livery; PbrMaterial: {metallic: 0.3, roughness: 0.4} }
+    bow_chev_b { Position: {6, 20.25, 128}; Rotation: {0, -0.6, 0}; Box: {12, 0.5, 2.4}; Rgb: livery; PbrMaterial: {metallic: 0.3, roughness: 0.4} }
+    for i in 0..5 {
+      "keel_door_{i}" : FlHullGrey { Position: {(i % 2 == 0 ? -1 : 1) * 9.1, -25, -70 + i * 34}; Box: {0.4, 8, 16}; TextureMapping: {MappingObject, size: 20, blend: 0.2} }
+      "keel_dome_{i}" : FlWhite { Position: {0, -31.4, -76 + i * 38}; Rotation: {PI, 0, 0}; HemiSphere: {radius: 2.2, segments: 10, smooth: true} }
+    }
+    aft_dish_post : FlSteel { Position: {8, 29, 10}; Box: {0.8, 5, 0.8} }
+    aft_dish : FlWhite { Position: {8, 32.6, 10}; Rotation: {-0.4, -0.8, 0}; HemiSphere: {radius: 3.4, segments: 12, smooth: true} }
+    for i in 0..6 {
+      "ac_{i}" : FlHullGrey { Position: {(i % 2 == 0 ? -1 : 1) * 10, 27.6, -8 + floor(i / 2) * 9}; Box: {4, 1.2, 5}; TextureMapping: {MappingObject, size: 12, blend: 0.2} }
+    }
+    for i in 0..4 {
+      "block_rib_{i}" : FlIron { Position: {0, 0, -156 + i * 10.6}; Box: {53, 36, 1}; Bevel: {radius: 5, segments: 1} }
+    }
+    block_top_a : FlSteel { Position: {-6, 23.6, -140}; Rotation: {PI / 2, 0, 0}; Cylinder: {length: 36, radius: 1.8, segments: 10, smooth: true} }
+    block_top_b : FlSteel { Position: {6, 23.6, -140}; Rotation: {PI / 2, 0, 0}; Cylinder: {length: 36, radius: 1.8, segments: 10, smooth: true} }
+    block_bot_a : FlSteel { Position: {-6, -23.6, -140}; Rotation: {PI / 2, 0, 0}; Cylinder: {length: 36, radius: 1.8, segments: 10, smooth: true} }
+    block_bot_b : FlSteel { Position: {6, -23.6, -140}; Rotation: {PI / 2, 0, 0}; Cylinder: {length: 36, radius: 1.8, segments: 10, smooth: true} }
+    neck_band { Position: {0, 0, -103}; Box: {44.6, 40.6, 2}; Bevel: {top_left: 8, top_right: 8, bottom_left: 8, bottom_right: 8, segments: 1}; Rgb: livery; PbrMaterial: {metallic: 0.3, roughness: 0.4} }
+    mind_text {
+      Position: {-22.5, -6.8, 9}
+      Rotation: {0, 0 - PI / 2, 0}
+      Scale: {0.07, 0.07, 0.07}
+      Text: {value: "DOORS OPEN INWARD. SPACE DOES NOT.", size: 16, align: Center}
+      Rgb: {60, 64, 72}
+      NoShadow
+    }
+
+    neck : FlHullDark { Position: {0, 0, -110}; Box: {28, 28, 18}; Bevel: {radius: 4, segments: 1} }
+    for i in 0..4 {
+      "strut_{i}" : FlSteel { Position: {(i % 2 == 0 ? -1 : 1) * 15, (i < 2 ? -1 : 1) * 15, -110}; Rotation: {PI / 2, 0, 0}; Cylinder: {length: 20, radius: 0.8, segments: 8, smooth: true} }
+    }
+    block : FlHullDark { Position: {0, 0, -140}; Box: {52, 46, 44}; Bevel: {radius: 7, segments: 1} }
+    block_band { Position: {0, 0, -124}; Box: {52.6, 40, 4}; Bevel: {radius: 5, segments: 1}; Rgb: livery; PbrMaterial: {metallic: 0.3, roughness: 0.4} }
+    thrust_plate : FlIron { Position: {0, 0, -163}; Box: {56, 42, 3}; Bevel: {radius: 6, segments: 1} }
+    FlBell eng_a(power: thrust, r: 10, seed: 1) { Position: {-13, 11, -171} }
+    FlBell eng_b(power: thrust, r: 10, seed: 2) { Position: {13, 11, -171} }
+    FlBell eng_c(power: thrust, r: 10, seed: 3) { Position: {-13, -11, -171} }
+    FlBell eng_d(power: thrust, r: 10, seed: 4) { Position: {13, -11, -171} }
+    FlBell eng_e(power: thrust * 0.8, r: 4.6) { Position: {-25.2, 0, -167.6} }
+    FlBell eng_f(power: thrust * 0.8, r: 4.6) { Position: {25.2, 0, -167.6} }
+    if thrust > 0.01 {
+      wash {
+        Position: {0, 0, -205}
+        PointLight: {intensity: 60000 * thrust, range: 700}
+        Rgb: {150, 200, 255}
+      }
+    }
+
+    port_collar { Position: {-22, 0, 0}; FlCollar hatch(r: 4.2, len: 8, lights: lights) }
+    star_collar { Position: {22, 0, 0}; Rotation: {0, PI, 0}; FlCollar hatch(r: 4.2, len: 8, lights: lights) }
+
+    rcs_bow_p { Position: {-22.4, 14, 118}; Rotation: {0, PI, 0}; FlPuff pod(power: rcs, size: 1.5) }
+    rcs_bow_s { Position: {22.4, 14, 118}; FlPuff pod(power: rcs, size: 1.5) }
+    rcs_aft_p { Position: {-22.4, 14, -96}; Rotation: {0, PI, 0}; FlPuff pod(power: rcs, size: 1.5) }
+    rcs_aft_s { Position: {22.4, 14, -96}; FlPuff pod(power: rcs, size: 1.5) }
+    rcs_bow_d { Position: {0, -31.4, 96}; Rotation: {0, 0, 0 - PI / 2}; FlPuff pod(power: rcs * 0.7, size: 1.5) }
+    rcs_aft_d { Position: {0, -31.4, -84}; Rotation: {0, 0, 0 - PI / 2}; FlPuff pod(power: rcs * 0.7, size: 1.5) }
+
+    if lights > 0.05 {
+      nav_port_a : FlLampR { Position: {-24.6, 31.4, 100}; Sphere: {radius: 0.8, segments: 8} }
+      nav_port_b : FlLampR { Position: {-26.6, 0, -150}; Sphere: {radius: 0.9, segments: 8} }
+      nav_star_a : FlLampG { Position: {24.6, 31.4, 100}; Sphere: {radius: 0.8, segments: 8} }
+      nav_star_b : FlLampG { Position: {26.6, 0, -150}; Sphere: {radius: 0.9, segments: 8} }
+      strobe_mast : FlStrobe { Position: {0, 40.8, 96}; Sphere: {radius: 0.8, segments: 8} }
+      strobe_keel : FlStrobe { Position: {0, -32.4, -60}; Sphere: {radius: 0.8, segments: 8}; Animator: {clip: fl_strobe_clip, time: 0.8} }
+      strobe_tail : FlStrobe { Position: {0, 36.4, -150}; Sphere: {radius: 0.8, segments: 8}; Animator: {clip: fl_strobe_clip, time: 0.4} }
+      beacon_bow : FlBlinkR { Position: {0, 20.6, 144}; Sphere: {radius: 0.7, segments: 8} }
+      for i in 0..12 {
+        "keel_lamp_{i}" : FlLampW { Position: {0, -31.2, -84 + i * 16.4}; Box: {0.9, 0.4, 0.9} }
+      }
+      for i in 0..8 {
+        "deck_lamp_p_{i}" : FlLampWarm { Position: {-15.6, 20.5, -46 + i * 18}; Box: {0.5, 0.5, 0.5} }
+        "deck_lamp_s_{i}" : FlLampWarm { Position: {15.6, 20.5, -46 + i * 18}; Box: {0.5, 0.5, 0.5} }
+      }
+      funnel_flood_p : FlLampW { Position: {-7, 27.4, -30}; Box: {0.6, 0.4, 6} }
+      funnel_flood_s : FlLampW { Position: {7, 27.4, -30}; Box: {0.6, 0.4, 6} }
+    }
+  }
+
+  template FlShuttle {
+    prop thrust: f32 = 0
+    prop rcs: f32 = 0
+    prop livery: Rgb = {255, 150, 30}
+    prop lights: f32 = 1
+
+    SpatialIgnore
+    hull : FlHullFine {
+      Position: {0, 0, 1}
+      Box: {9, 7, 24}
+      Bevel: {top_left: 2, top_right: 2, bottom_left: 2.4, bottom_right: 2.4, top_front: 3, bottom_front: 2, front_left: 2.5, front_right: 2.5, segments: 1}
+    }
+    nose : FlHullFine { Position: {0, -0.8, 13.4}; Box: {5.6, 4, 3.4}; Bevel: {radius: 1.4, segments: 1} }
+    canopy : FlGlassCool { Position: {0, 1.75, 11.6}; Rotation: {-0.785, 0, 0}; Box: {4.6, 3.6, 0.3}; Emissive: {strength: 1.6 * lights, color: {130, 200, 255}} }
+    belly : FlHullFineDark { Position: {0, -3.5, 0}; Box: {5, 1.2, 18}; Bevel: {radius: 0.5, segments: 1} }
+    roof : FlHullFineDark { Position: {0, 3.8, -3}; Box: {4.4, 1, 10}; Bevel: {radius: 0.4, segments: 1} }
+    fin { Position: {0, 5.4, -8}; Box: {0.5, 3.6, 6}; Bevel: {top_front: 3, segments: 1}; Rgb: livery; PbrMaterial: {metallic: 0.3, roughness: 0.4} }
+    for s in 0..2 {
+      const sx: f32 = s == 0 ? -1 : 1
+      "win_{s}" : FlWin { Position: {sx * 4.46, 0.9, 1}; Box: {0.12, 3, 15.4}; TextureTransform: {1, 1, 0.3, 0.03125}; Emissive: {strength: 2.2 * lights, color: {255, 232, 200}} }
+      "stripe_{s}" { Position: {sx * 4.5, -1.2, 1}; Box: {0.14, 0.9, 22}; Rgb: livery; PbrMaterial: {metallic: 0.3, roughness: 0.4} }
+      "pylon_{s}" : FlHullFineDark { Position: {sx * 5.3, -0.6, -7.4}; Box: {2.6, 0.7, 5} }
+      "pod_{s}" : FlHullFineDark { Position: {sx * 7, -0.6, -7.8}; Rotation: {PI / 2, 0, 0}; Cylinder: {length: 9, radius: 1.9, segments: 16, smooth: true} }
+      "pod_band_{s}" { Position: {sx * 7, -0.6, -5}; Rotation: {PI / 2, 0, 0}; Cylinder: {length: 0.8, radius: 1.96, segments: 16, smooth: true}; Rgb: livery; PbrMaterial: {metallic: 0.3, roughness: 0.4} }
+      "intake_{s}" : FlBlack { Position: {sx * 7, -0.6, -3.2}; Rotation: {PI / 2, 0, 0}; Cylinder: {length: 0.3, radius: 1.5, segments: 16} }
+      "skid_{s}" : FlIron { Position: {sx * 2.6, -4.3, 0}; Box: {0.4, 0.4, 15} }
+      "door_{s}" : FlHullFineDark { Position: {sx * 4.52, -0.4, 9}; Box: {0.1, 4, 2} }
+    }
+    FlBell eng_p(power: thrust, r: 1.7, seed: 11) { Position: {-7, -0.6, -13.6} }
+    FlBell eng_s(power: thrust, r: 1.7, seed: 12) { Position: {7, -0.6, -13.6} }
+    port_collar { Position: {-4.5, 0, 0}; FlCollar hatch(r: 1.5, len: 3.5, lights: lights) }
+    rcs_p { Position: {-4.5, 2.2, 9}; Rotation: {0, PI, 0}; FlPuff pod(power: rcs, size: 0.45) }
+    rcs_s { Position: {4.5, 2.2, 9}; FlPuff pod(power: rcs, size: 0.45) }
+    if lights > 0.05 {
+      nav_p : FlLampR { Position: {-8.95, -0.6, -8}; Sphere: {radius: 0.3, segments: 6} }
+      nav_s : FlLampG { Position: {8.95, -0.6, -8}; Sphere: {radius: 0.3, segments: 6} }
+      strobe : FlStrobe { Position: {0, 7.4, -9}; Sphere: {radius: 0.3, segments: 6} }
+      beacon : FlBlinkR { Position: {0, -4.3, -4}; Sphere: {radius: 0.3, segments: 6} }
+      head_p : FlLampW { Position: {-1.8, -1.6, 15.2}; Box: {0.8, 0.4, 0.2} }
+      head_s : FlLampW { Position: {1.8, -1.6, 15.2}; Box: {0.8, 0.4, 0.2} }
+    }
+  }
+
+  template FlCharter {
+    prop thrust: f32 = 0
+    prop rcs: f32 = 0
+    prop livery: Rgb = {255, 150, 30}
+    prop lights: f32 = 1
+
+    SpatialIgnore
+    hull : FlHullFine { Position: {0, 0, 2}; Box: {10, 9, 32}; Bevel: {radius: 2, segments: 1}; Rgb: {176, 160, 140} }
+    chin : FlHullFineDark { Position: {0, -3.2, 18.4}; Box: {7.6, 3, 7}; Bevel: {radius: 1.2, segments: 1}; Rgb: {96, 88, 80} }
+    green : FlGlassCool { Position: {0, 0.9, 19.6}; Box: {7.4, 4.6, 5}; Bevel: {radius: 1.6, segments: 1}; Emissive: {strength: 0.9 * lights, color: {255, 214, 160}} }
+    green_bar_a : FlIron { Position: {0, 0.9, 19.7}; Box: {0.3, 4.8, 5.1} }
+    green_bar_b : FlIron { Position: {0, 0.9, 19.7}; Box: {7.6, 0.3, 5.1} }
+    stern : FlHullFineDark { Position: {0, 0, -16.5}; Box: {12, 10, 7}; Bevel: {radius: 1.6, segments: 1}; Rgb: {84, 72, 66} }
+    patch_a { Position: {5.06, 1, 9}; Box: {0.14, 4.4, 6}; Rgb: livery; PbrMaterial: {metallic: 0.3, roughness: 0.5} }
+    patch_b : FlHullFine { Position: {-5.06, 1.6, -6}; Box: {0.14, 3.6, 7}; Rgb: {120, 140, 150} }
+    patch_c : FlHullFine { Position: {1.4, 4.56, 6}; Box: {4.6, 0.14, 5.4}; Rgb: {150, 92, 60} }
+    patch_d : FlHullFine { Position: {-2, 4.56, -7}; Box: {3, 0.14, 4}; Rgb: {206, 200, 186} }
+    win_p : FlWin { Position: {-5.05, 1.4, 8}; Box: {0.12, 3, 10}; TextureTransform: {1, 1, 0.7, 0.03125}; Rgb: {176, 160, 140}; Emissive: {strength: 1.8 * lights, color: {255, 214, 160}} }
+    win_s : FlWin { Position: {5.05, 1.4, -4}; Box: {0.12, 3, 8}; TextureTransform: {1, 1, 0.2, 0.03125}; Rgb: {176, 160, 140}; Emissive: {strength: 1.8 * lights, color: {255, 214, 160}} }
+    pod : FlCont { Position: {7.6, -0.6, 1}; Box: {5, 6, 14}; TextureMapping: {MappingObject, size: 12, blend: 0} }
+    strap_a : FlIron { Position: {7.7, -0.6, -3}; Box: {5.6, 6.6, 0.5} }
+    strap_b : FlIron { Position: {7.7, -0.6, 5}; Box: {5.6, 6.6, 0.5} }
+    tank : FlWhite { Position: {-6.8, -2.2, -9}; Rotation: {PI / 2, 0, 0}; Capsule: {length: 8, radius: 2, segments: 12, smooth: true}; Rgb: {190, 180, 160} }
+    tank_strap : FlIron { Position: {-6.8, -2.2, -9}; Rotation: {PI / 2, 0, 0}; Cylinder: {length: 0.6, radius: 2.1, segments: 12, smooth: true} }
+    pipe_a : FlSteel { Position: {3, 5, -9}; Rotation: {PI / 2, 0, 0}; Cylinder: {length: 14, radius: 0.5, segments: 8, smooth: true} }
+    pipe_b : FlSteel { Position: {-4.6, -4.2, -2}; Rotation: {PI / 2, 0, 0}; Cylinder: {length: 22, radius: 0.4, segments: 8, smooth: true} }
+    dish_post : FlSteel { Position: {2, 5.8, -4}; Rotation: {0, 0, 0.2}; Box: {0.3, 3, 0.3} }
+    dish : FlWhite { Position: {1.6, 7.6, -4}; Rotation: {-0.9, 0.5, 0.4}; HemiSphere: {radius: 2.4, segments: 12, smooth: true}; Rgb: {200, 196, 180} }
+    whip : FlSteel { Position: {-3, 7.5, 10}; Rotation: {0.2, 0, -0.1}; Box: {0.12, 6, 0.12} }
+    for i in 0..3 {
+      "leg_{i}" : FlIron { Position: {i == 0 ? 0 : (i == 1 ? -4 : 4), -5.6, i == 0 ? 14 : -10}; Rotation: {i == 0 ? 0.3 : -0.2, 0, 0}; Box: {0.5, 3, 0.5} }
+      "foot_{i}" : FlIron { Position: {i == 0 ? 0 : (i == 1 ? -4 : 4), -7.2, i == 0 ? 14.5 : -10.3}; Box: {1.6, 0.3, 2} }
+    }
+    slogan_text {
+      Position: {6.06, 2.6, -16.5}
+      Rotation: {0, PI / 2, 0}
+      Scale: {0.034, 0.034, 0.034}
+      Text: {value: "HOW'S MY FLYING?", size: 16, align: Center}
+      Rgb: {236, 230, 214}
+      NoShadow
+    }
+    FlBell eng_big(power: thrust, r: 3.3, seed: 21, hue: {255, 190, 120}) { Position: {-2.2, 0.6, -22.9} }
+    FlBell eng_small(power: thrust * 0.8, r: 1.9, seed: 22, hue: {140, 200, 255}) { Position: {3.6, -2, -21.7} }
+    port_collar { Position: {-5, 0, 0}; FlCollar hatch(r: 1.6, len: 5, lights: lights) }
+    rcs_p { Position: {-5.1, 3, 14}; Rotation: {0, PI, 0}; FlPuff pod(power: rcs, size: 0.6) }
+    rcs_s { Position: {5.1, 3, 14}; FlPuff pod(power: rcs, size: 0.6) }
+    if lights > 0.05 {
+      nav_p : FlLampR { Position: {-6.2, 4.4, -16}; Sphere: {radius: 0.35, segments: 6} }
+      nav_s : FlLampG { Position: {10.2, -0.6, 1}; Sphere: {radius: 0.35, segments: 6} }
+      strobe : FlStrobe { Position: {-3, 10.6, 10.6}; Sphere: {radius: 0.3, segments: 6} }
+      dodgy : FlBlinkA { Position: {0, -4.7, 8}; Sphere: {radius: 0.35, segments: 6}; Animator: {clip: fl_blink_clip, speed: 2.3} }
+      head : FlLampWarm { Position: {0, -3.2, 22}; Box: {1.6, 0.6, 0.2} }
+    }
+  }
+
+  template FlFreighter {
+    prop thrust: f32 = 0
+    prop rcs: f32 = 0
+    prop livery: Rgb = {255, 150, 30}
+    prop lights: f32 = 1
+    prop cap: i32 = 0
+
+    const len: f32 = match cap { 0: 70; 1: 110; 2: 170; _: 260 }
+    const nseg: i32 = match cap { 0: 2; 1: 4; 2: 7; _: 12 }
+    const bow: f32 = len / 2
+    const hold: f32 = len - 34
+    const pitch: f32 = hold / nseg
+    const big: bool = cap >= 2
+
+    SpatialIgnore
+    spine : FlHullFineDark { Position: {0, 0, bow - 16 - hold / 2}; Box: {6, 6, hold + 2} }
+    for i in 0..nseg {
+      const cz: f32 = bow - 16 - (i + 0.5) * pitch
+      "left_{i}" : FlCont { Position: {-9.6, 0, cz}; Box: {12.4, 26, pitch - 3}; TextureMapping: {MappingObject, size: 26, blend: 0}; TextureTransform: {1, 1, i * 0.37, i * 0.13} }
+      "right_{i}" : FlCont { Position: {9.6, 0, cz}; Box: {12.4, 26, pitch - 3}; TextureMapping: {MappingObject, size: 26, blend: 0}; TextureTransform: {1, 1, i * 0.61 + 0.2, i * 0.29} }
+      "frame_{i}" : FlIron { Position: {0, 0, cz - pitch / 2 + 0.6}; Box: {33, 28.4, 1.2} }
+      "mark_{i}" : FlLampW { Position: {0, 14.5, cz - pitch / 2 + 0.6}; Box: {0.7, 0.5, 0.7}; Emissive: {strength: 6 * lights, color: {235, 244, 255}} }
+    }
+    cab : FlHullFine { Position: {0, 2, bow - 9}; Box: {24, 20, 14}; Bevel: {top_front: 6, bottom_front: 5, front_left: 4, front_right: 4, segments: 1} }
+    cab_base : FlHullFineDark { Position: {0, -10, bow - 10}; Box: {28, 8, 12}; Bevel: {bottom_front: 4, segments: 1} }
+    cab_band { Position: {0, -3, bow - 9.5}; Box: {24.3, 3, 13.4}; Bevel: {front_left: 4, front_right: 4, segments: 1}; Rgb: livery; PbrMaterial: {metallic: 0.3, roughness: 0.4} }
+    bridge : FlGlass { Position: {0, 6.4, bow - 2.4}; Box: {17, 2.2, 1}; Emissive: {strength: 2.4 * lights, color: {255, 214, 160}} }
+    cab_win_p : FlWin { Position: {-12.05, 3, bow - 10}; Box: {0.14, 6, 9}; Emissive: {strength: 2.2 * lights, color: {255, 232, 200}} }
+    cab_win_s : FlWin { Position: {12.05, 3, bow - 10}; Box: {0.14, 6, 9}; TextureTransform: {1, 1, 0.4, 0}; Emissive: {strength: 2.2 * lights, color: {255, 232, 200}} }
+    mast : FlSteel { Position: {0, 16, bow - 12}; Box: {0.5, 8, 0.5} }
+    dish : FlWhite { Position: {5, 13.6, bow - 12}; Rotation: {-0.5, 0.4, 0}; HemiSphere: {radius: 2.6, segments: 12, smooth: true} }
+    block : FlHullFineDark { Position: {0, 0, 0 - bow + 11}; Box: {28, 24, 14}; Bevel: {radius: 3, segments: 1} }
+    block_band { Position: {0, 0, 0 - bow + 16}; Box: {28.4, 20, 2.4}; Bevel: {radius: 2.4, segments: 1}; Rgb: livery; PbrMaterial: {metallic: 0.3, roughness: 0.4} }
+    tank_p : FlWhite { Position: {-12, 9, 0 - bow + 13}; Rotation: {PI / 2, 0, 0}; Capsule: {length: 8, radius: 3.4, segments: 12, smooth: true} }
+    tank_s : FlWhite { Position: {12, 9, 0 - bow + 13}; Rotation: {PI / 2, 0, 0}; Capsule: {length: 8, radius: 3.4, segments: 12, smooth: true} }
+    if big {
+      FlBell eng_a(power: thrust, r: 4.6, seed: 31, hue: {255, 190, 120}) { Position: {-7, 6, 0 - bow + 4.14} }
+      FlBell eng_b(power: thrust, r: 4.6, seed: 32, hue: {255, 190, 120}) { Position: {7, 6, 0 - bow + 4.14} }
+      FlBell eng_c(power: thrust, r: 4.6, seed: 33, hue: {255, 190, 120}) { Position: {-7, -6, 0 - bow + 4.14} }
+      FlBell eng_d(power: thrust, r: 4.6, seed: 34, hue: {255, 190, 120}) { Position: {7, -6, 0 - bow + 4.14} }
+    } else {
+      FlBell eng_a(power: thrust, r: 4.6, seed: 31, hue: {255, 190, 120}) { Position: {-7, 0, 0 - bow + 4.14} }
+      FlBell eng_b(power: thrust, r: 4.6, seed: 32, hue: {255, 190, 120}) { Position: {7, 0, 0 - bow + 4.14} }
+    }
+    rcs_p { Position: {-12.1, 8, bow - 5}; Rotation: {0, PI, 0}; FlPuff pod(power: rcs, size: 0.8) }
+    rcs_s { Position: {12.1, 8, bow - 5}; FlPuff pod(power: rcs, size: 0.8) }
+    if lights > 0.05 {
+      nav_p : FlLampR { Position: {-14.2, -10, bow - 10}; Sphere: {radius: 0.5, segments: 6} }
+      nav_s : FlLampG { Position: {14.2, -10, bow - 10}; Sphere: {radius: 0.5, segments: 6} }
+      nav_pa : FlLampR { Position: {-14.2, 0, 0 - bow + 10}; Sphere: {radius: 0.5, segments: 6} }
+      nav_sa : FlLampG { Position: {14.2, 0, 0 - bow + 10}; Sphere: {radius: 0.5, segments: 6} }
+      strobe : FlStrobe { Position: {0, 20.4, bow - 12}; Sphere: {radius: 0.5, segments: 6} }
+      beacon : FlBlinkA { Position: {0, -12.6, 0 - bow + 11}; Sphere: {radius: 0.5, segments: 6} }
+    }
+  }
+
+  template FlDozer {
+    prop thrust: f32 = 0
+    prop rcs: f32 = 0
+    prop livery: Rgb = {236, 176, 34}
+    prop lights: f32 = 1
+
+    SpatialIgnore
+    body : FlHull { Position: {0, 0, -16}; Box: {56, 38, 84}; Bevel: {radius: 4, segments: 1}; Rgb: livery; TextureMapping: {MappingObject, size: 40, blend: 0.2} }
+    belly : FlHullDark { Position: {0, -21, -16}; Box: {44, 8, 76}; Bevel: {radius: 2, segments: 1} }
+    deck : FlHullDark { Position: {0, 19.6, -20}; Box: {48, 1.4, 70} }
+    blade : FlHull { Position: {0, -3, 62}; Box: {90, 42, 5}; Rgb: livery; TextureMapping: {MappingObject, size: 40, blend: 0.2} }
+    blade_top : FlHull { Position: {0, 21.6, 65}; Rotation: {0.6, 0, 0}; Box: {90, 12, 5}; Rgb: livery; TextureMapping: {MappingObject, size: 40, blend: 0.2} }
+    blade_edge : FlIron { Position: {0, -27, 65.4}; Rotation: {-0.6, 0, 0}; Box: {90, 12, 4} }
+    blade_wing_p : FlHull { Position: {-45.5, -3, 57}; Box: {3, 46, 16}; Rgb: livery; TextureMapping: {MappingObject, size: 40, blend: 0.2} }
+    blade_wing_s : FlHull { Position: {45.5, -3, 57}; Box: {3, 46, 16}; Rgb: livery; TextureMapping: {MappingObject, size: 40, blend: 0.2} }
+    for i in 0..9 {
+      "hazard_{i}" : FlBlack { Position: {-40 + i * 10, 16.4, 59.3}; Box: {5, 4, 0.6} }
+    }
+    for s in 0..2 {
+      const sx: f32 = s == 0 ? -1 : 1
+      "arm_{s}" : FlHullDark { Position: {sx * 31, -10, 40}; Box: {7, 9, 42} }
+      "ram_{s}" : FlSteel { Position: {sx * 31, 2, 44}; Rotation: {0.5, 0, 0}; Cylinder: {length: 34, radius: 1.6, segments: 10, smooth: true} }
+      "tank_{s}" : FlHullGrey { Position: {sx * 34, -6, -30}; Rotation: {PI / 2, 0, 0}; Capsule: {length: 40, radius: 8, segments: 16, smooth: true} }
+      "tank_strap_a_{s}" : FlIron { Position: {sx * 34, -6, -18}; Rotation: {PI / 2, 0, 0}; Cylinder: {length: 2, radius: 8.3, segments: 16, smooth: true} }
+      "tank_strap_b_{s}" : FlIron { Position: {sx * 34, -6, -42}; Rotation: {PI / 2, 0, 0}; Cylinder: {length: 2, radius: 8.3, segments: 16, smooth: true} }
+      "name_{s}" {
+        Position: {sx * 28.2, 9, -16}
+        Rotation: {0, sx * PI / 2, 0}
+        Scale: {0.28, 0.28, 0.28}
+        Text: {value: "TERRAFORMING? SURE. LLC", size: 16, align: Center}
+        Rgb: {20, 20, 22}
+        NoShadow
+      }
+      "win_{s}" : FlWin { Position: {sx * 28.1, 0, -30}; Box: {0.3, 6, 40}; Rgb: livery; Emissive: {strength: 2.2 * lights, color: {255, 232, 200}} }
+      "flood_{s}" : FlLampW { Position: {sx * 30, 27.4, 66}; Box: {3, 1.4, 1}; Emissive: {strength: 7 * lights, color: {235, 244, 255}} }
+      "beacon_{s}" : FlBlinkA { Position: {sx * 26, 21.6, -54}; Sphere: {radius: 1.2, segments: 8}; Animator: {clip: fl_blink_clip, time: s * 1.1} }
+      "nav_{s}" { Position: {sx * 46.4, 20, 57}; Sphere: {radius: 0.9, segments: 8}; Rgb: {20, 10, 4}; Emissive: {strength: 8 * lights, color: s == 0 ? {255, 50, 36} : {70, 255, 110}}; NoShadow }
+    }
+    for i in 0..3 {
+      "stack_{i}" : FlHullDark { Position: {-14, 29, -44 + i * 22}; Cylinder: {length: 18, radius: 7, segments: 16, smooth: true} }
+      "stack_cap_{i}" : FlIron { Position: {-14, 38.6, -44 + i * 22}; Cylinder: {length: 1.4, radius: 7.6, segments: 16, smooth: true} }
+      "stack_glow_{i}" { Position: {-14, 39.4, -44 + i * 22}; Cylinder: {length: 0.4, radius: 5.6, segments: 16}; Rgb: {30, 14, 4}; Emissive: {strength: 1.5 + 3 * thrust, color: {255, 150, 60}}; NoShadow }
+    }
+    cab : FlHull { Position: {14, 26, 10}; Box: {20, 12, 16}; Bevel: {top_front: 4, segments: 1}; Rgb: livery; TextureMapping: {MappingObject, size: 20, blend: 0.2} }
+    cab_win : FlGlass { Position: {14, 28, 10.4}; Box: {20.4, 3, 15.6}; Emissive: {strength: 2.4 * lights, color: {255, 214, 160}} }
+    cab_roof : FlHullDark { Position: {14, 32.6, 9}; Box: {21, 1.2, 15} }
+    ladder : FlSteel { Position: {28.3, 4, 12}; Box: {0.3, 32, 1.2} }
+    crane : FlIron { Position: {16, 24, -44}; Rotation: {0.5, 0, 0}; Box: {2, 2, 34} }
+    dish : FlWhite { Position: {16, 36, -8}; Rotation: {-0.6, 0.6, 0}; HemiSphere: {radius: 4.4, segments: 14, smooth: true} }
+    thrust_plate : FlIron { Position: {0, 0, -59.4}; Box: {50, 34, 3}; Bevel: {radius: 3, segments: 1} }
+    FlBell eng_a(power: thrust, r: 6.6, seed: 41, hue: {255, 190, 120}) { Position: {-14, 8, -66} }
+    FlBell eng_b(power: thrust, r: 6.6, seed: 42, hue: {255, 190, 120}) { Position: {14, 8, -66} }
+    FlBell eng_c(power: thrust, r: 6.6, seed: 43, hue: {255, 190, 120}) { Position: {-14, -8, -66} }
+    FlBell eng_d(power: thrust, r: 6.6, seed: 44, hue: {255, 190, 120}) { Position: {14, -8, -66} }
+    rcs_p { Position: {-28.2, 14, 20}; Rotation: {0, PI, 0}; FlPuff pod(power: rcs, size: 1.4) }
+    rcs_s { Position: {28.2, 14, 20}; FlPuff pod(power: rcs, size: 1.4) }
+    strobe : FlStrobe { Position: {14, 34, 9}; Sphere: {radius: 0.9, segments: 8} }
+  }
+
+  template FlBarge {
+    prop thrust: f32 = 0
+    prop rcs: f32 = 0
+    prop livery: Rgb = {255, 150, 30}
+    prop lights: f32 = 1
+
+    SpatialIgnore
+    hopper : FlHullFineDark { Position: {0, -4, 8}; Box: {36, 18, 84}; Bevel: {bottom_left: 6, bottom_right: 6, bottom_front: 6, segments: 1}; Rgb: {128, 90, 64}; TextureMapping: {MappingObject, size: 30, blend: 0.2} }
+    pit : FlBlack { Position: {0, 5.1, 8}; Box: {31, 0.4, 79} }
+    for i in 0..7 {
+      "ore_{i}" { Position: {(i % 3 - 1) * 7, 5.4 + (i % 2) * 1.6, -26 + i * 11.4}; Rotation: {i * 0.7, i * 1.3, 0}; Scale: {1.5, 0.62, 1.3}; IcoSphere: {radius: 7.4 + (i % 3), segments: 1}; Rgb: {112 + i * 5, 98 + i * 3, 86}; PbrMaterial: {metallic: 0.1, roughness: 0.95} }
+      "rib_{i}" : FlIron { Position: {0, -4, -30 + i * 12.6}; Box: {37.6, 19, 1.2} }
+    }
+    rail_p : FlSteel { Position: {-17.6, 6, 8}; Box: {1.2, 1.2, 84} }
+    rail_s : FlSteel { Position: {17.6, 6, 8}; Box: {1.2, 1.2, 84} }
+    bow : FlHullFineDark { Position: {0, -4, 55}; Box: {30, 14, 10}; Bevel: {front_left: 7, front_right: 7, bottom_front: 5, segments: 1}; Rgb: {96, 78, 64}; TextureMapping: {MappingObject, size: 30, blend: 0.2} }
+    stern : FlHullFineDark { Position: {0, -2, -43}; Box: {34, 22, 18}; Bevel: {radius: 3, segments: 1}; TextureMapping: {MappingObject, size: 30, blend: 0.2} }
+    cab : FlHullFine { Position: {0, 14, -42}; Box: {16, 10, 12}; Bevel: {top_front: 3, segments: 1} }
+    cab_band { Position: {0, 10.6, -42}; Box: {16.3, 2.4, 12.3}; Rgb: livery; PbrMaterial: {metallic: 0.3, roughness: 0.4} }
+    cab_win : FlGlass { Position: {0, 15.6, -41.8}; Box: {16.4, 2.2, 11.4}; Emissive: {strength: 2.4 * lights, color: {255, 214, 160}} }
+    mast : FlSteel { Position: {0, 23, -44}; Box: {0.5, 8, 0.5} }
+    FlBell eng_p(power: thrust, r: 5.6, seed: 51, hue: {255, 190, 120}) { Position: {-8.6, -2, -57} }
+    FlBell eng_s(power: thrust, r: 5.6, seed: 52, hue: {255, 190, 120}) { Position: {8.6, -2, -57} }
+    rcs_p { Position: {-18.1, 2, 44}; Rotation: {0, PI, 0}; FlPuff pod(power: rcs, size: 1) }
+    rcs_s { Position: {18.1, 2, 44}; FlPuff pod(power: rcs, size: 1) }
+    if lights > 0.05 {
+      for i in 0..4 {
+        "haz_{i}" : FlBlinkA { Position: {(i % 2 == 0 ? -1 : 1) * 18.4, 7, i < 2 ? 48 : -32}; Sphere: {radius: 0.8, segments: 8}; Animator: {clip: fl_blink_clip, time: i * 0.55} }
+      }
+      nav_p : FlLampR { Position: {-17.4, 4, -50}; Sphere: {radius: 0.6, segments: 6} }
+      nav_s : FlLampG { Position: {17.4, 4, -50}; Sphere: {radius: 0.6, segments: 6} }
+      strobe : FlStrobe { Position: {0, 27.4, -44}; Sphere: {radius: 0.6, segments: 6} }
+      work : FlLampWarm { Position: {0, 19.4, -35.6}; Box: {8, 0.6, 0.4} }
+    }
+  }
+
+  template FlTug {
+    prop thrust: f32 = 0
+    prop rcs: f32 = 0
+    prop livery: Rgb = {255, 150, 30}
+    prop lights: f32 = 1
+    prop count: i32 = 5
+
+    const n: i32 = clamp(count, 0, 12)
+
+    SpatialIgnore
+    hull : FlHullFine { Position: {0, 0, 2}; Box: {14, 10, 20}; Bevel: {radius: 2.4, top_front: 4, segments: 1}; Rgb: livery }
+    hull_low : FlHullFineDark { Position: {0, -5, 1}; Box: {12, 3, 20}; Bevel: {radius: 1, segments: 1} }
+    cab : FlGlass { Position: {0, 3, 10.4}; Box: {11, 2.6, 4}; Emissive: {strength: 2.2 * lights, color: {255, 214, 160}} }
+    bumper : FlBlack { Position: {0, -1.4, 12.6}; Box: {13, 2.4, 1.4}; Bevel: {radius: 0.6, segments: 1} }
+    roof : FlHullFineDark { Position: {0, 5.6, -1}; Box: {8, 1.4, 10} }
+    mast : FlSteel { Position: {0, 9.6, -3}; Box: {0.4, 7, 0.4} }
+    for s in 0..2 {
+      const sx: f32 = s == 0 ? -1 : 1
+      "out_{s}" : FlHullFineDark { Position: {sx * 9, 0, -3}; Box: {6, 2.4, 8} }
+      "nac_{s}" : FlHullFineDark { Position: {sx * 12.4, 0, -4}; Rotation: {PI / 2, 0, 0}; Cylinder: {length: 14, radius: 3.4, segments: 16, smooth: true} }
+      "nac_band_{s}" : FlYellow { Position: {sx * 12.4, 0, 1}; Rotation: {PI / 2, 0, 0}; Cylinder: {length: 1.2, radius: 3.5, segments: 16, smooth: true} }
+      "tow_{s}" : FlIron { Position: {sx * 3.4, 0, -12}; Rotation: {0, sx * 0.3, 0}; Box: {1, 1, 9} }
+    }
+    FlBell eng_p(power: thrust, r: 3, seed: 61) { Position: {-12.4, 0, -13.7} }
+    FlBell eng_s(power: thrust, r: 3, seed: 62) { Position: {12.4, 0, -13.7} }
+    hitch : FlIron { Position: {0, 0, -16}; Box: {4, 4, 3} }
+    if n > 0 {
+      cable : FlSteel { Position: {0, 0, -22}; Rotation: {PI / 2, 0, 0}; Cylinder: {length: 10, radius: 0.4, segments: 8} }
+    }
+    for i in 0..n {
+      "unit_{i}" : FlCont { Position: {0, 0, -42 - i * 34}; Box: {24, 24, 30}; TextureMapping: {MappingObject, size: 24, blend: 0}; TextureTransform: {1, 1, i * 0.37, i * 0.21} }
+      "link_{i}" : FlIron { Position: {0, 0, -25.6 - i * 34}; Box: {5, 5, 3.2} }
+      "frame_{i}" : FlIron { Position: {0, 0, -42 - i * 34}; Box: {25.4, 25.4, 1.6} }
+      "lamp_{i}" : FlBlinkA { Position: {0, 13.2, -42 - i * 34}; Sphere: {radius: 0.6, segments: 6}; Animator: {clip: fl_blink_clip, time: i * 0.3} }
+    }
+    rcs_p { Position: {-7.1, 3, 8}; Rotation: {0, PI, 0}; FlPuff pod(power: rcs, size: 0.6) }
+    rcs_s { Position: {7.1, 3, 8}; FlPuff pod(power: rcs, size: 0.6) }
+    if lights > 0.05 {
+      nav_p : FlLampR { Position: {-15.9, 0, -2}; Sphere: {radius: 0.4, segments: 6} }
+      nav_s : FlLampG { Position: {15.9, 0, -2}; Sphere: {radius: 0.4, segments: 6} }
+      strobe : FlStrobe { Position: {0, 13.4, -3}; Sphere: {radius: 0.4, segments: 6} }
+      work : FlLampW { Position: {0, 5, -6.2}; Box: {6, 0.5, 0.3} }
+    }
+  }
+
+  template FlPatrol {
+    prop thrust: f32 = 0
+    prop rcs: f32 = 0
+    prop livery: Rgb = {90, 110, 70}
+    prop lights: f32 = 1
+
+    SpatialIgnore
+    hull : FlHullFine { Position: {0, 0, 1}; Box: {7, 5, 30}; Bevel: {radius: 1.2, segments: 1}; Rgb: {112, 120, 100} }
+    prow : FlHullFine { Position: {0, -0.4, 17.4}; Scale: {1, 1, 2}; Box: {7, 4.2, 3.4}; Bevel: {front_left: 2.6, front_right: 2.6, top_front: 1.6, bottom_front: 1, segments: 1}; Rgb: {112, 120, 100} }
+    band { Position: {0, 0, 4}; Box: {7.2, 5.2, 3}; Bevel: {radius: 1.2, segments: 1}; Rgb: livery; PbrMaterial: {metallic: 0.3, roughness: 0.4} }
+    canopy : FlGlassCool { Position: {0, 2.4, 10}; Box: {3.4, 1.4, 6}; Bevel: {top_front: 1.2, top_back: 0.6, segments: 1}; Emissive: {strength: 1.4 * lights, color: {130, 200, 255}} }
+    spine : FlHullFineDark { Position: {0, 2.9, -5}; Box: {3, 1, 14} }
+    for s in 0..2 {
+      const sx: f32 = s == 0 ? -1 : 1
+      "spon_{s}" : FlHullFineDark { Position: {sx * 5.3, -0.8, -3}; Box: {3.8, 2.6, 16}; Bevel: {front_left: 1, front_right: 1, segments: 1}; Rgb: {70, 78, 62} }
+      "gun_{s}" : FlIron { Position: {sx * 5.6, -0.8, 9}; Rotation: {PI / 2, 0, 0}; Cylinder: {length: 9, radius: 0.34, segments: 8} }
+      "gun_tip_{s}" : FlBlack { Position: {sx * 5.6, -0.8, 13.6}; Rotation: {PI / 2, 0, 0}; Cylinder: {length: 1.2, radius: 0.5, segments: 8} }
+      "wing_{s}" : FlHullFineDark { Position: {sx * 8, -0.8, -9}; Box: {2, 0.4, 7}; Bevel: {front_left: 0.9, front_right: 0.9, segments: 1}; Rgb: {70, 78, 62} }
+      "plate_{s}" : FlHullFineDark { Position: {sx * 3.58, 0.2, -6}; Box: {0.2, 3.4, 9}; Rgb: {84, 92, 74} }
+    }
+    name_text {
+      Position: {-3.62, 0.3, 9.4}
+      Rotation: {0, 0 - PI / 2, 0}
+      Scale: {0.05, 0.05, 0.05}
+      Text: {value: "SECTOR PATROL", size: 16, align: Center}
+      Rgb: {236, 236, 226}
+      NoShadow
+    }
+    bar_base : FlBlack { Position: {0, 3.6, 2}; Box: {4.4, 0.4, 1.4} }
+    FlBell eng_p(power: thrust, r: 1.7, seed: 71) { Position: {-2, 0, -15.5} }
+    FlBell eng_s(power: thrust, r: 1.7, seed: 72) { Position: {2, 0, -15.5} }
+    port_collar { Position: {-3.5, 0, 0}; FlCollar hatch(r: 1.3, len: 5.5, lights: lights) }
+    rcs_p { Position: {-3.6, 1.6, 13}; Rotation: {0, PI, 0}; FlPuff pod(power: rcs, size: 0.4) }
+    rcs_s { Position: {3.6, 1.6, 13}; FlPuff pod(power: rcs, size: 0.4) }
+    if lights > 0.05 {
+      bar_r : FlBlinkR { Position: {-1.2, 4.1, 2}; Box: {1.8, 0.6, 1}; Animator: {clip: fl_blink_clip, speed: 2.4} }
+      bar_b : FlBlinkB { Position: {1.2, 4.1, 2}; Box: {1.8, 0.6, 1}; Animator: {clip: fl_blink_clip, speed: 2.4, time: 1.1} }
+      nav_p : FlLampR { Position: {-9.1, -0.8, -9}; Sphere: {radius: 0.3, segments: 6} }
+      nav_s : FlLampG { Position: {9.1, -0.8, -9}; Sphere: {radius: 0.3, segments: 6} }
+      strobe : FlStrobe { Position: {0, 3.8, -11}; Sphere: {radius: 0.3, segments: 6} }
+      spot : FlLampW { Position: {0, -2.2, 19.6}; Box: {1.4, 0.5, 0.3} }
+    }
+  }
+}

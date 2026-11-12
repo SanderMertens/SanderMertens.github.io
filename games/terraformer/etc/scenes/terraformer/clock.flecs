@@ -1,0 +1,43 @@
+include state
+
+using flecs.script
+using flecs.script.math
+using box.app
+using state
+
+state {
+  proc clock_advance(days: f64) {
+    if days > 0 && screen != SCREEN_GAMEOVER {
+      now += min(days, 400)
+      mut guard: i32 = 0
+      while today < floor(now) && guard < 400 {
+        today += 1
+        guard += 1
+        emit DayTick(day: today)
+      }
+    }
+  }
+
+  proc clock_reset() {
+    now = 0
+    today = 0
+    speed = 1
+    clock_hold = false
+  }
+}
+
+async {
+  mut last: f64 = AppStatus[AppStatus].elapsed
+  while true {
+    await next_frame()
+    const t = AppStatus[AppStatus].elapsed
+    const fixed = App[App].delta_time
+    const step = fixed > 0 ? fixed : clamp(t - last, 0.001, 0.1)
+    last = t
+    dt = step
+    real_time += step
+    if !clock_hold && speed > 0 && screen != SCREEN_GAMEOVER {
+      clock_advance(step * speed / DAY_SECONDS)
+    }
+  }
+}

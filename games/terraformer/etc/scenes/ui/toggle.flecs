@@ -1,0 +1,161 @@
+// Checkbox and Switch: a bool value the user toggles.
+
+module box.widgets
+
+using flecs.script
+using box.ui
+using box.input
+using box.picking
+using box.layout
+using box.geometry
+using box.material
+using box.text
+using box.transform
+using box.transition
+
+// Behavior of a two-state control with a label. A click on the control or its label, Enter or
+// Space toggles current and reports the change; Space shows the pressed look while it is down.
+// The pointer shows a hand over it, a crossed circle while it is disabled.
+template HeadlessToggle : HeadlessPressable {
+  prop label: string = ""
+  prop value: bool = false
+  prop width: f32 = 0
+
+  mut current = value
+  mut last_value = value
+
+  if !disabled {
+    Focusable
+    Cursor: {CursorPointer}
+  } else {
+    Cursor: {CursorNotAllowed}
+  }
+
+  async {
+    if value != last_value {
+      last_value = value
+      current = value
+    }
+  }
+
+  async {
+    while true {
+      const e = await on.activate(this)
+      if ui.activation(e) == this {
+        down = false
+        if !disabled {
+          current = !current
+          await ui.changed(this)
+        }
+      }
+    }
+  }
+}
+
+// A check box with a label to its right, both part of the hit area
+template Checkbox : HeadlessToggle {
+  const t = box.ui.theme[UiTheme]
+  const ring = focused && FocusStatus[FocusStatus].visible
+  const size = 16
+  const edge = ring ? t.focus : current ? t.accent : t.border
+
+  Layout: {direction: Row, spacing: t.spacing, v: Middle}
+  LayoutItem: {
+    width: {min: width, max: width},
+    height: {mode: Fixed, value: t.control_height}
+  }
+
+  box {
+    Layout: {}
+    LayoutItem: {width: {mode: Fixed, value: size}, height: {mode: Fixed, value: size}}
+    Rect: {1, 1}
+    Rgb: current ? t.accent : down ? t.pressed : hover ? t.hover : t.surface_alt
+
+    // Checked, the box lightens while hovered and darkens while pressed, as a filled button
+    Tint: current && down ? {0, 0, 0, 60} : {255, 255, 255, current && hover ? 40 : 0}
+    Transition: [Rgb: WidgetFade, Tint: WidgetFade]
+
+    Border: {
+      width: ring ? t.focus_width : 1, radius: 3,
+      color: {edge.r, edge.g, edge.b, 255}
+    }
+
+    if current {
+      mark {
+        LayoutItem: {
+          h: Center, v: Middle,
+          width: {mode: Fixed, value: 8}, height: {mode: Fixed, value: 8}
+        }
+        Rect: {1, 1}
+        Rgb: t.accent_text
+        Border: {radius: 2}
+      }
+    }
+  }
+
+  if label != "" {
+    caption {
+      Text: {value: label, size: t.font_size}
+      Rgb: t.text
+    }
+  }
+
+  if disabled {
+    Opacity: {t.disabled_opacity}
+  }
+}
+
+// A switch: a track with a knob that sits right when on, with a label to its right
+template Switch : HeadlessToggle {
+  const t = box.ui.theme[UiTheme]
+  const ring = focused && FocusStatus[FocusStatus].visible
+  const track_w = 34
+  const track_h = 18
+  const knob = 12
+  const inset = (track_h - knob) / 2
+  const edge = ring ? t.focus : current ? t.accent : t.border
+
+  Layout: {direction: Row, spacing: t.spacing, v: Middle}
+  LayoutItem: {
+    width: {min: width, max: width},
+    height: {mode: Fixed, value: t.control_height}
+  }
+
+  track {
+    Layout: {}
+    LayoutItem: {width: {mode: Fixed, value: track_w}, height: {mode: Fixed, value: track_h}}
+    Rect: {1, 1}
+    Rgb: current ? t.accent : down ? t.pressed : hover ? t.hover : t.surface_alt
+
+    // On, the track lightens while hovered and darkens while pressed, as a filled button
+    Tint: current && down ? {0, 0, 0, 60} : {255, 255, 255, current && hover ? 40 : 0}
+    Transition: [Rgb: WidgetFade, Tint: WidgetFade]
+
+    Border: {
+      width: ring ? t.focus_width : 1, radius: track_h / 2,
+      color: {edge.r, edge.g, edge.b, 255}
+    }
+
+    knob {
+      LayoutItem: {
+        h: Left, v: Middle, x: current ? track_w - knob - inset : inset,
+        width: {mode: Fixed, value: knob}, height: {mode: Fixed, value: knob}
+      }
+      Rect: {1, 1}
+      Border: {radius: knob / 2}
+      Rgb: current ? t.accent_text : t.text_muted
+      Transition: [Position: WidgetSlide, Rgb: WidgetFade]
+    }
+  }
+
+  if label != "" {
+    caption {
+      Text: {value: label, size: t.font_size}
+      Rgb: t.text
+    }
+  }
+
+  if disabled {
+    Opacity: {t.disabled_opacity}
+  }
+}

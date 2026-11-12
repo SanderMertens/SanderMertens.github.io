@@ -1,0 +1,882 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.movement
+using box.animation
+using box.transition
+using box.texture
+using box.layout
+using box.picking
+using box.input
+using box.text
+using state
+
+state {
+  export const NAV_H_MIN: f32 = 46
+  export const NAV_H_MAX: f32 = 172
+  export const NAV_H_HOME: f32 = 158
+  export const NAV_H_NAMES: f32 = 84
+  export const NAV_BIAS: f32 = 0.04
+  export const NAV_BIAS_X: f32 = 0.11
+
+  export const NAV_LABEL_NONE: i32 = 0
+  export const NAV_LABEL_HOME: i32 = 1
+  export const NAV_LABEL_OFFER: i32 = 2
+  export const NAV_LABEL_JOB: i32 = 3
+  export const NAV_LABEL_DEST: i32 = 4
+  export const NAV_LABEL_HERE: i32 = 5
+
+  export const OP_NAV_FOCUS: i32 = 204
+
+  export mut nav_hover: i32 = -1
+  export mut nav_goto: i32 = 0
+  export mut nav_goto_sys: i32 = 44
+  export mut nav_goto_h: f32 = 0
+  export mut nav_drag_px: f32 = 0
+  export mut nav_dragging: bool = false
+  export mut nav_names: bool = false
+  export mut nav_names_n: i32 = 0
+  export mut nav_lk: f32 = 1.053
+  export mut nav_wh: f32 = 1000
+  export mut nav_mark: i32[100] = {}
+  export mut nav_label: i32[100] = {}
+
+  nav_actions {
+    Pan { Action: {description: "Drag the galaxy map"}; Binding: {key: MouseLeft} }
+  }
+
+  fn nav_has_port(s: i32) -> bool {
+    sys_ok(s) && (sys_native_port(s) >= 0 || nav_mark[s] == 2)
+  }
+
+  fn nav_label_at(s: i32) -> i32 {
+    sys_ok(s) ? nav_label[s] : 0
+  }
+
+  fn nav_lim_x(h: f32) -> f32 {
+    max(3, 92 - h * 0.56)
+  }
+
+  fn nav_lim_y(h: f32) -> f32 {
+    max(2.5, 72 - h * 0.44)
+  }
+
+  fn nav_job_sys(i: i32) -> i32 {
+    i >= 0 && i < N_JOBS && jobs[i].status == JOB_ACTIVE && pl_ok(jobs[i].planet) ? pl_sys(jobs[i].planet) : -1
+  }
+
+  fn nav_offer_sys() -> i32 {
+    offer.status == 1 && pl_ok(offer.planet) ? pl_sys(offer.planet) : -1
+  }
+
+  fn nav_region_label(r: i32) -> string {
+    match r {
+      0: "T H E   C O M M U T E R\nB E L T"
+      1: "A C C R U A L\nR E A C H"
+      2: "T H E   G R E A T E R\nM I S C E L L A N E O U S"
+      3: "O U T E R\nE S C R O W"
+      4: "T H E\nD E D U C T I B L E"
+      5: "L O W E R\nO V E R H E A D"
+      6: "T H E   F I N E\nP R I N T"
+      _: "P E N D I N G\nE X P A N S E"
+    }
+  }
+
+  fn nav_region_lx(r: i32) -> f32 {
+    match r { 0: 0; 1: -2; 2: 27; 3: -8; 4: 27; 5: 29; 6: -2; _: -2 }
+  }
+
+  fn nav_region_ly(r: i32) -> f32 {
+    match r { 0: -19; 1: 15; 2: 4; 3: 21; 4: -13; 5: -9; 6: -22; _: 20 }
+  }
+
+  fn nav_map_row() -> string {
+    "{gcam_x:.3}|{gcam_y:.3}|{gcam_h:.3}|{nav_hover}|{nav_drag_px:.1}|{b2i(nav_dragging)}|{b2i(nav_names)}|{nav_lk:.3}"
+  }
+}
+
+terra {
+  export const MAP_LANE: Rgb = {58, 72, 104}
+  export const MAP_LINER: Rgb = {86, 114, 168}
+  export const MAP_PORT: Rgb = {176, 208, 240}
+  export const MAP_ROUTE: Rgb = {255, 186, 72}
+  export const MAP_CHARTER: Rgb = {255, 104, 72}
+  export const MAP_JOB: Rgb = {110, 210, 140}
+  export const MAP_OFFER: Rgb = {250, 200, 80}
+  export const MAP_HERE: Rgb = {255, 170, 40}
+
+  nav_cloud_field_0 {
+    TextureGen: {width: 512, height: 512, seed: 5, layers: [
+      {kind: GenNoise, frequency: 3, octaves: 5, gain: 0.55, amount: 0.55, seed: 1}
+      {kind: GenCells, count: 1, amount: -1, seed: 2}
+    ]}
+  }
+
+  nav_cloud_field_1 {
+    TextureGen: {width: 512, height: 512, seed: 5, layers: [
+      {kind: GenNoise, frequency: 2, octaves: 6, gain: 0.6, amount: 0.6, seed: 2}
+      {kind: GenCells, count: 1, amount: -1, seed: 2}
+    ]}
+  }
+
+  nav_cloud_field_2 {
+    TextureGen: {width: 512, height: 512, seed: 5, layers: [
+      {kind: GenNoise, frequency: 4, octaves: 5, gain: 0.5, amount: 0.5, seed: 3}
+      {kind: GenCells, count: 1, amount: -1, seed: 2}
+    ]}
+  }
+
+  nav_cloud_field_3 {
+    TextureGen: {width: 512, height: 512, seed: 5, layers: [
+      {kind: GenNoise, frequency: 3, octaves: 6, gain: 0.62, amount: 0.7, seed: 4}
+      {kind: GenCells, count: 1, amount: -1, seed: 2}
+    ]}
+  }
+
+  nav_cloud_0 {
+    TextureGen: {source: nav_cloud_field_0, output: GenAlbedo, colors: [{0, {0, 0, 0}}, {0.5, {0, 0, 0}}, {0.7, {96, 96, 96}}, {0.86, {150, 150, 150}}, {1, {255, 255, 255}}]}
+  }
+
+  nav_cloud_1 {
+    TextureGen: {source: nav_cloud_field_1, output: GenAlbedo, colors: [{0, {0, 0, 0}}, {0.5, {0, 0, 0}}, {0.7, {96, 96, 96}}, {0.86, {150, 150, 150}}, {1, {255, 255, 255}}]}
+  }
+
+  nav_cloud_2 {
+    TextureGen: {source: nav_cloud_field_2, output: GenAlbedo, colors: [{0, {0, 0, 0}}, {0.5, {0, 0, 0}}, {0.7, {96, 96, 96}}, {0.86, {150, 150, 150}}, {1, {255, 255, 255}}]}
+  }
+
+  nav_cloud_3 {
+    TextureGen: {source: nav_cloud_field_3, output: GenAlbedo, colors: [{0, {0, 0, 0}}, {0.5, {0, 0, 0}}, {0.7, {96, 96, 96}}, {0.86, {150, 150, 150}}, {1, {255, 255, 255}}]}
+  }
+
+  nav_dust_field {
+    TextureGen: {width: 1024, height: 1024, seed: 31, layers: [
+      {kind: GenNoise, frequency: 7, octaves: 6, gain: 0.6, amount: 1}
+    ]}
+  }
+
+  nav_dust {
+    TextureGen: {source: nav_dust_field, output: GenAlbedo, colors: [
+      {0, {255, 255, 255}}, {0.32, {236, 236, 236}}, {0.45, {84, 84, 84}}, {0.56, {236, 236, 236}}, {0.8, {176, 176, 176}}, {1, {120, 120, 120}}
+    ]}
+  }
+
+  fn nav_cloud_tex(kind: i32) -> entity {
+    match kind {
+      0: nav_cloud_0
+      1: nav_cloud_1
+      2: nav_cloud_2
+      _: nav_cloud_3
+    }
+  }
+
+  nav_arrow_path {
+    Path2D: {start: {0.62, 0}, closed: true, segments: [
+      {kind: Line, end: {-0.6, 0.62}},
+      {kind: Line, end: {-0.26, 0}},
+      {kind: Line, end: {-0.6, -0.62}}
+    ]}
+  }
+
+  nav_flag_path {
+    Path2D: {start: {0, 0}, closed: true, segments: [
+      {kind: Line, end: {1.05, 0.36}},
+      {kind: Line, end: {0, 0.72}}
+    ]}
+  }
+
+  nav_pulse {
+    AnimationClip: {duration: 2}
+    grow_x { AnimationTrack: {component: Scale, member: "x", curve: {keys: [{0, 1}, {2, 2.3}]}} }
+    grow_y { AnimationTrack: {component: Scale, member: "y", curve: {keys: [{0, 1}, {2, 2.3}]}} }
+    fade { AnimationTrack: {component: Opacity, member: "value", curve: {keys: [{0, 0.9}, {1.4, 0.25}, {2, 0}]}} }
+  }
+
+  nav_blink {
+    AnimationClip: {duration: 1.2}
+    fade { AnimationTrack: {component: Opacity, member: "value", curve: {keys: [{0, 1}, {0.6, 0.3}, {1.2, 1}]}} }
+  }
+
+  fn map_leg_rgb(charter: bool) -> Rgb {
+    charter ? MAP_CHARTER : MAP_ROUTE
+  }
+
+  fn map_pin_rgb(pending: bool) -> Rgb {
+    pending ? MAP_OFFER : MAP_JOB
+  }
+
+  fn map_lane_rgb(liner: bool) -> Rgb {
+    liner ? MAP_LINER : MAP_LANE
+  }
+
+  fn map_label_drop(tone: i32) -> f32 {
+    match tone {
+      2: 2.75
+      3: 2.75
+      4: 3.2
+      5: 2.2
+      _: 1.6
+    }
+  }
+
+  fn map_label_rgb(tone: i32) -> Rgb {
+    match tone {
+      1: {168, 180, 198}
+      2: MAP_OFFER
+      3: MAP_JOB
+      4: {255, 226, 170}
+      5: {255, 196, 104}
+      6: {240, 244, 250}
+      _: {112, 124, 146}
+    }
+  }
+
+  template MapRing {
+    prop radius: f32 = 1
+    prop width: f32 = 0.16
+    prop color: Rgb = {255, 255, 255}
+    prop z: f32 = 0
+
+    Position: {0, 0, z}
+    Circle: {radius}
+    Rgb: {0, 0, 0}
+    BlendMode: Additive
+    Border: {width: width, color: {color.r, color.g, color.b, 255}}
+    box.spatial.SpatialIgnore
+  }
+
+  template GalaxyLanes {
+    prop s: i32 = 0
+    prop liner_e: bool = false
+    prop liner_s: bool = false
+
+    Position: {sys_x(s), sys_y(s), -4}
+    box.spatial.SpatialIgnore
+    if sys_lane(s, DIR_E) {
+      east {
+        Position: {0, 0, 0}
+        Line: {0, 0, sys_x(s + 1) - sys_x(s), sys_y(s + 1) - sys_y(s), width: liner_e ? 0.18 : 0.14}
+        Rgb: map_lane_rgb(liner_e)
+        box.spatial.SpatialIgnore
+      }
+    }
+    if sys_lane(s, DIR_S) {
+      south {
+        Position: {0, 0, 0}
+        Line: {0, 0, sys_x(s + 10) - sys_x(s), sys_y(s + 10) - sys_y(s), width: liner_s ? 0.18 : 0.14}
+        Rgb: map_lane_rgb(liner_s)
+        box.spatial.SpatialIgnore
+      }
+    }
+  }
+
+  template GalaxyStar {
+    prop s: i32 = 0
+    prop mark: i32 = 0
+
+    const c = sys_star(s)
+    const core: f32 = 0.36 + 0.42 * star_size(c)
+    const hue: Rgb = {star_color_r(c), star_color_g(c), star_color_b(c)}
+    const ring: f32 = core + 0.6
+
+    Position: {sys_x(s), sys_y(s), 0}
+    Interactive
+    Cursor: {CursorPointer}
+    Circle: {1.8}
+    Rgb: {0, 0, 0}
+    BlendMode: Additive
+
+    glow {
+      Position: {0, 0, -2}
+      Circle: {core * 0.5}
+      Rgb: {0, 0, 0}
+      BlendMode: Additive
+      BoxShadow: {blur: core * 4.6, spread: core * 1.1, color: {hue.r, hue.g, hue.b, 58}}
+      box.spatial.SpatialIgnore
+    }
+    body {
+      Position: {0, 0, 1}
+      Circle: {core}
+      Rgb: {hue.r * 0.6 + 102, hue.g * 0.6 + 102, hue.b * 0.6 + 102}
+      Emissive: {strength: 0.9, color: hue}
+      box.spatial.SpatialIgnore
+    }
+    if sys_native_port(s) >= 0 {
+      MapRing port(radius: ring, width: 0.15, color: MAP_PORT, z: 1)
+    }
+    if mark == 2 {
+      MapRing own(radius: ring + 0.02, width: 0.22, color: MAP_HERE, z: 1.2)
+    }
+    if mark > 0 {
+      flag {
+        Position: {ring * 0.55, ring * 0.75, 2}
+        box.spatial.SpatialIgnore
+        pole {
+          Position: {0, 0, 0}
+          Line: {0, -0.1, 0, 1.5, width: 0.13}
+          Rgb: {226, 232, 240}
+          box.spatial.SpatialIgnore
+        }
+        cloth {
+          Position: {0.05, 0.78, 0.1}
+          Polygon2D: {path: nav_flag_path}
+          Rgb: mark == 2 ? {255, 170, 40} : {204, 142, 56}
+          box.spatial.SpatialIgnore
+        }
+      }
+    }
+    if c >= 3 {
+      flare_h {
+        Position: {0, 0, 0.5}
+        Line: {0 - core * 2.6, 0, core * 2.6, 0, width: 0.07}
+        Rgb: {hue.r * 0.55, hue.g * 0.55, hue.b * 0.55}
+        BlendMode: Additive
+        box.spatial.SpatialIgnore
+      }
+      flare_v {
+        Position: {0, 0, 0.5}
+        Line: {0, 0 - core * 2.6, 0, core * 2.6, width: 0.07}
+        Rgb: {hue.r * 0.55, hue.g * 0.55, hue.b * 0.55}
+        BlendMode: Additive
+        box.spatial.SpatialIgnore
+      }
+    }
+    if sys_has_mine(s) {
+      mine {
+        Position: {0 - ring * 0.78, 0 - ring * 0.78, 2}
+        Rect: {0.36, 0.36}
+        Rgb: {176, 150, 112}
+        box.spatial.SpatialIgnore
+      }
+    }
+    if sys_has_oddity(s) {
+      oddity {
+        Position: {ring * 0.78, 0 - ring * 0.78, 2}
+        Circle: {0.21}
+        Rgb: {214, 120, 220}
+        box.spatial.SpatialIgnore
+      }
+    }
+
+    async {
+      while true {
+        await on.enter(this)
+        if nav_hover != s {
+          nav_hover = s
+        }
+      }
+    }
+    async {
+      while true {
+        await on.leave(this)
+        if nav_hover == s {
+          nav_hover = -1
+        }
+      }
+    }
+    async {
+      while true {
+        await on.click(this)
+        if nav_drag_px < 5 {
+          emit Request(op: OP_NAV_LEVEL, a: NAV_SYSTEM, b: s)
+        }
+      }
+    }
+  }
+
+  template MapLabel {
+    prop s: i32 = 0
+    prop tone: i32 = 0
+    prop drop: f32 = 1.6
+    prop up: bool = false
+
+    Position: {sys_x(s), sys_y(s) + (up ? drop : 0 - drop), 6 + tone * 0.1}
+    Scale: {nav_lk, nav_lk, 1}
+    Transition: [Scale: {duration: 0.22, timing_function: EaseOut}]
+    box.spatial.SpatialIgnore
+
+    if tone > 0 {
+      pill {
+        Position: {0, up ? 1.45 : -1.45, 0}
+        Layout: {direction: Row, padding: {0.28, 0.3, 0.7, 0.7}, h: Center, v: Middle}
+        Rect: {1, 1}
+        Rgb: {8, 11, 17}
+        Opacity: {0.86}
+        Border: {width: 0.08, radius: 0.5, color: {52, 62, 80, 255}}
+        box.spatial.SpatialIgnore
+        name {
+          Text: {value: sys_name(s), size: 1.9}
+          Rgb: map_label_rgb(tone)
+          box.spatial.SpatialIgnore
+        }
+      }
+    } else {
+      name {
+        Position: {0, up ? 1.3 : -1.3, 0}
+        Text: {value: sys_name(s), size: 1.7, align: Center}
+        Rgb: map_label_rgb(0)
+        box.spatial.SpatialIgnore
+      }
+    }
+  }
+
+  template MapRouteLeg {
+    prop a: i32 = 0
+    prop b: i32 = 0
+    prop charter: bool = false
+    prop last: bool = false
+
+    const dx: f32 = sys_x(b) - sys_x(a)
+    const dy: f32 = sys_y(b) - sys_y(a)
+    const len: f32 = max(sqrt(dx * dx + dy * dy), 0.01)
+    const ux: f32 = dx / len
+    const uy: f32 = dy / len
+    const hue: Rgb = map_leg_rgb(charter)
+    const period: f32 = 1.6
+
+    Position: {sys_x(a), sys_y(a), 3}
+    box.spatial.SpatialIgnore
+
+    line {
+      Position: {0, 0, 0}
+      Line: {ux * 1.25, uy * 1.25, dx - ux * 1.25, dy - uy * 1.25, width: 0.4}
+      Rgb: hue
+      Emissive: {strength: 0.35, color: hue}
+      box.spatial.SpatialIgnore
+    }
+    arrow {
+      Position: {dx * 0.5, dy * 0.5, 0.2}
+      Rotation: {0, 0, atan2(dy, dx)}
+      Polygon2D: {path: nav_arrow_path, scale: {1.5, 1.5}}
+      Rgb: hue
+      Emissive: {strength: 0.35, color: hue}
+      box.spatial.SpatialIgnore
+    }
+    trip {
+      AnimationClip: {duration: period}
+      move_x { AnimationTrack: {component: Position, member: "x", curve: {keys: [{0, ux * 1.25}, {period, dx - ux * 1.25}]}} }
+      move_y { AnimationTrack: {component: Position, member: "y", curve: {keys: [{0, uy * 1.25}, {period, dy - uy * 1.25}]}} }
+    }
+    spark {
+      Position: {ux * 1.25, uy * 1.25, 0.4}
+      Circle: {0.3}
+      Rgb: {255, 244, 220}
+      Emissive: {strength: 1.6, color: hue}
+      Animator: {clip: trip}
+      box.spatial.SpatialIgnore
+    }
+    if !last {
+      MapRing node(radius: 1.25, width: 0.2, color: hue, z: 0.3)
+    }
+  }
+
+  template MapJobPin {
+    prop s: i32 = 0
+    prop pending: bool = false
+
+    const hue: Rgb = map_pin_rgb(pending)
+
+    Position: {sys_x(s), sys_y(s), 4}
+    box.spatial.SpatialIgnore
+    frame {
+      Position: {0, 0, 0}
+      Rotation: {0, 0, PI / 4}
+      Rect: {3.5, 3.5}
+      Rgb: {0, 0, 0}
+      BlendMode: Additive
+      Border: {width: 0.24, radius: 0.3, color: {hue.r, hue.g, hue.b, 255}}
+      if pending {
+        Opacity: {1}
+        Animator: {clip: nav_blink}
+      }
+      box.spatial.SpatialIgnore
+    }
+  }
+
+  template MapHereMark {
+    prop s: i32 = 0
+
+    Position: {sys_x(s), sys_y(s), 4.5}
+    box.spatial.SpatialIgnore
+    MapRing ring(radius: 1.75, width: 0.26, color: MAP_HERE)
+    wave {
+      Position: {0, 0, 0}
+      Scale: {1, 1, 1}
+      Circle: {1.75}
+      Rgb: {0, 0, 0}
+      BlendMode: Additive
+      Border: {width: 0.2, color: {255, 170, 40, 255}}
+      Opacity: {0.9}
+      Animator: {clip: nav_pulse}
+      box.spatial.SpatialIgnore
+    }
+  }
+
+  template MapDestMark {
+    prop s: i32 = 0
+
+    Position: {sys_x(s), sys_y(s), 4.6}
+    AngularVelocity: {0, 0, 0.5}
+    box.spatial.SpatialIgnore
+    MapRing ring(radius: 2.05, width: 0.2, color: {255, 226, 170})
+    for i in 0..4 {
+      const a = PI / 2 * i
+      "tick_{i}" {
+        Position: {0, 0, 0}
+        Line: {cos(a) * 1.75, sin(a) * 1.75, cos(a) * 2.95, sin(a) * 2.95, width: 0.26}
+        Rgb: {255, 226, 170}
+        Emissive: {strength: 0.4, color: {255, 186, 72}}
+        box.spatial.SpatialIgnore
+      }
+    }
+  }
+
+  template MapHoverMark {
+    prop s: i32 = 0
+
+    Position: {sys_x(s), sys_y(s), 5}
+    box.spatial.SpatialIgnore
+    MapRing ring(radius: 1.55, width: 0.14, color: {240, 244, 250})
+    for d in 0..4 {
+      if sys_lane(s, d) {
+        "lane_{d}" {
+          Position: {0, 0, -8.5}
+          Line: {0, 0, sys_x(sys_nb(s, d)) - sys_x(s), sys_y(sys_nb(s, d)) - sys_y(s), width: 0.2}
+          Rgb: {150, 176, 220}
+          box.spatial.SpatialIgnore
+        }
+      }
+    }
+  }
+
+  template MapCloud {
+    prop i: i32 = 0
+
+    const size: f32 = neb_size(i) * 2.15
+    const k: f32 = 0.36 * neb_gain(i)
+
+    Position: {neb_x(i), neb_y(i), i * 0.01}
+    Rotation: {0, 0, neb_rot(i)}
+    Scale: {neb_stretch(i), 1, 1}
+    Rect: {size, size}
+    Image: {texture: nav_cloud_tex(neb_kind(i))}
+    Rgb: {neb_r(i) * k, neb_g(i) * k, neb_b(i) * k}
+    BlendMode: Additive
+    box.spatial.SpatialIgnore
+
+    if i < N_SYS {
+      wisp {
+        Position: {hash_range(i, 131, -3, 3), hash_range(i, 132, -3, 3), 0.005}
+        Rotation: {0, 0, hash01(i, 133) * 6.283}
+        Rect: {size * 0.5, size * 0.5}
+        Image: {texture: nav_cloud_tex(neb_kind(i) + 1)}
+        Rgb: {(neb_r(i) * 0.6 + 100) * k * 0.9, (neb_g(i) * 0.6 + 100) * k * 0.9, (neb_b(i) * 0.6 + 100) * k * 0.9}
+        BlendMode: Additive
+        box.spatial.SpatialIgnore
+      }
+    }
+  }
+
+  template MapRegionName {
+    prop r: i32 = 0
+
+    const k: f32 = sqrt(nav_lk)
+
+    Position: {region_cx(r) + nav_region_lx(r), region_cy(r) + nav_region_ly(r), 3.5}
+    Scale: {k, k, 1}
+    Transition: [Scale: {duration: 0.22, timing_function: EaseOut}]
+    Text: {value: nav_region_label(r), size: 2.5, align: Center, line_height: 3.6}
+    Rgb: {region_r(r) * 0.42 + 26, region_g(r) * 0.42 + 26, region_b(r) * 0.42 + 26}
+    box.spatial.SpatialIgnore
+  }
+
+  template GalaxyBackdrop {
+    Position: {0, 0, -20}
+    box.spatial.SpatialIgnore
+
+    for r in 0..N_REGIONS {
+      "glow_{r}" {
+        Position: {region_cx(r), region_cy(r), 0}
+        Circle: {0.05}
+        Rgb: {0, 0, 0}
+        BlendMode: Additive
+        BoxShadow: {blur: 34, spread: 6, color: {region_r(r), region_g(r), region_b(r), 26}}
+        box.spatial.SpatialIgnore
+      }
+    }
+    for i in 0..N_NEB {
+      MapCloud "cloud_{i}"(i: i)
+    }
+    veil {
+      Position: {0, 0, 2}
+      Rect: {560, 560}
+      Image: {texture: nav_dust}
+      Rgb: {255, 255, 255}
+      BlendMode: Multiply
+      box.spatial.SpatialIgnore
+    }
+    for i in 0..150 {
+      const r = hash_range(i, 101, 0.07, 0.2)
+      const v = hash_range(i, 104, 34, 96)
+      "dust_{i}" {
+        Position: {hash_range(i, 102, -170, 170), hash_range(i, 103, -110, 110), 3}
+        Circle: {r}
+        Rgb: {v * 0.86, v * 0.92, v}
+        box.spatial.SpatialIgnore
+      }
+    }
+    for r in 0..N_REGIONS {
+      MapRegionName "name_{r}"(r: r)
+    }
+    rift {
+      Position: {31, -2, 3.5}
+      Rotation: {0, 0, 1.22}
+      Scale: {sqrt(nav_lk), sqrt(nav_lk), 1}
+      Transition: [Scale: {duration: 0.22, timing_function: EaseOut}]
+      Text: {value: "T H E   G R E A T   R E C E S S I O N", size: 2.1, align: Center}
+      Rgb: {44, 52, 70}
+      box.spatial.SpatialIgnore
+    }
+  }
+
+  template GalaxyRoute {
+    for i in 0..47 {
+      if i + 1 < route_seq_n {
+        MapRouteLeg "leg_{i}"(a: nav_seq_at(i), b: nav_seq_at(i + 1), charter: !nav_has_port(nav_seq_at(i + 1)), last: i + 2 == route_seq_n)
+      }
+    }
+  }
+
+  template GalaxyPins {
+    const here = poi_sys(at_poi)
+
+    MapHereMark here_mark(s: here)
+    if nav_dest >= 0 && poi_sys(nav_dest) != here {
+      MapDestMark dest_mark(s: poi_sys(nav_dest))
+    }
+    for i in 0..N_JOBS {
+      if nav_job_sys(i) >= 0 {
+        MapJobPin "job_{i}"(s: nav_job_sys(i))
+      }
+    }
+    if nav_offer_sys() >= 0 {
+      MapJobPin offer_pin(s: nav_offer_sys(), pending: true)
+    }
+    if nav_hover >= 0 {
+      MapHoverMark hover(s: nav_hover)
+      MapLabel hover_name(s: nav_hover, tone: 6, drop: map_label_drop(nav_label_at(nav_hover)))
+    }
+  }
+
+  template GalaxyMap {
+    GalaxyBackdrop backdrop()
+    lanes {
+      for s in 0..N_SYS {
+        GalaxyLanes "l_{s}"(s: s, liner_e: nav_has_port(s) && nav_has_port(s + 1), liner_s: nav_has_port(s) && nav_has_port(s + 10))
+      }
+    }
+    stars {
+      for s in 0..N_SYS {
+        GalaxyStar "s_{s}"(s: s, mark: nav_mark[s])
+      }
+    }
+    names {
+      for s in 0..N_SYS {
+        if nav_label[s] > 0 || s < nav_names_n {
+          MapLabel "n_{s}"(s: s, tone: nav_label[s], drop: map_label_drop(nav_label[s]), up: nav_label[s] == 0 && (sys_gx(s) + sys_gy(s)) % 2 == 1)
+        }
+      }
+    }
+    GalaxyRoute route()
+    GalaxyPins pins()
+  }
+}
+
+async {
+  mut shown: bool = false
+  mut first: bool = true
+  mut was_nav: bool = false
+  mut was_down: bool = false
+  mut last_x: f32 = 0
+  mut last_y: f32 = 0
+  mut tx: f32 = 0
+  mut ty: f32 = 0
+  mut th: f32 = NAV_H_HOME
+  mut gone: i32 = 0
+  while true {
+    await next_frame()
+    const show = view_layer == LAYER_GALAXY
+    if nav_goto != gone {
+      gone = nav_goto
+      if nav_goto_h > 0 {
+        th = clamp(nav_goto_h, NAV_H_MIN, NAV_H_MAX)
+      }
+      tx = sys_x(nav_goto_sys) + th * NAV_BIAS_X
+      ty = sys_y(nav_goto_sys) + th * NAV_BIAS
+    }
+    if view_nav && !was_nav {
+      const here = poi_sys(at_poi)
+      tx = clamp(sys_x(here) + th * NAV_BIAS_X, th * NAV_BIAS_X - nav_lim_x(th), th * NAV_BIAS_X + nav_lim_x(th))
+      ty = clamp(sys_y(here) + th * NAV_BIAS, th * NAV_BIAS - nav_lim_y(th), th * NAV_BIAS + nav_lim_y(th))
+      if first || !show {
+        first = false
+        gcam_h = th
+        gcam_x = tx
+        gcam_y = ty
+      }
+    }
+    was_nav = view_nav
+    if show {
+      const size = Input[Input].size
+      const ww: f32 = size.x > 0 ? size.x : 1600
+      const wh: f32 = size.y > 0 ? size.y : 1000
+      const mouse = Input[Input].mouse
+      const down = state.nav_actions.Pan[ActionState].down
+      shown = true
+      if nav_wh != wh {
+        nav_wh = wh
+      }
+      if down && !was_down {
+        nav_drag_px = 0
+        last_x = mouse.position.x
+        last_y = mouse.position.y
+      } else if down {
+        const dx = mouse.position.x - last_x
+        const dy = mouse.position.y - last_y
+        last_x = mouse.position.x
+        last_y = mouse.position.y
+        if dx != 0 || dy != 0 {
+          nav_drag_px += abs(dx) + abs(dy)
+          if nav_drag_px >= 5 {
+            const k = gcam_h / wh
+            tx = clamp(gcam_x - dx * k, th * NAV_BIAS_X - nav_lim_x(th), th * NAV_BIAS_X + nav_lim_x(th))
+            ty = clamp(gcam_y + dy * k, th * NAV_BIAS - nav_lim_y(th), th * NAV_BIAS + nav_lim_y(th))
+            gcam_x = tx
+            gcam_y = ty
+            if !nav_dragging {
+              nav_dragging = true
+            }
+          }
+        }
+      } else if nav_dragging {
+        nav_dragging = false
+      }
+      was_down = down
+      const wheel = clamp(mouse.scroll.y, -4, 4)
+      if wheel != 0 {
+        const nh: f32 = clamp(th * exp(0 - wheel * 0.14), NAV_H_MIN, NAV_H_MAX)
+        const cx = (mouse.position.x - ww * 0.5) / wh
+        const cy = (wh * 0.5 - mouse.position.y) / wh
+        tx += cx * (th - nh)
+        ty += cy * (th - nh)
+        th = nh
+      }
+      tx = clamp(tx, th * NAV_BIAS_X - nav_lim_x(th), th * NAV_BIAS_X + nav_lim_x(th))
+      ty = clamp(ty, th * NAV_BIAS - nav_lim_y(th), th * NAV_BIAS + nav_lim_y(th))
+      const ease = min(1, dt * 10)
+      if abs(gcam_h - th) > 0.02 {
+        gcam_h += (th - gcam_h) * ease
+      } else if gcam_h != th {
+        gcam_h = th
+      }
+      if abs(gcam_x - tx) > 0.01 || abs(gcam_y - ty) > 0.01 {
+        gcam_x += (tx - gcam_x) * ease
+        gcam_y += (ty - gcam_y) * ease
+      } else if gcam_x != tx || gcam_y != ty {
+        gcam_x = tx
+        gcam_y = ty
+      }
+      const lk: f32 = th / 150 * 1000 / wh
+      if abs(lk - nav_lk) > nav_lk * 0.025 {
+        nav_lk = lk
+      }
+      const all = th < NAV_H_NAMES
+      if nav_names != all {
+        nav_names = all
+      }
+      if all && nav_names_n < N_SYS {
+        nav_names_n += 20
+      } else if !all && nav_names_n > 0 {
+        nav_names_n = 0
+      }
+    } else if shown {
+      shown = false
+      was_down = false
+      if nav_hover != -1 {
+        nav_hover = -1
+      }
+      if nav_dragging {
+        nav_dragging = false
+      }
+    }
+  }
+}
+
+async {
+  while true {
+    const e = await Request
+    if e.op == OP_NAV_FOCUS && sys_ok(e.a) {
+      nav_goto_sys = e.a
+      nav_goto_h = e.b
+      nav_goto += 1
+    }
+  }
+}
+
+async {
+  mut sig_mark: f64 = -1
+  mut sig_label: f64 = -1
+  mut marks: i32[100] = {}
+  mut labels: i32[100] = {}
+  mut sm: f64 = 0
+  mut sl: f64 = 0
+  while true {
+    sm = 0
+    for i in 0..N_SITES {
+      if sites[i].used && pl_ok(sites[i].planet) {
+        sm += (i + 1) * 977 * (sites[i].planet + 1) * (site_port_done(i) ? 2 : 1)
+      }
+    }
+    if sm != sig_mark {
+      sig_mark = sm
+      marks = {}
+      for i in 0..N_SITES {
+        if sites[i].used && pl_ok(sites[i].planet) {
+          marks[pl_sys(sites[i].planet)] = site_port_done(i) ? 2 : 1
+        }
+      }
+      nav_mark = marks
+    }
+    const here = poi_sys(at_poi)
+    const dest = nav_dest >= 0 ? poi_sys(nav_dest) : -1
+    const off = nav_offer_sys()
+    sl = here + (dest + 1) * 101 + (off + 1) * 10201
+    for i in 0..N_JOBS {
+      sl = sl * 101 + nav_job_sys(i) + 1
+    }
+    if sl != sig_label {
+      sig_label = sl
+      labels = {}
+      labels[HOME] = NAV_LABEL_HOME
+      if off >= 0 && off < N_SYS {
+        labels[off] = NAV_LABEL_OFFER
+      }
+      for i in 0..N_JOBS {
+        const js = nav_job_sys(i)
+        if js >= 0 && js < N_SYS {
+          labels[js] = NAV_LABEL_JOB
+        }
+      }
+      if dest >= 0 && dest < N_SYS {
+        labels[dest] = NAV_LABEL_DEST
+      }
+      if here >= 0 && here < N_SYS {
+        labels[here] = NAV_LABEL_HERE
+      }
+      nav_label = labels
+    }
+    await delay(0.15)
+  }
+}

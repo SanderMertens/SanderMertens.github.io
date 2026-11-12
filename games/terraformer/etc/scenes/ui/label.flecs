@@ -1,0 +1,70 @@
+// Display widgets: Label, Panel and Separator. They take no input.
+
+module box.widgets
+
+using flecs.script
+using box.ui
+using box.layout
+using box.geometry
+using box.material
+using box.text
+
+// A line of text. variant is "body", "muted", "heading" or "caption"; a width wraps the text
+// at that many points, 0 fits it on lines broken at newlines only.
+template Label {
+  prop text: string = ""
+  prop variant: string = "body"
+  prop width: f32 = 0
+
+  const t = box.ui.theme[UiTheme]
+  const size = match variant {
+    "heading": t.heading_font_size
+    "caption": t.small_font_size
+    _: t.font_size
+  }
+
+  Text: {value: text, size: size, width: width}
+  Rgb: variant == "muted" || variant == "caption" ? t.text_muted : t.text
+}
+
+// A surface with padding, rounded corners and a border that lays its children out in a column,
+// below its title when it has one. A width fixes it, 0 fits the children, grow takes the free
+// height of its parent. The title is the first child of the column, a template child, which the
+// layout puts before the children of the instance; it does not float, so the clips around the
+// panel, such as a scroll view, clip it.
+template Panel {
+  prop title: string = ""
+  prop width: f32 = 0
+  prop grow: bool = false
+
+  const t = box.ui.theme[UiTheme]
+  const pad = t.padding * 1.5
+  const title_h = t.heading_font_size * 1.25
+
+  Layout: {direction: Column, padding: {pad, pad, pad, pad}, spacing: t.spacing}
+  LayoutItem: {width: {min: width, max: width}}
+  if grow {
+    LayoutItem = {height: {mode: Grow}}
+  }
+  Rect: {1, 1}
+  Rgb: t.surface
+  Border: {width: 1, radius: t.radius * 1.5, color: {t.border.r, t.border.g, t.border.b, 255}}
+  BoxShadow: {offset_y: -3, blur: 12, color: {0, 0, 0, 80}}
+
+  if title != "" {
+    heading {
+      LayoutItem: {height: {mode: Fixed, value: title_h}}
+      Text: {value: title, size: t.heading_font_size, line_height: title_h}
+      Rgb: t.text
+    }
+  }
+}
+
+// A thin line across its parent, between groups of widgets in a Panel
+template Separator {
+  const t = box.ui.theme[UiTheme]
+
+  LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: 1}}
+  Rect: {1, 1}
+  Rgb: t.border
+}

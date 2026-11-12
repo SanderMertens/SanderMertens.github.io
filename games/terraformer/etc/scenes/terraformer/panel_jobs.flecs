@@ -1,0 +1,473 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.layout
+using box.text
+using box.picking
+using box.transition
+using box.input
+using box.ui
+using box.widgets
+using state
+using terra
+
+state {
+  export const JOBS_PANEL_W: f32 = 920
+  export const JOBS_CARD_W: f32 = 438
+  export const JOBS_CARD_H: f32 = 244
+
+  fn jobs_need_text(lo: f32, hi: f32) -> string {
+    lo <= 0 && hi >= 100 ? "—" : hi >= 100 ? "≥ {lo:.0}" : lo <= 0 ? "≤ {hi:.0}" : "{lo:.0} – {hi:.0}"
+  }
+
+  fn jobs_struct_text(st: i32, part: f32) -> string {
+    match st {
+      1: "{clamp(part, 0, 1) * 100:.0}%"
+      2: "✓"
+      3: "STALLED"
+      _: "—"
+    }
+  }
+
+  fn jobs_struct_tone(st: i32) -> i32 {
+    match st {
+      1: 2
+      2: 3
+      3: 5
+      _: 1
+    }
+  }
+
+  fn jobs_dozer_to(poi: i32) -> i32 {
+    dozers[0].status == 2 && dozers[0].dest == poi ? 0 : dozers[1].status == 2 && dozers[1].dest == poi ? 1 : dozers[2].status == 2 && dozers[2].dest == poi ? 2 : dozers[3].status == 2 && dozers[3].dest == poi ? 3 : -1
+  }
+
+  fn jobs_eta_days(eta: f64, day: i32) -> i32 {
+    max(ceil(eta - day), 0)
+  }
+
+  fn jobs_dozer_text(poi: i32, day: i32) -> string {
+    const d = jobs_dozer_to(poi)
+    dozer_at(poi) >= 0 ? "✓" : d >= 0 ? "{jobs_eta_days(dozers[d].eta, day)} d" : "—"
+  }
+
+  fn jobs_dozer_tone(poi: i32) -> i32 {
+    dozer_at(poi) >= 0 ? 3 : jobs_dozer_to(poi) >= 0 ? 2 : 1
+  }
+
+  fn jobs_done_line(purpose: i32) -> string {
+    match purpose {
+      0: "Delivered. People have been put there."
+      1: "Delivered. The beach has an ocean now."
+      2: "Delivered. Nobody has looked outside."
+      3: "Delivered. It grows things. On purpose."
+      4: "Delivered. Habitable. Not comfortable."
+      5: "Delivered. It survived the paperwork."
+      6: "Delivered. Pristine, as manufactured."
+      _: "Delivered. Defensible, stocked, on time."
+    }
+  }
+
+  fn jobs_failed_line(purpose: i32) -> string {
+    match purpose {
+      0: "Deadline missed. The people are still elsewhere."
+      1: "Deadline missed. Guests were issued an apology."
+      2: "Deadline missed. The house did not win."
+      3: "Deadline missed. Nothing grew. On purpose or otherwise."
+      4: "Deadline missed. The inmates were let off with a warning."
+      5: "Deadline missed. There is nothing to study."
+      6: "Deadline missed. Nature remains theoretical."
+      _: "Deadline missed. The sector noticed."
+    }
+  }
+}
+
+terra {
+  template JobsMeter {
+    prop value: f32 = 0
+    prop lo: f32 = 0
+    prop hi: f32 = 100
+    prop width: f32 = 200
+    prop tone: i32 = 2
+
+    const any = lo <= 0 && hi >= 100
+    const v = clamp(value, 0, 100) / 100
+    const a = clamp(lo, 0, 100) / 100
+    const b = clamp(hi, 0, 100) / 100
+
+    Layout: {}
+    LayoutItem: {width: {mode: Fixed, value: width}, height: {mode: Fixed, value: 8}}
+    Rect: {1, 1}
+    Rgb: T_BG
+    Border: {radius: 4}
+    box.spatial.SpatialIgnore
+
+    if !any {
+      band {
+        LayoutItem: {h: Left, v: Middle, x: a * width, width: {mode: Fixed, value: max((b - a) * width, 2)}, height: {mode: Fixed, value: 8}}
+        Rect: {1, 1}
+        Rgb: {58, 70, 92}
+        Border: {radius: b >= 1 ? 4 : 0}
+        box.spatial.SpatialIgnore
+      }
+    }
+    fill {
+      LayoutItem: {h: Left, v: Middle, width: {mode: Fixed, value: v * width + 0.01}, height: {mode: Fixed, value: 8}}
+      Rect: {1, 1}
+      Rgb: tone_rgb(tone)
+      Border: {radius: 4}
+      Opacity: {any ? 0.55 : 1}
+      box.spatial.SpatialIgnore
+    }
+    if !any && lo > 0 {
+      pin_lo {
+        LayoutItem: {h: Left, v: Middle, x: a * width - 1, width: {mode: Fixed, value: 2}, height: {mode: Fixed, value: 14}}
+        Rect: {1, 1}
+        Rgb: T_TEXT
+        box.spatial.SpatialIgnore
+      }
+    }
+    if !any && hi < 100 {
+      pin_hi {
+        LayoutItem: {h: Left, v: Middle, x: b * width - 1, width: {mode: Fixed, value: 2}, height: {mode: Fixed, value: 14}}
+        Rect: {1, 1}
+        Rgb: T_TEXT
+        box.spatial.SpatialIgnore
+      }
+    }
+  }
+
+  template JobsStat {
+    prop label: string = ""
+    prop value: f32 = 0
+    prop lo: f32 = 0
+    prop hi: f32 = 100
+    prop width: f32 = 200
+
+    const any = lo <= 0 && hi >= 100
+    const met = value >= lo && value <= hi
+    const tone = any ? TONE_MUTED : met ? TONE_GOOD : value > hi ? TONE_BAD : TONE_ACCENT
+
+    Layout: {direction: Row, spacing: 10, v: Middle}
+    LayoutItem: {width: {mode: Grow}}
+    name {
+      Layout: {direction: Row, v: Middle}
+      LayoutItem: {width: {mode: Fixed, value: 82}}
+      HudCap cap(text: label)
+    }
+    JobsMeter meter(value: value, lo: lo, hi: hi, width: width, tone: tone)
+    amount {
+      Layout: {direction: Row, h: Right, v: Middle}
+      LayoutItem: {width: {mode: Fixed, value: 26}}
+      text {
+        Text: {value: "{value:.0}", size: 12}
+        Rgb: tone_rgb(any ? TONE_MUTED : met ? TONE_GOOD : TONE_TEXT)
+        box.spatial.SpatialIgnore
+      }
+    }
+    need {
+      Layout: {direction: Row, h: Right, v: Middle}
+      LayoutItem: {width: {mode: Grow}}
+      text {
+        Text: {value: jobs_need_text(lo, hi), size: 11}
+        Rgb: T_MUTED
+        box.spatial.SpatialIgnore
+      }
+    }
+  }
+
+  template JobsStats {
+    prop purpose: i32 = 0
+    prop planet: i32 = 0
+    prop width: f32 = 200
+
+    Layout: {direction: Column, spacing: 6}
+    LayoutItem: {width: {mode: Grow}}
+    JobsStat atm(label: "ATMOSPHERE", value: pl_atm(planet), lo: req_atm(purpose), hi: req_max_atm(purpose), width: width)
+    JobsStat water(label: "WATER", value: pl_water(planet), lo: req_water(purpose), hi: 100, width: width)
+    JobsStat temp(label: "TEMPERATURE", value: pl_temp(planet), lo: req_temp_lo(purpose), hi: req_temp_hi(purpose), width: width)
+    JobsStat bio(label: "BIOMASS", value: pl_bio(planet), lo: req_bio(purpose), hi: 100, width: width)
+  }
+
+  template JobsHead {
+    prop purpose: i32 = 0
+    prop client: i32 = 0
+    prop right: string = ""
+    prop tone: i32 = 0
+
+    Layout: {direction: Row, spacing: 7, v: Middle}
+    LayoutItem: {width: {mode: Grow}}
+    pip {
+      LayoutItem: {width: {mode: Fixed, value: 8}, height: {mode: Fixed, value: 8}}
+      Rect: {1, 1}
+      Rgb: hud_purpose_rgb(purpose)
+      Border: {radius: 2}
+      box.spatial.SpatialIgnore
+    }
+    what {
+      Text: {value: hud_purpose_caps(purpose), size: 11}
+      Rgb: T_ACCENT
+      box.spatial.SpatialIgnore
+    }
+    who {
+      Text: {value: client_name(client), size: 12}
+      Rgb: T_TEXT
+      box.spatial.SpatialIgnore
+    }
+    Gap flex()
+    due {
+      Text: {value: right, size: 16}
+      Rgb: tone_rgb(tone)
+      box.spatial.SpatialIgnore
+    }
+  }
+
+  template JobsWhere {
+    prop planet: i32 = 0
+    prop right: string = ""
+
+    const jumps = sys_dist(poi_sys(at_poi), pl_sys(planet))
+    const unit = jumps == 1 ? "jump" : "jumps"
+    const here = poi_planet(at_poi) == planet
+
+    Layout: {direction: Column, spacing: 4}
+    LayoutItem: {width: {mode: Grow}}
+    top {
+      Layout: {direction: Row, spacing: 8, v: Middle}
+      LayoutItem: {width: {mode: Grow}}
+      name {
+        Text: {value: pl_name(planet), size: 14}
+        Rgb: T_TEXT
+        box.spatial.SpatialIgnore
+      }
+      Gap flex()
+      note {
+        Text: {value: right, size: 11}
+        Rgb: T_MUTED
+        box.spatial.SpatialIgnore
+      }
+    }
+    about {
+      Text: {value: here ? "{pl_type_name(pl_type(planet))}  ·  here  ·  {planet_region_name(planet)}" : "{pl_type_name(pl_type(planet))}  ·  {jumps} {unit}  ·  {planet_region_name(planet)}", size: 11}
+      Rgb: T_MUTED
+      box.spatial.SpatialIgnore
+    }
+  }
+
+  template JobsCard {
+    prop idx: i32 = 0
+
+    const j = jobs[clamp(idx, 0, 3)]
+    const left = j.deadline - today
+    const span = max(j.deadline - j.accepted, 1)
+    const bonus = round(j.fee * BONUS_FACTOR)
+    const tone = hud_job_tone(j.status, left, span)
+    const site = pl_site(j.planet)
+    const poi = planet_poi(j.planet)
+    const extra = req_struct(j.purpose)
+    const live = j.status == JOB_ACTIVE
+    const aimed = nav_dest == poi
+    const here = at_poi == poi
+
+    Layout: {direction: Column, spacing: 8, padding: {12, 12, 14, 14}}
+    LayoutItem: {width: {mode: Fixed, value: JOBS_CARD_W}, height: {min: JOBS_CARD_H}}
+    Rect: {1, 1}
+    Rgb: T_PANEL_ALT
+    Border: {width: 1, radius: 5, color: live && tone == TONE_BAD ? {240, 96, 80, 255} : {52, 62, 80, 255}}
+
+    JobsHead head(purpose: j.purpose, client: j.client, right: j.status == JOB_DONE ? "DONE" : j.status == JOB_FAILED ? "FAILED" : hud_days_text(left), tone: tone)
+    JobsWhere where(planet: j.planet, right: live ? "due day {j.deadline}" : "")
+
+    if live {
+      HudMeter clock(value: 1 - left / span, width: JOBS_CARD_W - 28, height: 3, tone: tone == TONE_TEXT ? TONE_MUTED : tone)
+      JobsStats stats(purpose: j.purpose, planet: j.planet, width: 214)
+      tags {
+        Layout: {direction: Row, spacing: 6, v: Middle}
+        LayoutItem: {width: {mode: Grow}}
+        Chip port(label: "PORT", value: jobs_struct_text(hud_struct_state(site, S_PORT), hud_struct_part(site, S_PORT)), tone: jobs_struct_tone(hud_struct_state(site, S_PORT)))
+        Chip goal(label: hud_struct_caps(S_PURPOSE, j.purpose), value: jobs_struct_text(hud_struct_state(site, S_PURPOSE), hud_struct_part(site, S_PURPOSE)), tone: jobs_struct_tone(hud_struct_state(site, S_PURPOSE)))
+        more {
+          Layout: {direction: Row}
+          if extra >= 0 {
+            Chip also(label: hud_struct_caps(extra, j.purpose), value: jobs_struct_text(hud_struct_state(site, extra), hud_struct_part(site, extra)), tone: jobs_struct_tone(hud_struct_state(site, extra)))
+          }
+        }
+        Chip dozer(label: "DOZER", value: jobs_dozer_text(poi, today), tone: jobs_dozer_tone(poi))
+      }
+      foot {
+        Layout: {direction: Row, spacing: 8, v: Middle}
+        LayoutItem: {width: {mode: Grow}}
+        HudCap cap(text: "FEE")
+        fee {
+          Text: {value: hud_cash(j.fee), size: 12}
+          Rgb: T_TEXT
+          box.spatial.SpatialIgnore
+        }
+        Gap flex()
+        OpButton aim(label: here ? "YOU ARE HERE" : aimed ? "DESTINATION SET" : "SET DESTINATION", op: OP_NAV_DEST, a: poi, selected: aimed && !here, disabled: here, width: 150, height: 24, size: 11)
+      }
+    } else {
+      Gap flex()
+      result {
+        Layout: {direction: Column, spacing: 8, h: Center}
+        LayoutItem: {width: {mode: Grow}}
+        line {
+          Text: {value: j.status == JOB_DONE ? jobs_done_line(j.purpose) : jobs_failed_line(j.purpose), size: 14, width: JOBS_CARD_W - 60, align: Center}
+          Rgb: T_TEXT
+          box.spatial.SpatialIgnore
+        }
+        sum {
+          Text: {value: j.status == JOB_DONE ? "Completion bonus  +{hud_cash(bonus)}" : "Fee clawed back  -{hud_cash(j.fee * CLAWBACK_FACTOR)}", size: 13}
+          Rgb: tone_rgb(j.status == JOB_DONE ? TONE_GOOD : TONE_BAD)
+          box.spatial.SpatialIgnore
+        }
+      }
+      Gap flex_b()
+    }
+  }
+
+  template JobsVacant {
+    Layout: {direction: Column, spacing: 6, h: Center, v: Middle}
+    LayoutItem: {width: {mode: Fixed, value: JOBS_CARD_W}, height: {mode: Grow, min: 72}}
+    Rect: {1, 1}
+    Rgb: T_PANEL
+    Border: {width: 1, radius: 5, color: {40, 48, 62, 255}}
+
+    HudCap cap(text: "OPEN SLOT")
+    line {
+      Text: {value: "Capacity for one more planet.", size: 13}
+      Rgb: T_FAINT
+      box.spatial.SpatialIgnore
+    }
+  }
+
+  template JobsOffer {
+    const p = offer.planet
+    const left = offer_expires - today
+    const block = offer_block()
+    const free = block == 0
+    const extra = req_struct(offer.purpose)
+
+    Layout: {direction: Row, spacing: 20, padding: {12, 12, 14, 14}}
+    LayoutItem: {width: {mode: Grow}}
+    Rect: {1, 1}
+    Rgb: T_PANEL_ALT
+    Border: {width: 1, radius: 5, color: {255, 170, 40, 255}}
+
+    about {
+      Layout: {direction: Column, spacing: 7}
+      LayoutItem: {width: {mode: Fixed, value: 300}}
+      tag {
+        Layout: {direction: Row, spacing: 8, v: Middle}
+        HudCap cap(text: "OFFER", tone: TONE_ACCENT)
+        HudCap lapse(text: left <= 0 ? "LAPSES TODAY" : "LAPSES IN {left} d", tone: left <= 1 ? TONE_BAD : TONE_MUTED)
+      }
+      client {
+        Text: {value: client_name(offer.client), size: 16, width: 300}
+        Rgb: T_TEXT
+      }
+      what {
+        Layout: {direction: Row, spacing: 6, v: Middle}
+        pip {
+          LayoutItem: {width: {mode: Fixed, value: 8}, height: {mode: Fixed, value: 8}}
+          Rect: {1, 1}
+          Rgb: hud_purpose_rgb(offer.purpose)
+          Border: {radius: 2}
+        }
+        name {
+          Text: {value: hud_purpose_caps(offer.purpose), size: 11}
+          Rgb: T_ACCENT
+        }
+      }
+      JobsWhere where(planet: p)
+      brief {
+        Text: {value: purpose_brief(offer.purpose), size: 12, width: 300}
+        Rgb: T_MUTED
+      }
+    }
+    needs {
+      Layout: {direction: Column, spacing: 8}
+      LayoutItem: {width: {mode: Grow}}
+      JobsStats stats(purpose: offer.purpose, planet: p, width: 96)
+      tags {
+        Layout: {direction: Row, spacing: 6, v: Middle}
+        Chip goal(label: "BUILD", value: purpose_struct_name(offer.purpose), tone: TONE_TEXT)
+        more {
+          Layout: {direction: Row}
+          if extra >= 0 {
+            Chip also(label: "AND", value: struct_name(extra, offer.purpose), tone: TONE_TEXT)
+          }
+        }
+      }
+    }
+    deal {
+      Layout: {direction: Column, spacing: 7}
+      LayoutItem: {width: {mode: Fixed, value: 236}}
+      Row fee(label: "Fee", value: hud_cash(offer.fee), tone: TONE_GOOD, size: 14)
+      Row term(label: "Time allowed", value: "{offer.deadline} d")
+      Row risk(label: "If late", value: "-{hud_cash(offer.fee * CLAWBACK_FACTOR)}", tone: TONE_BAD)
+      Gap flex()
+      buttons {
+        Layout: {direction: Row, spacing: 6}
+        LayoutItem: {width: {mode: Grow}}
+        OpButton accept(label: free ? "ACCEPT" : offer_block_tag(block), op: OP_OFFER_ACCEPT, kind: BTN_PRIMARY, disabled: !free, grow: true)
+        OpButton decline(label: "DECLINE", op: OP_OFFER_DECLINE, width: 84)
+      }
+    }
+  }
+
+  template JobsRecord {
+    Layout: {direction: Row, spacing: 6, v: Middle}
+    LayoutItem: {width: {mode: Grow}}
+    Txt open(text: "Contracts  {jobs_active()} / {N_JOBS}", size: F_HEAD)
+    Gap flex()
+    Chip done(label: "DELIVERED", value: "{jobs_done}", tone: jobs_done > 0 ? TONE_GOOD : TONE_TEXT)
+    Chip failed(label: "FAILED", value: "{jobs_failed}", tone: jobs_failed > 0 ? TONE_BAD : TONE_TEXT)
+    Chip rep(label: "REPUTATION", value: "{reputation}", tone: TONE_ACCENT)
+  }
+
+  template JobsSlot {
+    prop idx: i32 = 0
+
+    Layout: {direction: Column}
+    LayoutItem: {height: {mode: Grow}}
+    if jobs[clamp(idx, 0, 3)].status != JOB_EMPTY {
+      JobsCard card(idx: idx)
+    } else {
+      JobsVacant vacant()
+    }
+  }
+
+  template PanelJobs {
+    LayoutItem: {h: Center, v: Top, y: -154}
+    Layout: {direction: Column}
+
+    Frame card(title: "JOBS", width: JOBS_PANEL_W, spacing: 12) {
+      body {
+        Layout: {direction: Column, spacing: 12}
+        LayoutItem: {width: {mode: Grow}}
+
+        JobsRecord record()
+        pending {
+          Layout: {direction: Column}
+          LayoutItem: {width: {mode: Grow}}
+          if offer.status == 1 {
+            JobsOffer deal()
+          }
+        }
+        row_a {
+          Layout: {direction: Row, spacing: 12}
+          JobsSlot slot_0(idx: 0)
+          JobsSlot slot_1(idx: 1)
+        }
+        row_b {
+          Layout: {direction: Row, spacing: 12}
+          JobsSlot slot_2(idx: 2)
+          JobsSlot slot_3(idx: 3)
+        }
+      }
+    }
+  }
+}

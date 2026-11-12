@@ -1,0 +1,201 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.light
+using box.movement
+using box.particle
+using box.spatial
+using state
+using terra
+
+terra {
+  template FlAnyShip {
+    prop cls: i32 = 0
+    prop line: i32 = 44
+    prop thrust: f32 = 0
+    prop rcs: f32 = 0
+
+    SpatialIgnore
+    if cls == CLS_LINER {
+      FlLiner ship(thrust: thrust, rcs: rcs, livery: line_livery(line, CLS_LINER))
+    } else if cls == CLS_SHUTTLE {
+      FlShuttle ship(thrust: thrust, rcs: rcs, livery: line_livery(line, CLS_SHUTTLE))
+    } else {
+      FlCharter ship(thrust: thrust, rcs: rcs, livery: line_livery(line, CLS_CHARTER))
+    }
+  }
+
+  template FlQueueShip {
+    prop j: i32 = 0
+    prop gate: i32 = 0
+    prop arriving: bool = false
+
+    const c: i32 = fl_q_cls(gate, j)
+    const burn: f32 = fl_q_run == j ? 1 : 0
+
+    Position: {fl_q[j * 2], 0, fl_q[j * 2 + 1]}
+    Rotation: {0, arriving ? PI : 0, 0}
+    SpatialIgnore
+    if c == 0 {
+      FlLiner ship(thrust: burn, livery: line_livery(poi_sys(gate) + j * 3, CLS_LINER))
+    } else if c == 1 {
+      FlFreighter ship(thrust: burn, cap: 2, livery: {206, 96, 40})
+    } else if c == 2 {
+      FlFreighter ship(thrust: burn, cap: 1, livery: {70, 150, 140})
+    } else if c == 3 {
+      FlCharter ship(thrust: burn, livery: line_livery(gate + j, CLS_CHARTER))
+    } else {
+      FlShuttle ship(thrust: burn, livery: {238, 198, 60})
+    }
+  }
+
+  template FlOrbiter {
+    prop kind: i32 = 0
+    prop cx: f32 = 0
+    prop cy: f32 = 0
+    prop cz: f32 = 0
+    prop radius: f32 = 1000
+    prop rate: f32 = 0.03
+    prop phase: f32 = 0
+    prop lean: f32 = 0
+
+    Position: {cx, cy, cz}
+    Rotation: {lean, 0, 0}
+    SpatialIgnore
+    arm {
+      Position: {0, 0, 0}
+      Rotation: {0, phase, 0}
+      AngularVelocity: {0, rate, 0}
+      body {
+        Position: {radius, 0, 0}
+        Rotation: {0, rate > 0 ? PI : 0, 0}
+        if kind == 0 {
+          FlShuttle ship(thrust: 0.5, livery: {238, 198, 60})
+        } else if kind == 1 {
+          FlPatrol ship(thrust: 0.3)
+        } else if kind == 2 {
+          FlTug ship(thrust: 0.6, count: 4, livery: {236, 176, 34})
+        } else if kind == 3 {
+          FlBarge ship(thrust: 0.5)
+        } else if kind == 4 {
+          FlFreighter ship(thrust: 0.5, cap: 2, livery: {206, 96, 40})
+        } else {
+          FlLiner ship(thrust: 0.4, livery: {120, 170, 255})
+        }
+      }
+    }
+  }
+
+  template FlPortLife {
+    prop poi: i32 = 0
+    prop own: i32 = -1
+
+    const s: i32 = poi_sys(poi)
+    const r: f32 = fl_place_r(poi)
+    const tier: i32 = fl_tier(s)
+    const n: i32 = poi_kind(poi) == KIND_PORT ? 2 + tier : 1
+
+    SpatialIgnore
+    for i in 0..n {
+      "cargo_{i}" {
+        Position: {-220 - i * 250, -110, 0 - r - 360}
+        Rotation: {0, PI / 2, 0}
+        FlFreighter ship(cap: hash_int(poi * 5 + i, 231, 4), livery: {206 - hash_int(poi + i, 232, 120), 96 + hash_int(poi + i, 233, 60), 40 + hash_int(poi + i, 234, 110)})
+      }
+    }
+    if own >= 0 {
+      own_ship {
+        Position: {80, -110, 0 - r - 360}
+        Rotation: {0, PI / 2, 0}
+        FlFreighter ship(cap: own, livery: {255, 150, 30})
+      }
+    }
+    FlOrbiter tug(kind: 2, cy: 150, radius: r + 950, rate: 0.016, phase: hash01(poi, 235) * 6.283)
+    FlOrbiter patrol(kind: 1, cy: -170, radius: r + 520, rate: -0.03, phase: hash01(poi, 236) * 6.283)
+    FlOrbiter hop_a(kind: 0, cy: 90, radius: r + 300, rate: 0.07, phase: hash01(poi, 237) * 6.283, lean: 0.25)
+    if tier > 0 {
+      FlOrbiter hop_b(kind: 0, cy: -60, radius: r + 760, rate: -0.05, phase: hash01(poi, 238) * 6.283, lean: -0.18)
+      FlOrbiter barge(kind: 3, cx: -5200, cy: -420, cz: 1500, radius: 5600, rate: 0.011, phase: hash01(poi, 239) * 0.5 - 0.5)
+    }
+    if tier > 1 {
+      FlOrbiter hauler(kind: 4, cx: 2600, cy: 380, cz: -6000, radius: 6400, rate: -0.012, phase: hash01(poi, 240) * 0.5 + 1.2)
+    }
+  }
+
+  template FlGatePlace {
+    prop poi: i32 = 0
+    prop busy: bool = false
+
+    const s: i32 = poi_sys(poi)
+    const rg: i32 = sys_region(s)
+
+    SpatialIgnore
+    FlGate gate(charge: fl_charge, accent: {region_r(rg), region_g(rg), region_b(rg)}, queue: fl_q_n)
+    for j in 0..5 {
+      if (fl_q_mask >> j) % 2 == 1 {
+        FlQueueShip "q_{j}"(j: j, gate: poi)
+      }
+    }
+    if (fl_q_mask >> 5) % 2 == 1 {
+      FlQueueShip inbound(j: 5, gate: poi, arriving: true)
+    }
+    if busy {
+      FlOrbiter patrol(kind: 1, cx: -520, cy: 120, cz: -200, radius: 620, rate: 0.028, phase: hash01(poi, 241) * 6.283)
+    }
+  }
+
+  template FlPlace {
+    prop poi: i32 = -1
+    prop gl: i32 = -1
+    prop gla: i32 = 44
+    prop gs: i32 = -1
+    prop gsa: i32 = 44
+    prop own: i32 = -1
+    prop busy: bool = false
+
+    const s: i32 = poi_sys(poi)
+    const kind: i32 = poi_kind(poi)
+    const tier: i32 = fl_tier(s)
+    const rg: i32 = sys_region(s)
+    const site: i32 = sys_site_idx(s)
+    const accent: Rgb = {region_r(rg), region_g(rg), region_b(rg)}
+
+    SpatialIgnore
+    if kind == KIND_PORT {
+      FlPort stn(tier: tier, culture: fl_culture(s), gangway: fl_gw, accent: accent)
+    } else if kind == KIND_PLAYER_PORT {
+      FlSite stn(done: true, progress: 1, bar: site_has(site, 1), trade: site_has(site, 2), terminal: site_has(site, 3), depot: site_has(site, 4), gangway: fl_gw, accent: {255, 150, 30})
+    } else if kind == KIND_CAMP {
+      FlCamp stn(gangway: fl_gw, accent: {255, 150, 30})
+    } else if kind == KIND_MINE {
+      FlMine stn(seed: s, gangway: fl_gw, accent: accent)
+    } else if kind == KIND_ODDITY {
+      FlOddity stn(kind: oddity_kind(s), gangway: fl_gw, accent: accent)
+    } else if kind == KIND_GATE {
+      FlGatePlace gate(poi: poi, busy: busy)
+    }
+    if gl >= 0 {
+      dock_l {
+        Position: {fl_berth_lx(poi, CLS_LINER), 0, fl_berth_lz(poi)}
+        FlAnyShip ship(cls: gl, line: gla)
+      }
+    }
+    if gs >= 0 {
+      dock_s {
+        Position: {fl_berth_lx(poi, CLS_SHUTTLE), 0, fl_berth_lz(poi)}
+        FlAnyShip ship(cls: gs, line: gsa)
+      }
+    }
+    if busy && kind != KIND_GATE && kind != KIND_ORBIT && kind != KIND_CAMP {
+      FlPortLife life(poi: poi, own: own)
+    } else if own >= 0 && kind != KIND_GATE {
+      own_ship {
+        Position: {-260, -60, -320}
+        Rotation: {0, PI / 2, 0}
+        FlFreighter ship(cap: own, livery: {255, 150, 30})
+      }
+    }
+  }
+}

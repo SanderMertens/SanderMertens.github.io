@@ -1,0 +1,263 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.layout
+using box.text
+using box.picking
+using state
+using terra
+
+state {
+  export const OP_UI_TRADE_QTY: i32 = 820
+  export const TRADE_MAX: i32 = 100000
+
+  export mut ui_trade_qty: i32 = 10
+
+  fn trade_flavor(kind: i32) -> string {
+    match kind {
+      2: "All sales final. All purchases also final."
+      3: "Your own shop. You still pay."
+      4: "Convenience pricing. The convenience is theirs."
+      5: "Rocks, mostly. Some of them useful."
+      6: "The gift shop of last resort."
+      _: "Open, in principle."
+    }
+  }
+
+  fn trade_hint(ratio: f64) -> string {
+    ratio < 0.9 ? "CHEAP" : ratio > 1.1 ? "DEAR" : "FAIR"
+  }
+
+  fn trade_hint_tone(ratio: f64) -> i32 {
+    ratio < 0.9 ? 3 : ratio > 1.1 ? 4 : 1
+  }
+}
+
+terra {
+  template SmSwatch {
+    prop g: i32 = 0
+    prop size: f32 = 10
+
+    LayoutItem: {width: {mode: Fixed, value: size}, height: {mode: Fixed, value: size}}
+    Rect: {1, 1}
+    Rgb: {good_r(g), good_g(g), good_b(g)}
+    Border: {radius: 2}
+    box.spatial.SpatialIgnore
+  }
+
+  template SmCell {
+    prop text: string = ""
+    prop width: f32 = 60
+    prop size: f32 = 13
+    prop tone: i32 = 0
+    prop side: i32 = 2
+    prop grow: bool = false
+
+    Layout: {direction: Row, h: side == 2 ? Right : side == 1 ? Center : Left, v: Middle}
+    LayoutItem: {width: {mode: grow ? Grow : Fixed, value: grow ? 1 : width}}
+    box.spatial.SpatialIgnore
+
+    name {
+      Text: {value: text, size: size}
+      Rgb: tone_rgb(tone)
+      box.spatial.SpatialIgnore
+    }
+  }
+
+  template SmAct {
+    prop label: string = ""
+    prop op: i32 = 0
+    prop a: i32 = 0
+    prop b: i32 = 0
+    prop kind: i32 = 0
+    prop width: f32 = 100
+    prop height: f32 = 28
+    prop tag: string = ""
+    prop tone: i32 = 1
+
+    Layout: {direction: Row, h: Center, v: Middle}
+    LayoutItem: {width: {mode: Fixed, value: width}, height: {mode: Fixed, value: height}}
+
+    if tag == "" {
+      OpButton go(label: label, op: op, a: a, b: b, kind: kind, grow: true, height: height, size: 12)
+    } else {
+      blocked {
+        Layout: {direction: Row, h: Center, v: Middle}
+        LayoutItem: {width: {mode: Grow}, height: {mode: Grow}}
+        Rect: {1, 1}
+        Rgb: T_PANEL
+        Border: {width: 1, radius: 4, color: {40, 48, 62, 255}}
+        box.spatial.SpatialIgnore
+        why {
+          Text: {value: tag, size: 10}
+          Rgb: tone_rgb(tone)
+          box.spatial.SpatialIgnore
+        }
+      }
+    }
+  }
+
+  template SmHead {
+    prop text: string = ""
+    prop note: string = ""
+    prop tone: i32 = 0
+
+    Layout: {direction: Row, spacing: 10, v: Middle}
+    LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: 18}}
+    name {
+      Text: {value: text, size: 11}
+      Rgb: T_MUTED
+      box.spatial.SpatialIgnore
+    }
+    line {
+      LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: 1}}
+      Rect: {1, 1}
+      Rgb: T_LINE
+      box.spatial.SpatialIgnore
+    }
+    if note != "" {
+      extra {
+        Text: {value: note, size: 12}
+        Rgb: tone_rgb(tone)
+        box.spatial.SpatialIgnore
+      }
+    }
+  }
+
+  template SmDivider {
+    LayoutItem: {width: {mode: Fixed, value: 1}, height: {mode: Grow}}
+    Rect: {1, 1}
+    Rgb: T_LINE
+    box.spatial.SpatialIgnore
+  }
+
+  template SmClose {
+    LayoutFloat: {h: Right, v: Middle, anchor_h: Right, anchor_v: Top, x: 6, y: 18}
+    Layout: {direction: Row}
+
+    OpButton go(label: "X", op: OP_CLOSE, kind: BTN_QUIET, width: 28, height: 22, size: 11)
+  }
+
+  template SmTradeRow {
+    prop g: i32 = 0
+
+    const sells = poi_sells(at_poi, g)
+    const want = ui_trade_qty <= 0 ? TRADE_MAX : ui_trade_qty
+    const pb = price_buy(at_poi, g, today)
+    const ps = price_sell(at_poi, g, today)
+    const have = stock_at(at_poi, g)
+    const n_buy: i32 = min(want, buy_max(g))
+    const n_sell: i32 = min(want, sell_max(g))
+    const buy_tag = buy_block_tag(buy_block(g))
+    const sell_tag = sell_block_tag(sell_block(g))
+    const takes = sell_room(g)
+    const ratio = pb / good_base(g)
+
+    Layout: {direction: Row, spacing: 12, v: Middle}
+    LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: 32}}
+
+    SmSwatch dot(g: g)
+    SmCell what(text: good_name(g), width: 84, size: F_BODY, side: 0)
+    SmCell blurb(text: good_blurb(g), size: F_SMALL, tone: TONE_MUTED, side: 0, grow: true)
+    SmCell buy_at(text: sells ? "\${pb:.0}" : "-", width: 56, size: F_BODY, tone: sells ? TONE_TEXT : TONE_MUTED)
+    SmCell sell_at(text: "\${ps:.0}", width: 56, size: F_BODY)
+    SmCell hint(text: trade_hint(ratio), width: 52, size: F_TINY, tone: trade_hint_tone(ratio))
+    SmCell pct(text: abs(ratio - 1) < 0.005 ? "0%" : "{(ratio - 1) * 100:+.0}%", width: 44, size: F_SMALL, tone: trade_hint_tone(ratio))
+    SmCell held(text: "{have:.0}", width: 64, size: F_BODY, tone: have > 0 ? TONE_TEXT : TONE_MUTED)
+    SmCell demand(text: "{takes:.0}", width: 76, size: F_BODY, tone: takes < 1 ? TONE_WARN : TONE_MUTED)
+    SmAct buy(label: "BUY {n_buy * 1.0:.0}", op: OP_BUY, a: g, b: n_buy, width: 104, tag: buy_tag, tone: sells ? TONE_WARN : TONE_MUTED)
+    SmAct sell(label: "SELL {n_sell * 1.0:.0}", op: OP_SELL, a: g, b: n_sell, width: 112, tag: sell_tag, tone: have >= 1 ? TONE_WARN : TONE_MUTED)
+  }
+
+  template MenuTrade {
+    const kind = poi_kind(at_poi)
+    const cap = depot_cap(at_poi)
+    const total = stock_total(at_poi)
+    const inbound = depot_incoming(at_poi)
+    const full = depot_room(at_poi) < 1
+    const capped = cap < 50000
+
+    LayoutItem: {h: Center, v: Middle, y: -10}
+    Layout: {direction: Column}
+
+    Frame card(title: "TRADE HUB", width: 1108) {
+      body {
+        Layout: {direction: Column, spacing: 8}
+        LayoutItem: {width: {mode: Grow}}
+
+        SmClose close()
+        top {
+          Layout: {direction: Row, spacing: 6, v: Middle}
+          LayoutItem: {width: {mode: Grow}}
+          where {
+            Layout: {direction: Column, spacing: 4}
+            Txt place(text: poi_name(at_poi), size: F_TITLE)
+            Txt line(text: trade_flavor(kind), size: F_SMALL, tone: TONE_MUTED)
+          }
+          Gap flex()
+          Txt per(text: "QTY", size: F_TINY, tone: TONE_MUTED)
+          Gap pad(size: 4)
+          OpButton q1(label: "1", op: OP_UI_TRADE_QTY, a: 1, selected: ui_trade_qty == 1, width: 48, height: 26)
+          OpButton q10(label: "10", op: OP_UI_TRADE_QTY, a: 10, selected: ui_trade_qty == 10, width: 48, height: 26)
+          OpButton q100(label: "100", op: OP_UI_TRADE_QTY, a: 100, selected: ui_trade_qty == 100, width: 48, height: 26)
+          OpButton qmax(label: "MAX", op: OP_UI_TRADE_QTY, a: 0, selected: ui_trade_qty == 0, width: 48, height: 26)
+        }
+
+        Gap air(size: 4)
+
+        cols {
+          Layout: {direction: Row, spacing: 12, v: Middle}
+          LayoutItem: {width: {mode: Grow}}
+          Gap dot(size: 10)
+          SmCell c_good(text: "GOOD", width: 84, size: F_TINY, tone: TONE_MUTED, side: 0)
+          SmCell c_blurb(grow: true)
+          SmCell c_buy(text: "BUY", width: 56, size: F_TINY, tone: TONE_MUTED)
+          SmCell c_sell(text: "SELL", width: 56, size: F_TINY, tone: TONE_MUTED)
+          SmCell c_hint(text: "VS BASE", width: 108, size: F_TINY, tone: TONE_MUTED)
+          SmCell c_held(text: "IN DEPOT", width: 64, size: F_TINY, tone: TONE_MUTED)
+          SmCell c_takes(text: "TAKES TODAY", width: 76, size: F_TINY, tone: TONE_MUTED)
+          SmCell c_act(width: 228)
+        }
+        Rule head_rule()
+
+        for g in 0..N_GOODS {
+          SmTradeRow "row_{g}"(g: g)
+        }
+
+        Rule foot_rule()
+        foot {
+          Layout: {direction: Row, spacing: 10, v: Middle}
+          LayoutItem: {width: {mode: Grow}}
+          Chip funds(label: "FUNDS", value: money_text(money), tone: money < 0 ? TONE_BAD : TONE_TEXT)
+          Gap flex()
+          Chip takes(label: "BUYERS TAKE", value: "{SELL_CAP_DAILY:.0} / good / day", tone: TONE_MUTED)
+          if capped {
+            due {
+              Layout: {direction: Row}
+              if inbound > 0 {
+                Chip chip(label: "INBOUND", value: "{inbound:.0}", tone: TONE_INFO)
+              }
+            }
+            Bar fill(value: total / max(cap, 1), width: 180, tone: full ? TONE_BAD : TONE_ACCENT)
+            Chip depot(label: "DEPOT", value: "{total:.0} / {cap:.0}", tone: full ? TONE_BAD : TONE_TEXT)
+          } else {
+            Chip depot(label: "DEPOT", value: "{total:.0}")
+          }
+        }
+      }
+    }
+  }
+}
+
+async {
+  while true {
+    const e = await Request
+    if e.op == OP_UI_TRADE_QTY {
+      if e.a == 0 || e.a == 1 || e.a == 10 || e.a == 100 {
+        ui_trade_qty = e.a
+      }
+    }
+  }
+}

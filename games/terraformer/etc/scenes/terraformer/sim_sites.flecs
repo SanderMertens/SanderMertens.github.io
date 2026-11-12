@@ -1,0 +1,540 @@
+using flecs.script
+using flecs.script.math
+using state
+
+state {
+  export const DOZER_SEND_BASE: f64 = 500
+  export const DOZER_SEND_JUMP: f64 = 200
+
+  export mut emergency_day: i32 = -1
+  export mut dozer_t0: f64[4] = {}
+
+  fn dozer_ok(d: i32) -> bool {
+    d >= 0 && d < N_DOZERS && dozers[d].status != 0
+  }
+
+  fn dozer_claims(d: i32, poi: i32) -> bool {
+    d >= 0 && d < N_DOZERS && (((dozers[d].status == 1 || dozers[d].status == 3) && dozers[d].poi == poi) || (dozers[d].status == 2 && dozers[d].dest == poi))
+  }
+
+  fn dozer_other_claims(d: i32, poi: i32) -> bool {
+    (d != 0 && dozer_claims(0, poi)) || (d != 1 && dozer_claims(1, poi)) || (d != 2 && dozer_claims(2, poi)) || (d != 3 && dozer_claims(3, poi))
+  }
+
+  fn dozer_needs_site(d: i32) -> i32 {
+    d >= 0 && d < N_DOZERS && dozers[d].status == 2 && pl_site(poi_planet(dozers[d].dest)) < 0 ? 1 : 0
+  }
+
+  fn sites_reserved() -> i32 {
+    dozer_needs_site(0) + dozer_needs_site(1) + dozer_needs_site(2) + dozer_needs_site(3)
+  }
+
+  fn dozer_send_jumps(d: i32, poi: i32) -> i32 {
+    d >= 0 && d < N_DOZERS && dozers[d].poi >= 0 ? sys_dist(poi_sys(dozers[d].poi), poi_sys(poi)) : 0
+  }
+
+  fn dozer_send_cost(d: i32, poi: i32) -> f64 {
+    DOZER_SEND_BASE + DOZER_SEND_JUMP * dozer_send_jumps(d, poi)
+  }
+
+  fn dozer_send_days(d: i32, poi: i32) -> f64 {
+    freight_days(dozer_send_jumps(d, poi))
+  }
+
+  fn dozer_progress(d: i32) -> f32 {
+    d >= 0 && d < N_DOZERS && dozers[d].status == 2 && dozers[d].eta > dozer_t0[d] ? clamp((today - dozer_t0[d]) / (dozers[d].eta - dozer_t0[d]), 0, 1) : 0
+  }
+
+  fn dozer_send_block(d: i32, poi: i32) -> i32 {
+    const p = poi_planet(poi)
+    const s = poi_sys(poi)
+    const i = s >= 0 && s < N_SYS ? sys_site[s] - 1 : -1
+    const st = d >= 0 && d < N_DOZERS ? dozers[d].status : 0
+    const here = d >= 0 && d < N_DOZERS ? dozers[d].poi : -1
+    const other = i >= 0 && i < N_SITES && sites[i].planet != p
+    const fresh = i < 0
+    st == 0 ? 1 : st == 2 ? 2 : st == 3 ? 3 : p < 0 || !pl_exists(p) ? 4 : !pl_terraformable(p) ? 5 : here == poi ? 10 : dozer_other_claims(d, poi) ? 6 : other ? 7 : fresh && sites_used() + sites_reserved() >= N_SITES ? 8 : money < dozer_send_cost(d, poi) ? 9 : 0
+  }
+
+  fn dozer_send_block_text(code: i32) -> string {
+    match code {
+      0: ""
+      1: "No such dozer. Count again."
+      2: "That dozer is in transit. It can't hear you."
+      3: "That dozer is mid-build. It only has the one blade."
+      4: "That is not a planet. Dozers need planets."
+      5: "Not that one. Someone lives there, or nothing can."
+      6: "A dozer already has dibs on that planet."
+      7: "One site per system. The other planet called it."
+      8: "Sixteen sites is the limit. The filing cabinet is full."
+      9: "Can't cover the haulage. Dozers don't hitchhike."
+      _: "It's already there. It seems content."
+    }
+  }
+
+  fn dozer_send_block_tag(code: i32) -> string {
+    match code {
+      0: ""
+      1: "NO DOZER"
+      2: "EN ROUTE"
+      3: "BUILDING"
+      4: "NOT A PLANET"
+      5: "NOT TERRAFORMABLE"
+      6: "DOZER CLAIMED IT"
+      7: "SITE ELSEWHERE"
+      8: "NO SITE SLOT"
+      9: "CANNOT AFFORD"
+      _: "ALREADY THERE"
+    }
+  }
+
+  fn site_power_used(i: i32) -> i32 {
+    i >= 0 && i < N_SITES ? b2i(site_struct[i * 16 + 6] != 0) + b2i(site_struct[i * 16 + 7] != 0) + b2i(site_struct[i * 16 + 8] != 0) + b2i(site_struct[i * 16 + 9] != 0) : 0
+  }
+
+  fn site_power_cap(i: i32) -> i32 {
+    site_has(i, 5) ? POWER_SLOTS : 0
+  }
+
+  fn site_staff(i: i32) -> i32 {
+    b2i(site_has(i, 1)) + b2i(site_has(i, 2)) + b2i(site_has(i, 3)) + b2i(site_has(i, 12) && site_job_live(i) >= 0)
+  }
+
+  fn site_food_covered(i: i32) -> bool {
+    site_has(i, 10) || (i >= 0 && i < N_SITES && sites[i].bio >= SELF_FOOD_BIO)
+  }
+
+  fn site_air_covered(i: i32) -> bool {
+    site_has(i, 11) || (i >= 0 && i < N_SITES && sites[i].atm >= SELF_AIR_ATM)
+  }
+
+  fn site_food_need(i: i32) -> f32 {
+    site_food_covered(i) ? 0 : site_staff(i) * STAFF_FOOD
+  }
+
+  fn site_air_need(i: i32) -> f32 {
+    site_air_covered(i) ? 0 : site_staff(i) * STAFF_AIR
+  }
+
+  fn site_income(i: i32) -> f64 {
+    (site_has(i, 1) ? struct_income(1) : 0) + (site_has(i, 2) ? struct_income(2) : 0) + (site_has(i, 3) ? struct_income(3) : 0)
+  }
+
+  fn site_stat(i: i32, k: i32) -> f32 {
+    i < 0 || i >= N_SITES ? 0 : k == 6 ? sites[i].atm : k == 7 ? sites[i].water : k == 8 ? sites[i].temp : sites[i].bio
+  }
+
+  fn site_goal(i: i32, k: i32) -> f32 {
+    const pu = site_live_purpose(i)
+    pu < 0 ? (k == 8 ? 50 : 100) : k == 6 ? min(req_atm(pu) + 5, req_max_atm(pu)) : k == 7 ? min(req_water(pu) + 5, 100) : k == 8 ? temp_target(pu) : min(req_bio(pu) + 5, 100)
+  }
+
+  fn site_stat_cap(i: i32, k: i32) -> f32 {
+    const pu = site_live_purpose(i)
+    pu >= 0 && k == 6 ? req_max_atm(pu) : 100
+  }
+
+  fn seeder_block_at(atm: f32, water: f32, temp: f32) -> i32 {
+    atm < SEED_MIN_ATM && water < SEED_MIN_WATER ? 1 : atm < SEED_MIN_ATM ? 2 : water < SEED_MIN_WATER ? 3 : temp < SEED_TEMP_LO ? 4 : temp > SEED_TEMP_HI ? 5 : 0
+  }
+
+  fn seeder_block(i: i32) -> i32 {
+    i < 0 || i >= N_SITES ? 6 : seeder_block_at(sites[i].atm, sites[i].water, sites[i].temp)
+  }
+
+  fn seeder_block_tag(code: i32) -> string {
+    match code {
+      0: ""
+      1: "NEEDS AIR AND WATER"
+      2: "NEEDS AIR"
+      3: "NEEDS WATER"
+      4: "TOO COLD"
+      5: "TOO HOT"
+      _: "NO SITE"
+    }
+  }
+
+  fn seeder_ok(i: i32) -> bool {
+    seeder_block(i) == 0
+  }
+
+  fn site_holding(i: i32, k: i32) -> bool {
+    k == 8 ? abs(site_stat(i, 8) - site_goal(i, 8)) < 0.05 : site_stat(i, k) >= site_goal(i, k)
+  }
+
+  fn feed_block_at(poi: i32, k: i32, cur: f32, goal: f32, seed: i32) -> i32 {
+    struct_eats(k) < 0 || cur >= goal ? 0 : k == 9 && seed != 0 ? 1 : stock_at(poi, struct_eats(k)) < struct_eats_qty(k) ? 2 : 0
+  }
+
+  fn feed_block(i: i32, k: i32) -> i32 {
+    i < 0 || i >= N_SITES ? 0 : feed_block_at(planet_poi(sites[i].planet), k, site_stat(i, k), site_goal(i, k), seeder_block(i))
+  }
+
+  fn stat_rate_of(k: i32) -> f32 {
+    k == 6 ? RATE_ATM : k == 7 ? RATE_WATER : k == 8 ? RATE_TEMP : RATE_BIO
+  }
+
+  fn feed_block_tag(i: i32, k: i32) -> string {
+    match feed_block(i, k) {
+      1: seeder_block_tag(seeder_block(i))
+      2: match struct_eats(k) {
+        4: "NO ICE"
+        5: "NO BIOSTOCK"
+        6: "NO REAGENTS"
+        _: "NO SUPPLIES"
+      }
+      _: ""
+    }
+  }
+
+  fn feed_wants(i: i32, k: i32) -> f32 {
+    i >= 0 && i < N_SITES && struct_eats(k) >= 0 && site_struct[i * 16 + k] >= 2 && !site_holding(i, k) && feed_block(i, k) != 1 ? struct_eats_qty(k) : 0
+  }
+
+  fn site_draw(i: i32, g: i32) -> f32 {
+    match g {
+      2: site_food_need(i)
+      3: site_air_need(i)
+      4: feed_wants(i, 7)
+      5: feed_wants(i, 9)
+      6: feed_wants(i, 6)
+      _: 0
+    }
+  }
+
+  fn site_cost_purpose(i: i32) -> i32 {
+    const pu = site_live_purpose(i)
+    pu >= 0 ? pu : site_purpose_of(i)
+  }
+
+  fn build_has(poi: i32, k: i32, pu: i32, g: i32) -> bool {
+    stock_at(poi, g) >= struct_cost(k, pu, g)
+  }
+
+  fn build_has_goods(poi: i32, k: i32, pu: i32) -> bool {
+    build_has(poi, k, pu, 0) && build_has(poi, k, pu, 1) && build_has(poi, k, pu, 2) && build_has(poi, k, pu, 3) && build_has(poi, k, pu, 4) && build_has(poi, k, pu, 5) && build_has(poi, k, pu, 6) && build_has(poi, k, pu, 7)
+  }
+
+  fn build_block(poi: i32, k: i32) -> i32 {
+    const i = pl_site(poi_planet(poi))
+    const d = dozer_at(poi)
+    const st = i >= 0 && i < N_SITES && k >= 0 && k < N_STRUCT ? site_struct[i * 16 + k] : 0
+    const ds = d >= 0 && d < N_DOZERS ? dozers[d].status : 0
+    i < 0 ? 1 : !struct_ok(k) ? 2 : st != 0 ? 3 : d < 0 ? 4 : ds != 1 ? 5 : k != 0 && !site_has(i, 0) ? 6 : struct_needs_power(k) && !site_has(i, 5) ? 7 : k == 12 && site_job_live(i) < 0 ? 8 : !build_has_goods(poi, k, site_cost_purpose(i)) ? 9 : 0
+  }
+
+  fn build_block_text(code: i32) -> string {
+    match code {
+      0: ""
+      1: "Nothing to build on here. Bring a dozer."
+      2: "Nobody knows how to build that."
+      3: "Already there. Or already under way."
+      4: "No dozer on site. Structures rarely build themselves."
+      5: "The dozer is busy. It only has the one blade."
+      6: "Space Port first. Everything else is paperwork."
+      7: "Needs a Fusion Plant. Extension cords were tried."
+      8: "No client for that here. Nobody builds a prison on spec."
+      _: "Not enough materials in the depot. It checked."
+    }
+  }
+
+  fn build_block_tag(code: i32) -> string {
+    match code {
+      0: ""
+      1: "NO SITE"
+      2: "NOT A THING"
+      3: "BUILT"
+      4: "NO DOZER"
+      5: "DOZER BUSY"
+      6: "NEEDS PORT"
+      7: "NEEDS POWER"
+      8: "NO JOB"
+      _: "MISSING GOODS"
+    }
+  }
+
+  proc dozer_send(d: i32, poi: i32) {
+    const code = dozer_send_block(d, poi)
+    if code != 0 {
+      toast_as(dozer_send_block_text(code), TOAST_BAD)
+    } else if d >= 0 && d < N_DOZERS {
+      const cost = dozer_send_cost(d, poi)
+      const days = dozer_send_days(d, poi)
+      const from = dozers[d].poi
+      const i = pl_site(poi_planet(from))
+      const eta: f64 = now + days
+      dozers[d] = {2, from, poi, eta}
+      dozer_t0[d] = now
+      if i >= 0 && i < N_SITES && sites[i].dozer == d {
+        sites[i].dozer = -1
+      }
+      pay(LED_DOZER_SEND, cost)
+      toast_as("Dozer off to {pl_name(poi_planet(poi))}. {days:.1} days. It packed light.", TOAST_GOOD)
+    }
+  }
+
+  proc site_create(p: i32, d: i32) {
+    const s = pl_sys(p)
+    const slot = site_free_slot()
+    if pl_exists(p) && s >= 0 && s < N_SYS && sys_site[s] == 0 && slot >= 0 && slot < N_SITES {
+      const j = job_on_planet(p)
+      sites[slot] = {true, p, j, pl_base_atm(p), pl_base_water(p), pl_base_temp(p), pl_base_bio(p), d}
+      for k in 0..N_STRUCT {
+        site_struct[slot * 16 + k] = 0
+        site_progress[slot * 16 + k] = 0
+      }
+      site_purpose[slot] = j >= 0 && j < N_JOBS ? jobs[j].purpose : -1
+      sys_site[s] = slot + 1
+    }
+  }
+
+  proc dozers_arrive(t: f64) {
+    for d in 0..N_DOZERS {
+      if dozers[d].status == 2 && dozers[d].eta <= t {
+        const poi = dozers[d].dest
+        const p = poi_planet(poi)
+        dozers[d] = {1, poi, -1, 0}
+        if pl_site(p) < 0 {
+          site_create(p, d)
+        }
+        const i = pl_site(p)
+        if i >= 0 && i < N_SITES {
+          if sites[i].dozer != d {
+            sites[i].dozer = d
+          }
+          toast_as("Dozer landed on {pl_name(p)}. The planet did not object.", TOAST_GOOD)
+        } else {
+          toast_as("Dozer parked at {pl_name(p)}. No paperwork, no site.", TOAST_WARN)
+        }
+      }
+    }
+  }
+
+  proc site_build(k: i32) {
+    const i = pl_site(poi_planet(at_poi))
+    const code = mode != MODE_STATION ? 1 : build_block(at_poi, k)
+    if code != 0 {
+      toast_as(build_block_text(code), TOAST_BAD)
+    } else if i >= 0 && i < N_SITES && k >= 0 && k < N_STRUCT {
+      const pu = site_cost_purpose(i)
+      const d = dozer_at(at_poi)
+      for g in 0..N_GOODS {
+        const c = struct_cost(k, pu, g)
+        if c > 0 {
+          stock_add(at_poi, g, 0 - c)
+        }
+      }
+      site_struct[i * 16 + k] = 1
+      site_progress[i * 16 + k] = 0
+      if d >= 0 && d < N_DOZERS {
+        dozers[d].status = 3
+      }
+      if k == 12 {
+        site_purpose[i] = pu
+      }
+      manifest_clamp()
+      toast_as("{struct_name(k, pu)} under way. {struct_days(k)} days. Allegedly.", TOAST_GOOD)
+    }
+  }
+
+  proc sites_construct() {
+    for i in 0..N_SITES {
+      if sites[i].used {
+        const poi = planet_poi(sites[i].planet)
+        const d = dozer_at(poi)
+        if sites[i].dozer != d {
+          sites[i].dozer = d
+        }
+        if d >= 0 && d < N_DOZERS {
+          mut active: i32 = -1
+          for k in 0..N_STRUCT {
+            if active < 0 && site_struct[i * 16 + k] == 1 {
+              active = k
+            }
+          }
+          if active >= 0 {
+            const pr: f32 = site_progress[i * 16 + active] + 1.0 / max(struct_days(active), 1)
+            if pr >= 0.999 {
+              site_struct[i * 16 + active] = 2
+              site_progress[i * 16 + active] = 1
+              dozers[d].status = 1
+              toast_as("{struct_name(active, site_purpose_of(i))} up on {pl_name(sites[i].planet)}. On schedule, even.", TOAST_GOOD)
+            } else {
+              site_progress[i * 16 + active] = pr
+              if dozers[d].status != 3 {
+                dozers[d].status = 3
+              }
+            }
+          } else if dozers[d].status == 3 {
+            dozers[d].status = 1
+          }
+        }
+      }
+    }
+  }
+
+  proc sites_run() {
+    mut buf: Site[16] = sites
+    mut dirty: bool = false
+    for i in 0..N_SITES {
+      if sites[i].used && site_struct[i * 16] >= 2 {
+        const poi = planet_poi(sites[i].planet)
+        mut atm: f32 = sites[i].atm
+        mut water: f32 = sites[i].water
+        mut temp: f32 = sites[i].temp
+        mut bio: f32 = sites[i].bio
+        for k in 6..10 {
+          if site_struct[i * 16 + k] >= 2 {
+            const cur: f32 = k == 6 ? atm : k == 7 ? water : k == 8 ? temp : bio
+            const goal = site_goal(i, k)
+            if k == 8 {
+              temp = cur < goal ? min(cur + RATE_TEMP, goal) : max(cur - RATE_TEMP, goal)
+            } else {
+              mut st: i32 = 2
+              if cur < goal {
+                if feed_block_at(poi, k, cur, goal, seeder_block_at(atm, water, temp)) != 0 {
+                  st = 3
+                } else {
+                  const v: f32 = min(cur + stat_rate_of(k), site_stat_cap(i, k))
+                  stock_add(poi, struct_eats(k), 0 - struct_eats_qty(k))
+                  if k == 6 {
+                    atm = v
+                  } else if k == 7 {
+                    water = v
+                  } else {
+                    bio = v
+                  }
+                }
+              }
+              if site_struct[i * 16 + k] != st {
+                site_struct[i * 16 + k] = st
+              }
+            }
+          }
+        }
+        if atm != sites[i].atm || water != sites[i].water || temp != sites[i].temp || bio != sites[i].bio {
+          buf[i].atm = atm
+          buf[i].water = water
+          buf[i].temp = temp
+          buf[i].bio = bio
+          dirty = true
+        }
+      }
+    }
+    if dirty {
+      sites = buf
+    }
+  }
+
+  proc sites_upkeep(day: i32) {
+    for i in 0..N_SITES {
+      if sites[i].used && site_struct[i * 16] >= 2 {
+        const poi = planet_poi(sites[i].planet)
+        const food = site_food_need(i)
+        const air = site_air_need(i)
+        const food_take = min(food, stock_at(poi, GOOD_FOOD))
+        const air_take = min(air, stock_at(poi, GOOD_AIR))
+        const bill = ((food - food_take) * good_base(GOOD_FOOD) + (air - air_take) * good_base(GOOD_AIR)) * EMERGENCY_FACTOR
+        if food_take > 0 {
+          stock_add(poi, GOOD_FOOD, 0 - food_take)
+        }
+        if air_take > 0 {
+          stock_add(poi, GOOD_AIR, 0 - air_take)
+        }
+        if bill > 0 {
+          pay(LED_EMERGENCY, bill)
+          if emergency_day != day {
+            emergency_day = day
+            toast_as("Emergency delivery to {pl_name(sites[i].planet)}. {money_text(bill)}. Rush fee.", TOAST_WARN)
+          }
+        }
+      }
+    }
+  }
+
+  proc sites_income() {
+    for i in 0..N_SITES {
+      if sites[i].used && site_struct[i * 16] >= 2 {
+        const v = site_income(i)
+        if v > 0 {
+          earn(LED_INCOME, v)
+        }
+      }
+    }
+  }
+
+  proc sim_reset() {
+    sim_day = 0
+    offer_seq = 0
+    offer_next = 1
+    site_purpose = SITE_PURPOSE_NONE
+    ledger = {}
+    retired = false
+    sold_today = {}
+    sold_day = 0
+    ship_t0 = {}
+    emergency_day = -1
+    dozer_t0 = {}
+  }
+
+  proc sim_daily(day: i32) {
+    shipments_arrive(day)
+    dozers_arrive(day)
+    jobs_relink()
+    sites_construct()
+    sites_run()
+    sites_upkeep(day)
+    sites_income()
+    overhead_daily()
+    jobs_check(day)
+    offers_daily(day)
+    manifest_clamp()
+    bankruptcy_check()
+    retire_check()
+  }
+}
+
+async {
+  while true {
+    const e = await Request
+    if screen != SCREEN_GAMEOVER {
+      if e.op == OP_DOZER_SEND {
+        dozer_send(e.a, e.b)
+      } else if e.op == OP_BUILD {
+        site_build(e.a)
+      }
+    }
+  }
+}
+
+async {
+  while true {
+    const e = await DayTick
+    if e.day <= sim_day {
+      sim_reset()
+    }
+    if e.day <= today && screen != SCREEN_GAMEOVER {
+      sim_daily(e.day)
+      sim_day = e.day
+    }
+  }
+}
+
+async {
+  while true {
+    await Reset
+    if today == 0 || today < sim_day {
+      sim_reset()
+    }
+  }
+}
+
+async {
+  while true {
+    await next_frame()
+    if sim_day == today && screen != SCREEN_GAMEOVER {
+      shipments_arrive(now)
+      dozers_arrive(now)
+    }
+  }
+}

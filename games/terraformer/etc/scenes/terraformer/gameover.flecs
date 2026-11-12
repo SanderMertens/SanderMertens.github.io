@@ -1,0 +1,50 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.layout
+using box.text
+using box.picking
+using box.transition
+using box.input
+using box.ui
+using box.widgets
+using state
+using terra
+
+state {
+  fn over_line(done: i32, failed: i32) -> string {
+    done <= 0 ? "No planets were improved in the making of this company." : done == 1 ? "One planet is measurably nicer. The accountants are not." : "{done} planets are measurably nicer. The accountants are not."
+  }
+
+  fn retire_line(done: i32, failed: i32) -> string {
+    done <= 0 ? "Sixteen sites, no deliveries. A consistent body of work." : failed <= 0 ? "{done} planets delivered, none late. Nobody will believe it." : "{done} planets are measurably nicer. The filing cabinet is full."
+  }
+}
+
+terra {
+  template GameOver {
+    LayoutItem: {h: Center, v: Middle}
+    Layout: {direction: Column}
+
+    Frame card(title: retired ? "NOTICE OF RETIREMENT" : "NOTICE OF INSOLVENCY", width: 480, pad: 22, tone: retired ? TONE_GOOD : TONE_BAD) {
+      body {
+        Layout: {direction: Column, spacing: 12}
+        LayoutItem: {width: {mode: Grow}}
+
+        Txt headline(text: retired ? "Retired. Voluntarily, for once." : "Chapter 11. Literally.", size: retired ? 26 : F_BIG)
+        Txt sub(text: retired ? "{COMPANY} has run out of sites to file." : "{COMPANY} has ceased to be a going concern.", size: F_BODY, tone: TONE_MUTED, width: 436)
+        Rule rule_a()
+        Row days(label: "Days in business", value: "{today}")
+        Row won(label: "Jobs delivered", value: "{jobs_done}", tone: jobs_done > 0 ? TONE_GOOD : TONE_TEXT)
+        Row lost(label: "Jobs failed", value: "{jobs_failed}", tone: jobs_failed > 0 ? TONE_BAD : TONE_TEXT)
+        Row rep(label: "Reputation", value: "{reputation}")
+        Row balance(label: "Final balance", value: hud_cash(money), tone: retired ? TONE_GOOD : TONE_BAD, size: 15)
+        Rule rule_b()
+        Txt epitaph(text: retired ? retire_line(jobs_done, jobs_failed) : over_line(jobs_done, jobs_failed), size: F_SMALL, tone: TONE_MUTED, width: 436)
+        OpButton again(label: "START A NEW COMPANY", op: OP_RESTART, kind: BTN_PRIMARY, grow: true, height: 34)
+      }
+    }
+  }
+}

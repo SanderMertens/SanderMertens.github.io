@@ -1,0 +1,1251 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.light
+using box.movement
+using box.texture
+using box.particle
+using box.animation
+using box.transition
+using box.spatial
+using state
+
+terra {
+  export const SX_LIGHT_H: f32 = 38
+  export const SX_LIGHT_POWER: f32 = 15000
+  export const SX_LANE: Rgb = {90, 170, 255}
+  export const SX_WHITE: Rgb = {255, 255, 255}
+
+  fn sx_h(seed: i32, i: i32, salt: i32) -> f32 {
+    hash01(seed * 131 + i * 17 + 7, 100 + salt)
+  }
+
+  fn sx_mix(a: f32, b: f32, t: f32) -> f32 {
+    a + (b - a) * t
+  }
+
+  fn sx_accent(i: i32) -> Rgb {
+    match i {
+      0: {48, 104, 190}
+      1: {200, 60, 50}
+      2: {60, 170, 130}
+      3: {236, 176, 34}
+      4: {150, 90, 200}
+      _: {255, 150, 30}
+    }
+  }
+
+  space_env {
+    EnvironmentImage: {path: "etc/scenes/space_station/assets/space.hdr"}
+    Environment: {resolution: 1024}
+  }
+
+  sx_star_noise {
+    TextureGen: {
+      width: 512, height: 256, seed: 9
+      layers: [
+        {kind: GenNoise, frequency: 6, octaves: 5, gain: 0.6, amount: 1, seed: 3}
+        {kind: GenCells, count: 220, distance: GenEdge, edge: 0.5, amount: 0.35, seed: 5}
+      ]
+    }
+  }
+
+  sx_star_tex {
+    TextureGen: {source: sx_star_noise, output: GenAlbedo, colors: [
+      {0, {70, 30, 10}}
+      {0.35, {170, 96, 50}}
+      {0.6, {235, 190, 140}}
+      {0.85, {255, 240, 220}}
+      {1, {255, 255, 255}}
+    ]}
+  }
+
+  sx_film_noise {
+    TextureGen: {
+      width: 256, height: 256, seed: 21
+      layers: [
+        {kind: GenNoise, frequency: 3, octaves: 4, gain: 0.55, amount: 1, seed: 2}
+      ]
+    }
+  }
+
+  sx_film_tex {
+    TextureGen: {source: sx_film_noise, output: GenAlbedo, colors: [
+      {0, {0, 0, 0}}
+      {0.38, {4, 14, 40}}
+      {0.55, {30, 90, 190}}
+      {0.72, {120, 200, 255}}
+      {1, {235, 250, 255}}
+    ]}
+  }
+
+  prefab SxWhite { Rgb: {222, 226, 232}; PbrMaterial: {metallic: 0.3, roughness: 0.45} }
+  prefab SxGrey { Rgb: {134, 142, 156}; PbrMaterial: {metallic: 0.7, roughness: 0.45} }
+  prefab SxDark { Rgb: {52, 58, 70}; PbrMaterial: {metallic: 0.8, roughness: 0.5} }
+  prefab SxBlack { Rgb: {16, 18, 24}; PbrMaterial: {metallic: 0.4, roughness: 0.75} }
+  prefab SxYellow { Rgb: {236, 176, 34}; PbrMaterial: {metallic: 0.25, roughness: 0.5} }
+  prefab SxAmber { Rgb: {255, 150, 30}; PbrMaterial: {metallic: 0.3, roughness: 0.45} }
+  prefab SxOrange { Rgb: {206, 96, 40}; PbrMaterial: {metallic: 0.35, roughness: 0.6} }
+  prefab SxRust { Rgb: {128, 70, 46}; PbrMaterial: {metallic: 0.5, roughness: 0.8} }
+  prefab SxRed { Rgb: {188, 52, 44}; PbrMaterial: {metallic: 0.3, roughness: 0.45} }
+  prefab SxBlue { Rgb: {48, 104, 190}; PbrMaterial: {metallic: 0.3, roughness: 0.45} }
+  prefab SxTeal { Rgb: {40, 138, 136}; PbrMaterial: {metallic: 0.3, roughness: 0.45} }
+  prefab SxPurple { Rgb: {110, 60, 150}; PbrMaterial: {metallic: 0.4, roughness: 0.4} }
+  prefab SxGold { Rgb: {236, 184, 84}; PbrMaterial: {metallic: 1, roughness: 0.3} }
+  prefab SxStone { Rgb: {150, 140, 124}; PbrMaterial: {metallic: 0, roughness: 0.95} }
+  prefab SxSolar { Rgb: {22, 40, 110}; PbrMaterial: {metallic: 0.7, roughness: 0.22} }
+  prefab SxGlass { Rgb: {20, 40, 62}; PbrMaterial: {metallic: 0.6, roughness: 0.1}; Emissive: {strength: 0.8, color: {70, 150, 220}} }
+  prefab SxRock { Rgb: {116, 106, 98}; PbrMaterial: {metallic: 0, roughness: 0.96} }
+  prefab SxRockDark { Rgb: {78, 72, 70}; PbrMaterial: {metallic: 0, roughness: 0.96} }
+  prefab SxRockWarm { Rgb: {138, 112, 88}; PbrMaterial: {metallic: 0.1, roughness: 0.9} }
+  prefab SxWindow { Rgb: {40, 30, 16}; Emissive: {strength: 5, color: {255, 214, 150}} }
+  prefab SxCyan { Rgb: {10, 30, 40}; Emissive: {strength: 5, color: {90, 210, 255}} }
+  prefab SxGreen { Rgb: {8, 30, 12}; Emissive: {strength: 6, color: {90, 255, 120}} }
+  prefab SxRedLight { Rgb: {40, 6, 4}; Emissive: {strength: 6, color: {255, 60, 40}} }
+  prefab SxAmberLight { Rgb: {40, 24, 4}; Emissive: {strength: 6, color: {255, 170, 40}} }
+  prefab SxPink { Rgb: {40, 6, 30}; Emissive: {strength: 6, color: {255, 70, 190}} }
+  prefab SxCandle { Rgb: {40, 26, 8}; Emissive: {strength: 3.5, color: {255, 190, 110}} }
+
+  prefab sx_blink_clip {
+    AnimationClip: {duration: 1.8}
+    strength { AnimationTrack: {component: Emissive, member: "strength", curve: {keys: [{0, 0.3}, {0.05, 9}, {0.28, 9}, {0.4, 0.3}, {1.8, 0.3}]}} }
+  }
+
+  prefab sx_pulse_clip {
+    AnimationClip: {duration: 2.6}
+    strength { AnimationTrack: {component: Emissive, member: "strength", curve: {keys: [{0, 2}, {1.3, 6}, {2.6, 2}]}} }
+  }
+
+  prefab SxBeacon { Rgb: {40, 6, 4}; Emissive: {strength: 6, color: {255, 60, 40}}; Animator: {clip: sx_blink_clip} }
+  prefab SxBeaconAmber { Rgb: {40, 24, 4}; Emissive: {strength: 6, color: {255, 170, 40}}; Animator: {clip: sx_blink_clip} }
+  prefab SxBeaconGreen { Rgb: {8, 30, 12}; Emissive: {strength: 6, color: {90, 255, 120}}; Animator: {clip: sx_pulse_clip} }
+
+  template Star {
+    prop kind: i32 = 2
+    prop radius: f32 = 3
+
+    const r: f32 = radius * star_size(kind)
+    const cr: f32 = star_color_r(kind)
+    const cg: f32 = star_color_g(kind)
+    const cb: f32 = star_color_b(kind)
+
+    key {
+      Position: {0, SX_LIGHT_H, 0}
+      PointLight: {intensity: SX_LIGHT_POWER, range: 500}
+      Rgb: {sx_mix(cr, 255, 0.6), sx_mix(cg, 250, 0.6), sx_mix(cb, 244, 0.6)}
+    }
+    under {
+      Position: {0, 0 - SX_LIGHT_H, 0}
+      PointLight: {intensity: SX_LIGHT_POWER * 0.3, range: 500}
+      Rgb: {sx_mix(cr, 255, 0.4), sx_mix(cg, 250, 0.4), sx_mix(cb, 244, 0.4)}
+    }
+    core {
+      Position: {0, 0, 0}
+      AngularVelocity: {0, 0.03, 0}
+      Sphere: {radius: r, segments: 40, smooth: true}
+      Rgb: {0, 0, 0}
+      PbrMaterial: {metallic: 0, roughness: 1}
+      Emissive: {strength: 7, color: {cr, cg, cb}}
+      PbrTextures: {emissive: sx_star_tex}
+      TextureTransform: {scale_x: 2, scale_y: 1}
+      NoShadow
+      SpatialIgnore
+    }
+    boil {
+      Position: {0, 0, 0}
+      Rotation: {0.4, 0, 0.3}
+      AngularVelocity: {0, -0.045, 0.01}
+      Sphere: {radius: r * 1.03, segments: 40, smooth: true}
+      Rgb: {0, 0, 0}
+      PbrMaterial: {metallic: 0, roughness: 1}
+      Emissive: {strength: 3, color: {cr, cg, cb}}
+      PbrTextures: {emissive: sx_star_tex}
+      TextureTransform: {scale_x: 3, scale_y: 2, offset_x: 0.37}
+      Fresnel: {color: {cr, cg, cb}, strength: 6, power: 2.2}
+      BlendMode: Additive
+      NoShadow
+      SpatialIgnore
+    }
+    corona {
+      Position: {0, 0, 0}
+      ParticleEmitter: {
+        max: 48, rate: 7, shape: EmitterSphere, radius: r * 0.15,
+        direction: {0, 0, 0}, speed: {0, 0}, lifetime: {3, 5},
+        size: {r * 3.4, r * 5}, opacity: {0.06, 0.11},
+        color: {cr, cg, cb}, seed: 5 + kind
+      }
+      ParticleForces: {gravity: {0, 0, 0}}
+      ParticleAppearance: {shape: ParticleCircle, blend: ParticleAdditive}
+      ParticleCurves: {opacity: {keys: [{0, 0}, {0.3, 1}, {0.7, 1}, {1, 0}]}}
+      SpatialIgnore
+    }
+    flares {
+      Position: {0, 0, 0}
+      ParticleEmitter: {
+        max: 260, rate: 46, shape: EmitterSphere, radius: r * 0.98,
+        direction: {0, 0, 0}, speed: {0, 0}, radial: {0.25, 1.1}, lifetime: {1.5, 4},
+        size: {r * 0.1, r * 0.34}, opacity: {0.3, 0.8},
+        color: {sx_mix(cr, 255, 0.3), sx_mix(cg, 255, 0.3), sx_mix(cb, 255, 0.3)}, seed: 11 + kind
+      }
+      ParticleForces: {gravity: {0, 0, 0}, turbulence: 0.6, turbulence_scale: 0.5}
+      ParticleAppearance: {shape: ParticleCircle, blend: ParticleAdditive}
+      ParticleCurves: {
+        opacity: {keys: [{0, 0}, {0.15, 1}, {1, 0}]}
+        size: {keys: [{0, 1}, {1, 0.3}]}
+      }
+      SpatialIgnore
+    }
+  }
+
+  template SpStarfield {
+    prop seed: i32 = 0
+    prop count: i32 = 320
+
+    SpatialIgnore
+    for i in 0..count {
+      const u: f32 = sx_h(seed, i, 1) * 2 - 1
+      const a: f32 = sx_h(seed, i, 2) * 2 * PI
+      const d: f32 = 260 + sx_h(seed, i, 3) * 520
+      const s: f32 = 0.35 + sx_h(seed, i, 4) * sx_h(seed, i, 5) * 1.2
+      const w: f32 = sqrt(max(1 - u * u, 0))
+      const tint: f32 = sx_h(seed, i, 6)
+      "s_{i}" {
+        Position: {cos(a) * w * d, u * d, sin(a) * w * d}
+        Rotation: {a, u * 3, 0}
+        Box: {s, s, s}
+        Rgb: {0, 0, 0}
+        Emissive: {strength: 2 + sx_h(seed, i, 7) * 9, color: {tint < 0.3 ? 255 : 200 + tint * 55, 226 + tint * 20, tint < 0.3 ? 200 : 255}}
+        NoShadow
+      }
+    }
+  }
+
+  sx_plate_h {
+    TextureGen: {
+      width: 256, height: 256, seed: 31
+      layers: [
+        {kind: GenBlocks, courses: 6, per_course: 4, gap: 0.005, stagger: 0.5, softness: 0.008, amount: 0.9, id_amount: 0.1, seed: 2}
+      ]
+    }
+  }
+
+  sx_plate {
+    TextureGen: {source: sx_plate_h, output: GenAlbedo, colors: [
+      {0, {196, 199, 206}}
+      {0.6, {236, 238, 242}}
+      {0.9, {244, 245, 248}}
+      {1, {255, 255, 255}}
+    ]}
+  }
+
+  sx_plate_n {
+    TextureGen: {source: sx_plate_h, output: GenNormal, strength: 0.45}
+  }
+
+  sx_win_h {
+    TextureGen: {
+      width: 512, height: 512, seed: 12
+      layers: [
+        {kind: GenBlocks, courses: 16, per_course: 16, gap: 0.044, softness: 0.004, amount: 0.3, id_amount: 0.7, seed: 5}
+      ]
+    }
+  }
+
+  sx_win {
+    TextureGen: {source: sx_win_h, output: GenAlbedo, colors: [
+      {0, {0, 0, 0}}
+      {0.28, {0, 0, 0}}
+      {0.3, {6, 9, 16}}
+      {0.68, {8, 12, 22}}
+      {0.7, {255, 206, 140}}
+      {1, {255, 236, 200}}
+    ]}
+  }
+
+  sx_win_alb {
+    TextureGen: {source: sx_win_h, output: GenAlbedo, colors: [
+      {0, {62, 68, 84}}
+      {0.28, {62, 68, 84}}
+      {0.3, {30, 34, 46}}
+      {1, {36, 40, 54}}
+    ]}
+  }
+
+  prefab SxHull { Rgb: {228, 232, 238}; PbrMaterial: {metallic: 0.35, roughness: 0.42}; PbrTextures: {albedo: sx_plate, normal: sx_plate_n}; TextureMapping: {MappingObject, size: 0.9, blend: 0.3} }
+  prefab SxHullGrey { Rgb: {150, 158, 172}; PbrMaterial: {metallic: 0.65, roughness: 0.42}; PbrTextures: {albedo: sx_plate, normal: sx_plate_n}; TextureMapping: {MappingObject, size: 0.9, blend: 0.3} }
+  prefab SxHullDark { Rgb: {70, 78, 94}; PbrMaterial: {metallic: 0.8, roughness: 0.45}; PbrTextures: {albedo: sx_plate, normal: sx_plate_n}; TextureMapping: {MappingObject, size: 0.9, blend: 0.3} }
+  prefab SxHullRust { Rgb: {150, 92, 60}; PbrMaterial: {metallic: 0.5, roughness: 0.75}; PbrTextures: {albedo: sx_plate, normal: sx_plate_n}; TextureMapping: {MappingObject, size: 0.9, blend: 0.3} }
+  prefab SxWinBelt { Rgb: {214, 218, 226}; PbrMaterial: {metallic: 0.3, roughness: 0.4}; Emissive: {strength: 3.6, color: {255, 222, 176}}; PbrTextures: {albedo: sx_win_alb, emissive: sx_win}; TextureMapping: {MappingObject, size: 1.9, blend: 0.12} }
+  prefab SxStrobe { Rgb: {30, 30, 30}; Emissive: {strength: 6, color: {235, 245, 255}}; Animator: {clip: sx_blink_clip} }
+  prefab SxWhiteLight { Rgb: {30, 30, 30}; Emissive: {strength: 5, color: {235, 245, 255}} }
+  prefab SxHot { Rgb: {30, 8, 4}; Emissive: {strength: 2.2, color: {255, 90, 40}} }
+
+  template SxEngine {
+    prop power: f32 = 0
+    prop size: f32 = 0.2
+    prop hue: Rgb = {110, 190, 255}
+
+    bell : SxDark {
+      Position: {0, 0, 0}
+      Rotation: {PI / 2, 0, 0}
+      Frustum: {length: size * 1.6, radius_bottom: size, radius_top: size * 0.6, segments: 16, smooth: true}
+    }
+    lip : SxGrey {
+      Position: {0, 0, 0 - size * 0.8}
+      Rotation: {PI / 2, 0, 0}
+      Torus: {radius: size, tube: size * 0.07, segments: 16, rings: 4}
+    }
+    glow {
+      Position: {0, 0, 0 - size * 0.5}
+      Rotation: {PI / 2, 0, 0}
+      Cylinder: {length: size * 0.1, radius: size * 0.82, segments: 16}
+      Rgb: {0, 0, 0}
+      Emissive: {strength: 0.4 + power * 13, color: hue}
+      NoShadow
+    }
+    if power > 0.02 {
+      plume {
+        Position: {0, 0, 0 - size * (0.6 + 2.6 * power)}
+        Scale: {1, 1, 0.4 + 3.6 * power}
+        Sphere: {radius: size * 0.76, segments: 14, smooth: true}
+        Rgb: {0, 0, 0}
+        Emissive: {strength: 1.3, color: hue}
+        BlendMode: Additive
+        NoShadow
+      }
+      jet {
+        Position: {0, 0, 0 - size * (0.6 + 1.5 * power)}
+        Scale: {1, 1, 0.4 + 3.2 * power}
+        Sphere: {radius: size * 0.44, segments: 12, smooth: true}
+        Rgb: {0, 0, 0}
+        Emissive: {strength: 4.5, color: hue}
+        BlendMode: Additive
+        NoShadow
+      }
+    }
+  }
+
+  template SxCollar {
+    prop size: f32 = 0.26
+
+    tube : SxDark { Position: {0, 0, 0}; Rotation: {0, 0, PI / 2}; Cylinder: {length: size * 1.2, radius: size, segments: 14, smooth: true} }
+    face : SxBlack { Position: {size * 0.61, 0, 0}; Rotation: {0, 0, PI / 2}; Cylinder: {length: size * 0.05, radius: size * 0.74, segments: 14} }
+    ring : SxGreen { Position: {size * 0.62, 0, 0}; Rotation: {0, 0, PI / 2}; Torus: {radius: size * 0.86, tube: size * 0.07, segments: 16, rings: 4} }
+  }
+
+  template SpLiner {
+    prop thrust: f32 = 0
+    prop livery: Rgb = {255, 150, 30}
+    prop detail: i32 = 1
+
+    SpatialIgnore
+    hull : SxHull { Position: {0, 0, 0.2}; Rotation: {PI / 2, 0, 0}; Scale: {1.12, 1, 0.92}; Capsule: {length: 5, radius: 0.62, segments: 20, smooth: true} }
+    belt : SxWinBelt { Position: {0, 0.02, 0.35}; Rotation: {PI / 2, 0, 0}; Scale: {1.12, 1, 0.92}; Cylinder: {length: 3.9, radius: 0.632, segments: 20, smooth: true} }
+    belt_cap_a : SxHull { Position: {0, 0, 2.38}; Rotation: {PI / 2, 0, 0}; Scale: {1.12, 1, 0.92}; Cylinder: {length: 0.12, radius: 0.65, segments: 20, smooth: true} }
+    belt_cap_b : SxHull { Position: {0, 0, -1.68}; Rotation: {PI / 2, 0, 0}; Scale: {1.12, 1, 0.92}; Cylinder: {length: 0.12, radius: 0.65, segments: 20, smooth: true} }
+    nose : SxHull { Position: {0, -0.02, 3.3}; Rotation: {PI / 2, 0, 0}; Scale: {1.12, 1, 0.92}; Frustum: {length: 1.4, radius_bottom: 0.6, radius_top: 0.2, segments: 20, smooth: true} }
+    tip : SxGrey { Position: {0, -0.02, 4}; Scale: {1.12, 0.92, 1.3}; Sphere: {radius: 0.2, segments: 12, smooth: true} }
+    bridge : SxGlass { Position: {0, 0.3, 3}; Scale: {1.5, 0.5, 1.5}; Sphere: {radius: 0.34, segments: 14, smooth: true} }
+    stripe { Position: {0, -0.3, 0.3}; Box: {1.36, 0.07, 5}; Rgb: livery; PbrMaterial: {metallic: 0.3, roughness: 0.4} }
+    nose_band { Position: {0, -0.02, 2.75}; Rotation: {PI / 2, 0, 0}; Scale: {1.12, 1, 0.92}; Cylinder: {length: 0.16, radius: 0.615, segments: 20, smooth: true}; Rgb: livery; PbrMaterial: {metallic: 0.3, roughness: 0.4} }
+    deck : SxHull { Position: {0, 0.62, -0.1}; RoundedBox: {0.84, 0.34, 3.5, radius: 0.12, segments: 3} }
+    deck_win : SxWinBelt { Position: {0, 0.63, -0.1}; Box: {0.86, 0.13, 3.2} }
+    dome : SxGlass { Position: {0, 0.8, 1.2}; Scale: {1, 0.55, 1.5}; Sphere: {radius: 0.3, segments: 14, smooth: true} }
+    keel : SxHullGrey { Position: {0, -0.52, -0.2}; RoundedBox: {0.7, 0.3, 3.8, radius: 0.1, segments: 3} }
+    stern : SxHullDark { Position: {0, 0, -3.05}; Rotation: {PI / 2, 0, 0}; Scale: {1.12, 1, 0.95}; Frustum: {length: 1, radius_bottom: 0.82, radius_top: 0.62, segments: 20, smooth: true} }
+    stern_band { Position: {0, 0, -2.52}; Rotation: {PI / 2, 0, 0}; Scale: {1.12, 1, 0.92}; Cylinder: {length: 0.1, radius: 0.64, segments: 20, smooth: true}; Rgb: livery; PbrMaterial: {metallic: 0.3, roughness: 0.4} }
+    fin { Position: {0, 0.74, -2.5}; Rotation: {-0.6, 0, 0}; Box: {0.07, 0.56, 1}; Rgb: livery; PbrMaterial: {metallic: 0.3, roughness: 0.4} }
+    fin_low : SxHullGrey { Position: {0, -0.84, -2.5}; Rotation: {0.5, 0, 0}; Box: {0.06, 0.6, 0.9} }
+    wing_l : SxHullDark { Position: {-1.3, -0.08, -2.3}; Rotation: {0, 0.5, 0.06}; Box: {1.7, 0.06, 1.2} }
+    wing_r : SxHullDark { Position: {1.3, -0.08, -2.3}; Rotation: {0, -0.5, -0.06}; Box: {1.7, 0.06, 1.2} }
+    hot_l : SxHot { Position: {-1.42, -0.08, -2.82}; Rotation: {0, 0.5, 0.06}; Box: {1.5, 0.07, 0.1} }
+    hot_r : SxHot { Position: {1.42, -0.08, -2.82}; Rotation: {0, -0.5, -0.06}; Box: {1.5, 0.07, 0.1} }
+    port_light : SxRedLight { Position: {-2.08, -0.13, -2.75}; Sphere: {radius: 0.07, segments: 8} }
+    star_light : SxGreen { Position: {2.08, -0.13, -2.75}; Sphere: {radius: 0.07, segments: 8} }
+    strobe_top : SxStrobe { Position: {0, 1.26, -2.98}; Sphere: {radius: 0.06, segments: 8} }
+    strobe_low : SxBeacon { Position: {0, -1.14, -2.66}; Sphere: {radius: 0.06, segments: 8} }
+    SxCollar collar_r(size: 0.25) { Position: {0.74, -0.05, 1.3} }
+    collar_l { Position: {-0.74, -0.05, 1.3}; Rotation: {0, PI, 0}; SxCollar hatch(size: 0.25) }
+    SxEngine eng_c(power: thrust, size: 0.42) { Position: {0, 0, -3.9} }
+    SxEngine eng_a(power: thrust, size: 0.24) { Position: {-0.56, 0.36, -3.72} }
+    SxEngine eng_b(power: thrust, size: 0.24) { Position: {0.56, 0.36, -3.72} }
+    SxEngine eng_d(power: thrust, size: 0.24) { Position: {-0.56, -0.36, -3.72} }
+    SxEngine eng_e(power: thrust, size: 0.24) { Position: {0.56, -0.36, -3.72} }
+    if detail > 0 {
+      for i in 0..8 {
+        "keel_light_{i}" : SxWhiteLight { Position: {0, -0.68, 1.5 - i * 0.48}; Box: {0.08, 0.02, 0.08} }
+      }
+      for i in 0..5 {
+        "boat_l_{i}" : SxOrange { Position: {-0.66, -0.36, 1.7 - i * 0.62}; Rotation: {PI / 2, 0, 0}; Capsule: {length: 0.26, radius: 0.09, segments: 8, smooth: true} }
+        "boat_r_{i}" : SxOrange { Position: {0.66, -0.36, 1.7 - i * 0.62}; Rotation: {PI / 2, 0, 0}; Capsule: {length: 0.26, radius: 0.09, segments: 8, smooth: true} }
+      }
+      mast : SxGrey { Position: {0, 1.05, 0.2}; Box: {0.03, 0.6, 0.03} }
+      mast_bar : SxGrey { Position: {0, 1.2, 0.2}; Box: {0.4, 0.02, 0.02} }
+      dish : SxWhite { Position: {0, 0.98, -0.6}; Rotation: {-0.6, 0, 0}; HemiSphere: {radius: 0.2, segments: 12, smooth: true} }
+      vent_l : SxBlack { Position: {-0.44, 0.62, -1.4}; Box: {0.02, 0.2, 0.5} }
+      vent_r : SxBlack { Position: {0.44, 0.62, -1.4}; Box: {0.02, 0.2, 0.5} }
+      rcs_a : SxDark { Position: {0, 0.6, 2.2}; Box: {0.22, 0.08, 0.16} }
+      rcs_b : SxDark { Position: {0, -0.62, 2.2}; Box: {0.22, 0.08, 0.16} }
+      gear : SxHullDark { Position: {0, -0.72, -1.2}; Box: {0.5, 0.12, 1.2} }
+    }
+  }
+
+  template SpShuttle {
+    prop thrust: f32 = 0
+    prop livery: Rgb = {255, 150, 30}
+    prop detail: i32 = 1
+
+    SpatialIgnore
+    hull : SxHull { Position: {0, 0, 0.05}; Rotation: {PI / 2, 0, 0}; Scale: {1.15, 1, 0.9}; Capsule: {length: 1.1, radius: 0.34, segments: 16, smooth: true} }
+    belly : SxHullGrey { Position: {0, -0.2, -0.08}; RoundedBox: {0.66, 0.2, 1.4, radius: 0.08, segments: 2} }
+    canopy : SxGlass { Position: {0, 0.15, 0.55}; Scale: {0.8, 0.55, 1.2}; Sphere: {radius: 0.3, segments: 12, smooth: true} }
+    stripe { Position: {0, 0, -0.2}; Rotation: {PI / 2, 0, 0}; Scale: {1.15, 1, 0.9}; Cylinder: {length: 0.18, radius: 0.346, segments: 16, smooth: true}; Rgb: livery; PbrMaterial: {metallic: 0.3, roughness: 0.4} }
+    wing_l : SxHullGrey { Position: {-0.58, -0.1, -0.32}; Rotation: {0, 0.3, 0.12}; Box: {0.72, 0.05, 0.62} }
+    wing_r : SxHullGrey { Position: {0.58, -0.1, -0.32}; Rotation: {0, -0.3, -0.12}; Box: {0.72, 0.05, 0.62} }
+    fin { Position: {0, 0.4, -0.58}; Rotation: {-0.5, 0, 0}; Box: {0.05, 0.5, 0.44}; Rgb: livery; PbrMaterial: {metallic: 0.3, roughness: 0.4} }
+    tip_l : SxRedLight { Position: {-0.94, -0.15, -0.44}; Sphere: {radius: 0.045, segments: 6} }
+    tip_r : SxGreen { Position: {0.94, -0.15, -0.44}; Sphere: {radius: 0.045, segments: 6} }
+    SxEngine eng_l(power: thrust, size: 0.15) { Position: {-0.24, -0.02, -0.86} }
+    SxEngine eng_r(power: thrust, size: 0.15) { Position: {0.24, -0.02, -0.86} }
+    if detail > 0 {
+      for i in 0..4 {
+        "win_l_{i}" : SxWindow { Position: {-0.388, 0.06, 0.28 - i * 0.2}; Box: {0.02, 0.07, 0.11} }
+        "win_r_{i}" : SxWindow { Position: {0.388, 0.06, 0.28 - i * 0.2}; Box: {0.02, 0.07, 0.11} }
+      }
+      SxCollar hatch(size: 0.13) { Position: {0.36, -0.06, -0.62} }
+      strobe : SxStrobe { Position: {0, 0.66, -0.7}; Sphere: {radius: 0.035, segments: 6} }
+      skid_l : SxDark { Position: {-0.24, -0.34, 0}; Box: {0.05, 0.05, 1} }
+      skid_r : SxDark { Position: {0.24, -0.34, 0}; Box: {0.05, 0.05, 1} }
+      pod_l : SxDark { Position: {-0.36, 0.1, 0.72}; Box: {0.06, 0.06, 0.1} }
+      pod_r : SxDark { Position: {0.36, 0.1, 0.72}; Box: {0.06, 0.06, 0.1} }
+      lamp : SxWhiteLight { Position: {0, -0.14, 0.86}; Box: {0.14, 0.04, 0.03} }
+    }
+  }
+
+  template SpCharter {
+    prop thrust: f32 = 0
+    prop livery: Rgb = {70, 150, 140}
+    prop detail: i32 = 1
+
+    SpatialIgnore
+    hull : SxHullRust { Position: {0, 0, 0}; RoundedBox: {0.9, 0.7, 2, radius: 0.16, segments: 3} }
+    patch_a : SxHullGrey { Position: {0.2, 0.2, 0.3}; Box: {0.56, 0.34, 0.9} }
+    patch_b { Position: {-0.3, -0.05, -0.4}; Box: {0.34, 0.5, 0.8}; Rgb: livery; PbrMaterial: {metallic: 0.3, roughness: 0.7} }
+    cab : SxHullDark { Position: {0.06, 0.4, 0.62}; RoundedBox: {0.66, 0.36, 0.7, radius: 0.1, segments: 2} }
+    glass : SxGlass { Position: {0.06, 0.44, 0.99}; Box: {0.54, 0.2, 0.04} }
+    nose : SxHullGrey { Position: {0, -0.08, 1.2}; Rotation: {0.25, 0, 0}; Box: {0.8, 0.4, 0.5} }
+    tank_a : SxOrange { Position: {0.58, -0.1, -0.2}; Rotation: {PI / 2, 0, 0}; Capsule: {length: 0.9, radius: 0.17, segments: 10, smooth: true} }
+    tank_b : SxGrey { Position: {-0.56, 0.22, 0.1}; Rotation: {PI / 2, 0, 0.1}; Capsule: {length: 0.6, radius: 0.13, segments: 10, smooth: true} }
+    strap_a : SxBlack { Position: {0.58, -0.1, 0}; Box: {0.38, 0.38, 0.04} }
+    strap_b : SxBlack { Position: {0.58, -0.1, -0.44}; Box: {0.38, 0.38, 0.04} }
+    aerial : SxGrey { Position: {-0.2, 0.84, -0.3}; Rotation: {0.2, 0, -0.3}; Box: {0.025, 0.9, 0.025} }
+    tip_l : SxRedLight { Position: {-0.48, 0.02, 1.02}; Sphere: {radius: 0.045, segments: 6} }
+    tip_r : SxGreen { Position: {0.48, 0.02, 1.02}; Sphere: {radius: 0.045, segments: 6} }
+    SxEngine eng_big(power: thrust, size: 0.3, hue: {255, 170, 90}) { Position: {-0.16, 0.02, -1.2} }
+    SxEngine eng_small(power: thrust * 0.8, size: 0.16, hue: {255, 200, 120}) { Position: {0.34, -0.16, -1.1} }
+    if detail > 0 {
+      rack : SxDark { Position: {0, 0.62, -0.5}; Box: {0.7, 0.04, 0.8} }
+      crate_a : SxBlue { Position: {-0.14, 0.76, -0.6}; Box: {0.3, 0.24, 0.3} }
+      crate_b : SxYellow { Position: {0.2, 0.74, -0.34}; Rotation: {0, 0.3, 0}; Box: {0.24, 0.2, 0.24} }
+      pipe_a : SxGrey { Position: {-0.47, -0.2, 0.2}; Rotation: {PI / 2, 0, 0}; Cylinder: {length: 1.4, radius: 0.035, segments: 6} }
+      pipe_b : SxGrey { Position: {-0.47, -0.3, 0.1}; Rotation: {PI / 2, 0, 0}; Cylinder: {length: 1.1, radius: 0.03, segments: 6} }
+      lamp : SxWindow { Position: {-0.2, -0.02, 1.47}; Box: {0.16, 0.1, 0.03} }
+      lamp_dead : SxBlack { Position: {0.24, -0.02, 1.47}; Box: {0.16, 0.1, 0.03} }
+      SxCollar hatch(size: 0.14) { Position: {0.44, 0.06, 0.2} }
+      strobe : SxBeaconAmber { Position: {-0.31, 1.27, -0.38}; Sphere: {radius: 0.04, segments: 6} }
+      plate : SxHullDark { Position: {0.1, -0.37, 0.1}; Rotation: {0, 0.1, 0}; Box: {0.6, 0.04, 1.2} }
+    }
+  }
+
+  template SxCargoRow {
+    prop tone: i32 = 0
+
+    if tone == 0 {
+      a : SxBlue { Position: {-0.36, 0.36, 0}; Box: {0.66, 0.66, 0.76} }
+      b : SxRust { Position: {0.36, 0.36, 0}; Box: {0.66, 0.66, 0.76} }
+      c : SxGrey { Position: {-0.36, -0.36, 0}; Box: {0.66, 0.66, 0.76} }
+      d : SxTeal { Position: {0.36, -0.36, 0}; Box: {0.66, 0.66, 0.76} }
+    } else if tone == 1 {
+      a : SxTeal { Position: {-0.36, 0.36, 0}; Box: {0.66, 0.66, 0.76} }
+      b : SxYellow { Position: {0.36, 0.36, 0}; Box: {0.66, 0.66, 0.76} }
+      c : SxRed { Position: {-0.36, -0.36, 0}; Box: {0.66, 0.66, 0.76} }
+      d : SxWhite { Position: {0.36, -0.36, 0}; Box: {0.66, 0.66, 0.76} }
+    } else if tone == 2 {
+      a : SxRed { Position: {-0.36, 0.36, 0}; Box: {0.66, 0.66, 0.76} }
+      b : SxGrey { Position: {0.36, 0.36, 0}; Box: {0.66, 0.66, 0.76} }
+      c : SxBlue { Position: {-0.36, -0.36, 0}; Box: {0.66, 0.66, 0.76} }
+      d : SxOrange { Position: {0.36, -0.36, 0}; Box: {0.66, 0.66, 0.76} }
+    } else {
+      a : SxWhite { Position: {-0.36, 0.36, 0}; Box: {0.66, 0.66, 0.76} }
+      b : SxBlue { Position: {0.36, 0.36, 0}; Box: {0.66, 0.66, 0.76} }
+      c : SxYellow { Position: {-0.36, -0.36, 0}; Box: {0.66, 0.66, 0.76} }
+      d : SxRust { Position: {0.36, -0.36, 0}; Box: {0.66, 0.66, 0.76} }
+    }
+    rib : SxDark { Position: {0, 0, 0.41}; Box: {1.5, 1.5, 0.05} }
+  }
+
+  template SpFreighter {
+    prop thrust: f32 = 0
+    prop livery: Rgb = {206, 96, 40}
+    prop cap: i32 = 1
+    prop seed: i32 = 0
+    prop detail: i32 = 1
+
+    const rows: i32 = match cap { 0: 1; 1: 2; 2: 4; _: 8 }
+    const len: f32 = rows * 0.84
+    const bow: f32 = len / 2
+
+    SpatialIgnore
+    spine : SxHullDark { Position: {0, 0, 0}; Box: {0.24, 0.24, len + 0.6} }
+    for i in 0..rows {
+      SxCargoRow "row_{i}"(tone: (i + seed) % 4) { Position: {0, 0, bow - 0.42 - i * 0.84} }
+    }
+    cab { Position: {0, 0.1, bow + 0.62}; RoundedBox: {1.1, 0.8, 0.9, radius: 0.16, segments: 3}; Rgb: livery; PbrMaterial: {metallic: 0.35, roughness: 0.55} }
+    glass : SxGlass { Position: {0, 0.26, bow + 1.04}; Box: {0.86, 0.26, 0.12} }
+    chin : SxHullGrey { Position: {0, -0.36, bow + 0.56}; Box: {0.9, 0.3, 1} }
+    neck : SxHullDark { Position: {0, 0, bow + 0.1}; Box: {0.6, 0.6, 0.3} }
+    block : SxHullDark { Position: {0, 0, 0 - bow - 0.5}; Box: {1.5, 1.1, 0.8} }
+    tank_l : SxGrey { Position: {-0.56, 0.66, 0 - bow - 0.45}; Rotation: {PI / 2, 0, 0}; Capsule: {length: 0.5, radius: 0.2, segments: 10, smooth: true} }
+    tank_r : SxGrey { Position: {0.56, 0.66, 0 - bow - 0.45}; Rotation: {PI / 2, 0, 0}; Capsule: {length: 0.5, radius: 0.2, segments: 10, smooth: true} }
+    tip_l : SxRedLight { Position: {-0.58, 0.1, bow + 1.0}; Sphere: {radius: 0.05, segments: 6} }
+    tip_r : SxGreen { Position: {0.58, 0.1, bow + 1.0}; Sphere: {radius: 0.05, segments: 6} }
+    SxEngine eng_l(power: thrust, size: 0.34, hue: {255, 170, 90}) { Position: {-0.4, 0, 0 - bow - 1.15} }
+    SxEngine eng_r(power: thrust, size: 0.34, hue: {255, 170, 90}) { Position: {0.4, 0, 0 - bow - 1.15} }
+    if detail > 0 {
+      mast : SxGrey { Position: {0, 0.8, bow + 0.5}; Box: {0.04, 0.7, 0.04} }
+      strobe : SxBeaconAmber { Position: {0, 1.18, bow + 0.5}; Sphere: {radius: 0.06, segments: 6} }
+      dish : SxWhite { Position: {0.3, 0.6, bow + 0.4}; Rotation: {-0.5, 0.4, 0}; HemiSphere: {radius: 0.16, segments: 10, smooth: true} }
+      SxCollar hatch(size: 0.18) { Position: {0.58, -0.1, bow + 0.5} }
+      rad_l : SxHot { Position: {-0.77, 0, 0 - bow - 0.5}; Box: {0.03, 0.8, 0.6} }
+      rad_r : SxHot { Position: {0.77, 0, 0 - bow - 0.5}; Box: {0.03, 0.8, 0.6} }
+      lamp_l : SxWindow { Position: {-0.36, -0.14, bow + 1.08}; Box: {0.18, 0.1, 0.03} }
+      lamp_r : SxWindow { Position: {0.36, -0.14, bow + 1.08}; Box: {0.18, 0.1, 0.03} }
+      for i in 0..rows {
+        "mark_{i}" : SxAmberLight { Position: {0, 0.76, bow - 0.42 - i * 0.84}; Box: {0.08, 0.03, 0.08} }
+      }
+    }
+  }
+
+  template SpBarge {
+    prop thrust: f32 = 0
+    prop load: f32 = 1
+    prop detail: i32 = 1
+
+    SpatialIgnore
+    floor_plate : SxHullRust { Position: {0, -0.5, 0}; Box: {1.7, 0.2, 3.6} }
+    wall_l : SxHullRust { Position: {-0.9, -0.05, 0}; Rotation: {0, 0, 0.18}; Box: {0.12, 1, 3.6} }
+    wall_r : SxHullRust { Position: {0.9, -0.05, 0}; Rotation: {0, 0, -0.18}; Box: {0.12, 1, 3.6} }
+    wall_f : SxHullGrey { Position: {0, -0.05, 1.8}; Box: {1.8, 0.9, 0.12} }
+    wall_b : SxHullGrey { Position: {0, -0.05, -1.8}; Box: {1.8, 0.9, 0.12} }
+    for i in 0..3 {
+      "rib_l_{i}" : SxDark { Position: {-1.02, -0.05, -1.1 + i * 1.1}; Rotation: {0, 0, 0.18}; Box: {0.1, 1.1, 0.14} }
+      "rib_r_{i}" : SxDark { Position: {1.02, -0.05, -1.1 + i * 1.1}; Rotation: {0, 0, -0.18}; Box: {0.1, 1.1, 0.14} }
+    }
+    if load > 0.05 {
+      for i in 0..9 {
+        const tone = i % 3
+        if tone == 0 {
+          "ore_{i}" : SxRock { Position: {(sx_h(7, i, 31) - 0.5) * 1.1, -0.3 + load * 0.5 + sx_h(7, i, 32) * 0.2, -1.4 + i * 0.35}; Rotation: {i * 1.3, i * 0.7, i}; Scale: {1.2, 0.8, 1}; IcoSphere: {radius: 0.3 + sx_h(7, i, 33) * 0.22, segments: 1} }
+        } else if tone == 1 {
+          "ore_{i}" : SxRockWarm { Position: {(sx_h(7, i, 31) - 0.5) * 1.1, -0.3 + load * 0.5 + sx_h(7, i, 32) * 0.2, -1.4 + i * 0.35}; Rotation: {i * 1.3, i * 0.7, i}; Scale: {1.2, 0.8, 1}; IcoSphere: {radius: 0.3 + sx_h(7, i, 33) * 0.22, segments: 1} }
+        } else {
+          "ore_{i}" : SxRockDark { Position: {(sx_h(7, i, 31) - 0.5) * 1.1, -0.3 + load * 0.5 + sx_h(7, i, 32) * 0.2, -1.4 + i * 0.35}; Rotation: {i * 1.3, i * 0.7, i}; Scale: {1.2, 0.8, 1}; IcoSphere: {radius: 0.3 + sx_h(7, i, 33) * 0.22, segments: 1} }
+        }
+      }
+    }
+    cab : SxYellow { Position: {0, 0.7, -2.3}; RoundedBox: {1, 0.6, 0.8, radius: 0.1, segments: 2} }
+    glass : SxGlass { Position: {0, 0.78, -1.88}; Box: {0.8, 0.26, 0.05} }
+    block : SxHullDark { Position: {0, -0.1, -2.4}; Box: {1.9, 1, 1} }
+    tip_l : SxRedLight { Position: {-0.96, 0.5, 1.84}; Sphere: {radius: 0.05, segments: 6} }
+    tip_r : SxGreen { Position: {0.96, 0.5, 1.84}; Sphere: {radius: 0.05, segments: 6} }
+    SxEngine eng_l(power: thrust, size: 0.32, hue: {255, 170, 90}) { Position: {-0.5, -0.1, -3.1} }
+    SxEngine eng_r(power: thrust, size: 0.32, hue: {255, 170, 90}) { Position: {0.5, -0.1, -3.1} }
+    if detail > 0 {
+      crane : SxYellow { Position: {0.5, 1.2, -1.6}; Rotation: {0.5, 0, 0}; Box: {0.1, 0.1, 1.8} }
+      claw : SxDark { Position: {0.5, 0.56, -0.86}; Box: {0.3, 0.3, 0.3} }
+      strobe : SxBeaconAmber { Position: {0, 1.08, -2.3}; Sphere: {radius: 0.06, segments: 6} }
+      flood : SxWhiteLight { Position: {0, 0.44, -1.86}; Box: {0.4, 0.08, 0.04} }
+      for i in 0..4 {
+        "haz_{i}" : SxYellow { Position: {-0.66 + i * 0.44, -0.05, 1.87}; Rotation: {0, 0, 0.6}; Box: {0.1, 0.7, 0.02} }
+      }
+    }
+  }
+
+  template SpTug {
+    prop thrust: f32 = 0
+    prop livery: Rgb = {236, 176, 34}
+    prop count: i32 = 5
+    prop detail: i32 = 1
+
+    SpatialIgnore
+    body { Position: {0, 0, 0}; RoundedBox: {1, 0.8, 1.3, radius: 0.2, segments: 3}; Rgb: livery; PbrMaterial: {metallic: 0.3, roughness: 0.5} }
+    cab : SxHullDark { Position: {0, 0.5, 0.2}; RoundedBox: {0.7, 0.4, 0.7, radius: 0.1, segments: 2} }
+    glass : SxGlass { Position: {0, 0.54, 0.57}; Box: {0.58, 0.22, 0.04} }
+    bumper : SxBlack { Position: {0, -0.1, 0.72}; RoundedBox: {1.1, 0.4, 0.2, radius: 0.08, segments: 2} }
+    pod_l : SxHullDark { Position: {-0.72, -0.05, -0.2}; Rotation: {PI / 2, 0, 0}; Capsule: {length: 0.7, radius: 0.26, segments: 12, smooth: true} }
+    pod_r : SxHullDark { Position: {0.72, -0.05, -0.2}; Rotation: {PI / 2, 0, 0}; Capsule: {length: 0.7, radius: 0.26, segments: 12, smooth: true} }
+    tip_l : SxRedLight { Position: {-1, -0.05, 0.3}; Sphere: {radius: 0.05, segments: 6} }
+    tip_r : SxGreen { Position: {1, -0.05, 0.3}; Sphere: {radius: 0.05, segments: 6} }
+    SxEngine eng_l(power: thrust, size: 0.28, hue: {255, 190, 110}) { Position: {-0.72, -0.05, -0.92} }
+    SxEngine eng_r(power: thrust, size: 0.28, hue: {255, 190, 110}) { Position: {0.72, -0.05, -0.92} }
+    hitch : SxGrey { Position: {0, 0, -0.75}; Box: {0.2, 0.2, 0.3} }
+    for i in 0..count {
+      "link_{i}" : SxGrey { Position: {0, 0, -1.3 - i * 2.1}; Box: {0.06, 0.06, 0.9} }
+      "box_{i}" {
+        Position: {0, 0, -2.55 - i * 2.1}
+        SxCargoRow front(tone: i % 4) { Position: {0, 0, 0.42} }
+        SxCargoRow back(tone: (i + 2) % 4) { Position: {0, 0, -0.42} }
+        if detail > 0 {
+          lamp_a : SxAmberLight { Position: {0, 0.76, 0}; Box: {0.1, 0.04, 0.1} }
+          lamp_b : SxRedLight { Position: {0.76, 0, -0.8}; Box: {0.04, 0.1, 0.06} }
+        }
+      }
+    }
+    if detail > 0 {
+      strobe : SxBeaconAmber { Position: {0, 0.78, 0.2}; Sphere: {radius: 0.06, segments: 6} }
+      winch : SxDark { Position: {0, 0.3, -0.5}; Rotation: {0, 0, PI / 2}; Cylinder: {length: 0.5, radius: 0.16, segments: 10, smooth: true} }
+      lamp_l : SxWindow { Position: {-0.3, 0.1, 0.83}; Box: {0.16, 0.1, 0.03} }
+      lamp_r : SxWindow { Position: {0.3, 0.1, 0.83}; Box: {0.16, 0.1, 0.03} }
+    }
+  }
+
+  template SpDozer {
+    prop thrust: f32 = 0
+    prop busy: bool = false
+
+    SpatialIgnore
+    body : SxYellow { Position: {0, 0, -0.1}; RoundedBox: {1.2, 0.72, 1.7, radius: 0.1, segments: 2} }
+    hood : SxYellow { Position: {0, 0.1, 0.92}; Box: {0.96, 0.52, 0.5} }
+    cab : SxDark { Position: {0, 0.56, -0.15}; Box: {0.76, 0.5, 0.8} }
+    glass : SxGlass { Position: {0, 0.6, 0.27}; Box: {0.66, 0.34, 0.06} }
+    glass_l : SxGlass { Position: {-0.385, 0.6, -0.15}; Box: {0.02, 0.3, 0.6} }
+    glass_r : SxGlass { Position: {0.385, 0.6, -0.15}; Box: {0.02, 0.3, 0.6} }
+    roof : SxYellow { Position: {0, 0.84, -0.15}; Box: {0.86, 0.08, 0.92} }
+    track_l : SxBlack { Position: {-0.72, -0.26, -0.05}; RoundedBox: {0.3, 0.46, 2.1, radius: 0.2, segments: 3} }
+    track_r : SxBlack { Position: {0.72, -0.26, -0.05}; RoundedBox: {0.3, 0.46, 2.1, radius: 0.2, segments: 3} }
+    for i in 0..5 {
+      "tread_l_{i}" : SxGrey { Position: {-0.88, -0.26, -0.85 + i * 0.4}; Box: {0.04, 0.3, 0.14} }
+      "tread_r_{i}" : SxGrey { Position: {0.88, -0.26, -0.85 + i * 0.4}; Box: {0.04, 0.3, 0.14} }
+    }
+    arm_l : SxDark { Position: {-0.5, -0.12, 1.3}; Rotation: {0.18, 0, 0}; Box: {0.1, 0.14, 0.9} }
+    arm_r : SxDark { Position: {0.5, -0.12, 1.3}; Rotation: {0.18, 0, 0}; Box: {0.1, 0.14, 0.9} }
+    ram_l : SxGrey { Position: {-0.3, 0.14, 1.3}; Rotation: {0.5, 0, 0}; Cylinder: {length: 0.8, radius: 0.04, segments: 6} }
+    ram_r : SxGrey { Position: {0.3, 0.14, 1.3}; Rotation: {0.5, 0, 0}; Cylinder: {length: 0.8, radius: 0.04, segments: 6} }
+    blade : SxGrey { Position: {0, -0.16, 1.78}; Rotation: {-0.16, 0, 0}; Box: {2, 0.86, 0.1} }
+    blade_lip : SxDark { Position: {0, -0.6, 1.9}; Rotation: {-0.7, 0, 0}; Box: {2, 0.22, 0.08} }
+    blade_l : SxGrey { Position: {-1.02, -0.16, 1.9}; Rotation: {-0.16, 0, 0}; Box: {0.06, 0.86, 0.34} }
+    blade_r : SxGrey { Position: {1.02, -0.16, 1.9}; Rotation: {-0.16, 0, 0}; Box: {0.06, 0.86, 0.34} }
+    for i in 0..4 {
+      "haz_{i}" : SxBlack { Position: {-0.45 + i * 0.3, 0.02, -0.96}; Rotation: {0, 0, 0.6}; Box: {0.09, 0.56, 0.02} }
+    }
+    stack : SxDark { Position: {0.38, 0.86, -0.72}; Cylinder: {length: 0.6, radius: 0.07, segments: 8, smooth: true} }
+    lamp_l : SxWindow { Position: {-0.36, 0.2, 1.18}; Box: {0.16, 0.1, 0.03} }
+    lamp_r : SxWindow { Position: {0.36, 0.2, 1.18}; Box: {0.16, 0.1, 0.03} }
+    if busy {
+      beacon : SxBeaconAmber { Position: {0, 0.96, -0.15}; Sphere: {radius: 0.1, segments: 8} }
+    } else {
+      beacon : SxAmberLight { Position: {0, 0.96, -0.15}; Sphere: {radius: 0.08, segments: 8} }
+    }
+    SxEngine eng_l(power: thrust, size: 0.24, hue: {255, 180, 90}) { Position: {-0.32, 0.02, -1.05} }
+    SxEngine eng_r(power: thrust, size: 0.24, hue: {255, 180, 90}) { Position: {0.32, 0.02, -1.05} }
+  }
+
+  template SpCamp {
+    prop busy: bool = false
+
+    SpatialIgnore
+    SpDozer dozer(busy: busy) { Position: {-0.2, 0, 0}; Rotation: {0, 0.5, 0} }
+    hut : SxBlue { Position: {1.9, 0.1, -0.6}; Box: {1.5, 0.7, 0.7} }
+    hut_ribs : SxDark { Position: {1.9, 0.1, -0.6}; Box: {1.56, 0.08, 0.74} }
+    door : SxGrey { Position: {1.9, 0.02, -0.24}; Box: {0.3, 0.5, 0.03} }
+    pane : SxWindow { Position: {2.35, 0.2, -0.24}; Box: {0.26, 0.2, 0.03} }
+    aerial : SxGrey { Position: {2.5, 0.75, -0.8}; Box: {0.03, 0.7, 0.03} }
+    dish : SxWhite { Position: {1.4, 0.56, -0.7}; Rotation: {0.6, 0.4, 0}; HemiSphere: {radius: 0.2, segments: 10, smooth: true} }
+    tether : SxGrey { Position: {0.95, 0, -0.3}; Box: {0.9, 0.03, 0.03} }
+    tip : SxBeaconAmber { Position: {2.5, 1.12, -0.8}; Sphere: {radius: 0.05, segments: 6} }
+  }
+
+  template SpGate {
+    prop charge: f32 = 0
+    prop detail: i32 = 1
+
+    const glow: f32 = 2.5 + charge * 11
+    const lamp: Rgb = {110 + charge * 145, 210 + charge * 40, 255}
+
+    SpatialIgnore
+    ring : SxHullDark {
+      Position: {0, 0, 0}
+      Rotation: {PI / 2, 0, 0}
+      Torus: {radius: 3.1, tube: 0.3, segments: 64, rings: 12, smooth: true}
+    }
+    lip {
+      Position: {0, 0, 0}
+      Rotation: {PI / 2, 0, 0}
+      Torus: {radius: 2.78, tube: 0.05, segments: 64, rings: 4}
+      Rgb: {4, 14, 24}
+      Emissive: {strength: glow, color: {90, 200, 255}}
+      NoShadow
+    }
+    for i in 0..8 {
+      "seg_{i}" {
+        Rotation: {0, 0, i * PI / 4 + PI / 8}
+        block : SxHullGrey { Position: {3.14, 0, 0}; Box: {0.74, 1.2, 0.84} }
+        plate : SxHull { Position: {3.46, 0, 0}; Box: {0.2, 0.9, 0.96} }
+        lamp_a { Position: {3.14, 0, 0.44}; Box: {0.14, 0.7, 0.04}; Rgb: {6, 16, 24}; Emissive: {strength: glow, color: lamp}; NoShadow }
+        lamp_b { Position: {3.14, 0, -0.44}; Box: {0.14, 0.7, 0.04}; Rgb: {6, 16, 24}; Emissive: {strength: glow, color: lamp}; NoShadow }
+        if detail > 0 {
+          vane : SxDark { Position: {2.6, 0, 0}; Rotation: {0, 0, 0}; Box: {0.4, 0.1, 0.5} }
+          vane_tip { Position: {2.38, 0, 0}; Box: {0.06, 0.16, 0.4}; Rgb: {6, 16, 24}; Emissive: {strength: glow * 1.2, color: lamp}; NoShadow }
+          coil : SxGold { Position: {3.14, 0.72, 0}; Rotation: {PI / 2, 0, 0}; Cylinder: {length: 0.7, radius: 0.12, segments: 10, smooth: true} }
+          rib_a : SxDark { Position: {3.3, 0, 0.5}; Box: {0.5, 1.3, 0.05} }
+          rib_b : SxDark { Position: {3.3, 0, -0.5}; Box: {0.5, 1.3, 0.05} }
+        }
+      }
+    }
+    for i in 0..4 {
+      "pylon_{i}" {
+        Rotation: {0, 0, i * PI / 2 + PI / 4}
+        arm : SxHullDark { Position: {3.9, 0, 0}; Box: {1.1, 0.26, 0.4} }
+        pod : SxHull { Position: {4.5, 0, 0}; Rotation: {PI / 2, 0, 0}; Capsule: {length: 0.9, radius: 0.24, segments: 12, smooth: true} }
+        tip : SxBeacon { Position: {4.5, 0, 0.74}; Sphere: {radius: 0.07, segments: 6} }
+        if detail > 0 {
+          tail : SxStrobe { Position: {4.5, 0, -0.74}; Sphere: {radius: 0.05, segments: 6} }
+          fin : SxHullGrey { Position: {4.86, 0, 0}; Box: {0.3, 0.05, 0.7} }
+        }
+      }
+    }
+    film_a {
+      Position: {0, 0, 0.02}
+      AngularVelocity: {0, 0, 0.2 + charge * 0.9}
+      Circle: {2.78}
+      Image: {texture: sx_film_tex}
+      Rgb: {110, 170, 255}
+      Emissive: {strength: 0.8 + charge * 2.4, color: {90, 170, 255}}
+      Opacity: {0.5 + charge * 0.5}
+      BlendMode: Additive
+      NoShadow
+    }
+    film_b {
+      Position: {0, 0, -0.02}
+      Rotation: {0, PI, 0}
+      AngularVelocity: {0, 0, 0.15 + charge * 0.7}
+      Circle: {2.78}
+      Image: {texture: sx_film_tex}
+      Rgb: {110, 170, 255}
+      Emissive: {strength: 0.8 + charge * 2.4, color: {120, 150, 255}}
+      Opacity: {0.5 + charge * 0.5}
+      BlendMode: Additive
+      NoShadow
+    }
+    if charge > 0.6 {
+      iris_a {
+        Position: {0, 0, 0.04}
+        Circle: {2.7 * (charge - 0.6) / 0.4}
+        Rgb: {0, 0, 0}
+        Emissive: {strength: (charge - 0.6) * 12, color: {200, 230, 255}}
+        BlendMode: Additive
+        NoShadow
+      }
+      iris_b {
+        Position: {0, 0, -0.04}
+        Rotation: {0, PI, 0}
+        Circle: {2.7 * (charge - 0.6) / 0.4}
+        Rgb: {0, 0, 0}
+        Emissive: {strength: (charge - 0.6) * 12, color: {200, 230, 255}}
+        BlendMode: Additive
+        NoShadow
+      }
+    }
+  }
+
+  template SpGateQueue {
+    prop queue: i32 = 0
+    prop slots: i32 = 4
+
+    SpatialIgnore
+    for i in 0..slots {
+      "slot_{i}" {
+        Position: {5.5, 0, -7 - i * 5}
+        buoy : SxHullDark { Position: {0, 0, 0}; Cylinder: {length: 0.5, radius: 0.12, segments: 8, smooth: true} }
+        fin_a : SxGrey { Position: {0, -0.36, 0}; Box: {0.4, 0.03, 0.03} }
+        fin_b : SxGrey { Position: {0, -0.36, 0}; Box: {0.03, 0.03, 0.4} }
+        if i < queue {
+          lamp : SxRedLight { Position: {0, 0.34, 0}; Sphere: {radius: 0.12, segments: 8} }
+        } else {
+          lamp : SxBeaconGreen { Position: {0, 0.34, 0}; Sphere: {radius: 0.12, segments: 8} }
+        }
+      }
+      "lead_{i}" : SxStrobe { Position: {0, -3.6, -7 - i * 5}; Sphere: {radius: 0.07, segments: 6} }
+    }
+  }
+
+  template SpGateStation {
+    prop charge: f32 = 0
+    prop queue: i32 = 0
+    prop accent: Rgb = {255, 150, 30}
+    prop detail: i32 = 1
+
+    SpatialIgnore
+    SpGate gate(charge: charge, detail: detail)
+    strut : SxHullDark { Position: {0, -3.75, 0}; Box: {0.3, 0.8, 0.3} }
+    hab : SxHull { Position: {0, -4.5, 0}; Rotation: {0, 0, PI / 2}; Capsule: {length: 2.6, radius: 0.5, segments: 16, smooth: true} }
+    hab_win : SxWinBelt { Position: {0, -4.5, 0}; Rotation: {0, 0, PI / 2}; Cylinder: {length: 1.9, radius: 0.508, segments: 16, smooth: true} }
+    hab_band { Position: {-1.1, -4.5, 0}; Rotation: {0, 0, PI / 2}; Cylinder: {length: 0.24, radius: 0.52, segments: 16, smooth: true}; Rgb: accent; PbrMaterial: {metallic: 0.3, roughness: 0.45} }
+    hab_band_b { Position: {1.1, -4.5, 0}; Rotation: {0, 0, PI / 2}; Cylinder: {length: 0.24, radius: 0.52, segments: 16, smooth: true}; Rgb: accent; PbrMaterial: {metallic: 0.3, roughness: 0.45} }
+    pier : SxHullGrey { Position: {0, -4.5, -1.3}; Box: {0.2, 0.14, 1.8} }
+    pad : SxDark { Position: {0, -4.5, -2.3}; Cylinder: {length: 0.1, radius: 0.5, segments: 14} }
+    pad_light : SxGreen { Position: {0, -4.43, -2.3}; Torus: {radius: 0.36, tube: 0.025, segments: 16, rings: 4} }
+    panel_l : SxSolar { Position: {-2.6, -4.5, 0}; Rotation: {0.5, 0, 0}; Box: {1.5, 0.04, 0.9} }
+    panel_r : SxSolar { Position: {2.6, -4.5, 0}; Rotation: {0.5, 0, 0}; Box: {1.5, 0.04, 0.9} }
+    mast : SxGrey { Position: {0, -5.4, 0}; Box: {0.05, 0.9, 0.05} }
+    mast_tip : SxBeaconGreen { Position: {0, -5.9, 0}; Sphere: {radius: 0.08, segments: 6} }
+    if detail > 0 {
+      SpGateQueue holding(queue: queue)
+      tower : SxHullGrey { Position: {0.9, -3.8, 0}; Box: {0.4, 0.7, 0.4} }
+      tower_glass : SxGlass { Position: {0.9, -3.56, 0}; Box: {0.46, 0.16, 0.46} }
+      dish : SxWhite { Position: {-0.9, -3.9, 0.1}; Rotation: {0.5, 0.4, 0}; HemiSphere: {radius: 0.3, segments: 12, smooth: true} }
+      rod_l : SxGrey { Position: {-1.75, -4.5, 0}; Box: {0.6, 0.06, 0.06} }
+      rod_r : SxGrey { Position: {1.75, -4.5, 0}; Box: {0.6, 0.06, 0.06} }
+      SxCollar dock(size: 0.2) { Position: {0, -4.5, -3} }
+      tank_a : SxGrey { Position: {0.5, -5.1, 0.1}; Rotation: {0, 0, PI / 2}; Capsule: {length: 0.5, radius: 0.16, segments: 10, smooth: true} }
+      tank_b : SxGrey { Position: {-0.5, -5.1, 0.1}; Rotation: {0, 0, PI / 2}; Capsule: {length: 0.5, radius: 0.16, segments: 10, smooth: true} }
+    }
+  }
+
+  template SxPortArm {
+    prop reach: f32 = 4.4
+    prop accent: Rgb = {48, 104, 190}
+    prop detail: i32 = 1
+
+    boom : SxHullGrey { Position: {reach / 2 + 0.3, 0, 0}; Box: {reach - 0.6, 0.22, 0.26} }
+    pad : SxHullDark { Position: {reach, 0, 0}; Cylinder: {length: 0.14, radius: 0.7, segments: 16} }
+    pad_ring : SxCyan { Position: {reach, 0.08, 0}; Torus: {radius: 0.5, tube: 0.03, segments: 20, rings: 4} }
+    pad_red : SxBeacon { Position: {reach + 0.7, 0.06, 0}; Sphere: {radius: 0.07, segments: 6} }
+    SxCollar clamp(size: 0.24) { Position: {reach, 0.3, 0}; Rotation: {0, 0, PI / 2} }
+    if detail > 0 {
+      band { Position: {reach - 0.9, 0, 0}; Box: {0.3, 0.26, 0.3}; Rgb: accent; PbrMaterial: {metallic: 0.3, roughness: 0.45} }
+      truss_a : SxGrey { Position: {reach / 2 + 0.3, 0.2, 0}; Box: {reach - 0.8, 0.03, 0.03} }
+      truss_b : SxGrey { Position: {reach / 2 + 0.3, -0.2, 0}; Box: {reach - 0.8, 0.03, 0.03} }
+      for i in 0..4 {
+        "light_{i}" : SxWhiteLight { Position: {1.2 + i * (reach - 2) / 3, 0.12, 0}; Box: {0.08, 0.03, 0.08} }
+      }
+      cabin : SxHull { Position: {reach - 0.9, 0.3, 0}; Box: {0.5, 0.3, 0.4} }
+      cabin_win : SxWindow { Position: {reach - 0.9, 0.32, 0.21}; Box: {0.36, 0.12, 0.02} }
+    }
+  }
+
+  template SpPort {
+    prop tier: i32 = 1
+    prop accent: Rgb = {48, 104, 190}
+    prop detail: i32 = 1
+
+    const arms: i32 = 2 + tier
+
+    SpatialIgnore
+    spindle : SxHull { Position: {0, 0, 0}; Cylinder: {length: 4.6, radius: 0.46, segments: 18, smooth: true} }
+    hub : SxHullGrey { Position: {0, 0, 0}; Cylinder: {length: 0.9, radius: 0.9, segments: 24, smooth: true} }
+    hub_win : SxWinBelt { Position: {0, 0, 0}; Cylinder: {length: 0.5, radius: 0.91, segments: 24, smooth: true} }
+    dome : SxGold { Position: {0, 2.3, 0}; HemiSphere: {radius: 0.62, segments: 18, smooth: true} }
+    spire : SxGold { Position: {0, 3.3, 0}; Cone: {length: 1.4, radius: 0.12, segments: 8, smooth: true} }
+    spire_tip : SxBeaconGreen { Position: {0, 4.05, 0}; Sphere: {radius: 0.09, segments: 8} }
+    foot : SxHullGrey { Position: {0, -2.5, 0}; Frustum: {length: 0.5, radius_bottom: 0.9, radius_top: 0.46, segments: 18, smooth: true} }
+    dish : SxWhite { Position: {0, -3, 0}; Rotation: {PI, 0, 0}; HemiSphere: {radius: 0.7, segments: 16, smooth: true} }
+    wheel {
+      Position: {0, 0, 0}
+      AngularVelocity: {0, 0.1, 0}
+      rim : SxHull { Position: {0, 0, 0}; Torus: {radius: 2.6, tube: 0.36, segments: 56, rings: 12, smooth: true} }
+      rim_win : SxWinBelt { Position: {0, 0, 0}; Tube: {radius: 2.975, thickness: 0.04, length: 0.3, segments: 56, smooth: true} }
+      rim_top : SxWinBelt { Position: {0, 0.345, 0}; Tube: {radius: 2.74, thickness: 0.28, length: 0.04, segments: 56, smooth: true} }
+      rim_band { Position: {0, -0.2, 0}; Torus: {radius: 2.9, tube: 0.05, segments: 56, rings: 4}; Rgb: accent; PbrMaterial: {metallic: 0.3, roughness: 0.45} }
+      for i in 0..4 {
+        "spoke_{i}" : SxHullGrey { Position: {0, 0, 0}; Rotation: {0, i * PI / 4, 0}; Box: {5.1, 0.16, 0.22} }
+      }
+    }
+    if tier > 0 {
+      upper {
+        Position: {0, 1.25, 0}
+        AngularVelocity: {0, -0.16, 0}
+        rim : SxHull { Position: {0, 0, 0}; Torus: {radius: 1.35, tube: 0.22, segments: 40, rings: 10, smooth: true} }
+        rim_win : SxWinBelt { Position: {0, 0, 0}; Tube: {radius: 1.585, thickness: 0.03, length: 0.2, segments: 40, smooth: true} }
+        for i in 0..3 {
+          "spoke_{i}" : SxHullGrey { Position: {0, 0, 0}; Rotation: {0, i * PI / 3, 0}; Box: {2.7, 0.1, 0.14} }
+        }
+      }
+    }
+    if tier > 1 {
+      crown {
+        Position: {0, -1.05, 0}
+        AngularVelocity: {0, 0.07, 0}
+        rim : SxHull { Position: {0, 0, 0}; Torus: {radius: 3.6, tube: 0.26, segments: 64, rings: 10, smooth: true} }
+        rim_win : SxWinBelt { Position: {0, 0, 0}; Tube: {radius: 3.875, thickness: 0.03, length: 0.22, segments: 64, smooth: true} }
+        rim_band { Position: {0, 0.15, 0}; Torus: {radius: 3.8, tube: 0.04, segments: 64, rings: 4}; Rgb: accent; PbrMaterial: {metallic: 0.3, roughness: 0.45} }
+        for i in 0..3 {
+          "spoke_{i}" : SxHullGrey { Position: {0, 0, 0}; Rotation: {0, i * PI / 3 + 0.3, 0}; Box: {7.1, 0.14, 0.2} }
+        }
+      }
+      gild : SxGold { Position: {0, 1.9, 0}; Torus: {radius: 0.5, tube: 0.06, segments: 20, rings: 6} }
+    }
+    for i in 0..arms {
+      "arm_{i}" {
+        Position: {0, -1.7, 0}
+        Rotation: {0, i * 2 * PI / arms + PI / 2, 0}
+        SxPortArm arm(reach: 4.4 + tier * 0.4, accent: accent, detail: detail)
+      }
+    }
+    wing_l : SxSolar { Position: {-2.4, 2, 0}; Rotation: {0, 0, -0.25}; Box: {2.6, 0.04, 1.1} }
+    wing_r : SxSolar { Position: {2.4, 2, 0}; Rotation: {0, 0, 0.25}; Box: {2.6, 0.04, 1.1} }
+    band { Position: {0, 1.7, 0}; Cylinder: {length: 0.3, radius: 0.48, segments: 18, smooth: true}; Rgb: accent; PbrMaterial: {metallic: 0.3, roughness: 0.45} }
+    if detail > 0 {
+      wing_rod_l : SxGrey { Position: {-0.9, 1.9, 0}; Box: {1, 0.06, 0.06} }
+      wing_rod_r : SxGrey { Position: {0.9, 1.9, 0}; Box: {1, 0.06, 0.06} }
+      neck_win : SxWinBelt { Position: {0, -1, 0}; Cylinder: {length: 0.6, radius: 0.468, segments: 18, smooth: true} }
+      for i in 0..6 {
+        "tank_{i}" {
+          Rotation: {0, i * PI / 3, 0}
+          vat : SxGrey { Position: {0.74, -2.05, 0}; Capsule: {length: 0.4, radius: 0.18, segments: 10, smooth: true} }
+        }
+      }
+      aerial_a : SxGrey { Position: {0.3, 2.9, 0}; Box: {0.02, 0.9, 0.02} }
+      aerial_b : SxGrey { Position: {-0.24, 2.8, 0.2}; Box: {0.02, 0.7, 0.02} }
+      dish_b : SxWhite { Position: {0.5, 2.36, 0.3}; Rotation: {0.7, 0.6, 0}; HemiSphere: {radius: 0.22, segments: 12, smooth: true} }
+      low_light : SxBeacon { Position: {0, -3.72, 0}; Sphere: {radius: 0.08, segments: 6} }
+    }
+  }
+
+  template SpSite {
+    prop done: bool = false
+    prop progress: f32 = 0.5
+    prop bar: bool = false
+    prop trade: bool = false
+    prop terminal: bool = false
+    prop depot: bool = false
+    prop accent: Rgb = {255, 150, 30}
+
+    const arc: f32 = clamp(progress, 0.08, 1) * 2 * PI
+
+    SpatialIgnore
+    core : SxWhite { Position: {0, 0, 0}; Cylinder: {length: 1.9, radius: 0.5, segments: 14, smooth: true} }
+    band { Position: {0, 0.5, 0}; Cylinder: {length: 0.3, radius: 0.52, segments: 14, smooth: true}; Rgb: accent; PbrMaterial: {metallic: 0.3, roughness: 0.45} }
+    cap : SxGrey { Position: {0, 1, 0}; HemiSphere: {radius: 0.5, segments: 12, smooth: true} }
+    foot : SxGrey { Position: {0, -1.1, 0}; Frustum: {length: 0.3, radius_bottom: 0.3, radius_top: 0.5, segments: 12, smooth: true} }
+    if done {
+      rim : SxWhite { Position: {0, -0.1, 0}; Torus: {radius: 1.5, tube: 0.24, segments: 36, rings: 8, smooth: true} }
+      for i in 0..2 {
+        "spoke_{i}" : SxGrey { Position: {0, -0.1, 0}; Rotation: {0, i * PI / 2, 0}; Box: {3, 0.1, 0.14} }
+      }
+      for i in 0..12 {
+        "win_{i}" {
+          Rotation: {0, i * PI / 6, 0}
+          up : SxWindow { Position: {1.5, 0.15, 0}; Box: {0.22, 0.03, 0.1} }
+        }
+      }
+      panel_l : SxSolar { Position: {-1.5, 1.2, 0}; Rotation: {0, 0, -0.2}; Box: {1.6, 0.04, 0.8} }
+      panel_r : SxSolar { Position: {1.5, 1.2, 0}; Rotation: {0, 0, 0.2}; Box: {1.6, 0.04, 0.8} }
+      tip : SxBeaconGreen { Position: {0, 1.62, 0}; Sphere: {radius: 0.09, segments: 8} }
+      sign : SxAmberLight { Position: {0, 0.5, 0.53}; Box: {0.5, 0.16, 0.03} }
+    } else {
+      rim : SxGrey {
+        Position: {0, -0.1, 0}
+        TorusShell: {radius: 1.5, tube: 0.24, ring_start: 0, ring_end: arc, tube_start: 0, tube_end: 2 * PI, thickness: 0.05, rims: true, segments: 36, rings: 8}
+      }
+      for i in 0..4 {
+        const a = i * PI / 2 + PI / 4
+        "post_{i}" : SxYellow { Position: {cos(a) * 1.9, 0, sin(a) * 1.9}; Box: {0.06, 2.6, 0.06} }
+        "beam_a_{i}" : SxYellow { Position: {cos(a + PI / 4) * 1.343, 1.3, sin(a + PI / 4) * 1.343}; Rotation: {0, PI / 4 - a, 0}; Box: {2.69, 0.05, 0.05} }
+        "beam_b_{i}" : SxYellow { Position: {cos(a + PI / 4) * 1.343, -1.3, sin(a + PI / 4) * 1.343}; Rotation: {0, PI / 4 - a, 0}; Box: {2.69, 0.05, 0.05} }
+        "lamp_{i}" : SxBeaconAmber { Position: {cos(a) * 1.9, 1.36, sin(a) * 1.9}; Sphere: {radius: 0.07, segments: 6} }
+      }
+      crane : SxYellow { Position: {0.6, 1.5, 0}; Rotation: {0, 0, 0.5}; Box: {1.8, 0.07, 0.07} }
+      hook : SxDark { Position: {1.35, 1.55, 0}; Box: {0.03, 0.7, 0.03} }
+      crate : SxOrange { Position: {1.35, 1.15, 0}; Box: {0.3, 0.3, 0.3} }
+      sparks {
+        Position: {cos(arc) * 1.5, -0.1, sin(arc) * 1.5}
+        ParticleEmitter: {
+          max: 60, rate: 26, shape: EmitterPoint, direction: {0, 1, 0}, spread: 80, speed: {0.4, 1.6},
+          lifetime: {0.25, 0.7}, size: {0.04, 0.1}, opacity: {0.8, 1}, color: {255, 210, 130}, seed: 3
+        }
+        ParticleForces: {gravity: {0, 0, 0}, drag: 1}
+        ParticleAppearance: {blend: ParticleAdditive, stretch: 0.05}
+        ParticleCurves: {opacity: {keys: [{0, 1}, {1, 0}]}}
+      }
+      weld : SxBeaconAmber { Position: {cos(arc) * 1.5, -0.1, sin(arc) * 1.5}; Sphere: {radius: 0.09, segments: 6} }
+    }
+    if bar {
+      bar_pod : SxPurple { Position: {0, -0.55, 0.85}; Sphere: {radius: 0.34, segments: 10, smooth: true} }
+      bar_neon : SxPink { Position: {0, -0.55, 0.85}; Torus: {radius: 0.36, tube: 0.03, segments: 16, rings: 4} }
+    }
+    if trade {
+      trade_a : SxBlue { Position: {0.8, -0.6, -0.3}; Box: {0.5, 0.36, 0.36} }
+      trade_b : SxRust { Position: {0.8, -0.6, 0.12}; Box: {0.5, 0.36, 0.36} }
+      trade_c : SxTeal { Position: {0.8, -0.22, -0.1}; Box: {0.5, 0.36, 0.36} }
+    }
+    if terminal {
+      term_arm : SxGrey { Position: {-1.5, -0.6, 0}; Box: {2.2, 0.12, 0.16} }
+      term_pad : SxDark { Position: {-2.7, -0.6, 0}; Cylinder: {length: 0.1, radius: 0.46, segments: 12} }
+      term_light : SxGreen { Position: {-2.7, -0.53, 0}; Torus: {radius: 0.32, tube: 0.025, segments: 14, rings: 4} }
+    }
+    if depot {
+      tank_a : SxGrey { Position: {0.3, -0.75, -0.8}; Rotation: {0, 0, PI / 2}; Capsule: {length: 0.7, radius: 0.24, segments: 10, smooth: true} }
+      tank_b : SxGrey { Position: {-0.4, -0.75, -0.8}; Rotation: {0, 0, PI / 2}; Capsule: {length: 0.5, radius: 0.24, segments: 10, smooth: true} }
+    }
+  }
+
+  template SpAsteroids {
+    prop seed: i32 = 0
+    prop count: i32 = 22
+    prop inner: f32 = 2.6
+    prop outer: f32 = 7
+    prop size: f32 = 0.5
+    prop flat: f32 = 0.3
+
+    SpatialIgnore
+    AngularVelocity: {0, 0.012, 0}
+    for i in 0..count {
+      const a: f32 = sx_h(seed, i, 11) * 2 * PI
+      const d: f32 = inner + (outer - inner) * sqrt(sx_h(seed, i, 12))
+      const s: f32 = size * (0.35 + sx_h(seed, i, 13) * sx_h(seed, i, 14) * 1.5)
+      const tone: i32 = floor(sx_h(seed, i, 15) * 3)
+      if tone == 0 {
+        "rock_{i}" : SxRock {
+          Position: {cos(a) * d, (sx_h(seed, i, 16) - 0.5) * 2 * flat * d, sin(a) * d}
+          Rotation: {a * 3, a * 7, a * 5}
+          AngularVelocity: {0.05 + sx_h(seed, i, 17) * 0.12, 0.04, 0.02}
+          Scale: {1 + sx_h(seed, i, 18) * 0.7, 0.66 + sx_h(seed, i, 19) * 0.3, 1}
+          IcoSphere: {radius: s, segments: 1}
+        }
+      } else if tone == 1 {
+        "rock_{i}" : SxRockDark {
+          Position: {cos(a) * d, (sx_h(seed, i, 16) - 0.5) * 2 * flat * d, sin(a) * d}
+          Rotation: {a * 3, a * 7, a * 5}
+          AngularVelocity: {0.02, 0.05 + sx_h(seed, i, 17) * 0.1, 0.04}
+          Scale: {1 + sx_h(seed, i, 18) * 0.7, 0.66 + sx_h(seed, i, 19) * 0.3, 1}
+          IcoSphere: {radius: s, segments: 1}
+        }
+      } else {
+        "rock_{i}" : SxRockWarm {
+          Position: {cos(a) * d, (sx_h(seed, i, 16) - 0.5) * 2 * flat * d, sin(a) * d}
+          Rotation: {a * 3, a * 7, a * 5}
+          AngularVelocity: {0.03, 0.02, 0.05 + sx_h(seed, i, 17) * 0.1}
+          Scale: {1 + sx_h(seed, i, 18) * 0.7, 0.66 + sx_h(seed, i, 19) * 0.3, 1}
+          IcoSphere: {radius: s, segments: 1}
+        }
+      }
+    }
+  }
+
+  template SpBelt {
+    prop seed: i32 = 0
+    prop count: i32 = 70
+    prop radius: f32 = 53
+    prop angle: f32 = 0
+    prop sweep: f32 = 1.1
+
+    SpatialIgnore
+    for i in 0..count {
+      const u: f32 = sx_h(seed, i, 21) * 2 - 1
+      const a: f32 = angle + u * abs(u) * sweep
+      const d: f32 = radius + (sx_h(seed, i, 22) - 0.5) * 7
+      const s: f32 = 0.12 + sx_h(seed, i, 23) * sx_h(seed, i, 24) * 0.5
+      "b_{i}" : SxRock {
+        Position: {cos(a) * d, (sx_h(seed, i, 25) - 0.5) * 1.6, 0 - sin(a) * d}
+        Rotation: {a * 5, a * 9, a * 3}
+        Scale: {1 + sx_h(seed, i, 26) * 0.6, 0.7, 1}
+        IcoSphere: {radius: s, segments: 1}
+      }
+    }
+  }
+
+  template SpMine {
+    prop seed: i32 = 0
+
+    SpatialIgnore
+    rock : SxRockDark { Position: {0, -0.9, 0}; Rotation: {0.4, 0.8, 0.2}; Scale: {1.35, 0.8, 1.1}; IcoSphere: {radius: 1.7, segments: 2} }
+    lump : SxRock { Position: {1.4, -1.2, 0.6}; Rotation: {1, 0.3, 0.5}; Scale: {1, 0.8, 1.1}; IcoSphere: {radius: 0.9, segments: 1} }
+    deck : SxDark { Position: {0, 0.36, 0}; Box: {2.6, 0.16, 1.8} }
+    deck_edge : SxYellow { Position: {0, 0.46, 0.88}; Box: {2.6, 0.06, 0.06} }
+    deck_edge_b : SxYellow { Position: {0, 0.46, -0.88}; Box: {2.6, 0.06, 0.06} }
+    for i in 0..4 {
+      const sx = i % 2 == 0 ? -1 : 1
+      const sz = i < 2 ? -1 : 1
+      "leg_{i}" : SxRust { Position: {sx * 0.36, 1.5, sz * 0.36}; Rotation: {0 - sz * 0.1, 0, sx * 0.1}; Box: {0.07, 2.2, 0.07} }
+    }
+    for i in 0..3 {
+      "brace_{i}" : SxRust { Position: {0, 0.9 + i * 0.6, 0}; Box: {0.74 - i * 0.12, 0.05, 0.74 - i * 0.12} }
+    }
+    head : SxOrange { Position: {0, 2.66, 0}; Box: {0.4, 0.24, 0.4} }
+    head_light : SxBeacon { Position: {0, 2.88, 0}; Sphere: {radius: 0.09, segments: 6} }
+    drill {
+      Position: {0, 0.3, 0}
+      AngularVelocity: {0, 2.4, 0}
+      shaft : SxGrey { Position: {0, 0.7, 0}; Cylinder: {length: 3.4, radius: 0.09, segments: 8} }
+      collar : SxYellow { Position: {0, 0.5, 0}; Box: {0.3, 0.2, 0.3} }
+    }
+    for i in 0..3 {
+      "silo_{i}" : SxGrey { Position: {-0.95 + i * 0.44, 0.86, -0.5}; Cylinder: {length: 0.86, radius: 0.2, segments: 10, smooth: true} }
+      "silo_cap_{i}" : SxRust { Position: {-0.95 + i * 0.44, 1.3, -0.5}; HemiSphere: {radius: 0.2, segments: 10, smooth: true} }
+    }
+    hut : SxOrange { Position: {0.88, 0.7, 0.4}; Box: {0.7, 0.5, 0.6} }
+    hut_win : SxWindow { Position: {0.88, 0.76, 0.71}; Box: {0.44, 0.14, 0.03} }
+    boom : SxRust { Position: {1.9, 0.9, -0.3}; Rotation: {0, 0.2, 0.32}; Box: {2.4, 0.1, 0.16} }
+    boom_tip : SxBeaconAmber { Position: {3, 1.3, -0.52}; Sphere: {radius: 0.07, segments: 6} }
+    crate_a : SxRust { Position: {-0.9, 0.62, 0.5}; Box: {0.4, 0.36, 0.4} }
+    crate_b : SxBlue { Position: {-0.44, 0.62, 0.56}; Box: {0.4, 0.36, 0.4} }
+    crate_c : SxRust { Position: {-0.7, 0.98, 0.52}; Box: {0.4, 0.36, 0.4} }
+    flood {
+      Position: {0.4, 1.2, 0.86}
+      Box: {0.3, 0.12, 0.05}
+      Rgb: {40, 36, 30}
+      Emissive: {strength: 7, color: {255, 236, 200}}
+      NoShadow
+    }
+    SpAsteroids rocks(seed: seed, count: 26, inner: 3.2, outer: 8.5, size: 0.62)
+  }
+
+  template SpResearch {
+    SpatialIgnore
+    lab : SxWhite { Position: {0, 0, 0}; Sphere: {radius: 1, segments: 20, smooth: true} }
+    belt : SxTeal { Position: {0, 0, 0}; Cylinder: {length: 0.24, radius: 1.03, segments: 20, smooth: true} }
+    for i in 0..8 {
+      "port_{i}" {
+        Rotation: {0, i * PI / 4, 0}
+        glass : SxCyan { Position: {1.035, 0, 0}; Box: {0.03, 0.12, 0.22} }
+      }
+    }
+    neck : SxGrey { Position: {0, -1.3, 0}; Cylinder: {length: 0.9, radius: 0.22, segments: 10, smooth: true} }
+    pod : SxWhite { Position: {0, -2, 0}; Rotation: {0, 0, PI / 2}; Capsule: {length: 1.2, radius: 0.34, segments: 12, smooth: true} }
+    boom : SxGrey { Position: {0, 0.3, 0}; Box: {5.2, 0.07, 0.07} }
+    panel_l : SxSolar { Position: {-2.2, 0.3, 0}; Rotation: {0.4, 0, 0}; Box: {1.3, 0.04, 1.1} }
+    panel_r : SxSolar { Position: {2.2, 0.3, 0}; Rotation: {0.4, 0, 0}; Box: {1.3, 0.04, 1.1} }
+    scope : SxGrey { Position: {0, 1.4, 0.2}; Rotation: {0.5, 0, 0}; Cylinder: {length: 1.5, radius: 0.26, segments: 12, smooth: true} }
+    scope_lens : SxCyan { Position: {0, 2.06, 0.56}; Rotation: {0.5, 0, 0}; Cylinder: {length: 0.03, radius: 0.22, segments: 12} }
+    turn {
+      Position: {0.9, 1, -0.5}
+      AngularVelocity: {0, 0.5, 0}
+      dish : SxWhite { Position: {0, 0.2, 0}; Rotation: {1.2, 0, 0}; HemiSphere: {radius: 0.42, segments: 12, smooth: true} }
+      stem : SxGrey { Position: {0, -0.1, 0}; Box: {0.05, 0.5, 0.05} }
+    }
+    tip : SxBeaconGreen { Position: {0, -2.5, 0}; Sphere: {radius: 0.08, segments: 6} }
+  }
+
+  template SpCasino {
+    SpatialIgnore
+    hull : SxPurple { Position: {0, 0, 0}; RoundedBox: {2.4, 0.7, 4.4, radius: 0.3, segments: 3} }
+    deck : SxGold { Position: {0, 0.4, 0}; RoundedBox: {2.1, 0.16, 4, radius: 0.07, segments: 2} }
+    tower : SxPurple { Position: {0, 1.05, -0.9}; RoundedBox: {1.3, 1.2, 1.5, radius: 0.2, segments: 3} }
+    crown : SxGold { Position: {0, 1.86, -0.9}; Cone: {length: 0.6, radius: 0.7, segments: 6} }
+    for i in 0..7 {
+      "neon_l_{i}" : SxPink { Position: {-1.22, 0, -1.8 + i * 0.6}; Box: {0.03, 0.4, 0.34} }
+      "neon_r_{i}" : SxPink { Position: {1.22, 0, -1.8 + i * 0.6}; Box: {0.03, 0.4, 0.34} }
+    }
+    for i in 0..4 {
+      "tw_f_{i}" : SxWindow { Position: {-0.45 + i * 0.3, 1.1, -0.14}; Box: {0.16, 0.8, 0.03} }
+      "tw_b_{i}" : SxWindow { Position: {-0.45 + i * 0.3, 1.1, -1.66}; Box: {0.16, 0.8, 0.03} }
+    }
+    sign {
+      Position: {0, 1.3, 1.2}
+      AngularVelocity: {0, 0.6, 0}
+      board : SxBlack { Position: {0, 0, 0}; Box: {1.5, 0.7, 0.1} }
+      glow_a : SxAmberLight { Position: {0, 0, 0.06}; Box: {1.3, 0.5, 0.02} }
+      glow_b : SxPink { Position: {0, 0, -0.06}; Box: {1.3, 0.5, 0.02} }
+    }
+    post : SxGold { Position: {0, 0.8, 1.2}; Box: {0.08, 0.6, 0.08} }
+    ring_a : SxAmberLight { Position: {0, 0.5, 0}; Scale: {1, 1, 1.9}; Torus: {radius: 1.08, tube: 0.03, segments: 32, rings: 4} }
+    dice_a : SxWhite { Position: {0.6, 0.7, 0.4}; Rotation: {0.3, 0.5, 0.2}; AngularVelocity: {0.4, 0.3, 0.2}; Box: {0.34, 0.34, 0.34} }
+    dice_b : SxRed { Position: {-0.5, 0.7, 0.2}; Rotation: {0.1, 0.9, 0.4}; AngularVelocity: {0.2, 0.5, 0.3}; Box: {0.34, 0.34, 0.34} }
+    SxEngine eng_l(power: 0, size: 0.3, hue: {255, 90, 200}) { Position: {-0.6, -0.05, -2.3} }
+    SxEngine eng_r(power: 0, size: 0.3, hue: {255, 90, 200}) { Position: {0.6, -0.05, -2.3} }
+  }
+
+  template SpListening {
+    SpatialIgnore
+    body : SxBlack { Position: {0, -0.6, 0}; Cylinder: {length: 1.5, radius: 0.5, segments: 8} }
+    skirt : SxDark { Position: {0, -1.5, 0}; Frustum: {length: 0.4, radius_bottom: 0.2, radius_top: 0.5, segments: 8} }
+    turn {
+      Position: {0, 0.4, 0}
+      AngularVelocity: {0, 0.16, 0}
+      yoke : SxDark { Position: {0, 0.2, 0}; Box: {0.3, 0.5, 0.3} }
+      dish : SxDark { Position: {0, 1.3, 0.3}; Rotation: {0.9, 0, 0}; HemiSphere: {radius: 2.1, segments: 20, smooth: true} }
+      dish_in : SxGrey { Position: {0, 1.32, 0.32}; Rotation: {0.9, 0, 0}; Cylinder: {length: 0.03, radius: 2.04, segments: 20} }
+      feed : SxGrey { Position: {0, 2.14, 1.34}; Rotation: {0.9, 0, 0}; Box: {0.05, 0.05, 2.5} }
+      horn : SxRedLight { Position: {0, 2.86, 2.26}; Sphere: {radius: 0.09, segments: 6} }
+    }
+    for i in 0..5 {
+      const a = i * 2 * PI / 5
+      "whip_{i}" : SxGrey { Position: {cos(a) * 0.7, -0.9, sin(a) * 0.7}; Rotation: {sin(a) * 0.5, 0, 0 - cos(a) * 0.5}; Box: {0.025, 2.4, 0.025} }
+    }
+    eye : SxRedLight { Position: {0, -0.4, 0.51}; Box: {0.3, 0.05, 0.03} }
+  }
+
+  template SpShipLot {
+    SpatialIgnore
+    slab : SxDark { Position: {0, -0.3, 0}; Box: {5.2, 0.2, 3.4} }
+    edge_a : SxYellow { Position: {0, -0.19, 1.66}; Box: {5.2, 0.03, 0.08} }
+    edge_b : SxYellow { Position: {0, -0.19, -1.66}; Box: {5.2, 0.03, 0.08} }
+    for i in 0..3 {
+      "row_a_{i}" { Position: {-1.7 + i * 1.7, 0.06, 0.75}; Rotation: {0, 0.3, 0}; Scale: {0.62, 0.62, 0.62}; SpShuttle ship(detail: 0) }
+      "tag_a_{i}" : SxWindow { Position: {-1.7 + i * 1.7, -0.14, 1.5}; Box: {0.6, 0.03, 0.14} }
+    }
+    row_b_0 { Position: {-1.5, 0.2, -0.8}; Rotation: {0, 1.3, 0}; Scale: {0.4, 0.4, 0.4}; SpFreighter ship(seed: 1, cap: 1, detail: 0) }
+    row_b_1 { Position: {1.2, 0.16, -0.8}; Rotation: {0, 1.8, 0}; Scale: {0.42, 0.42, 0.42}; SpLiner ship(detail: 0) }
+    office : SxOrange { Position: {2.2, 0.1, -1.25}; Box: {0.7, 0.6, 0.6} }
+    office_win : SxWindow { Position: {2.2, 0.16, -0.94}; Box: {0.4, 0.2, 0.03} }
+    pole : SxGrey { Position: {-2.4, 0.9, -1.5}; Box: {0.07, 2.2, 0.07} }
+    arrow {
+      Position: {-2.4, 2.2, -1.5}
+      AngularVelocity: {0, 0.8, 0}
+      board : SxRed { Position: {0, 0, 0}; Box: {1.2, 0.5, 0.08} }
+      face_a : SxAmberLight { Position: {0, 0, 0.05}; Box: {1, 0.3, 0.02} }
+      face_b : SxAmberLight { Position: {0, 0, -0.05}; Box: {1, 0.3, 0.02} }
+    }
+    for i in 0..9 {
+      const tone = i % 3
+      if tone == 0 {
+        "flag_{i}" : SxRedLight { Position: {-2.2 + i * 0.55, 1.5 - abs(i - 4) * 0.06, 1.6}; Box: {0.12, 0.12, 0.02} }
+      } else if tone == 1 {
+        "flag_{i}" : SxAmberLight { Position: {-2.2 + i * 0.55, 1.5 - abs(i - 4) * 0.06, 1.6}; Box: {0.12, 0.12, 0.02} }
+      } else {
+        "flag_{i}" : SxCyan { Position: {-2.2 + i * 0.55, 1.5 - abs(i - 4) * 0.06, 1.6}; Box: {0.12, 0.12, 0.02} }
+      }
+    }
+    wire : SxGrey { Position: {0, 1.52, 1.6}; Box: {5, 0.015, 0.015} }
+    post_a : SxGrey { Position: {-2.5, 0.65, 1.6}; Box: {0.04, 1.8, 0.04} }
+    post_b : SxGrey { Position: {2.5, 0.65, 1.6}; Box: {0.04, 1.8, 0.04} }
+  }
+
+  template SpMonastery {
+    SpatialIgnore
+    rock : SxRockDark { Position: {0, -1.1, 0}; Rotation: {0.2, 0.5, 0}; Scale: {1.3, 0.6, 1.3}; IcoSphere: {radius: 1.9, segments: 2} }
+    court : SxStone { Position: {0, -0.3, 0}; Cylinder: {length: 0.24, radius: 2, segments: 24} }
+    for i in 0..12 {
+      const a = i * PI / 6
+      "col_{i}" : SxStone { Position: {cos(a) * 1.7, 0.4, sin(a) * 1.7}; Cylinder: {length: 1.2, radius: 0.09, segments: 8, smooth: true} }
+      "candle_{i}" : SxCandle { Position: {cos(a) * 1.5, 0.02, sin(a) * 1.5}; Box: {0.06, 0.2, 0.06} }
+    }
+    cloister : SxStone { Position: {0, 1.06, 0}; Tube: {radius: 1.87, thickness: 0.34, length: 0.16, segments: 24, smooth: true} }
+    keep : SxStone { Position: {0, 0.7, 0}; Cylinder: {length: 1.8, radius: 0.6, segments: 12, smooth: true} }
+    keep_win : SxCandle { Position: {0, 0.9, 0.6}; Box: {0.12, 0.5, 0.03} }
+    keep_win_b : SxCandle { Position: {0, 0.9, -0.6}; Box: {0.12, 0.5, 0.03} }
+    belfry : SxStone { Position: {0, 1.9, 0}; Box: {0.8, 0.6, 0.8} }
+    bell : SxGold { Position: {0, 1.86, 0}; Cone: {length: 0.34, radius: 0.22, segments: 10, smooth: true} }
+    roof : SxRust { Position: {0, 2.7, 0}; Cone: {length: 1.1, radius: 0.64, segments: 4} }
+    ledger : SxGold { Position: {0, 3.4, 0}; Rotation: {0, 0.6, 0}; AngularVelocity: {0, 0.5, 0}; Box: {0.3, 0.38, 0.06} }
+  }
+
+  template SpOddity {
+    prop kind: i32 = 0
+
+    if kind == 0 {
+      SpResearch hull()
+    } else if kind == 1 {
+      SpCasino hull()
+    } else if kind == 2 {
+      SpListening hull()
+    } else if kind == 3 {
+      SpShipLot hull()
+    } else {
+      SpMonastery hull()
+    }
+  }
+}

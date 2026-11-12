@@ -1,0 +1,476 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.animation
+using box.text
+using box.input
+using state
+using terra
+
+state {
+  export const CAM_LEAD: f32 = 0.3
+  export const AVATAR_PACE: f32 = 6
+
+  export mut pvx: f32 = 0
+  export mut pvz: f32 = 0
+  export mut pstep: f32 = 0
+  export mut pgait: f32 = 0
+  export mut pidle: f32 = 0
+  export mut mark_x: f32 = 0
+  export mut mark_z: f32 = 0
+  export mut mark_on: bool = false
+  export mut mark_tall: bool = false
+  export mut av_respawn: bool = true
+
+  export mut nav_n: i32 = 0
+  export mut nav_x: f32[20] = {}
+  export mut nav_z: f32[20] = {}
+  export mut nav_hx: f32[20] = {}
+  export mut nav_hz: f32[20] = {}
+  export mut nav_room: i32[20] = {}
+  export mut blk_x: f32[80] = {}
+  export mut blk_z: f32[80] = {}
+  export mut blk_hx: f32[80] = {}
+  export mut blk_hz: f32[80] = {}
+  export mut act_x: f32[80] = {}
+  export mut act_z: f32[80] = {}
+  export mut act_kind: i32[80] = {}
+  export mut act_arg: i32[80] = {}
+  export mut lnk_x: f32[10] = {}
+  export mut lnk_z: f32[10] = {}
+  export mut lnk_on: bool[10] = {}
+  export mut cam_rx: f32[10] = {}
+  export mut cam_rz: f32[10] = {}
+  export mut cam_rd: f32[10] = {}
+  export mut col_hit: bool = false
+  export mut col_room: i32 = -1
+  export mut near_kind: i32 = 0
+  export mut near_arg: i32 = 0
+  export mut amb_cur: i32 = -1
+  export mut amb_n: i32 = 0
+
+  fn wrap_pi(a: f64) -> f64 {
+    a - floor((a + PI) / (2 * PI)) * 2 * PI
+  }
+
+  fn plan_sig(poi: i32) -> i32 {
+    here_fac + here_kind * 1000
+  }
+
+  proc here_scan(poi: i32) {
+    const lvl: i32 = depot_level(stock_total(poi))
+    mut fleet: i32 = 0
+    mut doz: i32 = 0
+    for f in 0..8 {
+      if freighters[f].status != 0 && freighters[f].poi == poi {
+        fleet += (1 + clamp(freighter_tier(freighters[f].cap), 0, 3)) << (f * 3)
+      }
+    }
+    for k in 0..4 {
+      if (dozers[k].status == 1 || dozers[k].status == 3) && dozers[k].poi == poi {
+        doz += 1 << k
+      }
+    }
+    if here_stock != lvl {
+      here_stock = lvl
+    }
+    if here_fleet != fleet {
+      here_fleet = fleet
+    }
+    if here_dozers != doz {
+      here_dozers = doz
+    }
+    if here_name != poi_name(poi) {
+      here_name = poi_name(poi)
+    }
+  }
+
+  proc nav_build(poi: i32) {
+    mut n: i32 = 0
+    for i in 0..10 {
+      const r = plan_room(poi, i)
+      if r.role != 0 && n < 20 {
+        nav_x[n] = r.x
+        nav_z[n] = r.z
+        nav_hx[n] = r.w / 2 - ROOM_MARGIN
+        nav_hz[n] = r.d / 2 - ROOM_MARGIN
+        nav_room[n] = i
+        n += 1
+      }
+      cam_rx[i] = r.x
+      cam_rz[i] = r.z
+      cam_rd[i] = room_cam(r)
+      for k in 0..8 {
+        const b: i32 = i * 8 + k
+        const s = plan_spot(poi, i, k)
+        const a = plan_act(poi, i, k)
+        blk_x[b] = s.x
+        blk_z[b] = s.z
+        blk_hx[b] = s.hx > 0 ? s.hx + AVATAR_R : 0
+        blk_hz[b] = s.hx > 0 ? s.hz + AVATAR_R : 0
+        act_x[b] = a.x
+        act_z[b] = a.z
+        act_kind[b] = a.kind
+        act_arg[b] = a.arg
+      }
+    }
+    for j in 0..10 {
+      const l = plan_link(poi, j)
+      const live = l.a >= 0 && l.a < 10 && link_walk(l.kind)
+      lnk_x[j] = l.x
+      lnk_z[j] = l.z
+      lnk_on[j] = live
+      if live && n < 20 {
+        const along = link_along_x(l, plan_room(poi, l.a))
+        nav_x[n] = l.x
+        nav_z[n] = l.z
+        nav_hx[n] = along ? l.w / 2 + 0.7 : l.w / 2 - 0.2 - AVATAR_R
+        nav_hz[n] = along ? l.d / 2 - 0.2 - AVATAR_R : l.d / 2 + 0.7
+        nav_room[n] = -1
+        n += 1
+      }
+    }
+    nav_n = n
+  }
+
+  proc col_check(x: f32, z: f32) {
+    mut ok: bool = false
+    mut hit: bool = false
+    mut room: i32 = -1
+    const n: i32 = clamp(nav_n, 0, 20)
+    for j in 0..n {
+      if abs(x - nav_x[j]) <= nav_hx[j] && abs(z - nav_z[j]) <= nav_hz[j] {
+        const m = nav_room[j]
+        ok = true
+        if m >= 0 && m < 10 {
+          room = m
+          for k in 0..8 {
+            if blk_hx[m * 8 + k] > 0 && abs(x - blk_x[m * 8 + k]) < blk_hx[m * 8 + k] && abs(z - blk_z[m * 8 + k]) < blk_hz[m * 8 + k] {
+              hit = true
+            }
+          }
+        }
+      }
+    }
+    col_hit = !ok || hit
+    col_room = room
+  }
+
+  proc talk_leave() {
+    if amb_cur >= 0 {
+      amb_cur = -1
+      amb_n = 0
+      say_end()
+    }
+  }
+}
+
+terra {
+  av_mark_bob {
+    AnimationClip: {duration: 0.7}
+    lift { AnimationTrack: {component: Position, member: "y", curve: {kind: CurveBezier, keys: [{0, 0, 0, 0}, {0.7, 0.14, 0, 0}]}} }
+  }
+
+  prefab AvSuit { Rgb: {44, 58, 92}; PbrMaterial: {roughness: 0.75} }
+  prefab AvVest { Rgb: {255, 132, 24}; PbrMaterial: {roughness: 0.6} }
+  prefab AvBand { Rgb: {230, 236, 240}; PbrMaterial: {metallic: 0.7, roughness: 0.3}; Emissive: {strength: 0.5, color: {220, 230, 240}} }
+  prefab AvSkin { Rgb: {240, 196, 160}; PbrMaterial: {roughness: 0.7} }
+  prefab AvBoot { Rgb: {36, 34, 38}; PbrMaterial: {roughness: 0.6} }
+  prefab AvHat { Rgb: {250, 250, 244}; PbrMaterial: {roughness: 0.3}; ClearCoat: {strength: 0.7, roughness: 0.15} }
+
+  template Avatar {
+    const swing = sin(pstep) * pgait
+    const lift = abs(sin(pstep)) * 0.07 * pgait + sin(pidle) * 0.012 * (1 - pgait)
+
+    Position: {0, 0, 0}
+
+    figure {
+      Position: {px, 0, pz}
+      Rotation: {0, pyaw, 0}
+      Scale: {1.12, 1.12, 1.12}
+
+      leg_l {
+        Position: {-0.13, 0.5, 0}
+        Rotation: {swing * 0.75, 0, 0}
+        thigh : AvSuit { Position: {0, -0.2, 0}; Capsule: {length: 0.22, radius: 0.1, segments: 10, smooth: true} }
+        boot : AvBoot { Position: {0, -0.43, 0.05}; RoundedBox: {0.2, 0.15, 0.32, 0.06, segments: 2} }
+      }
+      leg_r {
+        Position: {0.13, 0.5, 0}
+        Rotation: {0 - swing * 0.75, 0, 0}
+        thigh : AvSuit { Position: {0, -0.2, 0}; Capsule: {length: 0.22, radius: 0.1, segments: 10, smooth: true} }
+        boot : AvBoot { Position: {0, -0.43, 0.05}; RoundedBox: {0.2, 0.15, 0.32, 0.06, segments: 2} }
+      }
+      upper {
+        Position: {0, lift, 0}
+        Rotation: {pgait * 0.17, 0, swing * 0.05}
+
+        hips : AvSuit { Position: {0, 0.56, 0}; Scale: {1, 0.7, 0.8}; Sphere: {radius: 0.25, segments: 14, smooth: true} }
+        vest : AvVest { Position: {0, 0.86, 0}; Scale: {1, 1, 0.82}; Capsule: {length: 0.26, radius: 0.26, segments: 16, smooth: true} }
+        band_a : AvBand { Position: {0, 0.78, 0}; Scale: {1, 1, 0.82}; Torus: {radius: 0.262, tube: 0.022, segments: 20, rings: 4} }
+        band_b : AvBand { Position: {0, 0.94, 0}; Scale: {1, 1, 0.82}; Torus: {radius: 0.262, tube: 0.022, segments: 20, rings: 4} }
+        pack : AvBoot { Position: {0, 0.9, -0.25}; RoundedBox: {0.34, 0.4, 0.16, 0.06, segments: 2}; Rgb: {58, 62, 70} }
+        patch { Position: {0, 0.96, -0.335}; Box: {0.2, 0.12, 0.02}; Rgb: {255, 190, 84}; Emissive: {strength: 1.6, color: {255, 180, 60}}; NoShadow }
+        roll : AvBand { Position: {0, 1.14, -0.25}; Rotation: {0, 0, 1.5708}; Cylinder: {length: 0.36, radius: 0.06, segments: 10, smooth: true}; Rgb: {96, 150, 220} }
+
+        arm_l {
+          Position: {-0.31, 1.03, 0}
+          Rotation: {0 - swing * 0.85, 0, 0.14}
+          sleeve : AvSuit { Position: {0, -0.19, 0}; Capsule: {length: 0.24, radius: 0.075, segments: 8, smooth: true} }
+          hand : AvSkin { Position: {0, -0.4, 0}; Sphere: {radius: 0.075, segments: 8, smooth: true} }
+        }
+        arm_r {
+          Position: {0.31, 1.03, 0}
+          Rotation: {swing * 0.85, 0, -0.14}
+          sleeve : AvSuit { Position: {0, -0.19, 0}; Capsule: {length: 0.24, radius: 0.075, segments: 8, smooth: true} }
+          hand : AvSkin { Position: {0, -0.4, 0}; Sphere: {radius: 0.075, segments: 8, smooth: true} }
+        }
+        head {
+          Position: {0, 1.36, 0.02}
+          face : AvSkin { Position: {0, 0, 0}; Sphere: {radius: 0.22, segments: 16, smooth: true} }
+          nose : AvSkin { Position: {0, -0.03, 0.21}; Sphere: {radius: 0.04, segments: 6, smooth: true} }
+          eye_l : AvBoot { Position: {-0.08, 0.02, 0.19}; Sphere: {radius: 0.032, segments: 6, smooth: true} }
+          eye_r : AvBoot { Position: {0.08, 0.02, 0.19}; Sphere: {radius: 0.032, segments: 6, smooth: true} }
+          shell : AvHat { Position: {0, 0.06, -0.01}; Scale: {1, 0.86, 1.06}; HemiSphere: {radius: 0.25, segments: 16, smooth: true} }
+          brim : AvHat { Position: {0, 0.07, 0.0}; Cylinder: {length: 0.03, radius: 0.285, segments: 20, smooth: true} }
+          bill : AvHat { Position: {0, 0.07, 0.24}; RoundedBox: {0.3, 0.03, 0.2, 0.012, segments: 2} }
+          ridge : AvHat { Position: {0, 0.255, -0.01}; RoundedBox: {0.07, 0.05, 0.42, 0.02, segments: 2}; Rgb: {255, 150, 30} }
+          lamp { Position: {0, 0.14, 0.245}; Box: {0.09, 0.06, 0.04}; Rgb: {255, 240, 200}; Emissive: {strength: 4, color: {255, 230, 170}}; NoShadow }
+        }
+      }
+    }
+
+    if mark_on {
+      hint {
+        Position: {mark_x, mark_tall ? 2.3 : 1.95, mark_z - (mark_tall ? 0.5 : 0.2)}
+        Rotation: {-0.95, 0, 0}
+        bobber {
+          Position: {0, 0, 0}
+          Animator: {clip: av_mark_bob, mode: AnimationPingPong}
+          rim { Position: {0, 0, -0.02}; RoundedBox: {0.62, 0.62, 0.06, 0.12, segments: 3}; Rgb: {255, 190, 84}; Emissive: {strength: 2.2, color: {255, 180, 60}}; NoShadow }
+          key : AvBoot { Position: {0, 0, 0.02}; RoundedBox: {0.52, 0.52, 0.08, 0.1, segments: 3}; Rgb: {24, 26, 32}; NoShadow }
+          glyph { Position: {0, 0, 0.07}; Scale: {0.011, 0.011, 0.011}; Text: {value: "E", size: 32, align: Center}; Rgb: {255, 214, 140}; Emissive: {strength: 2, color: {255, 200, 110}}; NoShadow }
+        }
+      }
+    }
+  }
+}
+
+async {
+  mut c_poi: i32 = -1
+  mut c_sig: i32 = -1
+  mut room: i32 = 0
+  mut was_npc: i32 = -1
+  mut scan: i32 = 0
+  mut s_poi: i32 = -1
+  while true {
+    await next_frame()
+    if here_kind != poi_kind(at_poi) {
+      here_kind = poi_kind(at_poi)
+    }
+    if here_fac != poi_fac(at_poi) {
+      here_fac = poi_fac(at_poi)
+    }
+    scan += 1
+    if scan >= 20 || s_poi != at_poi {
+      scan = 0
+      s_poi = at_poi
+      here_scan(at_poi)
+    }
+    if mode == MODE_STATION {
+      const sig = plan_sig(at_poi)
+      if at_poi != c_poi || sig != c_sig {
+        if at_poi != c_poi || sig / 1000 != c_sig / 1000 {
+          av_respawn = true
+        }
+        c_poi = at_poi
+        c_sig = sig
+        nav_build(at_poi)
+      }
+      col_check(px, pz)
+      if av_respawn || col_hit {
+        av_respawn = false
+        px = spawn_x(at_poi)
+        pz = spawn_z(at_poi)
+        pyaw = 0
+        pvx = 0
+        pvz = 0
+        pgait = 0
+        col_check(px, pz)
+        room = clamp(col_room, 0, 9)
+        cam_x = px
+        cam_z = pz - cam_rd[room] * 0.05
+        cam_dist = cam_rd[room]
+        talk_leave()
+      }
+      if col_room >= 0 && col_room < 10 {
+        room = col_room
+      }
+
+      const free = screen == SCREEN_NONE
+      const mx = free ? b2i(state.actions.MoveRight[ActionState].down) - b2i(state.actions.MoveLeft[ActionState].down) : 0
+      const mz = free ? b2i(state.actions.MoveDown[ActionState].down) - b2i(state.actions.MoveUp[ActionState].down) : 0
+      const len = sqrt(mx * mx + mz * mz)
+      const tvx = len > 0 ? mx / len * AVATAR_PACE : 0
+      const tvz = len > 0 ? mz / len * AVATAR_PACE : 0
+      const grip = min(1, dt * (len > 0 ? 9 : 13))
+      if abs(tvx - pvx) > 0.01 || abs(tvz - pvz) > 0.01 {
+        pvx += (tvx - pvx) * grip
+        pvz += (tvz - pvz) * grip
+      } else if pvx != tvx || pvz != tvz {
+        pvx = tvx
+        pvz = tvz
+      }
+      if abs(pvx) > 0.001 {
+        const nx = px + pvx * dt
+        col_check(nx, pz)
+        if col_hit {
+          pvx = 0
+        } else {
+          px = nx
+        }
+      }
+      if abs(pvz) > 0.001 {
+        const nz = pz + pvz * dt
+        col_check(px, nz)
+        if col_hit {
+          pvz = 0
+        } else {
+          pz = nz
+        }
+      }
+      const v = sqrt(pvx * pvx + pvz * pvz)
+      if len > 0 {
+        pyaw += wrap_pi(atan2(mx, mz) - pyaw) * min(1, dt * 12)
+      }
+      const gait = clamp(v / AVATAR_PACE, 0, 1)
+      if abs(gait - pgait) > 0.002 {
+        pgait = gait
+      }
+      if v > 0.05 {
+        pstep += dt * (4 + v * 1.5)
+      }
+      pidle += dt * 2.2
+
+      mut best: f32 = ACT_REACH * ACT_REACH
+      mut kind: i32 = 0
+      mut arg: i32 = 0
+      mut slot: i32 = -1
+      for k in 0..8 {
+        const b: i32 = room * 8 + k
+        if act_kind[b] != 0 {
+          const dx = px - act_x[b]
+          const dz = pz - act_z[b]
+          if dx * dx + dz * dz < best {
+            best = dx * dx + dz * dz
+            kind = act_kind[b]
+            arg = act_arg[b]
+            slot = b
+          }
+        }
+      }
+      if kind != near_kind || arg != near_arg {
+        near_kind = kind
+        near_arg = arg
+        near = kind == ACT_FAC ? arg : 0
+        near_npc = kind == ACT_PATRON ? arg : -1
+        near_text = kind == ACT_PATRON ? bar_npc_name(at_poi, arg) : kind == ACT_CHAR ? amb_name(arg) : ""
+        mark_on = kind != 0
+        mark_tall = kind == ACT_FAC
+        if slot >= 0 {
+          mark_x = act_x[slot]
+          mark_z = act_z[slot]
+        }
+        if amb_cur >= 0 && !(kind == ACT_CHAR && arg == amb_cur) {
+          talk_leave()
+        }
+      }
+      if near_npc != was_npc {
+        if was_npc >= 0 && talk_npc == was_npc {
+          emit Request(op: OP_TALK, a: -1, b: 0)
+        }
+        was_npc = near_npc
+      }
+      for j in 0..10 {
+        const want = lnk_on[j] && (px - lnk_x[j]) * (px - lnk_x[j]) + (pz - lnk_z[j]) * (pz - lnk_z[j]) < 9
+        if door_open[j] != want {
+          door_open[j] = want
+        }
+      }
+
+      const want_d = cam_rd[room]
+      const fits = want_d < 26.5 && col_room >= 0
+      const tx = fits ? cam_rx[room] * 0.55 + px * 0.45 : px + pvx * CAM_LEAD
+      const tz = (fits ? cam_rz[room] * 0.55 + pz * 0.45 : pz + pvz * CAM_LEAD) - want_d * 0.05
+      const ease = min(1, dt * 3.2)
+      if abs(cam_x - tx) > 0.002 || abs(cam_z - tz) > 0.002 {
+        cam_x += (tx - cam_x) * ease
+        cam_z += (tz - cam_z) * ease
+      }
+      if abs(cam_dist - want_d) > 0.01 {
+        cam_dist += (want_d - cam_dist) * ease
+      }
+    } else {
+      if near != 0 || near_npc != -1 || near_kind != 0 {
+        near = 0
+        near_npc = -1
+        near_text = ""
+        near_kind = 0
+        near_arg = 0
+        mark_on = false
+      }
+      talk_leave()
+      was_npc = -1
+    }
+  }
+}
+
+async {
+  while true {
+    await on.pressed(state.actions.Interact)
+    if screen != SCREEN_NONE {
+      emit Request(op: OP_CLOSE, a: 0, b: 0)
+    } else if mode == MODE_STATION {
+      if near_kind == ACT_FAC && fac_screen(near_arg) != SCREEN_NONE {
+        emit Request(op: OP_OPEN, a: fac_screen(near_arg), b: 0)
+      } else if near_kind == ACT_PATRON {
+        if talk_npc != near_arg {
+          emit Request(op: OP_TALK, a: near_arg, b: 0)
+        } else {
+          emit Request(op: OP_TALK_NEXT, a: 0, b: 0)
+        }
+      } else if near_kind == ACT_CHAR {
+        if amb_cur != near_arg {
+          amb_cur = near_arg
+          amb_n = 0
+        } else {
+          amb_n += 1
+        }
+        if amb_n >= amb_count(amb_cur) {
+          talk_leave()
+        } else {
+          say(amb_name(amb_cur), amb_tag(amb_cur), amb_line(amb_cur, amb_n), amb_n + 1 < amb_count(amb_cur))
+        }
+      } else {
+        emit Request(op: OP_OPEN, a: SCREEN_PANEL, b: 0)
+      }
+    }
+  }
+}
+
+async {
+  while true {
+    const e = await Arrived
+    av_respawn = true
+  }
+}
+
+async {
+  while true {
+    await Reset
+    av_respawn = true
+    amb_cur = -1
+  }
+}

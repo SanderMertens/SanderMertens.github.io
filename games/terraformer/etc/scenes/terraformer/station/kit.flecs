@@ -1,0 +1,678 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.movement
+using box.animation
+using box.transition
+using box.light
+using box.text
+using box.texture
+using state
+using terra
+
+state {
+  export mut door_open: bool[10] = {}
+
+  fn bottle_ink(n: i32) -> Rgb {
+    match n % 6 {
+      0: {255, 170, 60}
+      1: {110, 230, 130}
+      2: {255, 90, 80}
+      3: {110, 180, 255}
+      4: {240, 240, 220}
+      _: {220, 120, 255}
+    }
+  }
+
+  fn crate_tint(seed: i32) -> Rgb {
+    match hash_int(seed, 114, 6) {
+      0: {70, 110, 160}
+      1: {160, 70, 60}
+      2: {80, 140, 100}
+      3: {150, 150, 158}
+      4: {170, 130, 60}
+      _: {110, 90, 140}
+    }
+  }
+
+  fn depot_level(units: f32) -> i32 {
+    units <= 0 ? 0 : units < 40 ? 1 : units < 120 ? 2 : units < 300 ? 3 : units < 600 ? 4 : 5
+  }
+
+  fn role_title(role: i32) -> string {
+    match role {
+      1: "DOCK"
+      2: "CONCOURSE"
+      3: "BAR"
+      4: "TRADE"
+      5: "FREIGHT"
+      6: "SHIPYARD"
+      7: "SITE OFFICE"
+      _: ""
+    }
+  }
+
+  fn plan_gaps(a: Link, b: Link, c: Link, d: Link, e: Link, f: Link, g: Link, h: Link, i: Link, j: Link, x: f32, z: f32) -> bool {
+    gap_at(a, x, z) || gap_at(b, x, z) || gap_at(c, x, z) || gap_at(d, x, z) || gap_at(e, x, z) || gap_at(f, x, z) || gap_at(g, x, z) || gap_at(h, x, z) || gap_at(i, x, z) || gap_at(j, x, z)
+  }
+}
+
+terra {
+  kit_tile_h {
+    TextureGen: {
+      width: 256, height: 256, seed: 3,
+      layers: [
+        {kind: GenBlocks, courses: 2, per_course: 2, gap: 0.008, softness: 0.014, amount: 1, id_amount: 0.1},
+        {kind: GenNoise, frequency: 12, octaves: 3, amount: 0.05}
+      ]
+    }
+  }
+  kit_tile { TextureGen: {source: kit_tile_h, output: GenAlbedo, colors: [{0, {70, 70, 78}}, {0.55, {205, 205, 212}}, {0.85, {240, 240, 244}}, {1, {255, 255, 255}}]} }
+  kit_tile_n { TextureGen: {source: kit_tile_h, output: GenNormal, strength: 1.2} }
+
+  kit_plate_h {
+    TextureGen: {
+      width: 256, height: 256, seed: 9,
+      layers: [
+        {kind: GenBlocks, courses: 4, per_course: 2, gap: 0.012, softness: 0.02, stagger: 0.5, amount: 1, id_amount: 0.25},
+        {kind: GenNoise, frequency: 6, octaves: 4, amount: 0.35}
+      ]
+    }
+  }
+  kit_plate { TextureGen: {source: kit_plate_h, output: GenAlbedo, colors: [{0, {40, 40, 44}}, {0.4, {150, 150, 156}}, {0.7, {215, 215, 220}}, {1, {255, 255, 255}}]} }
+  kit_plate_n { TextureGen: {source: kit_plate_h, output: GenNormal, strength: 1.6} }
+
+  kit_rock_h {
+    TextureGen: {
+      width: 256, height: 256, seed: 21,
+      layers: [
+        {kind: GenNoise, frequency: 4, octaves: 5, amount: 1},
+        {kind: GenCells, count: 40, distance: GenEdge, edge: 0.4, amount: 0.3}
+      ]
+    }
+  }
+  kit_rock { TextureGen: {source: kit_rock_h, output: GenAlbedo, colors: [{0, {70, 62, 56}}, {0.5, {150, 138, 124}}, {1, {226, 214, 196}}]} }
+  kit_rock_n { TextureGen: {source: kit_rock_h, output: GenNormal, strength: 3} }
+
+  prefab KitTile { Rgb: {255, 255, 255}; PbrMaterial: {metallic: 0.05, roughness: 0.6}; ClearCoat: {strength: 0.2, roughness: 0.4}; PbrTextures: {albedo: kit_tile, normal: kit_tile_n}; TextureMapping: {mode: MappingWorld, size: 4} }
+  prefab KitPlate { Rgb: {255, 255, 255}; PbrMaterial: {metallic: 0.5, roughness: 0.7}; PbrTextures: {albedo: kit_plate, normal: kit_plate_n}; TextureMapping: {mode: MappingWorld, size: 4} }
+  prefab KitRock { Rgb: {255, 255, 255}; PbrMaterial: {roughness: 0.95}; PbrTextures: {albedo: kit_rock, normal: kit_rock_n}; TextureMapping: {mode: MappingObject, size: 6, blend: 0.3} }
+  prefab KitPaint { PbrMaterial: {metallic: 0.1, roughness: 0.55} }
+  prefab KitGloss { PbrMaterial: {metallic: 0.15, roughness: 0.28}; ClearCoat: {strength: 0.7, roughness: 0.12} }
+  prefab KitMatte { PbrMaterial: {roughness: 0.92} }
+  prefab KitMetal { PbrMaterial: {metallic: 0.9, roughness: 0.38} }
+  prefab KitSteel { Rgb: {150, 158, 170}; PbrMaterial: {metallic: 0.85, roughness: 0.4} }
+  prefab KitDark { Rgb: {38, 42, 50}; PbrMaterial: {metallic: 0.6, roughness: 0.5} }
+  prefab KitBrass { Rgb: {214, 168, 84}; PbrMaterial: {metallic: 1, roughness: 0.3} }
+  prefab KitRubber { Rgb: {26, 26, 30}; PbrMaterial: {roughness: 0.85} }
+  prefab KitLeaf { Rgb: {64, 150, 72}; PbrMaterial: {roughness: 0.85} }
+  prefab KitGlass { Rgb: {190, 225, 240}; PbrMaterial: {metallic: 0.1, roughness: 0.05}; ClearCoat: {strength: 1, roughness: 0.03}; Transmission: {transmission_factor: 0.9, ior: 1.3, thickness_factor: 0.02, attenuation_distance: 8, attenuation_color: {200, 235, 250}} }
+
+  kit_npc_idle {
+    AnimationClip: {duration: 1.4}
+    lift { AnimationTrack: {component: Position, member: "y", curve: {kind: CurveBezier, keys: [{0, 0, 0, 0}, {1.4, 0.03, 0, 0}]}} }
+  }
+
+  kit_arm_swing {
+    AnimationClip: {duration: 3.2}
+    turn { AnimationTrack: {component: Rotation, member: "y", curve: {kind: CurveBezier, keys: [{0, -0.9, 0, 0}, {3.2, 0.7, 0, 0}]}} }
+  }
+
+  kit_arm_reach {
+    AnimationClip: {duration: 1.6}
+    bend { AnimationTrack: {component: Rotation, member: "z", curve: {kind: CurveBezier, keys: [{0, -0.5, 0, 0}, {1.6, -0.95, 0, 0}]}} }
+  }
+
+  kit_glow_pulse {
+    AnimationClip: {duration: 1.2}
+    strength { AnimationTrack: {component: Emissive, member: "strength", curve: {kind: CurveBezier, keys: [{0, 0.6, 0, 0}, {1.2, 3.2, 0, 0}]}} }
+  }
+
+  template KitGlow {
+    prop ink: Rgb = {255, 190, 84}
+    prop power: f32 = 3
+    Rgb: ink
+    Emissive: {strength: power, color: ink}
+    NoShadow
+  }
+
+  template KitSign {
+    prop text: string = ""
+    prop sub: string = ""
+    prop w: f32 = 3
+    prop ink: Rgb = {255, 190, 84}
+    prop size: f32 = 1
+
+    board : KitDark { Position: {0, 0, 0}; Box: {w, 0.66 * size, 0.08}; Rgb: {20, 22, 28} }
+    edge { Position: {0, -0.33 * size - 0.02, 0.02}; Box: {w, 0.04, 0.1}; KitGlow: {ink: ink, power: 3} }
+    label { Position: {0, sub == "" ? 0 : 0.09 * size, 0.05}; Scale: {0.0105 * size, 0.0105 * size, 0.0105 * size}; Text: {value: text, size: 32, align: Center}; Rgb: ink; Emissive: {strength: 2.4, color: ink}; NoShadow }
+    if sub != "" {
+      small { Position: {0, -0.19 * size, 0.05}; Scale: {0.0046 * size, 0.0046 * size, 0.0046 * size}; Text: {value: sub, size: 32, align: Center}; Rgb: {214, 220, 230}; Emissive: {strength: 1.2, color: {200, 208, 220}}; NoShadow }
+    }
+  }
+
+  template KitNote {
+    prop text: string = ""
+    prop ink: Rgb = {30, 30, 36}
+    prop size: f32 = 1
+    prop glow: f32 = 0
+    Scale: {0.005 * size, 0.005 * size, 0.005 * size}
+    Text: {value: text, size: 32, align: Center}
+    Rgb: ink
+    Emissive: {strength: glow, color: ink}
+    NoShadow
+  }
+
+  template KitKiosk {
+    prop ink: Rgb = {255, 190, 84}
+    base : KitDark { Position: {0, 0.5, 0}; RoundedBox: {0.5, 1.0, 0.34, 0.05, segments: 2} }
+    head : KitSteel { Position: {0, 1.1, 0.05}; Rotation: {-0.75, 0, 0}; RoundedBox: {0.66, 0.46, 0.08, 0.03, segments: 2} }
+    face { Position: {0, 1.115, 0.085}; Rotation: {-0.75, 0, 0}; Box: {0.54, 0.34, 0.03}; KitGlow: {ink: ink, power: 2.2} }
+    strip { Position: {0, 0.5, 0.175}; Box: {0.06, 0.7, 0.02}; KitGlow: {ink: ink, power: 1.5} }
+  }
+
+  template KitRing {
+    prop ink: Rgb = {255, 190, 84}
+    prop reach: f32 = 1.45
+    band { Position: {0, 0.014, 0}; Tube: {radius: reach, thickness: 0.05, length: 0.012, segments: 48}; KitGlow: {ink: ink, power: 0.8} }
+    dot { Position: {0, 0.014, 0}; Cylinder: {radius: 0.09, length: 0.012, segments: 12}; KitGlow: {ink: ink, power: 0.8} }
+  }
+
+  template KitCrate {
+    prop sx: f32 = 0.8
+    prop sy: f32 = 0.7
+    prop sz: f32 = 0.8
+    prop tint: Rgb = {150, 150, 158}
+    body : KitPaint { Position: {0, sy / 2, 0}; Box: {sx, sy, sz}; Rgb: tint }
+    band_a : KitDark { Position: {0, sy / 2, 0}; Box: {sx + 0.03, sy * 0.14, sz + 0.03} }
+    strap_a : KitDark { Position: {0, sy, 0}; Box: {sx * 0.12, 0.02, sz + 0.02} }
+    strap_b : KitDark { Position: {0, sy, 0}; Box: {sx + 0.02, 0.02, sz * 0.12} }
+  }
+
+  template KitCargo {
+    prop len: f32 = 1.8
+    prop tint: Rgb = {70, 110, 160}
+    body : KitMetal { Position: {0, 0.5, 0}; Box: {len, 1.0, 0.95}; Rgb: tint; PbrMaterial: {metallic: 0.3, roughness: 0.6} }
+    const n: i32 = floor(len / 0.3)
+    for i in 0..n {
+      "rib_{i}" : KitDark { Position: {0 - len / 2 + 0.15 + i * 0.3, 0.48, 0}; Box: {0.05, 0.9, 1.0} }
+    }
+    rail_a : KitDark { Position: {0, 1.0, 0.45}; Box: {len + 0.04, 0.05, 0.08} }
+    rail_b : KitDark { Position: {0, 1.0, -0.45}; Box: {len + 0.04, 0.05, 0.08} }
+    cap_a : KitDark { Position: {len / 2, 1.0, 0}; Box: {0.08, 0.05, 0.95} }
+    cap_b : KitDark { Position: {0 - len / 2, 1.0, 0}; Box: {0.08, 0.05, 0.95} }
+    door : KitSteel { Position: {len / 2 + 0.01, 0.5, 0}; Box: {0.03, 0.86, 0.8} }
+  }
+
+  template KitPlanter {
+    prop seed: i32 = 0
+    prop tub: Rgb = {232, 232, 236}
+    prop trim: Rgb = {214, 168, 84}
+    pot : KitGloss { Position: {0, 0.3, 0}; RoundedBox: {1.3, 0.6, 1.3, 0.08, segments: 2}; Rgb: tub }
+    lip : KitBrass { Position: {0, 0.6, 0}; Box: {1.36, 0.05, 1.36}; Rgb: trim }
+    soil : KitMatte { Position: {0, 0.61, 0}; Box: {1.14, 0.04, 1.14}; Rgb: {58, 42, 32} }
+    if hash01(seed, 121) < 0.5 {
+      trunk : KitMatte { Position: {0, 1.0, 0}; Cylinder: {length: 0.8, radius: 0.07, segments: 8, smooth: true}; Rgb: {96, 70, 50} }
+      crown_a : KitLeaf { Position: {0, 1.55, 0}; IcoSphere: {radius: 0.52, segments: 1} }
+      crown_b : KitLeaf { Position: {0.24, 1.36, 0.16}; IcoSphere: {radius: 0.34, segments: 1}; Rgb: {84, 170, 84} }
+      crown_c : KitLeaf { Position: {-0.24, 1.42, -0.12}; IcoSphere: {radius: 0.36, segments: 1}; Rgb: {52, 132, 70} }
+    } else {
+      bush_a : KitLeaf { Position: {-0.22, 0.86, 0.1}; IcoSphere: {radius: 0.38, segments: 1} }
+      bush_b : KitLeaf { Position: {0.24, 0.92, -0.14}; IcoSphere: {radius: 0.42, segments: 1}; Rgb: {84, 170, 84} }
+      bush_c : KitLeaf { Position: {0.06, 0.8, 0.3}; IcoSphere: {radius: 0.3, segments: 1}; Rgb: {52, 132, 70} }
+      bloom_a { Position: {-0.26, 1.2, 0.2}; Sphere: {radius: 0.07, segments: 8, smooth: true}; Rgb: {255, 150, 190}; PbrMaterial: {roughness: 0.6} }
+      bloom_b { Position: {0.3, 1.3, -0.1}; Sphere: {radius: 0.07, segments: 8, smooth: true}; Rgb: {255, 220, 120}; PbrMaterial: {roughness: 0.6} }
+      bloom_c { Position: {0.1, 1.08, 0.42}; Sphere: {radius: 0.06, segments: 8, smooth: true}; Rgb: {255, 150, 190}; PbrMaterial: {roughness: 0.6} }
+    }
+  }
+
+  template KitBench {
+    prop len: f32 = 2.2
+    prop tint: Rgb = {120, 78, 48}
+    seat : KitGloss { Position: {0, 0.46, 0}; RoundedBox: {len, 0.1, 0.56, 0.04, segments: 2}; Rgb: tint }
+    back_ : KitGloss { Position: {0, 0.72, -0.26}; RoundedBox: {len, 0.42, 0.08, 0.03, segments: 2}; Rgb: tint }
+    leg_a : KitSteel { Position: {0 - len / 2 + 0.2, 0.22, 0}; Box: {0.08, 0.44, 0.5} }
+    leg_b : KitSteel { Position: {len / 2 - 0.2, 0.22, 0}; Box: {0.08, 0.44, 0.5} }
+  }
+
+  template KitRail {
+    prop len: f32 = 4
+    prop trim: Rgb = {214, 168, 84}
+    const n: i32 = max(1, floor(len / 2.4 + 0.5))
+    pane : KitGlass { Position: {0, 0.55, 0}; Box: {len, 0.86, 0.04} }
+    top : KitMetal { Position: {0, 1.04, 0}; Box: {len, 0.07, 0.1}; Rgb: trim }
+    foot : KitDark { Position: {0, 0.07, 0}; Box: {len, 0.14, 0.1} }
+    for i in 0..n + 1 {
+      "post_{i}" : KitSteel { Position: {0 - len / 2 + i * len / n, 0.54, 0}; Box: {0.07, 1.06, 0.08} }
+    }
+  }
+
+  template KitFence {
+    prop len: f32 = 4
+    prop ink: Rgb = {230, 180, 40}
+    const n: i32 = max(1, floor(len / 1.6 + 0.5))
+    top : KitPaint { Position: {0, 1.0, 0}; Box: {len, 0.07, 0.07}; Rgb: ink }
+    mid : KitPaint { Position: {0, 0.55, 0}; Box: {len, 0.05, 0.05}; Rgb: ink }
+    for i in 0..n + 1 {
+      "post_{i}" : KitPaint { Position: {0 - len / 2 + i * len / n, 0.5, 0}; Box: {0.07, 1.0, 0.07}; Rgb: ink }
+    }
+  }
+
+  template KitShip {
+    prop tint: Rgb = {226, 230, 236}
+    prop trim: Rgb = {255, 150, 40}
+    prop worn: bool = false
+    hull : KitGloss { Position: {0, 0, 0}; Rotation: {1.5708, 0, 0}; Scale: {1, 1, 0.72}; Capsule: {length: 1.5, radius: 0.5, segments: 16, smooth: true}; Rgb: tint }
+    belly : KitDark { Position: {0, -0.26, -0.1}; Box: {0.7, 0.2, 1.5} }
+    canopy : KitGloss { Position: {0, 0.2, 0.62}; Scale: {0.8, 0.6, 1.2}; Sphere: {radius: 0.36, segments: 14, smooth: true}; Rgb: {40, 70, 96} }
+    wing_l : KitGloss { Position: {-0.82, -0.05, -0.35}; Rotation: {0, 0.32, 0.06}; Box: {1.1, 0.07, 0.7}; Rgb: tint }
+    wing_r : KitGloss { Position: {0.82, -0.05, -0.35}; Rotation: {0, -0.32, -0.06}; Box: {1.1, 0.07, 0.7}; Rgb: tint }
+    tip_l : KitPaint { Position: {-1.34, -0.02, -0.52}; Box: {0.1, 0.1, 0.6}; Rgb: trim }
+    tip_r : KitPaint { Position: {1.34, -0.02, -0.52}; Box: {0.1, 0.1, 0.6}; Rgb: trim }
+    fin : KitPaint { Position: {0, 0.42, -0.8}; Rotation: {-0.4, 0, 0}; Box: {0.07, 0.6, 0.5}; Rgb: trim }
+    stripe : KitPaint { Position: {0, 0.3, 0}; Box: {0.3, 0.04, 1.3}; Rgb: trim }
+    pod_l : KitSteel { Position: {-0.36, -0.02, -1.1}; Rotation: {1.5708, 0, 0}; Cylinder: {length: 0.5, radius: 0.2, segments: 12, smooth: true} }
+    pod_r : KitSteel { Position: {0.36, -0.02, -1.1}; Rotation: {1.5708, 0, 0}; Cylinder: {length: 0.5, radius: 0.2, segments: 12, smooth: true} }
+    burn_l { Position: {-0.36, -0.02, -1.36}; Rotation: {1.5708, 0, 0}; Cylinder: {length: 0.03, radius: 0.15, segments: 12}; KitGlow: {ink: {120, 200, 255}, power: worn ? 0.4 : 5} }
+    burn_r { Position: {0.36, -0.02, -1.36}; Rotation: {1.5708, 0, 0}; Cylinder: {length: 0.03, radius: 0.15, segments: 12}; KitGlow: {ink: {120, 200, 255}, power: worn ? 0.4 : 5} }
+    if worn {
+      patch_a : KitPaint { Position: {0.2, 0.33, -0.2}; Rotation: {0, 0.3, 0}; Box: {0.34, 0.03, 0.3}; Rgb: {120, 126, 134} }
+      patch_b : KitPaint { Position: {0.9, -0.03, -0.36}; Rotation: {0, -0.32, -0.06}; Box: {0.5, 0.09, 0.72}; Rgb: {196, 110, 70} }
+    }
+  }
+
+  template KitDozer {
+    body : KitGloss { Position: {0, 0.62, -0.1}; RoundedBox: {1.3, 0.6, 1.8, 0.1, segments: 2}; Rgb: {250, 196, 30} }
+    cab : KitGloss { Position: {0, 1.18, -0.35}; RoundedBox: {1.0, 0.62, 0.9, 0.1, segments: 2}; Rgb: {250, 196, 30} }
+    pane : KitGloss { Position: {0, 1.2, 0.11}; Box: {0.8, 0.4, 0.04}; Rgb: {40, 70, 96} }
+    roof : KitDark { Position: {0, 1.52, -0.35}; Box: {1.1, 0.07, 1.0} }
+    track_l : KitRubber { Position: {-0.78, 0.3, 0}; RoundedBox: {0.36, 0.6, 2.3, 0.2, segments: 3} }
+    track_r : KitRubber { Position: {0.78, 0.3, 0}; RoundedBox: {0.36, 0.6, 2.3, 0.2, segments: 3} }
+    blade : KitSteel { Position: {0, 0.5, 1.42}; Rotation: {-0.25, 0, 0}; Box: {2.3, 0.9, 0.1} }
+    edge : KitDark { Position: {0, 0.1, 1.55}; Box: {2.3, 0.1, 0.12} }
+    ram_l : KitSteel { Position: {-0.5, 0.5, 1.1}; Box: {0.1, 0.1, 0.6} }
+    ram_r : KitSteel { Position: {0.5, 0.5, 1.1}; Box: {0.1, 0.1, 0.6} }
+    pipe : KitDark { Position: {0.4, 1.3, 0.5}; Cylinder: {length: 0.7, radius: 0.06, segments: 8, smooth: true} }
+    beacon { Position: {0, 1.62, -0.35}; Sphere: {radius: 0.1, segments: 8, smooth: true}; KitGlow: {ink: {255, 150, 30}, power: 4}; Animator: {clip: kit_glow_pulse, mode: AnimationPingPong} }
+    stripe_a : KitDark { Position: {0, 0.62, -1.01}; Box: {1.2, 0.2, 0.02} }
+  }
+
+  kit_wood_h {
+    TextureGen: {
+      width: 256, height: 256, seed: 5,
+      layers: [
+        {kind: GenBlocks, courses: 8, per_course: 2, gap: 0.006, softness: 0.01, stagger: 0.5, jitter: 0.2, amount: 1, id_amount: 0.3},
+        {kind: GenNoise, frequency: 2, octaves: 4, amount: 0.12}
+      ]
+    }
+  }
+  kit_wood { TextureGen: {source: kit_wood_h, output: GenAlbedo, colors: [{0, {60, 50, 44}}, {0.5, {176, 170, 164}}, {1, {255, 255, 255}}]} }
+  kit_wood_n { TextureGen: {source: kit_wood_h, output: GenNormal, strength: 1} }
+  kit_grit_h { TextureGen: {width: 256, height: 256, seed: 31, layers: [{kind: GenCells, count: 900, amount: 1}, {kind: GenNoise, frequency: 8, octaves: 3, amount: 0.5}]} }
+  kit_grit { TextureGen: {source: kit_grit_h, output: GenAlbedo, colors: [{0, {150, 146, 140}}, {1, {255, 255, 255}}]} }
+  kit_grit_n { TextureGen: {source: kit_grit_h, output: GenNormal, strength: 2} }
+
+  prefab KitWood { Rgb: {255, 255, 255}; PbrMaterial: {roughness: 0.6}; PbrTextures: {albedo: kit_wood, normal: kit_wood_n}; TextureMapping: {mode: MappingWorld, size: 4} }
+  prefab KitGravel { Rgb: {255, 255, 255}; PbrMaterial: {roughness: 1}; PbrTextures: {albedo: kit_grit, normal: kit_grit_n}; TextureMapping: {mode: MappingWorld, size: 3} }
+  prefab KitGrate { Rgb: {255, 255, 255}; PbrMaterial: {metallic: 0.7, roughness: 0.5}; PbrTextures: {albedo: kit_plate, normal: kit_plate_n}; TextureMapping: {mode: MappingWorld, size: 1.5} }
+
+  kit_door_bob {
+    AnimationClip: {duration: 1.2}
+    strength { AnimationTrack: {component: Emissive, member: "strength", curve: {kind: CurveBezier, keys: [{0, 1, 0, 0}, {1.2, 3, 0, 0}]}} }
+  }
+
+  template KitFloor {
+    prop w: f32 = 4
+    prop d: f32 = 4
+    prop mat: i32 = 0
+    prop tint: Rgb = {255, 255, 255}
+    if mat == 1 {
+      top : KitPlate { Position: {0, -0.15, 0}; Box: {w, 0.3, d}; Rgb: tint }
+    } else if mat == 2 {
+      top : KitMatte { Position: {0, -0.15, 0}; Box: {w, 0.3, d}; Rgb: tint }
+    } else if mat == 3 {
+      top : KitWood { Position: {0, -0.15, 0}; Box: {w, 0.3, d}; Rgb: tint }
+    } else if mat == 4 {
+      top : KitGrate { Position: {0, -0.15, 0}; Box: {w, 0.3, d}; Rgb: tint }
+    } else if mat == 5 {
+      top : KitGravel { Position: {0, -0.15, 0}; Box: {w, 0.3, d}; Rgb: tint }
+    } else {
+      top : KitTile { Position: {0, -0.15, 0}; Box: {w, 0.3, d}; Rgb: tint }
+    }
+    keel : KitDark { Position: {0, -0.6, 0}; Box: {max(w - 1, 0.4), 0.6, max(d - 1, 0.4)} }
+  }
+
+  template KitWallPiece {
+    prop len: f32 = 2
+    prop mode: i32 = 1
+    prop wall: Rgb = {200, 200, 200}
+    prop trim: Rgb = {120, 120, 120}
+    if mode == 1 {
+      body : KitPaint { Position: {0, 0.4, 0}; Box: {len, 0.8, 0.25}; Rgb: wall }
+      cap : KitMetal { Position: {0, 0.83, 0}; Box: {len, 0.06, 0.31}; Rgb: trim }
+    } else if mode == 2 {
+      body : KitPaint { Position: {0, 1.2, 0}; Box: {len, 2.4, 0.25}; Rgb: wall }
+      cap : KitMetal { Position: {0, 2.43, 0}; Box: {len, 0.06, 0.31}; Rgb: trim }
+    } else if mode == 3 {
+      sill : KitPaint { Position: {0, 0.45, 0}; Box: {len, 0.9, 0.25}; Rgb: wall }
+      pane : KitGlass { Position: {0, 1.5, 0}; Box: {len - 0.12, 1.2, 0.05} }
+      mull : KitMetal { Position: {len / 2 - 0.06, 1.5, 0}; Box: {0.12, 1.2, 0.2}; Rgb: trim }
+      head : KitPaint { Position: {0, 2.25, 0}; Box: {len, 0.3, 0.25}; Rgb: wall }
+      cap : KitMetal { Position: {0, 2.43, 0}; Box: {len, 0.06, 0.31}; Rgb: trim }
+    } else if mode == 4 {
+      kerb : KitPaint { Position: {0, 0.15, 0}; Box: {len, 0.3, 0.25}; Rgb: wall }
+      pane : KitGlass { Position: {0, 0.8, 0}; Box: {len, 1.0, 0.04} }
+      rail : KitMetal { Position: {0, 1.32, 0}; Box: {len, 0.06, 0.1}; Rgb: trim }
+      post : KitMetal { Position: {len / 2 - 0.03, 0.8, 0}; Box: {0.06, 1.0, 0.08}; Rgb: trim }
+    } else if mode == 5 {
+      rail : KitMetal { Position: {0, 1.0, 0}; Box: {len, 0.06, 0.06}; Rgb: trim }
+      mid : KitMetal { Position: {0, 0.55, 0}; Box: {len, 0.04, 0.04}; Rgb: trim }
+      post : KitMetal { Position: {len / 2 - 0.03, 0.5, 0}; Box: {0.06, 1.0, 0.06}; Rgb: trim }
+    }
+  }
+
+  template KitRoom {
+    prop r: Room
+    prop th: Theme
+    prop l0: Link
+    prop l1: Link
+    prop l2: Link
+    prop l3: Link
+    prop l4: Link
+    prop l5: Link
+    prop l6: Link
+    prop l7: Link
+    prop l8: Link
+    prop l9: Link
+
+    const x0 = r.x - r.w / 2
+    const z0 = r.z - r.d / 2
+    const x1 = r.x + r.w / 2
+    const z1 = r.z + r.d / 2
+    const nx: i32 = ceil(r.w / 2)
+    const nz: i32 = ceil(r.d / 2)
+
+    KitFloor base(w: r.w, d: r.d, mat: th.mat, tint: th.floor) { Position: {r.x, 0, r.z} }
+    glow_n { Position: {r.x, 0.012, z0 + 0.3}; Box: {r.w - 1, 0.012, 0.08}; KitGlow: {ink: th.ink, power: 1.4 * th.level} }
+    glow_s { Position: {r.x, 0.012, z1 - 0.3}; Box: {r.w - 1, 0.012, 0.08}; KitGlow: {ink: th.ink, power: 1.4 * th.level} }
+    lamp { Position: {r.x, 3.2, r.z}; PointLight: {intensity: th.level * (6 + r.w * r.d * 0.22), range: max(r.w, r.d) * 0.75 + 3}; Rgb: th.lamp }
+
+    for k in 0..nx {
+      const xa = x0 + k * 2 + 0.5
+      const two = k * 2 + 1 < r.w
+      const na = !plan_gaps(l0, l1, l2, l3, l4, l5, l6, l7, l8, l9, xa, z0)
+      const nb = two && !plan_gaps(l0, l1, l2, l3, l4, l5, l6, l7, l8, l9, xa + 1, z0)
+      const sa = !plan_gaps(l0, l1, l2, l3, l4, l5, l6, l7, l8, l9, xa, z1)
+      const sb = two && !plan_gaps(l0, l1, l2, l3, l4, l5, l6, l7, l8, l9, xa + 1, z1)
+      if r.wn != 0 && (na || nb) {
+        KitWallPiece "n_{k}"(len: na && nb ? 2 : 1, mode: r.wn, wall: th.wall, trim: th.trim) { Position: {na && nb ? xa + 0.5 : na ? xa : xa + 1, 0, z0} }
+      }
+      if r.ws != 0 && (sa || sb) {
+        KitWallPiece "s_{k}"(len: sa && sb ? 2 : 1, mode: r.ws, wall: th.wall, trim: th.trim) { Position: {sa && sb ? xa + 0.5 : sa ? xa : xa + 1, 0, z1} }
+      }
+    }
+    for k in 0..nz {
+      const za = z0 + k * 2 + 0.5
+      const two = k * 2 + 1 < r.d
+      const wa = !plan_gaps(l0, l1, l2, l3, l4, l5, l6, l7, l8, l9, x0, za)
+      const wb = two && !plan_gaps(l0, l1, l2, l3, l4, l5, l6, l7, l8, l9, x0, za + 1)
+      const ea = !plan_gaps(l0, l1, l2, l3, l4, l5, l6, l7, l8, l9, x1, za)
+      const eb = two && !plan_gaps(l0, l1, l2, l3, l4, l5, l6, l7, l8, l9, x1, za + 1)
+      if r.ww != 0 && (wa || wb) {
+        KitWallPiece "w_{k}"(len: wa && wb ? 2 : 1, mode: r.ww, wall: th.wall, trim: th.trim) { Position: {x0, 0, wa && wb ? za + 0.5 : wa ? za : za + 1}; Rotation: {0, 1.5708, 0} }
+      }
+      if r.we != 0 && (ea || eb) {
+        KitWallPiece "e_{k}"(len: ea && eb ? 2 : 1, mode: r.we, wall: th.wall, trim: th.trim) { Position: {x1, 0, ea && eb ? za + 0.5 : ea ? za : za + 1}; Rotation: {0, 1.5708, 0} }
+      }
+    }
+    if th.wear > 0.6 {
+      patch_a : KitPlate { Position: {r.x - r.w * 0.2, 0.004, r.z + r.d * 0.15}; Box: {1.6, 0.01, 1.1}; Rgb: {104, 96, 88} }
+      patch_b : KitPlate { Position: {r.x + r.w * 0.24, 0.004, r.z - r.d * 0.2}; Rotation: {0, 0.2, 0}; Box: {1.1, 0.01, 1.4}; Rgb: {150, 120, 90} }
+      conduit : KitMetal { Position: {r.x, 0.5, z0 + 0.22}; Rotation: {0, 0, 1.5708}; Cylinder: {length: r.w - 0.8, radius: 0.07, segments: 8, smooth: true}; Rgb: {176, 104, 66} }
+    }
+    post_a : KitMetal { Position: {x0, 0.45, z0}; Box: {0.34, 0.9, 0.34}; Rgb: th.trim }
+    post_b : KitMetal { Position: {x1, 0.45, z0}; Box: {0.34, 0.9, 0.34}; Rgb: th.trim }
+    post_c : KitMetal { Position: {x0, 0.45, z1}; Box: {0.34, 0.9, 0.34}; Rgb: th.trim }
+    post_d : KitMetal { Position: {x1, 0.45, z1}; Box: {0.34, 0.9, 0.34}; Rgb: th.trim }
+  }
+
+  template KitLink {
+    prop l: Link
+    prop ra: Room
+    prop th: Theme
+    prop role: i32 = 0
+    prop j: i32 = 0
+
+    const along = link_along_x(l, ra)
+    const len = along ? l.w : l.d
+    const wide = along ? l.d : l.w
+    const ink: Rgb = pick_rgb(l.kind == 2, {255, 190, 84}, th.ink)
+    const open = door_open[clamp(j, 0, 9)]
+    const out = along ? (l.x > ra.x ? 1 : -1) : (l.z > ra.z ? -1 : 1)
+
+    Position: {l.x, 0, l.z}
+    Rotation: {0, along ? 0 : 1.5708, 0}
+
+    if l.kind != 3 {
+      deck_ : KitPlate { Position: {0, -0.15, 0}; Box: {len, 0.3, wide}; Rgb: {120, 126, 138} }
+      line_a { Position: {0, 0.012, wide / 2 - 0.34}; Box: {len, 0.012, 0.06}; KitGlow: {ink: ink, power: 2} }
+      line_b { Position: {0, 0.012, 0.34 - wide / 2}; Box: {len, 0.012, 0.06}; KitGlow: {ink: ink, power: 2} }
+      if len > 1.2 {
+        side_a : KitDark { Position: {0, 0.2, wide / 2 - 0.1}; Box: {len - 0.26, 0.4, 0.2} }
+        side_b : KitDark { Position: {0, 0.2, 0.1 - wide / 2}; Box: {len - 0.26, 0.4, 0.2} }
+        pane_a : KitGlass { Position: {0, 0.95, wide / 2 - 0.1}; Box: {len - 0.26, 1.1, 0.04} }
+        pane_b : KitGlass { Position: {0, 0.95, 0.1 - wide / 2}; Box: {len - 0.26, 1.1, 0.04} }
+      }
+    }
+    if l.kind == 0 || l.kind == 2 {
+      jamb_a : KitDark { Position: {0, 1.1, wide / 2 - 0.08}; Box: {0.3, 2.2, 0.2} }
+      jamb_b : KitDark { Position: {0, 1.1, 0.08 - wide / 2}; Box: {0.3, 2.2, 0.2} }
+      head : KitDark { Position: {0, 2.26, 0}; Box: {0.3, 0.14, wide} }
+      lit { Position: {0, 2.16, 0}; Box: {0.34, 0.06, wide - 0.4}; KitGlow: {ink: ink, power: 3} }
+      leaf_a : KitSteel { Position: {0, 1.05, open ? wide * 0.5 - 0.3 : wide * 0.25 - 0.05}; Box: {0.1, 2.1, wide / 2 - 0.1}; Transition: [Position: {duration: 0.25}] }
+      leaf_b : KitSteel { Position: {0, 1.05, open ? 0.3 - wide * 0.5 : 0.05 - wide * 0.25}; Box: {0.1, 2.1, wide / 2 - 0.1}; Transition: [Position: {duration: 0.25}] }
+    }
+    if l.kind == 0 && role != 0 && role != 9 {
+      KitSign name_(text: role_title(role), w: 2.2, ink: ink, size: 0.6) { Position: {0, 2.62, 0}; Rotation: {-0.6, along ? 0 : -1.5708, 0} }
+    }
+    if l.kind == 2 {
+      for k in 0..3 {
+        "rib_{k}" : KitSteel { Position: {out * (k - 1) * (len / 3) + out * 0.3, 1.1, 0}; Box: {0.14, 2.3, wide + 0.1}; Rgb: {120, 128, 140} }
+      }
+      roof : KitGlass { Position: {out * 0.3, 2.22, 0}; Box: {len - 0.4, 0.05, wide - 0.1} }
+      collar : KitPaint { Position: {out * (len / 2 - 0.1), 1.15, 0}; Box: {0.3, 2.5, wide + 0.5}; Rgb: {250, 196, 30} }
+      beacon { Position: {0, 2.5, 0}; Sphere: {radius: 0.12, segments: 8, smooth: true}; KitGlow: {ink: {90, 255, 120}, power: 4}; Animator: {clip: kit_glow_pulse, mode: AnimationPingPong} }
+    }
+    if l.kind == 3 {
+      sill : KitPaint { Position: {0, 0.03, 0}; Box: {0.5, 0.06, wide}; Rgb: {250, 196, 30} }
+      bay_a : KitPaint { Position: {0, 1.3, wide / 2 + 0.1}; Box: {0.4, 2.6, 0.3}; Rgb: {250, 196, 30} }
+      bay_b : KitPaint { Position: {0, 1.3, -0.1 - wide / 2}; Box: {0.4, 2.6, 0.3}; Rgb: {250, 196, 30} }
+      bay_head : KitDark { Position: {0, 2.7, 0}; Box: {0.4, 0.24, wide + 0.5} }
+      field { Position: {0, 1.3, 0}; Box: {0.04, 2.5, wide}; Rgb: {0, 0, 0}; Emissive: {strength: 0.6, color: {90, 170, 255}}; BlendMode: Additive; Opacity: {0.35}; NoShadow; Animator: {clip: kit_door_bob, mode: AnimationPingPong} }
+    }
+  }
+
+  template KitDesk {
+    prop len: f32 = 2
+    prop tint: Rgb = {120, 78, 48}
+    prop ink: Rgb = {255, 190, 84}
+    body : KitGloss { Position: {0, 0.5, 0}; Box: {len, 1.0, 0.6}; Rgb: tint }
+    top : KitGloss { Position: {0, 1.03, 0}; RoundedBox: {len + 0.12, 0.07, 0.74, 0.03, segments: 2}; Rgb: {48, 44, 48} }
+    line { Position: {0, 0.75, 0.305}; Box: {len - 0.2, 0.04, 0.02}; KitGlow: {ink: ink, power: 2} }
+    screen_ : KitDark { Position: {len * 0.25, 1.22, -0.05}; Rotation: {-0.5, 0, 0}; Box: {0.5, 0.34, 0.05} }
+    face { Position: {len * 0.25, 1.225, -0.02}; Rotation: {-0.5, 0, 0}; Box: {0.42, 0.26, 0.02}; KitGlow: {ink: ink, power: 2.2} }
+  }
+
+  template KitTable {
+    prop tint: Rgb = {120, 78, 48}
+    leg : KitSteel { Position: {0, 0.38, 0}; Cylinder: {length: 0.76, radius: 0.06, segments: 8, smooth: true} }
+    foot : KitSteel { Position: {0, 0.02, 0}; Cylinder: {length: 0.04, radius: 0.3, segments: 14, smooth: true} }
+    top : KitGloss { Position: {0, 0.78, 0}; Cylinder: {length: 0.06, radius: 0.55, segments: 20, smooth: true}; Rgb: tint }
+  }
+
+  template KitStool {
+    prop tint: Rgb = {255, 150, 70}
+    seat : KitGloss { Position: {0, 0.62, 0}; Cylinder: {length: 0.08, radius: 0.2, segments: 14, smooth: true}; Rgb: tint }
+    post : KitSteel { Position: {0, 0.3, 0}; Cylinder: {length: 0.58, radius: 0.04, segments: 8, smooth: true} }
+    disc : KitSteel { Position: {0, 0.02, 0}; Cylinder: {length: 0.04, radius: 0.18, segments: 14, smooth: true} }
+  }
+
+  template KitBarrel {
+    prop tint: Rgb = {60, 110, 150}
+    body : KitMetal { Position: {0, 0.42, 0}; Cylinder: {length: 0.84, radius: 0.28, segments: 14, smooth: true}; Rgb: tint }
+    hoop : KitDark { Position: {0, 0.42, 0}; Cylinder: {length: 0.08, radius: 0.29, segments: 14, smooth: true} }
+  }
+
+  template KitVending {
+    prop tint: Rgb = {200, 60, 60}
+    prop text: string = "SNACKS? SURE."
+    body : KitGloss { Position: {0, 0.9, 0}; RoundedBox: {0.9, 1.8, 0.7, 0.06, segments: 2}; Rgb: tint }
+    pane { Position: {-0.1, 1.05, 0.36}; Box: {0.56, 1.2, 0.02}; KitGlow: {ink: {200, 240, 255}, power: 1.8} }
+    lid { Position: {0, 1.81, 0}; Box: {0.8, 0.02, 0.6}; KitGlow: {ink: {255, 255, 255}, power: 0.6} }
+    KitNote brand(text: text, ink: {30, 30, 36}, size: 0.5) { Position: {0, 1.83, 0.02}; Rotation: {-1.5708, 0, 0} }
+  }
+
+  template KitShelf {
+    prop len: f32 = 2
+    prop tint: Rgb = {120, 78, 48}
+    prop seed: i32 = 0
+    base : KitGloss { Position: {0, 0.5, 0}; Box: {len, 1.0, 0.4}; Rgb: tint }
+    board : KitGloss { Position: {0, 1.4, -0.04}; Box: {len, 0.05, 0.3}; Rgb: tint }
+    const n: i32 = floor(len / 0.3)
+    for k in 0..n {
+      "jar_a{k}" { Position: {0.15 - len / 2 + k * 0.3, 1.14, 0}; Cylinder: {length: 0.28, radius: 0.05, segments: 8, smooth: true}; Rgb: bottle_ink(k + seed); Emissive: {strength: 1.5, color: bottle_ink(k + seed)}; NoShadow }
+      "jar_b{k}" { Position: {0.2 - len / 2 + k * 0.3, 1.55, -0.04}; Cylinder: {length: 0.24, radius: 0.045, segments: 8, smooth: true}; Rgb: bottle_ink(k * 3 + seed + 2); Emissive: {strength: 1.5, color: bottle_ink(k * 3 + seed + 2)}; NoShadow }
+    }
+  }
+
+  template KitRope {
+    prop len: f32 = 2
+    post_a : KitBrass { Position: {0 - len / 2, 0.45, 0}; Cylinder: {length: 0.9, radius: 0.04, segments: 8, smooth: true} }
+    post_b : KitBrass { Position: {len / 2, 0.45, 0}; Cylinder: {length: 0.9, radius: 0.04, segments: 8, smooth: true} }
+    cord : KitMatte { Position: {0, 0.8, 0}; Box: {len, 0.04, 0.04}; Rgb: {150, 30, 44} }
+  }
+
+  template KitRug {
+    prop w: f32 = 2
+    prop d: f32 = 3
+    prop tint: Rgb = {150, 40, 50}
+    prop trim: Rgb = {214, 168, 84}
+    edge : KitMatte { Position: {0, 0.006, 0}; Box: {w, 0.012, d}; Rgb: trim }
+    pile : KitMatte { Position: {0, 0.012, 0}; Box: {w - 0.2, 0.012, d - 0.2}; Rgb: tint }
+  }
+
+  template KitPipe {
+    prop len: f32 = 4
+    prop tint: Rgb = {196, 110, 70}
+    run : KitMetal { Position: {0, 0, 0}; Rotation: {0, 0, 1.5708}; Cylinder: {length: len, radius: 0.1, segments: 10, smooth: true}; Rgb: tint }
+    clamp_a : KitDark { Position: {0 - len * 0.3, 0, 0}; Box: {0.1, 0.3, 0.3} }
+    clamp_b : KitDark { Position: {len * 0.3, 0, 0}; Box: {0.1, 0.3, 0.3} }
+  }
+
+  template KitBoard {
+    prop w: f32 = 3
+    prop h: f32 = 1.3
+    panel : KitDark { Position: {0, 0, 0}; Box: {w, h, 0.06}; Rgb: {14, 16, 20} }
+  }
+
+  template KitLamp {
+    prop ink: Rgb = {255, 226, 190}
+    prop power: f32 = 10
+    prop reach: f32 = 7
+    pole : KitDark { Position: {0, 1.2, 0}; Box: {0.08, 2.4, 0.08} }
+    globe { Position: {0, 2.5, 0}; Sphere: {radius: 0.17, segments: 10, smooth: true}; KitGlow: {ink: ink, power: 4} }
+    shine { Position: {0, 2.6, 0}; PointLight: {intensity: power, range: reach}; Rgb: ink }
+  }
+
+  template KitMachine {
+    prop tint: Rgb = {132, 84, 58}
+    prop seed: i32 = 0
+    body : KitPaint { Position: {0, 0.6, 0}; RoundedBox: {1.9, 1.2, 1.3, 0.08, segments: 2}; Rgb: tint }
+    tank : KitSteel { Position: {-0.5, 1.5, -0.1}; Cylinder: {length: 0.7, radius: 0.34, segments: 14, smooth: true} }
+    fan {
+      Position: {0.5, 1.26, 0}
+      Rotation: {0, 0, 0}
+      AngularVelocity: {0, 5, 0}
+      blade_a : KitSteel { Position: {0, 0, 0}; Box: {0.7, 0.03, 0.12} }
+      blade_b : KitSteel { Position: {0, 0, 0}; Box: {0.12, 0.03, 0.7} }
+    }
+    gauge { Position: {-0.4, 0.8, 0.66}; Box: {0.34, 0.24, 0.02}; KitGlow: {ink: {120, 255, 150}, power: 2.5} }
+    warn { Position: {0.5, 0.8, 0.66}; Box: {0.2, 0.2, 0.02}; KitGlow: {ink: {255, 90, 60}, power: 3}; Animator: {clip: kit_glow_pulse, time: hash01(seed, 133), mode: AnimationPingPong} }
+  }
+
+  template KitStack {
+    prop level: i32 = 0
+    prop cols: i32 = 3
+    prop tint: Rgb = {255, 170, 40}
+    for k in 0..level {
+      "own_{k}" {
+        Position: {(k % cols) * 1.15, 0, 0 - floor(k / cols) * 1.1}
+        KitCrate base(sx: 0.9, sy: 0.7, sz: 0.9, tint: tint) { Position: {0, 0, 0} }
+        if k % 3 != 0 {
+          KitCrate upper(sx: 0.8, sy: 0.6, sz: 0.8, tint: {255, 190, 84}) { Position: {0.03, 0.72, -0.02}; Rotation: {0, 0.2, 0} }
+        }
+      }
+    }
+  }
+
+  template KitLiner {
+    prop tint: Rgb = {232, 236, 240}
+    prop trim: Rgb = {255, 150, 40}
+    hull : KitGloss { Position: {0, 0, 0}; Rotation: {1.5708, 0, 0}; Capsule: {length: 13, radius: 2.4, segments: 20, smooth: true}; Rgb: tint }
+    belly : KitDark { Position: {0, -1.5, -0.5}; Box: {3.2, 1.0, 12} }
+    bridge : KitGloss { Position: {0, 1.3, 6.2}; Scale: {1, 0.6, 1.3}; Sphere: {radius: 1.6, segments: 16, smooth: true}; Rgb: {30, 56, 84} }
+    stripe : KitPaint { Position: {0, 2.3, 0}; Box: {1.0, 0.2, 12}; Rgb: trim }
+    for k in 0..9 {
+      "win_l{k}" { Position: {-2.36, 0.5, -4.8 + k * 1.2}; Box: {0.06, 0.5, 0.7}; KitGlow: {ink: {255, 226, 170}, power: 2.2} }
+      "win_r{k}" { Position: {2.36, 0.5, -4.8 + k * 1.2}; Box: {0.06, 0.5, 0.7}; KitGlow: {ink: {255, 226, 170}, power: 2.2} }
+      "win_t{k}" { Position: {1.3, 2.02, -4.8 + k * 1.2}; Rotation: {0, 0, -0.55}; Box: {0.5, 0.06, 0.7}; KitGlow: {ink: {255, 226, 170}, power: 2.2} }
+    }
+    wing_l : KitGloss { Position: {-3.8, -0.4, -4.4}; Rotation: {0, 0.4, 0}; Box: {4.4, 0.3, 2.6}; Rgb: tint }
+    wing_r : KitGloss { Position: {3.8, -0.4, -4.4}; Rotation: {0, -0.4, 0}; Box: {4.4, 0.3, 2.6}; Rgb: tint }
+    fin : KitPaint { Position: {0, 2.9, -6.4}; Rotation: {-0.4, 0, 0}; Box: {0.3, 2.6, 2.2}; Rgb: trim }
+    pod_l : KitSteel { Position: {-1.5, 0, -8.6}; Rotation: {1.5708, 0, 0}; Cylinder: {length: 2.2, radius: 1.0, segments: 16, smooth: true} }
+    pod_r : KitSteel { Position: {1.5, 0, -8.6}; Rotation: {1.5708, 0, 0}; Cylinder: {length: 2.2, radius: 1.0, segments: 16, smooth: true} }
+    burn_l { Position: {-1.5, 0, -9.72}; Rotation: {1.5708, 0, 0}; Cylinder: {length: 0.04, radius: 0.8, segments: 16}; KitGlow: {ink: {120, 200, 255}, power: 3} }
+    burn_r { Position: {1.5, 0, -9.72}; Rotation: {1.5708, 0, 0}; Cylinder: {length: 0.04, radius: 0.8, segments: 16}; KitGlow: {ink: {120, 200, 255}, power: 3} }
+    nav_a { Position: {-5.8, -0.2, -5.2}; Sphere: {radius: 0.16, segments: 8, smooth: true}; KitGlow: {ink: {255, 70, 60}, power: 5}; Animator: {clip: kit_glow_pulse, mode: AnimationPingPong} }
+    nav_b { Position: {5.8, -0.2, -5.2}; Sphere: {radius: 0.16, segments: 8, smooth: true}; KitGlow: {ink: {90, 255, 120}, power: 5}; Animator: {clip: kit_glow_pulse, time: 0.6, mode: AnimationPingPong} }
+  }
+
+  template KitFreighter {
+    prop rows: i32 = 3
+    prop own: bool = false
+    prop seed: i32 = 0
+    const body: Rgb = pick_rgb(own, {255, 170, 40}, {150, 158, 170})
+    spine : KitDark { Position: {0, 0, 0}; Box: {1.2, 1.0, rows * 2.2 + 1} }
+    bridge : KitPaint { Position: {0, 0.6, rows * 1.1 + 1.6}; RoundedBox: {3.2, 2.2, 2.4, 0.4, segments: 3}; Rgb: body }
+    glass_ : KitGloss { Position: {0, 1.0, rows * 1.1 + 2.7}; Box: {2.4, 0.7, 0.3}; Rgb: {30, 56, 84} }
+    for k in 0..rows {
+      "box_l{k}" : KitMetal { Position: {-1.5, 0.1, (k - (rows - 1) / 2) * 2.2}; Box: {1.8, 1.9, 2.0}; Rgb: crate_tint(seed + k * 2); PbrMaterial: {metallic: 0.3, roughness: 0.6} }
+      "box_r{k}" : KitMetal { Position: {1.5, 0.1, (k - (rows - 1) / 2) * 2.2}; Box: {1.8, 1.9, 2.0}; Rgb: crate_tint(seed + k * 2 + 1); PbrMaterial: {metallic: 0.3, roughness: 0.6} }
+    }
+    drive : KitSteel { Position: {0, 0, 0 - rows * 1.1 - 1.4}; Box: {3.4, 2.0, 1.8} }
+    burn { Position: {0, 0, 0 - rows * 1.1 - 2.32}; Box: {2.6, 1.2, 0.05}; KitGlow: {ink: {120, 200, 255}, power: own ? 1 : 3} }
+    mark : KitPaint { Position: {0, 1.72, rows * 1.1 + 1.6}; Box: {2.0, 0.04, 1.2}; Rgb: own ? {40, 44, 52} : {250, 196, 30} }
+  }
+
+  template KitBackdrop {
+    prop poi: i32 = 0
+    const p = poi_planet(poi)
+    const star = sys_star(poi_sys(poi))
+    tint {
+      Rotation: {0.8, -0.9, 0}
+      DirectionalLight: {intensity: 1.6}
+      Rgb: {star_color_r(star), star_color_g(star), star_color_b(star)}
+    }
+    if p >= 0 {
+      world {
+        Position: {40, -420, 70}
+        Planet body(kind: pl_type(p), seed: pl_seed(p), atm: pl_atm(p), water: pl_water(p), temp: pl_temp(p), bio: pl_bio(p), radius: 240, lights: pl_lights(p), rings: pl_rings(p), detail: 2, spin: 0.002)
+      }
+    } else {
+      orb { Position: {-90, -80, -190}; Sphere: {radius: 11, segments: 24, smooth: true}; Rgb: {star_color_r(star), star_color_g(star), star_color_b(star)}; Emissive: {strength: 8, color: {star_color_r(star), star_color_g(star), star_color_b(star)}}; NoShadow }
+    }
+  }
+}

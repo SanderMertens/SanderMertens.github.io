@@ -1,0 +1,189 @@
+include state
+include galaxy
+include rules
+include clock
+include frame
+
+using flecs.script
+using flecs.script.math
+using state
+
+state {
+  export mut dev_ok: bool = false
+  export mut dev_ticks: i32 = 0
+  export mut dev_last_day: i32 = 0
+  export mut dev_resets: i32 = 0
+  export mut dev_arrivals: i32 = 0
+
+  fn dev_sys_row(s: i32) -> string {
+    "{sys_name(s)}|{sys_x(s):.3}|{sys_y(s):.3}|{sys_star(s)}|{sys_planets(s)}|{sys_native_port(s)}|{b2i(sys_lane(s, 0))}{b2i(sys_lane(s, 1))}{b2i(sys_lane(s, 2))}{b2i(sys_lane(s, 3))}|{sys_nb(s, 0)},{sys_nb(s, 1)},{sys_nb(s, 2)},{sys_nb(s, 3)}|{b2i(sys_has_mine(s))}|{b2i(sys_has_oddity(s))}|{b2i(sys_has_port(s))}|{sys_port_poi(s)}"
+  }
+
+  fn dev_poi_row(poi: i32) -> string {
+    "{b2i(poi_exists(poi))}|{poi_kind(poi)}|{poi_x(poi):.3}|{poi_z(poi):.3}|{poi_fac(poi)}|{poi_planet(poi)}|{poi_name(poi)}"
+  }
+
+  fn dev_planet_row(p: i32) -> string {
+    "{b2i(pl_exists(p))}|{pl_type(p)}|{pl_radius(p):.2}|{pl_orbit(p):.2}|{pl_angle(p):.3}|{pl_base_atm(p):.0}|{pl_base_water(p):.0}|{pl_base_temp(p):.0}|{pl_base_bio(p):.0}|{b2i(pl_native(p))}|{b2i(pl_terraformable(p))}|{pl_name(p)}"
+  }
+
+  fn dev_price_row(poi: i32, day: i32) -> string {
+    "{price_buy(poi, 0, day):.0} {price_buy(poi, 1, day):.0} {price_buy(poi, 2, day):.0} {price_buy(poi, 3, day):.0} {price_buy(poi, 4, day):.0} {price_buy(poi, 5, day):.0} {price_buy(poi, 6, day):.0} {price_buy(poi, 7, day):.0}|{b2i(poi_sells(poi, 0))}{b2i(poi_sells(poi, 1))}{b2i(poi_sells(poi, 2))}{b2i(poi_sells(poi, 3))}{b2i(poi_sells(poi, 4))}{b2i(poi_sells(poi, 5))}{b2i(poi_sells(poi, 6))}{b2i(poi_sells(poi, 7))}"
+  }
+
+  fn dev_clock_row() -> string {
+    "{now:.6}|{today}|{dev_ticks}|{dev_last_day}|{speed}|{real_time:.6}"
+  }
+
+  proc dev_site(planet: i32, job: i32) {
+    const s = pl_sys(planet)
+    if pl_exists(planet) && sys_site[s] == 0 {
+      mut slot: i32 = -1
+      for i in 0..N_SITES {
+        if slot < 0 && !sites[i].used {
+          slot = i
+        }
+      }
+      if slot >= 0 {
+        sites[slot] = {true, planet, job, pl_base_atm(planet), pl_base_water(planet), pl_base_temp(planet), pl_base_bio(planet), dozer_at(planet_poi(planet))}
+        sys_site[s] = slot + 1
+        for k in 0..N_STRUCT {
+          site_struct[slot * 16 + k] = 0
+          site_progress[slot * 16 + k] = 0
+        }
+      }
+    }
+  }
+
+  proc dev_job(purpose: i32, planet: i32) {
+    mut slot: i32 = -1
+    for i in 0..N_JOBS {
+      if slot < 0 && jobs[i].status == JOB_EMPTY {
+        slot = i
+      }
+    }
+    if slot >= 0 && purpose >= 0 && purpose < 8 && pl_exists(planet) {
+      jobs[slot] = {JOB_ACTIVE, purpose_client(purpose), purpose, planet, purpose_fee(purpose), today + purpose_days(purpose), today}
+      money += purpose_fee(purpose)
+    }
+  }
+}
+
+async {
+  dev_ok = HOME_POI == HOME * 12 + sys_native_port(HOME) && poi_kind(HOME_POI) == KIND_PORT && poi_has(HOME_POI, FAC_SHIPYARD)
+  while true {
+    const e = await Request
+    const a = e.a
+    const b = e.b
+    const site = pl_site(poi_planet(at_poi))
+    if e.op == OP_DEV_MONEY {
+      money += a
+    } else if e.op == OP_DEV_TELEPORT {
+      if poi_exists(a) {
+        at_poi = a
+        mode = MODE_STATION
+        trav_active = false
+        clock_hold = false
+        px = 0
+        pz = 0
+        emit Arrived(poi: a)
+      }
+    } else if e.op == OP_DEV_DAYS {
+      clock_advance(a)
+    } else if e.op == OP_DEV_GOODS {
+      if a < 0 {
+        for g in 0..N_GOODS {
+          stock_add(at_poi, g, b)
+        }
+      } else {
+        stock_add(at_poi, a, b)
+      }
+    } else if e.op == OP_DEV_DOZER {
+      if a >= 0 && a < N_DOZERS {
+        const where = b < 0 ? at_poi : b
+        if poi_exists(where) {
+          dozers[a] = {SHIP_IDLE, where, -1, 0}
+        }
+      }
+    } else if e.op == OP_DEV_SITE {
+      dev_site(a < 0 ? poi_planet(at_poi) : a, b)
+    } else if e.op == OP_DEV_STRUCT {
+      if site >= 0 && site < N_SITES && a >= 0 && a < N_STRUCT && b >= 0 && b <= 3 {
+        site_struct[site * 16 + a] = b
+        site_progress[site * 16 + a] = b == ST_BUILDING ? 0.5 : 0
+      }
+    } else if e.op == OP_DEV_FREIGHTER {
+      mut slot: i32 = -1
+      for i in 0..N_FREIGHTERS {
+        if slot < 0 && freighters[i].status == SHIP_NONE {
+          slot = i
+        }
+      }
+      if slot >= 0 && a >= 0 && a <= 3 {
+        freighters[slot] = {SHIP_IDLE, freighter_cap(a), b < 0 ? at_poi : b}
+      }
+    } else if e.op == OP_DEV_MODE {
+      if a == MODE_TRAVEL {
+        trav_sys = poi_sys(at_poi)
+        trav_from = at_poi
+        trav_to = poi_exists(b) ? b : at_poi
+        trav_t = 0.5
+        trav_active = true
+        screen = SCREEN_NONE
+        mode = MODE_TRAVEL
+      } else {
+        trav_active = false
+        mode = MODE_STATION
+      }
+    } else if e.op == OP_DEV_TOAST {
+      toast("Dev toast {a}. Nothing to see here.")
+    } else if e.op == OP_DEV_STAT {
+      if site >= 0 && site < N_SITES {
+        if a == 0 {
+          sites[site].atm = b
+        } else if a == 1 {
+          sites[site].water = b
+        } else if a == 2 {
+          sites[site].temp = b
+        } else if a == 3 {
+          sites[site].bio = b
+        }
+      }
+    } else if e.op == OP_DEV_HOLD {
+      clock_hold = a != 0
+    } else if e.op == OP_DEV_JOB {
+      dev_job(a, b)
+    } else if e.op == OP_DEV_SCREEN {
+      if a >= SCREEN_NONE && a <= SCREEN_GAMEOVER {
+        screen = a
+      }
+    } else if e.op == OP_DEV_OFFER {
+      if a >= 0 && a < 8 && pl_exists(b) {
+        offer = {1, purpose_client(a), a, b, purpose_fee(a), purpose_days(a), 0}
+        offer_expires = today + 5
+      }
+    }
+  }
+}
+
+async {
+  while true {
+    const e = await DayTick
+    dev_ticks += 1
+    dev_last_day = e.day
+  }
+}
+
+async {
+  while true {
+    await Reset
+    dev_resets += 1
+  }
+}
+
+async {
+  while true {
+    const e = await Arrived
+    dev_arrivals += 1
+  }
+}

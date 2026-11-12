@@ -1,0 +1,209 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.movement
+using box.animation
+using box.light
+using box.text
+using state
+using terra
+
+state {
+  fn gate_dir(poi: i32) -> f32 {
+    hash01(poi, 102) < 0.5 ? -1 : 1
+  }
+
+  fn gate_busy(poi: i32) -> bool {
+    sys_lanes(poi_sys(poi)) >= 3
+  }
+
+  fn gate_room_raw(poi: i32, i: i32) -> Room {
+    const fac = stn_fac(poi)
+    match i {
+      0: {1, 0, -15, 0, 8, 6, 3, 1, 4, 4}
+      1: {9, 0, -3, 0, 12, 4, 4, 1, 4, 1}
+      2: {2, 0, 10, 0, 10, 8, 1, 1, 4, 1}
+      3: (fac & 1) != 0 ? mk_room(3, 1, 8, -8.5, 6, 5, 2, 1, 1, 1) : ROOM_NONE
+      4: (fac & 2) != 0 ? mk_room(4, 1, 12, 8.5, 6, 5, 1, 1, 4, 1) : ROOM_NONE
+      5: (fac & 20) != 0 ? mk_room(5, 1, 21, 0, 8, 6, 2, 1, 1, 1) : ROOM_NONE
+      6: gate_busy(poi) ? mk_room(8, 30, -3, 6.5, 8, 5, 1, 1, 4, 1) : ROOM_NONE
+      _: ROOM_NONE
+    }
+  }
+
+  fn gate_link_raw(poi: i32, j: i32) -> Link {
+    const fac = stn_fac(poi)
+    match j {
+      0: {0, 1, -10, 0, 2, 2, 0}
+      1: {1, 2, 4, 0, 2, 2, 1}
+      2: (fac & 1) != 0 ? mk_link(2, 3, 8, -5, 2, 2, 0) : LINK_NONE
+      3: (fac & 2) != 0 ? mk_link(2, 4, 12, 5, 2, 2, 0) : LINK_NONE
+      4: (fac & 20) != 0 ? mk_link(2, 5, 16, 0, 2, 2, 0) : LINK_NONE
+      5: {0, -1, -20.5, 0, 3, 2, 2}
+      6: (fac & 20) != 0 ? mk_link(5, -1, 25, 0, 1, 4, 3) : LINK_NONE
+      7: gate_busy(poi) ? mk_link(1, 6, -3, 3, 2, 2, 1) : LINK_NONE
+      _: LINK_NONE
+    }
+  }
+
+  fn gate_room(poi: i32, i: i32) -> Room {
+    room_mirror(gate_room_raw(poi, i), gate_dir(poi))
+  }
+
+  fn gate_link(poi: i32, j: i32) -> Link {
+    link_mirror(gate_link_raw(poi, j), gate_dir(poi))
+  }
+
+  fn gate_spot(poi: i32, i: i32, k: i32) -> Spot {
+    const r = gate_room(poi, i)
+    const g = gate_dir(poi)
+    match i {
+      0: std_spot(1, r.w, r.d, 0 - g, k)
+      1: k == 0 ? spot(g * 2.5, -1.3, 0.45, 0.35) : k == 1 ? spot(0 - g * 3.5, 1.25, 0.3, 0.3) : SPOT_NONE
+      2: match k {
+        0: spot(g * 4.3, -2.7, 0.4, 0.45)
+        1: spot(g * 4.3, 2.7, 0.4, 0.45)
+        2: spot(0 - g * 2.6, 2.3, 0.55, 0.55)
+        3: spot(g * 2.2, -3.2, 1.1, 0.4)
+        4: spot(0 - g * 4.1, -2.6, 0.7, 0.4)
+        _: SPOT_NONE
+      }
+      5: std_spot(5, r.w, r.d, g, k)
+      6: k == 0 ? spot(-2.2, 0.6, 1.2, 0.45) : k == 1 ? spot(2.2, 0.6, 1.2, 0.45) : SPOT_NONE
+      _: std_spot(r.role, r.w, r.d, g, k)
+    }
+  }
+
+  fn gate_act(poi: i32, i: i32, k: i32) -> Act {
+    const r = gate_room(poi, i)
+    const g = gate_dir(poi)
+    match i {
+      0: k == 0 ? std_act(1, r.w, r.d, 0 - g, stn_fac(poi), 0) : ACT_NONE
+      1: k == 0 ? act(0 - g * 3.5, 1.25, 3, 15) : ACT_NONE
+      2: ACT_NONE
+      6: ACT_NONE
+      _: std_act(r.role, r.w, r.d, g, stn_fac(poi), k)
+    }
+  }
+
+  fn gate_spawn(poi: i32) -> Act {
+    const r = gate_room(poi, 0)
+    act(r.x - gate_dir(poi) * (r.w / 2 - 1.5), r.z, 0, 0)
+  }
+}
+
+terra {
+  gate_dive {
+    AnimationClip: {duration: 14}
+    drop { AnimationTrack: {component: Position, member: "y", curve: {keys: [{0, 90}, {9, 90}, {10.2, 4}, {10.5, -200}, {14, -200}]}} }
+  }
+
+  gate_flash {
+    AnimationClip: {duration: 14}
+    burst { AnimationTrack: {component: PointLight, member: "intensity", curve: {keys: [{0, 60}, {10.1, 60}, {10.3, 2600}, {11, 60}, {14, 60}]}} }
+  }
+
+  gate_veil {
+    AnimationClip: {duration: 14}
+    burst { AnimationTrack: {component: Emissive, member: "strength", curve: {keys: [{0, 0.3}, {10.1, 0.3}, {10.3, 3}, {11.2, 0.3}, {14, 0.3}]}} }
+  }
+
+  template GateRing {
+    prop seed: i32 = 0
+    Rotation: {0.63, 0, 0}
+    ring : KitSteel { Position: {0, 0, 0}; Torus: {radius: 30, tube: 1.8, segments: 96, rings: 10, smooth: true}; Rgb: {96, 108, 132} }
+    inner { Position: {0, 0.5, 0}; Torus: {radius: 27.9, tube: 0.26, segments: 96, rings: 6}; KitGlow: {ink: {110, 190, 255}, power: 6} }
+    for k in 0..20 {
+      const a = k * 0.31416
+      "pylon_{k}" : KitDark { Position: {cos(a) * 30.2, 1.6, sin(a) * 30.2}; Rotation: {0, 0 - a, 0}; Box: {2.8, 1.2, 2.4} }
+      "lit_{k}" { Position: {cos(a) * 30.2, 2.3, sin(a) * 30.2}; Rotation: {0, 0 - a, 0}; Box: {1.7, 0.2, 0.9}; KitGlow: {ink: {255, 190, 84}, power: 4}; Animator: {clip: kit_glow_pulse, time: k * 0.12, mode: AnimationPingPong} }
+    }
+    veil { Position: {0, -1, 0}; Cylinder: {length: 0.02, radius: 27.9, segments: 96}; Rgb: {0, 0, 0}; Emissive: {strength: 0.3, color: {50, 110, 255}}; BlendMode: Additive; Opacity: {0.4}; NoShadow; Animator: {clip: gate_veil, time: hash01(seed, 230) * 9} }
+    swirl_a {
+      Position: {0, -0.8, 0}
+      Rotation: {0, 0, 0}
+      AngularVelocity: {0, 0.3, 0}
+      arc_a { Position: {0, 0, 0}; Tube: {radius: 23, thickness: 4.2, length: 0.02, arc: 2.0, segments: 48}; Rgb: {0, 0, 0}; Emissive: {strength: 0.5, color: {90, 170, 255}}; BlendMode: Additive; Opacity: {0.5}; NoShadow }
+      arc_b { Position: {0, 0, 0}; Rotation: {0, 3.1416, 0}; Tube: {radius: 23, thickness: 4.2, length: 0.02, arc: 2.0, segments: 48}; Rgb: {0, 0, 0}; Emissive: {strength: 0.5, color: {90, 170, 255}}; BlendMode: Additive; Opacity: {0.5}; NoShadow }
+    }
+    swirl_b {
+      Position: {0, -0.6, 0}
+      Rotation: {0, 1, 0}
+      AngularVelocity: {0, -0.55, 0}
+      arc_a { Position: {0, 0, 0}; Tube: {radius: 15, thickness: 4.6, length: 0.02, arc: 2.4, segments: 40}; Rgb: {0, 0, 0}; Emissive: {strength: 0.7, color: {140, 200, 255}}; BlendMode: Additive; Opacity: {0.5}; NoShadow }
+      arc_b { Position: {0, 0, 0}; Rotation: {0, 3.1416, 0}; Tube: {radius: 15, thickness: 4.6, length: 0.02, arc: 2.4, segments: 40}; Rgb: {0, 0, 0}; Emissive: {strength: 0.7, color: {140, 200, 255}}; BlendMode: Additive; Opacity: {0.5}; NoShadow }
+    }
+    core { Position: {0, -0.4, 0}; Cylinder: {length: 0.02, radius: 7, segments: 40}; Rgb: {0, 0, 0}; Emissive: {strength: 1.2, color: {200, 230, 255}}; BlendMode: Additive; Opacity: {0.6}; NoShadow }
+    glow_ { Position: {0, 6, 0}; PointLight: {intensity: 60, range: 70}; Rgb: {90, 160, 255}; Animator: {clip: gate_flash, time: hash01(seed, 230) * 9} }
+    diver {
+      Position: {6, 90, -4}
+      Animator: {clip: gate_dive, time: hash01(seed, 230) * 9}
+      KitShip hull(tint: {214, 220, 230}, trim: {255, 150, 40}) { Position: {0, 0, 0}; Rotation: {1.5708, 0, 0}; Scale: {4, 4, 4} }
+    }
+  }
+
+  template GateRoom {
+    prop poi: i32 = 0
+    prop i: i32 = 0
+
+    const r = gate_room(poi, i)
+    const th = theme_role(theme_base(poi), r.role)
+    const seed = plan_seed(poi) + i * 31
+    const g = gate_dir(poi)
+    const s = poi_sys(poi)
+    const busy = gate_busy(poi)
+    const quiet = sys_lanes(s) == 1
+
+    if i == 0 {
+      StdDock body(poi: poi, w: r.w, d: r.d, q: 0 - g, th: th, seed: seed) { Position: {0, 0, 0} }
+    } else if i == 1 {
+      KitVending snacks(tint: {60, 130, 200}, text: "AIR. ALSO SNACKS.") { Position: {g * 2.5, 0, -1.3} }
+      Person tech(seed: seed + 5, garb: 1) { Position: {0 - g * 3.5, 0, 1.25}; Rotation: {0, 3.1416, 0} }
+      KitSign name_(text: "GATE TO {sys_name(sys_nb(s, poi_slot(poi) - 6))}", sub: "TRANSIT. NO LOITERING. SOME LOITERING.", w: 6.4, ink: {120, 200, 255}, size: 0.85) { Position: {0, 2.2, -1.9}; Rotation: {-0.5, 0, 0} }
+      stay_a : KitDark { Position: {-3, 1.0, -1.95}; Box: {0.08, 2.0, 0.08} }
+      stay_b : KitDark { Position: {3, 1.0, -1.95}; Box: {0.08, 2.0, 0.08} }
+      for k in 0..6 {
+        "chev_{k}" : KitPaint { Position: {(k - 2.5) * 1.6, 0.006, 0}; Rotation: {0, 0.7854, 0}; Box: {0.4, 0.01, 0.4}; Rgb: {255, 190, 84} }
+      }
+      KitPipe pipe_a(len: 11.4, tint: {196, 110, 70}) { Position: {0, 0.5, 1.78} }
+    } else if i == 2 {
+      KitVending snack_a(tint: {200, 60, 60}, text: "SNACKS? SURE.") { Position: {g * 4.3, 0, -2.7}; Rotation: {0, 0 - g * 1.5708, 0} }
+      KitVending snack_b(tint: {60, 160, 110}, text: "FOOD (TECHNICALLY)") { Position: {g * 4.3, 0, 2.7}; Rotation: {0, 0 - g * 1.5708, 0} }
+      KitTable table(tint: th.trim) { Position: {0 - g * 2.6, 0, 2.3} }
+      Person eater(seed: seed + 6, pose: 1) { Position: {0 - g * 2.6, 0, 3.2}; Rotation: {0, 3.1416, 0} }
+      KitBench bench(len: 2.0, tint: th.trim) { Position: {g * 2.2, 0, -3.15} }
+      if quiet {
+        sheet : KitMatte { Position: {g * 2.2, 0.62, -3.15}; Box: {2.3, 0.5, 0.8}; Rgb: {226, 224, 214} }
+      } else {
+        Person sitter(seed: seed + 7, pose: 1) { Position: {g * 2.5, 0.26, -3.1} }
+      }
+      Person folk_a(seed: seed + 8) { Position: {0 - g * 4.4, 0, -2.6}; Rotation: {0, 1.4, 0} }
+      Person folk_b(seed: seed + 9, garb: 1) { Position: {0 - g * 3.8, 0, -2.55}; Rotation: {0, -1.4, 0} }
+      KitPipe pipe_a(len: 9.4, tint: {150, 158, 170}) { Position: {0, 0.5, 3.75} }
+      KitRug mat_(w: 3, d: 2, tint: {60, 70, 96}, trim: {255, 190, 84}) { Position: {0, 0, 0} }
+    } else if r.role == 3 {
+      StdBar body(poi: poi, w: r.w, d: r.d, th: th, seed: seed) { Position: {0, 0, 0} }
+    } else if r.role == 4 {
+      StdTrade body(poi: poi, w: r.w, d: r.d, th: th, seed: seed) { Position: {0, 0, 0} }
+      KitSign customs(text: "CUSTOMS", sub: "DECLARE EVERYTHING. BUY THE REST.", w: 3, ink: {90, 220, 140}, size: 0.6) { Position: {0, 1.25, r.d / 2 - 0.3}; Rotation: {-0.9, 0, 0} }
+    } else if r.role == 5 {
+      StdBay body(poi: poi, w: r.w, d: r.d, o: g, th: th, seed: seed) { Position: {0, 0, 0} }
+    } else if r.role == 8 {
+      for k in 0..2 {
+        KitBench "row_{k}"(len: 2.2, tint: th.trim) { Position: {(k * 2 - 1) * 2.2, 0, 0.65} }
+        Person "wait_{k}"(seed: seed + 20 + k, pose: 1) { Position: {(k * 2 - 1) * 2.2 + 0.3, 0.26, 0.7} }
+      }
+      KitSign hall(text: "WAITING HALL", sub: "IT WORKS. YOU ARE WAITING.", w: 3.4, ink: th.ink, size: 0.6) { Position: {0, 1.25, r.d / 2 - 0.3}; Rotation: {-0.9, 0, 0} }
+    }
+  }
+
+  template GateOutside {
+    prop poi: i32 = 0
+    const r = gate_room(poi, 0)
+    const g = gate_dir(poi)
+    GateRing ring_(seed: poi) { Position: {g * 4, -34, -34} }
+    KitShip shuttle(tint: {226, 230, 236}, trim: {255, 190, 84}) { Position: {r.x - g * (r.w / 2 + 5.3), 0.9, r.z + 1}; Rotation: {0, 3.1416, 0}; Scale: {3.6, 3.6, 3.6} }
+  }
+}

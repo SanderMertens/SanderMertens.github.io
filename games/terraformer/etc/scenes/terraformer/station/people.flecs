@@ -1,0 +1,300 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.movement
+using box.animation
+using box.light
+using box.text
+using state
+using terra
+
+state {
+  fn npc_shirt(seed: i32, garb: i32) -> Rgb {
+    match garb {
+      1: {240, 130, 30}
+      2: {104, 76, 54}
+      3: {34, 34, 42}
+      4: {236, 240, 244}
+      5: {246, 244, 238}
+      6: {60, 90, 150}
+      _: match hash_int(seed, 111, 7) {
+        0: {196, 70, 60}
+        1: {70, 120, 190}
+        2: {90, 160, 110}
+        3: {220, 180, 70}
+        4: {150, 100, 180}
+        5: {220, 220, 226}
+        _: {60, 150, 160}
+      }
+    }
+  }
+
+  fn npc_skin(seed: i32) -> Rgb {
+    match hash_int(seed, 112, 5) {
+      0: {244, 204, 170}
+      1: {224, 172, 130}
+      2: {180, 126, 90}
+      3: {120, 82, 60}
+      _: {150, 190, 150}
+    }
+  }
+
+  fn npc_hair(seed: i32) -> Rgb {
+    match hash_int(seed, 113, 5) {
+      0: {40, 32, 30}
+      1: {110, 70, 40}
+      2: {200, 170, 90}
+      3: {150, 150, 156}
+      _: {160, 60, 40}
+    }
+  }
+
+  fn cul_garb(c: i32) -> i32 {
+    match c {
+      1: 3
+      3: 6
+      4: 4
+      6: 1
+      _: 0
+    }
+  }
+
+  fn amb_name(id: i32) -> string {
+    match id {
+      0: "Dock Marshal"
+      1: "Delayed Passenger"
+      2: "Information"
+      3: "Commuter"
+      4: "Barkeep"
+      5: "Stallholder"
+      6: "Loader"
+      7: "Foreman"
+      8: "Intern"
+      9: "Coffee Machine"
+      10: "Researcher"
+      11: "Pit Boss"
+      12: "Operator"
+      13: "Honest Zed"
+      14: "Brother Ledger"
+      15: "Gate Technician"
+      16: "Shift Boss"
+      _: "Somebody"
+    }
+  }
+
+  fn amb_tag(id: i32) -> string {
+    match id {
+      0: "Dock crew"
+      1: "Waiting"
+      2: "Help desk"
+      4: "Bar staff"
+      5: "Trade hall"
+      6: "Freight"
+      9: "Operational"
+      15: "Gate authority"
+      _: "Local"
+    }
+  }
+
+  fn amb_count(id: i32) -> i32 {
+    2
+  }
+
+  fn amb_line(id: i32, n: i32) -> string {
+    match id * 2 + (n % 2) {
+      0: "Mind the gap. It is mostly vacuum."
+      1: "Your ship is the one that is still attached."
+      2: "I have been boarding for three days."
+      3: "They say the delay is temporary. So is everything."
+      4: "Information is free. Accuracy is extra."
+      5: "The bar is that way. Everything is that way eventually."
+      6: "I am not from here. Nobody is."
+      7: "Do you know which gate is the real one?"
+      8: "I pour. They talk. Ask them, not me."
+      9: "The special is whatever is left."
+      10: "Everything here is a bargain to someone."
+      11: "Prices are final until tomorrow."
+      12: "If it rattles, it was like that."
+      13: "We lose nothing. We merely relocate it."
+      14: "The port is done when the tape comes off."
+      15: "We are on schedule. I have not checked which one."
+      16: "I was told this was a desk job."
+      17: "The hologram is to scale. The budget is not."
+      18: "Gurgle."
+      19: "It dispenses something warm and blameless."
+      20: "We are close to a result. We have been since founding."
+      21: "Please do not tap the tanks. They tap back."
+      22: "The house always wins. You are welcome to try."
+      23: "Chips are non-refundable. So is time."
+      24: "We heard you coming."
+      25: "Please speak clearly. For the record."
+      26: "One careful owner. Several careless ones."
+      27: "It flew in here. Legally, that counts as running."
+      28: "Silence, please. The books are balancing."
+      29: "We seek zero. Zero is at peace."
+      30: "The gate is perfectly safe. Statistically."
+      31: "Try not to think about the middle part."
+      32: "Hard hat. Always. Even in the shower."
+      33: "We bother rocks so you do not have to."
+      _: "Hm."
+    }
+  }
+}
+
+terra {
+  template Person {
+    prop seed: i32 = 0
+    prop pose: i32 = 0
+    prop garb: i32 = 0
+
+    const shirt: Rgb = npc_shirt(seed, garb)
+    const skin: Rgb = npc_skin(seed)
+    const hair: Rgb = npc_hair(seed)
+    const drop: f32 = pose == 1 ? 0.24 : 0
+    const tall: f32 = 0.94 + hash01(seed, 118) * 0.14
+
+    Scale: {tall, tall, tall}
+
+    if pose == 1 {
+      lap : KitMatte { Position: {0, 0.5, 0.16}; Box: {0.36, 0.16, 0.42}; Rgb: {46, 50, 62} }
+      shin : KitMatte { Position: {0, 0.26, 0.36}; Box: {0.34, 0.5, 0.14}; Rgb: {46, 50, 62} }
+    } else if garb == 2 {
+      robe : KitMatte { Position: {0, 0.36, 0}; Frustum: {length: 0.72, radius_bottom: 0.3, radius_top: 0.2, segments: 12, smooth: true}; Rgb: shirt }
+    } else {
+      legs : KitMatte { Position: {0, 0.3, 0}; RoundedBox: {0.34, 0.6, 0.22, 0.06, segments: 2}; Rgb: {46, 50, 62} }
+    }
+    up {
+      Position: {0, 0, 0}
+      Animator: {clip: kit_npc_idle, time: hash01(seed, 119) * 1.4, speed: 0.7 + hash01(seed, 120) * 0.6, mode: AnimationPingPong}
+      torso : KitMatte { Position: {0, 0.86 - drop, 0}; Scale: {1, 1, 0.8}; Capsule: {length: 0.26, radius: 0.22, segments: 12, smooth: true}; Rgb: shirt }
+      arm_l : KitMatte { Position: {-0.27, 0.84 - drop, 0.02}; Rotation: {pose == 1 ? -0.5 : 0, 0, 0.1}; Capsule: {length: 0.3, radius: 0.07, segments: 8, smooth: true}; Rgb: shirt }
+      arm_r : KitMatte { Position: {0.27, 0.84 - drop, 0.02}; Rotation: {pose == 1 ? -0.5 : 0, 0, -0.1}; Capsule: {length: 0.3, radius: 0.07, segments: 8, smooth: true}; Rgb: shirt }
+      head : KitMatte { Position: {0, 1.3 - drop, 0.01}; Sphere: {radius: 0.2, segments: 14, smooth: true}; Rgb: skin }
+      nose : KitMatte { Position: {0, 1.28 - drop, 0.2}; Sphere: {radius: 0.04, segments: 6, smooth: true}; Rgb: skin }
+      if garb == 1 {
+        hat : KitGloss { Position: {0, 1.36 - drop, 0}; HemiSphere: {radius: 0.225, segments: 14, smooth: true}; Rgb: {250, 206, 40} }
+        brim : KitGloss { Position: {0, 1.365 - drop, 0.04}; Cylinder: {length: 0.025, radius: 0.26, segments: 16, smooth: true}; Rgb: {250, 206, 40} }
+        vest : KitMatte { Position: {0, 0.86 - drop, 0}; Scale: {1, 1, 0.8}; Torus: {radius: 0.222, tube: 0.02, segments: 16, rings: 4}; Rgb: {236, 240, 244} }
+      } else if garb == 2 {
+        hood : KitMatte { Position: {0, 1.33 - drop, -0.04}; Scale: {1.05, 1, 1.1}; HemiSphere: {radius: 0.225, segments: 14, smooth: true}; Rgb: shirt }
+      } else {
+        hair_ : KitMatte { Position: {0, 1.34 - drop, -0.03}; Scale: {1, 0.9, 1.04}; HemiSphere: {radius: 0.212, segments: 14, smooth: true}; Rgb: hair }
+      }
+      if garb == 5 {
+        apron : KitMatte { Position: {0, 0.8 - drop, 0.17}; Box: {0.3, 0.42, 0.03}; Rgb: {40, 44, 52} }
+      }
+      if garb == 3 {
+        tie : KitMatte { Position: {0, 0.92 - drop, 0.18}; Box: {0.07, 0.24, 0.02}; Rgb: {200, 40, 50} }
+      }
+    }
+  }
+
+  template KitRobot {
+    prop x0: f32 = -4
+    prop x1: f32 = 4
+    prop period: f32 = 14
+    Position: {x0, 0, 0}
+    Rotation: {0, 1.5708, 0}
+    lap {
+      AnimationClip: {duration: period * 2}
+      track_x { AnimationTrack: {component: Position, member: "x", curve: {keys: [{0, x0}, {period - 0.6, x1}, {period, x1}, {period * 2 - 0.6, x0}, {period * 2, x0}]}} }
+      track_y { AnimationTrack: {component: Rotation, member: "y", curve: {keys: [{0, 1.5708}, {period - 0.6, 1.5708}, {period, -1.5708}, {period * 2 - 0.6, -1.5708}, {period * 2, 1.5708}]}} }
+    }
+    Animator: {clip: lap}
+    body : KitGloss { Position: {0, 0.16, 0}; Cylinder: {length: 0.2, radius: 0.34, segments: 16, smooth: true}; Rgb: {236, 240, 244} }
+    dome : KitGloss { Position: {0, 0.26, 0}; Scale: {1, 0.5, 1}; HemiSphere: {radius: 0.24, segments: 12, smooth: true}; Rgb: {60, 90, 150} }
+    eye { Position: {0, 0.3, 0.2}; Box: {0.16, 0.05, 0.04}; KitGlow: {ink: {120, 255, 150}, power: 4} }
+    brush : KitRubber { Position: {0, 0.04, 0.3}; Box: {0.5, 0.06, 0.1} }
+  }
+
+  template BasicRoom {
+    prop poi: i32 = 0
+    prop i: i32 = 0
+
+    const r = basic_room(poi, i)
+    const th = theme_role(theme_base(poi), r.role)
+    const form = basic_form(poi)
+    const fac = stn_fac(poi)
+    const seed = plan_seed(poi) + i * 31
+    const lvl: i32 = here_stock
+
+    if i == 0 {
+      if form == 1 {
+        for k in 0..6 {
+          "seat_{k}" {
+            Position: {(k % 2) * 4.2 - 2.1, 0, -0.5 + floor(k / 2) * 1.0}
+            pan : KitGloss { Position: {0, 0.42, 0}; RoundedBox: {1.2, 0.14, 0.62, 0.05, segments: 2}; Rgb: {60, 90, 150} }
+            rest : KitGloss { Position: {0, 0.78, 0.32}; RoundedBox: {1.2, 0.8, 0.12, 0.05, segments: 2}; Rgb: {60, 90, 150} }
+          }
+        }
+        hatch : KitPaint { Position: {0, 0.5, r.d / 2 - 0.16}; Box: {1.3, 1.0, 0.06}; Rgb: {255, 150, 40} }
+        aisle : KitMatte { Position: {0, 0.006, 0}; Box: {1.4, 0.012, r.d - 0.6}; Rgb: {60, 90, 150} }
+      } else {
+        KitKiosk post(ink: fac_ink(8)) { Position: {0, 0, 0.6 - r.d / 2} }
+        KitSign board(text: "BOARDING", sub: "WAVE VIGOROUSLY", w: 2.6, ink: fac_ink(8), size: 0.62) { Position: {0, 2.75, 0.34 - r.d / 2}; Rotation: {-0.7, 0, 0} }
+      }
+    } else if i == 1 {
+      if form == 1 {
+        dash : KitDark { Position: {0, 0.5, -1.0}; Box: {3.5, 1.0, 0.8} }
+        for k in 0..5 {
+          "dial_{k}" { Position: {-1.3 + k * 0.65, 1.06, -0.8}; Rotation: {-0.9, 0, 0}; Box: {0.5, 0.34, 0.03}; KitGlow: {ink: bottle_ink(k), power: 2.2} }
+        }
+        seat_l : KitGloss { Position: {-0.8, 0.42, 0.05}; RoundedBox: {0.7, 0.16, 0.6, 0.05, segments: 2}; Rgb: {60, 90, 150} }
+        seat_r : KitGloss { Position: {0.8, 0.42, 0.05}; RoundedBox: {0.7, 0.16, 0.6, 0.05, segments: 2}; Rgb: {60, 90, 150} }
+        Person pilot(seed: seed + 51, pose: 1, garb: 3) { Position: {0.8, 0.22, 0}; Rotation: {0, 3.1416, 0} }
+        cup : KitGloss { Position: {-0.8, 0.58, 0.05}; Cylinder: {length: 0.14, radius: 0.06, segments: 10, smooth: true}; Rgb: {255, 150, 40} }
+        KitSign board(text: "CHARTER SHUTTLE", sub: "PILOT: PROBABLY", w: 2.6, ink: fac_ink(8), size: 0.6) { Position: {0, 2.7, -1.3}; Rotation: {-0.7, 0, 0} }
+      } else {
+        for k in 0..4 {
+          if (fac & basic_bit(k)) != 0 {
+            "desk_{k}" {
+              Position: {basic_desk_x(poi, k), 0, 0}
+              KitDesk desk(len: 2.0, tint: th.trim, ink: fac_ink(basic_bit(k))) { Position: {0, 0, 1.25 - r.d / 2} }
+              Person clerk(seed: seed + k * 7, garb: k == 1 ? 1 : k == 2 ? 3 : 0) { Position: {-0.2, 0, 0.6 - r.d / 2} }
+              KitSign board(text: role_title(k == 0 ? 4 : k == 1 ? 5 : k == 2 ? 6 : 7), w: 2.2, ink: fac_ink(basic_bit(k)), size: 0.6) { Position: {0, 2.75, 0.34 - r.d / 2}; Rotation: {-0.7, 0, 0} }
+            }
+          }
+        }
+        if (fac & 1) != 0 {
+          for k in 0..3 {
+            Person "patron_{k}"(seed: seed + 100 + k) { Position: {1.3 - r.w / 2 + k * 1.4, 0, r.d / 2 - 1.0}; Rotation: {0, 3.1416, 0} }
+          }
+          KitSign bar_(text: "BAR. SORT OF.", w: 2.6, ink: fac_ink(1), size: 0.6) { Position: {2.7 - r.w / 2, 1.25, r.d / 2 - 0.3}; Rotation: {-0.9, 0, 0} }
+        }
+        if (fac & 16) != 0 {
+          KitFence fence_n(len: 3.2, ink: {250, 196, 30}) { Position: {r.w / 2 - 2.0, 0, r.d / 2 - 2.6} }
+          KitFence fence_w(len: 2.2, ink: {250, 196, 30}) { Position: {r.w / 2 - 3.6, 0, r.d / 2 - 1.5}; Rotation: {0, 1.5708, 0} }
+          KitStack stock_(level: lvl, cols: 2) { Position: {r.w / 2 - 2.9, 0, r.d / 2 - 0.9} }
+        }
+      }
+    }
+  }
+
+  template BasicOutside {
+    prop poi: i32 = 0
+    const form = basic_form(poi)
+    const kind = stn_kind(poi)
+    if form == 1 {
+      nose : KitGloss { Position: {0, 0.1, -5.1}; Rotation: {-1.5708, 0, 0}; Scale: {1, 1.2, 0.3}; HemiSphere: {radius: 3.2, segments: 28, smooth: true}; Rgb: {226, 230, 236} }
+      wing_l : KitGloss { Position: {-5.2, -0.3, 2.2}; Rotation: {0, 0.35, 0}; Box: {4.4, 0.24, 2.6}; Rgb: {226, 230, 236} }
+      wing_r : KitGloss { Position: {5.2, -0.3, 2.2}; Rotation: {0, -0.35, 0}; Box: {4.4, 0.24, 2.6}; Rgb: {226, 230, 236} }
+      pod_l : KitSteel { Position: {-1.8, -0.1, 5.2}; Rotation: {1.5708, 0, 0}; Cylinder: {length: 2.2, radius: 0.9, segments: 18, smooth: true} }
+      pod_r : KitSteel { Position: {1.8, -0.1, 5.2}; Rotation: {1.5708, 0, 0}; Cylinder: {length: 2.2, radius: 0.9, segments: 18, smooth: true} }
+      burn_l { Position: {-1.8, -0.1, 6.32}; Rotation: {1.5708, 0, 0}; Cylinder: {length: 0.04, radius: 0.7, segments: 18}; KitGlow: {ink: {120, 200, 255}, power: 6} }
+      burn_r { Position: {1.8, -0.1, 6.32}; Rotation: {1.5708, 0, 0}; Cylinder: {length: 0.04, radius: 0.7, segments: 18}; KitGlow: {ink: {120, 200, 255}, power: 6} }
+    } else {
+      KitShip shuttle(tint: {226, 230, 236}, trim: {255, 190, 84}) { Position: {basic_link(poi, 1).x - 6.8, 0.9, 1}; Rotation: {0, 3.1416, 0}; Scale: {3.6, 3.6, 3.6} }
+    }
+    if form == 2 {
+      pad : KitPlate { Position: {9.6, -0.25, 0}; Box: {5.2, 0.3, 5.2}; Rgb: {120, 110, 100} }
+      KitDozer dozer_() { Position: {9.6, -0.1, -0.2}; Rotation: {0, 0.3, 0}; Scale: {1.5, 1.5, 1.5} }
+    }
+    if kind == 5 {
+      for k in 0..12 {
+        "rock_{k}" : KitRock { Position: {cos(k * 0.55) * (22 + hash01(poi + k, 147) * 14), -5 - hash01(poi + k, 148) * 12, sin(k * 0.55) * (16 + hash01(poi + k, 149) * 8)}; Rotation: {k, k * 2, 0}; AngularVelocity: {hash01(poi + k, 151) * 0.1 - 0.05, hash01(poi + k, 152) * 0.1 - 0.05, 0}; Scale: {1, 0.7, 0.9}; IcoSphere: {radius: 1 + hash01(poi + k, 150) * 3, segments: 1} }
+      }
+    }
+  }
+}

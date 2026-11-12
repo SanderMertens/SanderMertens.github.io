@@ -1,0 +1,472 @@
+using flecs.script
+using flecs.script.math
+using state
+
+state {
+  export const TOAST_INFO: i32 = 0
+  export const TOAST_GOOD: i32 = 3
+  export const TOAST_WARN: i32 = 4
+  export const TOAST_BAD: i32 = 5
+
+  export const OFFER_OPEN_DAYS: i32 = 6
+  export const OFFER_GAP_MIN: i32 = 8
+  export const OFFER_GAP_SPAN: i32 = 13
+  export const BONUS_FACTOR: f64 = 0.1
+  export const JOB_LINGER: i32 = 5
+
+  export const LED_FEES: i32 = 0
+  export const LED_BONUS: i32 = 1
+  export const LED_SALES: i32 = 2
+  export const LED_INCOME: i32 = 3
+  export const LED_GOODS: i32 = 4
+  export const LED_FREIGHT: i32 = 5
+  export const LED_SHIPS: i32 = 6
+  export const LED_DOZER_SEND: i32 = 7
+  export const LED_EMERGENCY: i32 = 8
+  export const LED_OVERHEAD: i32 = 9
+  export const LED_CLAWBACK: i32 = 10
+
+  export const REGION_BIAS: f64 = 0.6
+
+  export const SITE_PURPOSE_NONE: i32[16] = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1]
+
+  export mut sim_day: i32 = 0
+  export mut offer_seq: i32 = 0
+  export mut offer_next: i32 = 1
+  export mut site_purpose: i32[16] = SITE_PURPOSE_NONE
+  export mut ledger: f64[12] = {}
+  export mut retired: bool = false
+
+  proc earn(account: i32, amount: f64) {
+    money += amount
+    if account >= 0 && account < 12 {
+      ledger[account] += amount
+    }
+  }
+
+  proc pay(account: i32, amount: f64) {
+    money -= amount
+    if account >= 0 && account < 12 {
+      ledger[account] += amount
+    }
+  }
+
+  fn ledger_net() -> f64 {
+    ledger[0] + ledger[1] + ledger[2] + ledger[3] - ledger[4] - ledger[5] - ledger[6] - ledger[7] - ledger[8] - ledger[9] - ledger[10]
+  }
+
+  fn job_ok(j: i32) -> bool {
+    j >= 0 && j < N_JOBS
+  }
+
+  fn job_status(j: i32) -> i32 {
+    j >= 0 && j < N_JOBS ? jobs[j].status : 0
+  }
+
+  fn job_free_slot() -> i32 {
+    jobs[0].status == 0 ? 0 : jobs[1].status == 0 ? 1 : jobs[2].status == 0 ? 2 : jobs[3].status == 0 ? 3 : -1
+  }
+
+  fn job_active_on(j: i32, p: i32) -> bool {
+    j >= 0 && j < N_JOBS && jobs[j].status == 1 && jobs[j].planet == p
+  }
+
+  fn job_on_planet(p: i32) -> i32 {
+    p < 0 ? -1 : job_active_on(0, p) ? 0 : job_active_on(1, p) ? 1 : job_active_on(2, p) ? 2 : job_active_on(3, p) ? 3 : -1
+  }
+
+  fn job_active_in(j: i32, s: i32) -> bool {
+    j >= 0 && j < N_JOBS && jobs[j].status == 1 && pl_sys(jobs[j].planet) == s
+  }
+
+  fn job_in_sys(s: i32) -> bool {
+    job_active_in(0, s) || job_active_in(1, s) || job_active_in(2, s) || job_active_in(3, s)
+  }
+
+  fn job_site(j: i32) -> i32 {
+    j >= 0 && j < N_JOBS && jobs[j].status != 0 ? pl_site(jobs[j].planet) : -1
+  }
+
+  fn job_days_left(j: i32) -> i32 {
+    j >= 0 && j < N_JOBS && jobs[j].status == 1 ? jobs[j].deadline - today : 0
+  }
+
+  fn job_unsited(j: i32) -> i32 {
+    j >= 0 && j < N_JOBS && jobs[j].status == 1 && pl_site(jobs[j].planet) < 0 ? 1 : 0
+  }
+
+  fn jobs_unsited() -> i32 {
+    job_unsited(0) + job_unsited(1) + job_unsited(2) + job_unsited(3)
+  }
+
+  fn jobs_active() -> i32 {
+    b2i(jobs[0].status == 1) + b2i(jobs[1].status == 1) + b2i(jobs[2].status == 1) + b2i(jobs[3].status == 1)
+  }
+
+  fn sites_used() -> i32 {
+    b2i(sites[0].used) + b2i(sites[1].used) + b2i(sites[2].used) + b2i(sites[3].used) + b2i(sites[4].used) + b2i(sites[5].used) + b2i(sites[6].used) + b2i(sites[7].used) + b2i(sites[8].used) + b2i(sites[9].used) + b2i(sites[10].used) + b2i(sites[11].used) + b2i(sites[12].used) + b2i(sites[13].used) + b2i(sites[14].used) + b2i(sites[15].used)
+  }
+
+  fn site_free_slot() -> i32 {
+    !sites[0].used ? 0 : !sites[1].used ? 1 : !sites[2].used ? 2 : !sites[3].used ? 3 : !sites[4].used ? 4 : !sites[5].used ? 5 : !sites[6].used ? 6 : !sites[7].used ? 7 : !sites[8].used ? 8 : !sites[9].used ? 9 : !sites[10].used ? 10 : !sites[11].used ? 11 : !sites[12].used ? 12 : !sites[13].used ? 13 : !sites[14].used ? 14 : !sites[15].used ? 15 : -1
+  }
+
+  fn site_job_live(i: i32) -> i32 {
+    i >= 0 && i < N_SITES && sites[i].used ? job_on_planet(sites[i].planet) : -1
+  }
+
+  fn site_live_purpose(i: i32) -> i32 {
+    const j = site_job_live(i)
+    j >= 0 && j < N_JOBS ? jobs[j].purpose : -1
+  }
+
+  fn site_purpose_of(i: i32) -> i32 {
+    i >= 0 && i < N_SITES && site_purpose[i] >= 0 ? site_purpose[i] : 0
+  }
+
+  fn struct_frac(i: i32, k: i32) -> f32 {
+    i < 0 || i >= N_SITES || k < 0 || k >= N_STRUCT ? 0 : site_struct[i * 16 + k] >= 2 ? 1 : site_struct[i * 16 + k] == 1 ? clamp(site_progress[i * 16 + k], 0, 1) : 0
+  }
+
+  fn frac_min(cur: f32, req: f32) -> f32 {
+    req <= 0 ? 0 : clamp(cur / req, 0, 1)
+  }
+
+  fn frac_band(cur: f32, lo: f32, hi: f32) -> f32 {
+    lo <= 0 && hi >= 100 ? 0 : cur < lo ? clamp(1 - (lo - cur) / 50, 0, 1) : cur > hi ? clamp(1 - (cur - hi) / 50, 0, 1) : 1
+  }
+
+  fn req_count(pu: i32) -> i32 {
+    b2i(req_atm(pu) > 0) + b2i(req_water(pu) > 0) + b2i(req_bio(pu) > 0) + b2i(req_temp_lo(pu) > 0 || req_temp_hi(pu) < 100)
+  }
+
+  fn stats_progress(pu: i32, atm: f32, water: f32, temp: f32, bio: f32) -> f32 {
+    const n = req_count(pu)
+    n <= 0 ? 1 : (frac_min(atm, req_atm(pu)) + frac_min(water, req_water(pu)) + frac_min(bio, req_bio(pu)) + frac_band(temp, req_temp_lo(pu), req_temp_hi(pu))) / n
+  }
+
+  fn job_stats_progress(j: i32) -> f32 {
+    const p = j >= 0 && j < N_JOBS ? jobs[j].planet : -1
+    const pu = j >= 0 && j < N_JOBS ? jobs[j].purpose : 0
+    p < 0 ? 0 : stats_progress(pu, pl_atm(p), pl_water(p), pl_temp(p), pl_bio(p))
+  }
+
+  fn job_struct_progress(j: i32) -> f32 {
+    const i = job_site(j)
+    const pu = j >= 0 && j < N_JOBS ? jobs[j].purpose : 0
+    const extra = req_struct(pu)
+    extra >= 0 ? 0.5 * struct_frac(i, 12) + 0.5 * struct_frac(i, extra) : struct_frac(i, 12)
+  }
+
+  fn job_progress(j: i32) -> f32 {
+    const st = job_status(j)
+    const i = job_site(j)
+    st == 2 ? 1 : st == 0 ? 0 : i < 0 ? 0 : 0.1 + 0.15 * struct_frac(i, 0) + 0.5 * job_stats_progress(j) + 0.25 * job_struct_progress(j)
+  }
+
+  fn job_complete(j: i32) -> bool {
+    const i = job_site(j)
+    const p = j >= 0 && j < N_JOBS ? jobs[j].planet : -1
+    const pu = j >= 0 && j < N_JOBS ? jobs[j].purpose : 0
+    const extra = req_struct(pu)
+    job_status(j) == 1 && i >= 0 && i < N_SITES && site_has(i, 12) && site_purpose[i] == pu && (extra < 0 || site_has(i, extra)) && req_met(pu, pl_atm(p), pl_water(p), pl_temp(p), pl_bio(p))
+  }
+
+  fn purpose_pool(i: i32) -> i32 {
+    match i {
+      0: 4
+      1: 2
+      2: 5
+      3: 7
+      4: 1
+      5: 3
+      6: 0
+      _: 6
+    }
+  }
+
+  fn purpose_pool_n(rep: i32) -> i32 {
+    rep <= 0 ? 2 : rep == 1 ? 4 : rep == 2 ? 6 : 8
+  }
+
+  fn purpose_rank(pu: i32) -> i32 {
+    match pu {
+      4: 0
+      2: 1
+      5: 2
+      7: 3
+      1: 4
+      3: 5
+      0: 6
+      _: 7
+    }
+  }
+
+  fn faction_purpose(f: i32, alt: bool) -> i32 {
+    match f {
+      0: 0
+      1: alt ? 2 : 1
+      2: 3
+      3: 4
+      4: 5
+      5: 6
+      6: 7
+      _: -1
+    }
+  }
+
+  fn planet_region(p: i32) -> i32 {
+    sys_region(pl_sys(p))
+  }
+
+  fn planet_region_name(p: i32) -> string {
+    p < 0 ? "" : region_name(planet_region(p))
+  }
+
+  fn region_purpose(r: i32, seq: i32, pool: i32) -> i32 {
+    const f = region_faction(r)
+    const a = faction_purpose(f, hash01(seq, 106) < 0.5)
+    const b = faction_purpose(f, hash01(seq, 106) >= 0.5)
+    a >= 0 && purpose_rank(a) < pool ? a : b >= 0 && purpose_rank(b) < pool ? b : -1
+  }
+
+  fn offer_purpose(s: i32, seq: i32, pool: i32) -> i32 {
+    const local = region_purpose(sys_region(s), seq, pool)
+    local >= 0 && hash01(seq, 105) < REGION_BIAS ? local : purpose_pool(hash_int(seq, 103, pool))
+  }
+
+  fn offer_dmin(rep: i32) -> i32 {
+    rep <= 1 ? 2 : rep <= 3 ? 3 : rep <= 5 ? 4 : 5
+  }
+
+  fn offer_dmax(rep: i32) -> i32 {
+    3 + clamp(rep, 0, 5)
+  }
+
+  fn offer_fee(pu: i32, rep: i32, dist: i32) -> f64 {
+    round(purpose_fee(pu) * (1 + 0.04 * clamp(rep, 0, 10)) * (1 + 0.03 * clamp(dist - 2, 0, 16)) / 1000) * 1000
+  }
+
+  fn offer_days(pu: i32, dist: i32) -> i32 {
+    purpose_days(pu) + 5 * clamp(dist - 2, 0, 16)
+  }
+
+  fn offer_sys_ok(s: i32) -> bool {
+    s >= 0 && s < N_SYS && s != HOME && sys_native_port(s) < 0 && sys_site[s] == 0 && !job_in_sys(s)
+  }
+
+  fn offer_block() -> i32 {
+    offer.status != 1 ? 1 : job_free_slot() < 0 ? 2 : 0
+  }
+
+  fn offer_block_text(code: i32) -> string {
+    match code {
+      0: ""
+      1: "No offer on the table. Just the table."
+      _: "Four jobs is the limit. Legal checked."
+    }
+  }
+
+  fn offer_block_tag(code: i32) -> string {
+    match code {
+      0: ""
+      1: "NO OFFER"
+      _: "NO FREE SLOT"
+    }
+  }
+
+  fn offers_over() -> bool {
+    sites_used() >= N_SITES
+  }
+
+  fn jobs_idle() -> bool {
+    jobs[0].status == 0 && jobs[1].status == 0 && jobs[2].status == 0 && jobs[3].status == 0
+  }
+
+  fn retire_due() -> bool {
+    offers_over() && offer.status == 0 && jobs_idle()
+  }
+
+  proc jobs_relink() {
+    for i in 0..N_SITES {
+      if sites[i].used {
+        const j = job_on_planet(sites[i].planet)
+        const cur = sites[i].job
+        const keep = cur >= 0 && cur < N_JOBS && jobs[cur].status >= 2 && jobs[cur].planet == sites[i].planet
+        const want: i32 = j >= 0 ? j : keep ? cur : -1
+        if cur != want {
+          sites[i].job = want
+        }
+        if j >= 0 && j < N_JOBS && (site_struct[i * 16 + 12] == 0 || site_purpose[i] < 0) && site_purpose[i] != jobs[j].purpose {
+          site_purpose[i] = jobs[j].purpose
+        }
+      }
+    }
+  }
+
+  proc offer_accept() {
+    const code = offer_block()
+    if code != 0 {
+      toast_as(offer_block_text(code), TOAST_BAD)
+    } else {
+      const slot = job_free_slot()
+      if slot >= 0 && slot < N_JOBS {
+        const fee = offer.fee
+        const planet = offer.planet
+        jobs[slot] = {1, offer.client, offer.purpose, planet, fee, today + max(offer.deadline, 1), today}
+        offer = JOB_NONE
+        earn(LED_FEES, fee)
+        jobs_relink()
+        toast_as("{pl_name(planet)} signed. {money_text(fee)} received. One refund, tops.", TOAST_GOOD)
+      }
+    }
+  }
+
+  proc offer_decline() {
+    if offer.status == 1 {
+      offer = JOB_NONE
+      toast_as("Declined. They sounded relieved.", TOAST_INFO)
+    }
+  }
+
+  proc offer_roll(day: i32) {
+    if offer.status == 0 && day >= offer_next && job_free_slot() >= 0 && sites_used() + jobs_unsited() < N_SITES {
+      const seq = offer_seq
+      const first = seq == 0
+      const rep = reputation
+      const dmin: i32 = first ? 2 : offer_dmin(rep)
+      const dmax: i32 = first ? 3 : offer_dmax(rep)
+      mut count: i32 = 0
+      for s in 0..N_SYS {
+        const d = sys_dist(s, HOME)
+        if d >= dmin && d <= dmax && offer_sys_ok(s) {
+          count += 1
+        }
+      }
+      mut wide: bool = false
+      if count == 0 {
+        wide = true
+        for s in 0..N_SYS {
+          if offer_sys_ok(s) {
+            count += 1
+          }
+        }
+      }
+      if count > 0 {
+        const pick = hash_int(seq, 101, count)
+        mut target: i32 = -1
+        mut n: i32 = 0
+        for s in 0..N_SYS {
+          const d = sys_dist(s, HOME)
+          if offer_sys_ok(s) && (wide || (d >= dmin && d <= dmax)) {
+            if n == pick {
+              target = s
+            }
+            n += 1
+          }
+        }
+        mut planets: i32 = 0
+        if target >= 0 {
+          for k in 0..MAX_PLANETS {
+            if pl_terraformable(target * 6 + k) {
+              planets += 1
+            }
+          }
+        }
+        if planets > 0 {
+          const ppick = hash_int(seq, 102, planets)
+          mut planet: i32 = -1
+          mut m: i32 = 0
+          for k in 0..MAX_PLANETS {
+            if pl_terraformable(target * 6 + k) {
+              if m == ppick {
+                planet = target * 6 + k
+              }
+              m += 1
+            }
+          }
+          if planet >= 0 {
+            const pool: i32 = first ? 2 : purpose_pool_n(rep)
+            const pu = offer_purpose(target, seq, pool)
+            const dist = sys_dist(target, HOME)
+            offer = {1, purpose_client(pu), pu, planet, offer_fee(pu, rep, dist), offer_days(pu, dist), 0}
+            offer_expires = day + OFFER_OPEN_DAYS
+            offer_next = day + OFFER_GAP_MIN + hash_int(seq, 104, OFFER_GAP_SPAN)
+            offer_seq += 1
+            toast_as("{client_short(purpose_client(pu))} calling. They have a planet in {region_name(sys_region(target))}.", TOAST_INFO)
+          }
+        }
+      }
+    }
+  }
+
+  proc offers_daily(day: i32) {
+    if offer.status == 1 && day > offer_expires {
+      offer = JOB_NONE
+      toast_as("Offer withdrawn. They found someone cheaper.", TOAST_INFO)
+    }
+    offer_roll(day)
+  }
+
+  proc jobs_check(day: i32) {
+    for j in 0..N_JOBS {
+      const st = jobs[j].status
+      if st == 1 {
+        const planet = jobs[j].planet
+        const fee = jobs[j].fee
+        if day > jobs[j].deadline {
+          const back = fee * CLAWBACK_FACTOR
+          jobs[j].status = 3
+          jobs[j].deadline = day + JOB_LINGER
+          jobs_failed += 1
+          reputation = max(reputation - 1, 0)
+          pay(LED_CLAWBACK, back)
+          toast_as("{pl_name(planet)} is late. {money_text(back)} clawed back. With feeling.", TOAST_BAD)
+        } else if job_complete(j) {
+          const bonus = round(fee * BONUS_FACTOR)
+          jobs[j].status = 2
+          jobs[j].deadline = day + JOB_LINGER
+          jobs_done += 1
+          reputation += 1
+          earn(LED_BONUS, bonus)
+          toast_as("{pl_name(planet)} delivered. Bonus {money_text(bonus)}. The client nodded.", TOAST_GOOD)
+        }
+      } else if st >= 2 && day > jobs[j].deadline {
+        jobs[j] = JOB_NONE
+      }
+    }
+    jobs_relink()
+  }
+
+  proc overhead_daily() {
+    pay(LED_OVERHEAD, OVERHEAD_DAILY)
+  }
+
+  proc bankruptcy_check() {
+    if money < 0 && screen != SCREEN_GAMEOVER {
+      screen = SCREEN_GAMEOVER
+      toast_as("Chapter 11. Literally.", TOAST_BAD)
+    }
+  }
+
+  proc retire_check() {
+    if screen != SCREEN_GAMEOVER && retire_due() {
+      retired = true
+      screen = SCREEN_GAMEOVER
+      toast_as("Sixteen planets. That will do. Retired.", TOAST_GOOD)
+    }
+  }
+}
+
+async {
+  while true {
+    const e = await Request
+    if screen != SCREEN_GAMEOVER {
+      if e.op == OP_OFFER_ACCEPT {
+        offer_accept()
+      } else if e.op == OP_OFFER_DECLINE {
+        offer_decline()
+      }
+    }
+  }
+}

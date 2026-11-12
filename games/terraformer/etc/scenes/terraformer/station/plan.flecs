@@ -1,0 +1,442 @@
+using flecs.script
+using flecs.script.math
+using box.material
+using state
+
+state {
+  export const N_ROOM: i32 = 10
+  export const N_LINK: i32 = 10
+  export const N_SPOT: i32 = 8
+  export const N_ACT: i32 = 8
+
+  export const ROLE_DOCK: i32 = 1
+  export const ROLE_HALL: i32 = 2
+  export const ROLE_BAR: i32 = 3
+  export const ROLE_TRADE: i32 = 4
+  export const ROLE_FREIGHT: i32 = 5
+  export const ROLE_YARD: i32 = 6
+  export const ROLE_SITE: i32 = 7
+  export const ROLE_EXTRA: i32 = 8
+  export const ROLE_PASS: i32 = 9
+
+  export const WALL_NONE: i32 = 0
+  export const WALL_LOW: i32 = 1
+  export const WALL_TALL: i32 = 2
+  export const WALL_WINDOW: i32 = 3
+  export const WALL_GLASS: i32 = 4
+  export const WALL_RAIL: i32 = 5
+
+  export const LINK_DOOR: i32 = 0
+  export const LINK_OPEN: i32 = 1
+  export const LINK_AIRLOCK: i32 = 2
+  export const LINK_BAY: i32 = 3
+
+  export const ACT_FAC: i32 = 1
+  export const ACT_PATRON: i32 = 2
+  export const ACT_CHAR: i32 = 3
+
+  export const MAT_TILE: i32 = 0
+  export const MAT_PLATE: i32 = 1
+  export const MAT_CARPET: i32 = 2
+  export const MAT_WOOD: i32 = 3
+  export const MAT_GRATE: i32 = 4
+  export const MAT_GRAVEL: i32 = 5
+
+  export const ARCH_PORT: i32 = 1
+  export const ARCH_GATE: i32 = 2
+  export const ARCH_MINE: i32 = 3
+  export const ARCH_ODD: i32 = 4
+  export const ARCH_SITE: i32 = 5
+
+  export const AVATAR_R: f32 = 0.38
+  export const ROOM_MARGIN: f32 = 0.55
+  export const ACT_REACH: f32 = 1.45
+
+  struct Room(role: i32, kind: i32, x: f32, z: f32, w: f32, d: f32, wn: i32, we: i32, ws: i32, ww: i32)
+  struct Link(a: i32, b: i32, x: f32, z: f32, w: f32, d: f32, kind: i32)
+  struct Spot(x: f32, z: f32, hx: f32, hz: f32, tag: i32)
+  struct Act(x: f32, z: f32, kind: i32, arg: i32)
+  struct Theme(wall: Rgb, floor: Rgb, trim: Rgb, ink: Rgb, lamp: Rgb, level: f32, mat: i32, wear: f32, tier: i32, culture: i32)
+
+  export const ROOM_NONE: Room = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+  export const LINK_NONE: Link = {-1, -1, 0, 0, 0, 0, 0}
+  export const SPOT_NONE: Spot = {0, 0, 0, 0, 0}
+  export const ACT_NONE: Act = {0, 0, 0, 0}
+
+  fn spot(x: f32, z: f32, hx: f32, hz: f32) -> Spot {
+    {x, z, hx, hz, 1}
+  }
+
+  fn pick_rgb(c: bool, a: Rgb, b: Rgb) -> Rgb {
+    match b2i(c) {
+      1: a
+      _: b
+    }
+  }
+
+  fn act(x: f32, z: f32, kind: i32, arg: i32) -> Act {
+    {x, z, kind, arg}
+  }
+
+  fn mk_room(role: i32, kind: i32, x: f32, z: f32, w: f32, d: f32, wn: i32, we: i32, ws: i32, ww: i32) -> Room {
+    {role, kind, x, z, w, d, wn, we, ws, ww}
+  }
+
+  fn mk_link(a: i32, b: i32, x: f32, z: f32, w: f32, d: f32, kind: i32) -> Link {
+    {a, b, x, z, w, d, kind}
+  }
+
+  export mut here_kind: i32 = 2
+  export mut here_fac: i32 = 63
+  export mut here_name: string = ""
+  export mut here_stock: i32 = 0
+  export mut here_fleet: i32 = 0
+  export mut here_dozers: i32 = 0
+
+  fn stn_kind(poi: i32) -> i32 {
+    here_kind
+  }
+
+  fn stn_fac(poi: i32) -> i32 {
+    here_fac
+  }
+
+  fn stn_sells(g: i32) -> bool {
+    (here_fac & 2) != 0 && kind_sells(here_kind, g)
+  }
+
+  fn rgb_mix(a: Rgb, b: Rgb, t: f32) -> Rgb {
+    {a.r * (1 - t) + b.r * t, a.g * (1 - t) + b.g * t, a.b * (1 - t) + b.b * t}
+  }
+
+  fn rgb_dim(a: Rgb, k: f32) -> Rgb {
+    {min(a.r * k, 255), min(a.g * k, 255), min(a.b * k, 255)}
+  }
+
+  fn sys_core(s: i32) -> f32 {
+    clamp(1 - sys_dist(s, HOME) / 9, 0, 1)
+  }
+
+  fn sys_tier(s: i32) -> i32 {
+    const score = sys_core(s) * 1.5 + sys_lanes(s) * 0.18
+    s == HOME ? 2 : score > 1.45 ? 2 : score > 1.0 ? 1 : 0
+  }
+
+  fn sys_culture(s: i32) -> i32 {
+    region_faction(sys_region(s))
+  }
+
+  fn poi_world(poi: i32) -> i32 {
+    const p = poi_planet(poi)
+    p < 0 ? 0 : pl_base_temp(p) < 48 ? 3 : pl_base_water(p) >= 74 ? 1 : pl_base_water(p) < 63 ? 2 : pl_base_bio(p) >= 88 ? 4 : 0
+  }
+
+  fn poi_tier(poi: i32) -> i32 {
+    sys_tier(poi_sys(poi))
+  }
+
+  fn poi_culture(poi: i32) -> i32 {
+    sys_culture(poi_sys(poi))
+  }
+
+  fn plan_seed(poi: i32) -> i32 {
+    poi * 7 + 13
+  }
+
+  fn plan_arch(poi: i32) -> i32 {
+    match stn_kind(poi) {
+      2: 1
+      4: 2
+      5: 3
+      6: 4
+      _: 5
+    }
+  }
+
+  fn plan_look(poi: i32) -> i32 {
+    const k = stn_kind(poi)
+    k == KIND_ODDITY ? 6 + clamp(oddity_kind(poi_sys(poi)), 0, 4) : clamp(k, 0, 5)
+  }
+
+  fn trade_rank(poi: i32, g: i32) -> f32 {
+    stn_sells(g) ? region_factor(poi_sys(poi), g) : 9
+  }
+
+  fn trade_cheap(poi: i32) -> i32 {
+    const a = trade_rank(poi, 0) <= trade_rank(poi, 1) ? 0 : 1
+    const b = trade_rank(poi, 2) <= trade_rank(poi, 3) ? 2 : 3
+    const c = trade_rank(poi, 4) <= trade_rank(poi, 5) ? 4 : 5
+    const d = trade_rank(poi, 6) <= trade_rank(poi, 7) ? 6 : 7
+    const ab = trade_rank(poi, a) <= trade_rank(poi, b) ? a : b
+    const cd = trade_rank(poi, c) <= trade_rank(poi, d) ? c : d
+    trade_rank(poi, ab) <= trade_rank(poi, cd) ? ab : cd
+  }
+
+  fn trade_dear(poi: i32) -> i32 {
+    const s = poi_sys(poi)
+    const a = region_factor(s, 0) >= region_factor(s, 1) ? 0 : 1
+    const b = region_factor(s, 2) >= region_factor(s, 3) ? 2 : 3
+    const c = region_factor(s, 4) >= region_factor(s, 5) ? 4 : 5
+    const d = region_factor(s, 6) >= region_factor(s, 7) ? 6 : 7
+    const ab = region_factor(s, a) >= region_factor(s, b) ? a : b
+    const cd = region_factor(s, c) >= region_factor(s, d) ? c : d
+    region_factor(s, ab) >= region_factor(s, cd) ? ab : cd
+  }
+
+  fn fac_ink(fac: i32) -> Rgb {
+    match fac {
+      1: {255, 150, 70}
+      2: {90, 220, 140}
+      4: {90, 160, 255}
+      8: {255, 190, 84}
+      16: {170, 174, 186}
+      32: {200, 130, 255}
+      _: {255, 225, 80}
+    }
+  }
+
+  fn good_ink(g: i32) -> Rgb {
+    {good_r(g), good_g(g), good_b(g)}
+  }
+
+  fn cul_wall(c: i32) -> Rgb {
+    match c {
+      0: {214, 202, 176}
+      1: {244, 236, 220}
+      2: {206, 222, 190}
+      3: {150, 154, 160}
+      4: {238, 242, 246}
+      5: {156, 124, 90}
+      6: {124, 134, 104}
+      _: {132, 122, 112}
+    }
+  }
+
+  fn cul_trim(c: i32) -> Rgb {
+    match c {
+      0: {150, 120, 84}
+      1: {226, 180, 84}
+      2: {96, 150, 70}
+      3: {240, 200, 40}
+      4: {90, 170, 200}
+      5: {84, 110, 64}
+      6: {70, 76, 60}
+      _: {176, 96, 52}
+    }
+  }
+
+  fn cul_ink(c: i32) -> Rgb {
+    match c {
+      0: {255, 214, 150}
+      1: {255, 170, 90}
+      2: {160, 240, 110}
+      3: {255, 220, 90}
+      4: {120, 220, 255}
+      5: {190, 240, 150}
+      6: {255, 120, 80}
+      _: {255, 160, 60}
+    }
+  }
+
+  fn world_floor(w: i32) -> Rgb {
+    match w {
+      1: {196, 220, 236}
+      2: {230, 200, 156}
+      3: {188, 156, 122}
+      4: {204, 218, 192}
+      _: {228, 224, 216}
+    }
+  }
+
+  fn look_wall(l: i32) -> Rgb {
+    match l {
+      0: {200, 204, 212}
+      1: {176, 96, 52}
+      3: {228, 230, 226}
+      4: {92, 104, 128}
+      5: {132, 84, 58}
+      6: {220, 232, 232}
+      7: {120, 24, 40}
+      8: {86, 98, 74}
+      9: {70, 140, 140}
+      _: {150, 144, 132}
+    }
+  }
+
+  fn look_trim(l: i32) -> Rgb {
+    match l {
+      0: {255, 190, 84}
+      1: {60, 60, 64}
+      3: {240, 130, 40}
+      4: {56, 66, 88}
+      5: {230, 180, 40}
+      6: {60, 180, 170}
+      7: {230, 190, 90}
+      8: {40, 48, 40}
+      9: {230, 70, 60}
+      _: {96, 90, 80}
+    }
+  }
+
+  fn look_floor(l: i32) -> Rgb {
+    match l {
+      0: {150, 156, 170}
+      1: {170, 130, 90}
+      3: {206, 210, 212}
+      4: {120, 132, 156}
+      5: {168, 122, 96}
+      6: {214, 228, 232}
+      7: {150, 30, 44}
+      8: {110, 124, 104}
+      9: {150, 156, 160}
+      _: {172, 166, 152}
+    }
+  }
+
+  fn look_mat(l: i32) -> i32 {
+    match l {
+      1: 3
+      3: 0
+      6: 0
+      7: 2
+      10: 5
+      _: 1
+    }
+  }
+
+  fn theme_base(poi: i32) -> Theme {
+    const port = stn_kind(poi) == KIND_PORT
+    const c = poi_culture(poi)
+    const t = poi_tier(poi)
+    const l = plan_look(poi)
+    const wall: Rgb = pick_rgb(port, cul_wall(c), look_wall(l))
+    const trim: Rgb = pick_rgb(port, cul_trim(c), look_trim(l))
+    const floor: Rgb = pick_rgb(port, rgb_dim(world_floor(poi_world(poi)), t == 0 ? 0.78 : 1), look_floor(l))
+    const ink: Rgb = pick_rgb(port, cul_ink(c), look_trim(l))
+    {wall, floor, trim, ink, {255, 236, 210}, port ? 0.7 + t * 0.15 : 0.8, port ? (t == 0 ? 1 : poi_world(poi) == 3 ? 3 : 0) : look_mat(l), port ? 0.8 - t * 0.4 : 0.5, port ? t : 0, port ? c : -1}
+  }
+
+  fn theme_role(b: Theme, role: i32) -> Theme {
+    match role {
+      1: {b.wall, rgb_mix(b.floor, {200, 214, 232}, 0.35), b.trim, {150, 200, 255}, {200, 225, 255}, b.level, b.mat == 3 ? 0 : b.mat, b.wear, b.tier, b.culture}
+      3: {rgb_dim(rgb_mix(b.wall, {150, 60, 50}, 0.5), 0.5), {62, 44, 38}, b.trim, {255, 150, 70}, {255, 150, 90}, b.level * 0.8, 3, b.wear, b.tier, b.culture}
+      4: {b.wall, rgb_mix(b.floor, {190, 226, 200}, 0.35), b.trim, {90, 220, 140}, {220, 255, 226}, b.level, b.mat, b.wear, b.tier, b.culture}
+      5: {rgb_mix(b.wall, {120, 126, 138}, 0.6), {126, 130, 140}, {250, 196, 30}, {90, 160, 255}, {255, 224, 180}, b.level, 1, b.wear, b.tier, b.culture}
+      6: {rgb_mix(b.wall, {60, 60, 80}, 0.4), {52, 52, 66}, b.trim, {200, 130, 255}, {230, 220, 255}, b.level, 0, b.wear, b.tier, b.culture}
+      7: {b.wall, b.floor, {240, 130, 40}, {255, 225, 80}, {255, 240, 200}, b.level, b.mat, b.wear, b.tier, b.culture}
+      9: {b.wall, rgb_dim(b.floor, 0.8), b.trim, b.ink, {210, 230, 255}, b.level, 1, b.wear, b.tier, b.culture}
+      _: b
+    }
+  }
+
+  fn basic_form(poi: i32) -> i32 {
+    match stn_kind(poi) {
+      0: 1
+      1: 2
+      _: 0
+    }
+  }
+
+  fn basic_room(poi: i32, i: i32) -> Room {
+    match basic_form(poi) {
+      1: match i {
+        0: {1, 0, 0, 1.5, 6, 5, 1, 3, 1, 3}
+        1: {2, 0, 0, -3.5, 4, 3, 3, 1, 1, 1}
+        _: ROOM_NONE
+      }
+      2: match i {
+        0: {1, 0, -7, 0, 4, 4, 3, 1, 1, 2}
+        1: {2, 0, 1, 0, 10, 6, 2, 3, 1, 1}
+        _: ROOM_NONE
+      }
+      _: match i {
+        0: {1, 0, -11, 0, 6, 6, 3, 1, 4, 2}
+        1: {2, 0, 2, 0, 14, 8, 3, 3, 4, 1}
+        _: ROOM_NONE
+      }
+    }
+  }
+
+  fn basic_link(poi: i32, j: i32) -> Link {
+    match basic_form(poi) {
+      1: match j {
+        0: {0, 1, 0, -1.5, 2, 1, 0}
+        _: LINK_NONE
+      }
+      2: match j {
+        0: {0, 1, -4.5, 0, 1, 2, 0}
+        1: {0, -1, -10.5, 0, 3, 2, 2}
+        _: LINK_NONE
+      }
+      _: match j {
+        0: {0, 1, -6.5, 0, 3, 2, 0}
+        1: {0, -1, -15.5, 0, 3, 2, 2}
+        _: LINK_NONE
+      }
+    }
+  }
+
+  fn basic_slot(fac: i32, k: i32) -> i32 {
+    k == 0 ? 0 : k == 1 ? b2i((fac & 2) != 0) : k == 2 ? b2i((fac & 2) != 0) + b2i((fac & 4) != 0) : b2i((fac & 2) != 0) + b2i((fac & 4) != 0) + b2i((fac & 32) != 0)
+  }
+
+  fn basic_bit(k: i32) -> i32 {
+    match k {
+      0: 2
+      1: 4
+      2: 32
+      _: 64
+    }
+  }
+
+  fn basic_desk_x(poi: i32, k: i32) -> f32 {
+    1.7 - basic_room(poi, 1).w / 2 + basic_slot(stn_fac(poi), k) * 2.9
+  }
+
+  fn basic_spot(poi: i32, i: i32, k: i32) -> Spot {
+    const form = basic_form(poi)
+    const r = basic_room(poi, i)
+    const fac = stn_fac(poi)
+    i == 0 ? (form == 1 ? (k == 0 ? spot(-2.1, 0.5, 0.65, 1.4) : k == 1 ? spot(2.1, 0.5, 0.65, 1.4) : SPOT_NONE) : (k == 0 ? spot(0, 0.6 - r.d / 2, 0.3, 0.3) : SPOT_NONE)) : i != 1 ? SPOT_NONE : form == 1 ? (k == 0 ? spot(0, -1.0, 1.8, 0.4) : k == 1 ? spot(-0.8, 0, 0.4, 0.4) : k == 2 ? spot(0.8, 0, 0.4, 0.4) : SPOT_NONE) : k < 4 ? ((fac & basic_bit(k)) != 0 ? spot(basic_desk_x(poi, k), 0.9 - r.d / 2, 1.1, 0.75) : SPOT_NONE) : k < 7 ? ((fac & 1) != 0 ? spot(1.3 - r.w / 2 + (k - 4) * 1.4, r.d / 2 - 1.0, 0.3, 0.3) : SPOT_NONE) : (fac & 16) != 0 ? spot(r.w / 2 - 2.0, r.d / 2 - 1.5, 1.6, 1.1) : SPOT_NONE
+  }
+
+  fn basic_act(poi: i32, i: i32, k: i32) -> Act {
+    const form = basic_form(poi)
+    const r = basic_room(poi, i)
+    const fac = stn_fac(poi)
+    i == 0 ? (form != 1 && k == 0 ? act(0, 0.9 - r.d / 2, 1, 8) : ACT_NONE) : i != 1 ? ACT_NONE : form == 1 ? (k == 0 ? act(0.8, 0, 1, 8) : ACT_NONE) : k < 4 ? ((fac & basic_bit(k)) != 0 ? act(basic_desk_x(poi, k), 1.3 - r.d / 2, 1, basic_bit(k)) : ACT_NONE) : k < 7 && (fac & 1) != 0 ? act(1.3 - r.w / 2 + (k - 4) * 1.4, r.d / 2 - 1.0, 2, k - 4) : ACT_NONE
+  }
+
+  fn basic_spawn(poi: i32) -> Act {
+    const r = basic_room(poi, 0)
+    basic_form(poi) == 1 ? act(0, 3.0, 0, 0) : act(r.x - r.w / 2 + 1.3, r.z, 0, 0)
+  }
+
+  fn link_walk(kind: i32) -> bool {
+    kind == 0 || kind == 1
+  }
+
+  fn link_along_x(l: Link, a: Room) -> bool {
+    abs(l.x - a.x) > a.w / 2 - 0.05
+  }
+
+  fn gap_at(l: Link, x: f32, z: f32) -> bool {
+    l.a >= 0 && abs(x - l.x) < l.w / 2 + 0.1 && abs(z - l.z) < l.d / 2 + 0.1
+  }
+
+  fn room_cam(r: Room) -> f32 {
+    clamp(max((r.w / 2 + 2.5) / 0.551, (r.d / 2 + 3) / 0.423), 15, 27)
+  }
+
+  fn room_in(r: Room, x: f32, z: f32, m: f32) -> bool {
+    r.role != 0 && abs(x - r.x) <= r.w / 2 - m && abs(z - r.z) <= r.d / 2 - m
+  }
+
+  fn link_in(l: Link, a: Room, x: f32, z: f32) -> bool {
+    l.a >= 0 && link_walk(l.kind) && (link_along_x(l, a) ? abs(x - l.x) <= l.w / 2 + 0.7 && abs(z - l.z) <= l.d / 2 - 0.2 - AVATAR_R : abs(x - l.x) <= l.w / 2 - 0.2 - AVATAR_R && abs(z - l.z) <= l.d / 2 + 0.7)
+  }
+
+  fn spot_hit(s: Spot, x: f32, z: f32) -> bool {
+    s.hx > 0 && abs(x - s.x) < s.hx + AVATAR_R && abs(z - s.z) < s.hz + AVATAR_R
+  }
+}

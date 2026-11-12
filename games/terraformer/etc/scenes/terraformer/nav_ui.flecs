@@ -1,0 +1,474 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.layout
+using box.text
+using box.picking
+using box.transition
+using box.input
+using box.ui
+using box.widgets
+using state
+using terra
+
+state {
+  fn nav_planet_purpose(p: i32) -> i32 {
+    jobs[0].status == JOB_ACTIVE && jobs[0].planet == p ? jobs[0].purpose : jobs[1].status == JOB_ACTIVE && jobs[1].planet == p ? jobs[1].purpose : jobs[2].status == JOB_ACTIVE && jobs[2].planet == p ? jobs[2].purpose : jobs[3].status == JOB_ACTIVE && jobs[3].planet == p ? jobs[3].purpose : offer.status == 1 && offer.planet == p ? offer.purpose : -1
+  }
+
+  fn nav_sys_job(s: i32) -> i32 {
+    nav_job_sys(0) == s ? jobs[0].purpose : nav_job_sys(1) == s ? jobs[1].purpose : nav_job_sys(2) == s ? jobs[2].purpose : nav_job_sys(3) == s ? jobs[3].purpose : nav_offer_sys() == s ? offer.purpose : -1
+  }
+
+  fn nav_kind_tag(kind: i32) -> string {
+    match kind {
+      0: "ORBIT"
+      1: "DOZER CAMP"
+      2: "PORT"
+      3: "OUR PORT"
+      4: "GATE"
+      5: "MINE"
+      _: "ODDITY"
+    }
+  }
+
+  fn nav_kind_tone(kind: i32) -> i32 {
+    match kind {
+      1: 2
+      2: 6
+      3: 2
+      4: 6
+      5: 4
+      6: 0
+      _: 1
+    }
+  }
+
+  fn nav_poi_short(poi: i32) -> string {
+    const s = poi_sys(poi)
+    const k = poi_slot(poi)
+    !poi_ok(poi) ? "" : k < 6 ? "{roman(k)}  {pl_type_name(pl_type(poi_planet(poi)))}" : k < 10 ? "{sys_name(sys_nb(s, k - 6))} Gate" : k == 10 ? mine_name(s) : oddity_name(oddity_kind(s))
+  }
+
+  fn nav_poi_blurb(kind: i32) -> string {
+    match kind {
+      0: "Nothing here. The shuttle pilot will wait."
+      1: "A container, a dozer and a coffee machine."
+      2: "Civilisation, with a gift shop."
+      3: "Ours. The paint is still wet."
+      4: "A ring, a queue and a vending machine."
+      5: "Rocks, professionally bothered."
+      _: "Nobody is sure why this is here."
+    }
+  }
+
+  fn nav_type_rgb_r(t: i32) -> i32 {
+    match t { 0: 150; 1: 214; 2: 170; 3: 235; 4: 206; _: 96 }
+  }
+
+  fn nav_type_rgb_g(t: i32) -> i32 {
+    match t { 0: 142; 1: 170; 2: 210; 3: 96; 4: 170; _: 190 }
+  }
+
+  fn nav_type_rgb_b(t: i32) -> i32 {
+    match t { 0: 132; 1: 110; 2: 235; 3: 56; 4: 130; _: 120 }
+  }
+
+  fn nav_fac_text(fac: i32) -> string {
+    const bar = (fac & 1) != 0 ? "BAR   " : ""
+    const trade = (fac & 2) != 0 ? "TRADE   " : ""
+    const freight = (fac & 4) != 0 ? "FREIGHT   " : ""
+    const yard = (fac & 32) != 0 ? "SHIPYARD   " : ""
+    const site = (fac & 64) != 0 ? "SITE OFFICE" : ""
+    "{bar}{trade}{freight}{yard}{site}"
+  }
+
+  fn nav_poi_note(poi: i32) -> string {
+    const purpose = nav_planet_purpose(poi_planet(poi))
+    (poi_fac(poi) & 103) != 0 ? nav_fac_text(poi_fac(poi)) : purpose >= 0 ? "JOB   {purpose_name(purpose)}" : ""
+  }
+
+  fn nav_poi_note_tone(poi: i32) -> i32 {
+    (poi_fac(poi) & 103) != 0 ? 1 : 3
+  }
+
+  fn nav_region_owner(r: i32) -> string {
+    region_faction(r) >= 0 ? client_short(region_faction(r)) : "Unincorporated"
+  }
+
+  fn nav_fare_text(v: f64) -> string {
+    "\${v:.0}"
+  }
+}
+
+terra {
+  template NavPoiGlyph {
+    prop kind: i32 = 0
+    prop ptype: i32 = 0
+    prop size: f32 = 16
+
+    Layout: {}
+    LayoutItem: {width: {mode: Fixed, value: size}, height: {mode: Fixed, value: size}}
+    box.spatial.SpatialIgnore
+
+    if kind <= 3 {
+      disc {
+        LayoutItem: {h: Center, v: Middle, width: {mode: Fixed, value: size * 0.62}, height: {mode: Fixed, value: size * 0.62}}
+        Rect: {1, 1}
+        Rgb: {nav_type_rgb_r(ptype), nav_type_rgb_g(ptype), nav_type_rgb_b(ptype)}
+        Border: {radius: size}
+        box.spatial.SpatialIgnore
+      }
+      if kind >= 1 {
+        ring {
+          LayoutItem: {h: Center, v: Middle, width: {mode: Fixed, value: size}, height: {mode: Fixed, value: size}}
+          Rect: {1, 1}
+          Rgb: {0, 0, 0}
+          BlendMode: Additive
+          Border: kind == 2 ? {width: 1.5, radius: size, color: {176, 208, 240, 255}} : {width: 1.5, radius: size, color: {255, 170, 40, 255}}
+          box.spatial.SpatialIgnore
+        }
+      }
+    } else if kind == 4 {
+      ring {
+        LayoutItem: {h: Center, v: Middle, width: {mode: Fixed, value: size * 0.86}, height: {mode: Fixed, value: size * 0.86}}
+        Rect: {1, 1}
+        Rgb: {0, 0, 0}
+        BlendMode: Additive
+        Border: {width: 2.5, radius: size, color: {110, 180, 255, 255}}
+        box.spatial.SpatialIgnore
+      }
+    } else if kind == 5 {
+      block {
+        LayoutItem: {h: Center, v: Middle, width: {mode: Fixed, value: size * 0.6}, height: {mode: Fixed, value: size * 0.6}}
+        Rect: {1, 1}
+        Rgb: {176, 150, 112}
+        Border: {radius: 2}
+        box.spatial.SpatialIgnore
+      }
+    } else {
+      gem {
+        LayoutItem: {h: Center, v: Middle, width: {mode: Fixed, value: size * 0.56}, height: {mode: Fixed, value: size * 0.56}}
+        Rotation: {0, 0, PI / 4}
+        Rect: {1, 1}
+        Rgb: {214, 120, 220}
+        box.spatial.SpatialIgnore
+      }
+    }
+  }
+
+  template NavPoiRow : HeadlessButton {
+    prop poi: i32 = 0
+    prop here: bool = false
+    prop chosen: bool = false
+
+    const kind = poi_kind(poi)
+
+    Layout: {direction: Row, padding: {6, 6, 10, 10}, spacing: 10, v: Middle}
+    LayoutItem: {width: {mode: Grow}}
+    Rect: {1, 1}
+    Rgb: chosen ? {58, 44, 18} : hover && !here ? T_HOVER : T_PANEL
+    Border: {width: 1, radius: 4, color: chosen ? {255, 170, 40, 255} : {52, 62, 80, 0}}
+    Transition: [Rgb: {duration: 0.08}]
+
+    NavPoiGlyph glyph(kind: kind, ptype: pl_type(poi_planet(poi)))
+    words {
+      Layout: {direction: Column, spacing: 3}
+      LayoutItem: {width: {mode: Grow}}
+      box.spatial.SpatialIgnore
+      Txt name(text: nav_poi_short(poi), size: 13, tone: here ? TONE_ACCENT : TONE_TEXT)
+      if nav_poi_note(poi) != "" {
+        Txt note(text: nav_poi_note(poi), size: 10, tone: nav_poi_note_tone(poi))
+      }
+    }
+    if here {
+      Txt at(text: "YOU", size: 10, tone: TONE_ACCENT)
+    } else {
+      Txt tag(text: nav_kind_tag(kind), size: 10, tone: nav_kind_tone(kind))
+    }
+
+    async {
+      while true {
+        const e = await on.activate(this)
+        if ui.activation(e) == this && !here {
+          emit Request(op: OP_NAV_DEST, a: poi, b: 0)
+        }
+      }
+    }
+  }
+
+  template NavRegionTag {
+    prop r: i32 = 0
+    prop size: f32 = 11
+
+    Text: {value: region_name(r), size: size}
+    Rgb: {region_r(r) * 0.7 + 70, region_g(r) * 0.7 + 70, region_b(r) * 0.7 + 70}
+    box.spatial.SpatialIgnore
+  }
+
+  template NavCrumbs {
+    const here = poi_sys(at_poi)
+
+    Layout: {direction: Row, spacing: 6, padding: {6, 6, 6, 6}, v: Middle}
+    Rect: {1, 1}
+    Rgb: T_PANEL
+    Border: {width: 1, radius: 6, color: {52, 62, 80, 255}}
+    InputBlocker
+
+    OpButton galaxy(label: "GALAXY", op: OP_NAV_LEVEL, a: NAV_GALAXY, kind: BTN_QUIET, selected: nav_level == NAV_GALAXY, width: 92)
+    Txt sep(text: ">", size: 12, tone: TONE_MUTED)
+    OpButton system(label: sys_name(nav_sys), op: OP_NAV_LEVEL, a: NAV_SYSTEM, b: nav_sys, kind: BTN_QUIET, selected: nav_level == NAV_SYSTEM)
+    if nav_sys != here {
+      OpButton current(label: "YOU", op: OP_NAV_LEVEL, a: NAV_SYSTEM, b: here, kind: BTN_QUIET, width: 54)
+    }
+  }
+
+  template NavPoiList {
+    prop sys: i32 = 44
+
+    Layout: {direction: Column}
+    Frame card(title: "POINTS OF INTEREST", width: 330, pad: 12, spacing: 8) {
+      body {
+        Layout: {direction: Column, spacing: 2}
+        LayoutItem: {width: {mode: Grow}}
+        head {
+          Layout: {direction: Row, spacing: 8, v: Middle, padding: {0, 6, 2, 2}}
+          LayoutItem: {width: {mode: Grow}}
+          Txt name(text: sys_name(sys), size: F_HEAD)
+          Gap pad()
+          Txt star(text: star_name(sys_star(sys)), size: F_TINY, tone: TONE_MUTED)
+        }
+        zone {
+          Layout: {direction: Row, spacing: 8, v: Middle, padding: {0, 6, 2, 2}}
+          LayoutItem: {width: {mode: Grow}}
+          NavRegionTag name(r: sys_region(sys))
+          Gap pad()
+          Txt owner(text: nav_region_owner(sys_region(sys)), size: 10, tone: TONE_MUTED)
+        }
+        for k in 0..12 {
+          if poi_exists(sys * 12 + k) {
+            NavPoiRow "row_{k}"(poi: sys * 12 + k, here: at_poi == sys * 12 + k, chosen: nav_dest == sys * 12 + k)
+          }
+        }
+      }
+    }
+  }
+
+  template NavStatBar {
+    prop label: string = ""
+    prop value: f32 = 0
+    prop mark: f32 = -1
+    prop tone: i32 = 6
+
+    Layout: {direction: Row, spacing: 10, v: Middle}
+    LayoutItem: {width: {mode: Grow}}
+    tag {
+      Layout: {direction: Row}
+      LayoutItem: {width: {mode: Fixed, value: 48}}
+      Txt name(text: label, size: 10, tone: TONE_MUTED)
+    }
+    Bar meter(value: value / 100, width: 196, tone: tone, mark: mark < 0 ? -1 : mark / 100)
+    Gap pad()
+    Txt amount(text: "{value:.0}", size: 12)
+  }
+
+  template NavDestCard {
+    const poi = nav_dest
+    const kind = poi_kind(poi)
+    const p = poi_planet(poi)
+    const purpose = nav_planet_purpose(p)
+    const ready = route_n >= 2
+    const poor = ready && money < route_cost
+
+    Layout: {direction: Column}
+    Frame card(title: "DESTINATION", width: 340, pad: 14, spacing: 8) {
+      body {
+        Layout: {direction: Column, spacing: 9}
+        LayoutItem: {width: {mode: Grow}}
+        head {
+          Layout: {direction: Row, spacing: 10, v: Middle}
+          LayoutItem: {width: {mode: Grow}}
+          NavPoiGlyph glyph(kind: kind, ptype: pl_type(p), size: 20)
+          Txt name(text: poi_name(poi), size: F_HEAD, width: 276)
+        }
+        sub {
+          Layout: {direction: Row, spacing: 8, v: Middle}
+          LayoutItem: {width: {mode: Grow}}
+          Txt tag(text: nav_kind_tag(kind), size: 10, tone: nav_kind_tone(kind))
+          if p >= 0 {
+            Txt planet_type(text: pl_type_name(pl_type(p)), size: 10, tone: TONE_MUTED)
+          }
+          Gap pad()
+          Txt where(text: sys_name(poi_sys(poi)), size: 10, tone: TONE_MUTED)
+        }
+        zone {
+          Layout: {direction: Row, spacing: 8, v: Middle}
+          LayoutItem: {width: {mode: Grow}}
+          NavRegionTag name(r: sys_region(poi_sys(poi)))
+          Gap pad()
+          Txt owner(text: nav_region_owner(sys_region(poi_sys(poi))), size: 10, tone: TONE_MUTED)
+        }
+        if p >= 0 {
+          stats {
+            Layout: {direction: Column, spacing: 6, padding: {2, 2, 0, 0}}
+            LayoutItem: {width: {mode: Grow}}
+            NavStatBar atm(label: "ATMOS", value: pl_atm(p), mark: purpose >= 0 ? req_atm(purpose) : -1, tone: TONE_INFO)
+            NavStatBar water(label: "WATER", value: pl_water(p), mark: purpose >= 0 ? req_water(purpose) : -1, tone: TONE_INFO)
+            NavStatBar temp(label: "TEMP", value: pl_temp(p), mark: purpose >= 0 ? temp_target(purpose) : 50, tone: TONE_WARN)
+            NavStatBar bio(label: "BIO", value: pl_bio(p), mark: purpose >= 0 ? req_bio(purpose) : -1, tone: TONE_GOOD)
+          }
+        }
+        there {
+          Layout: {direction: Column, spacing: 5}
+          LayoutItem: {width: {mode: Grow}}
+          if (poi_fac(poi) & 103) != 0 {
+            Txt has(text: nav_fac_text(poi_fac(poi)), size: 11)
+          }
+          Txt blurb(text: nav_poi_blurb(kind), size: F_SMALL, tone: TONE_MUTED, width: 310)
+        }
+        Rule line()
+        Row fare(label: "FARE", value: ready ? nav_fare_text(route_cost) : "...", tone: !ready ? TONE_MUTED : poor ? TONE_BAD : TONE_ACCENT, size: 15)
+        Row days(label: "DAYS", value: ready ? "{route_days:.1}" : "...")
+        Row jumps(label: "JUMPS", value: ready ? "{route_jumps}" : "...")
+        Row charter(label: "PORTLESS", value: ready ? "{route_charters}" : "...", tone: ready && route_charters > 0 ? TONE_BAD : TONE_MUTED)
+        OpButton clear(label: "CLEAR", op: OP_NAV_CLEAR, kind: BTN_PLAIN, grow: true, height: 28)
+      }
+    }
+  }
+
+  template NavTip {
+    prop s: i32 = 0
+
+    const k: f32 = nav_wh / max(gcam_h, 1)
+    const port = sys_port_poi(s)
+
+    LayoutItem: {h: Center, v: Middle, x: (sys_x(s) - gcam_x) * k, y: (sys_y(s) - gcam_y) * k, width: {mode: Fixed, value: 3.6 * k + 8}, height: {mode: Fixed, value: 3.6 * k + 8}}
+    Layout: {}
+    box.spatial.SpatialIgnore
+
+    card {
+      LayoutFloat: {h: Left, v: Bottom, anchor_h: Right, anchor_v: Top, x: 0, y: 0, flip: true}
+      Layout: {direction: Column, padding: {10, 10, 12, 12}, spacing: 5}
+      LayoutItem: {width: {min: 210, max: 210}}
+      Rect: {1, 1}
+      Rgb: T_PANEL
+      Border: {width: 1, radius: 6, color: {84, 98, 124, 255}}
+      BoxShadow: {offset_y: -4, blur: 16, color: {0, 0, 0, 150}}
+      box.spatial.SpatialIgnore
+
+      Txt name(text: sys_name(s), size: F_BODY)
+      NavRegionTag zone(r: sys_region(s))
+      Txt star(text: "{star_name(sys_star(s))}, {sys_planets(s)} planets", size: F_TINY, tone: TONE_MUTED)
+      Row port_row(label: "Port", value: port >= 0 ? pl_name(poi_planet(port)) : "none", tone: port < 0 ? TONE_BAD : sys_native_port(s) >= 0 ? TONE_INFO : TONE_ACCENT, size: 12)
+      Row lanes(label: "Lanes", value: "{sys_lanes(s)}", size: 12)
+      if nav_sys_job(s) >= 0 {
+        Row job(label: nav_offer_sys() == s ? "Offer" : "Job", value: purpose_name(nav_sys_job(s)), tone: nav_offer_sys() == s ? TONE_WARN : TONE_GOOD, size: 12)
+      }
+      if sys_has_mine(s) {
+        Row mine(label: "Mine", value: mine_name(s), size: 12)
+      }
+      if sys_has_oddity(s) {
+        Row oddity(label: "Also", value: oddity_name(oddity_kind(s)), size: 12)
+      }
+    }
+  }
+
+  template NavLegendItem {
+    prop text: string = ""
+    prop kind: i32 = 0
+
+    Layout: {direction: Row, spacing: 6, v: Middle}
+    box.spatial.SpatialIgnore
+    mark {
+      Layout: {}
+      LayoutItem: {width: {mode: Fixed, value: 14}, height: {mode: Fixed, value: 14}}
+      box.spatial.SpatialIgnore
+      if kind <= 1 {
+        ring {
+          LayoutItem: {h: Center, v: Middle, width: {mode: Fixed, value: 12}, height: {mode: Fixed, value: 12}}
+          Rect: {1, 1}
+          Rgb: {0, 0, 0}
+          BlendMode: Additive
+          Border: kind == 0 ? {width: 1.5, radius: 8, color: {176, 208, 240, 255}} : {width: 2, radius: 8, color: {255, 170, 40, 255}}
+          box.spatial.SpatialIgnore
+        }
+      } else if kind <= 3 {
+        gem {
+          LayoutItem: {h: Center, v: Middle, width: {mode: Fixed, value: 9}, height: {mode: Fixed, value: 9}}
+          Rotation: {0, 0, PI / 4}
+          Rect: {1, 1}
+          Rgb: {0, 0, 0}
+          BlendMode: Additive
+          Border: kind == 2 ? {width: 1.5, radius: 1, color: {110, 210, 140, 255}} : {width: 1.5, radius: 1, color: {250, 200, 80, 255}}
+          box.spatial.SpatialIgnore
+        }
+      } else {
+        dash {
+          LayoutItem: {h: Center, v: Middle, width: {mode: Fixed, value: 14}, height: {mode: Fixed, value: 3}}
+          Rect: {1, 1}
+          Rgb: kind == 4 ? {255, 186, 72} : {255, 104, 72}
+          box.spatial.SpatialIgnore
+        }
+      }
+    }
+    Txt name(text: text, size: 10, tone: TONE_MUTED)
+  }
+
+  template NavLegend {
+    Layout: {direction: Row, spacing: 16, padding: {7, 7, 12, 12}, v: Middle}
+    Rect: {1, 1}
+    Rgb: T_BG
+    Opacity: {0.82}
+    Border: {width: 1, radius: 6, color: {34, 41, 56, 255}}
+    box.spatial.SpatialIgnore
+
+    NavLegendItem port(text: "PORT", kind: 0)
+    NavLegendItem own(text: "OURS", kind: 1)
+    NavLegendItem job(text: "JOB", kind: 2)
+    NavLegendItem bid(text: "OFFER", kind: 3)
+    NavLegendItem route(text: "ROUTE", kind: 4)
+    NavLegendItem charter(text: "CHARTER", kind: 5)
+  }
+
+  template NavUi {
+    const root = this.parent()
+
+    LayoutItem: {h: Center, v: Middle, width: {mode: Fixed, value: 1}, height: {mode: Fixed, value: 1}}
+    Layout: {}
+
+    crumbs {
+      Position: {0, 0, 12}
+      LayoutFloat: {anchor: root, h: Left, v: Top, anchor_h: Left, anchor_v: Top, x: 24, y: -100}
+      Layout: {direction: Column}
+      NavCrumbs bar()
+    }
+    if nav_level == NAV_SYSTEM {
+      pois {
+        Position: {0, 0, 12}
+        LayoutFloat: {anchor: root, h: Left, v: Top, anchor_h: Left, anchor_v: Top, x: 24, y: -158}
+        Layout: {direction: Column}
+        NavPoiList "list_{nav_sys}"(sys: nav_sys)
+      }
+    } else {
+      legend {
+        Position: {0, 0, 12}
+        LayoutFloat: {anchor: root, h: Center, v: Bottom, anchor_h: Center, anchor_v: Bottom, y: 18}
+        Layout: {direction: Column}
+        NavLegend keys()
+      }
+      if nav_hover >= 0 && !nav_dragging {
+        NavTip tip(s: nav_hover)
+      }
+    }
+    if nav_dest >= 0 {
+      dest {
+        Position: {0, 0, 12}
+        LayoutFloat: {anchor: root, h: Right, v: Top, anchor_h: Right, anchor_v: Top, x: -24, y: -100}
+        Layout: {direction: Column}
+        NavDestCard "card_{nav_dest}"()
+      }
+    }
+  }
+}

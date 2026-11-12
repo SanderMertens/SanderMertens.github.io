@@ -1,0 +1,210 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.light
+using box.movement
+using box.texture
+using box.particle
+using box.animation
+using box.spatial
+using box.text
+using state
+using terra
+
+terra {
+  template FlGateStation {
+    prop gangway: f32 = 0
+    prop accent: Rgb = {90, 170, 255}
+
+    const sx: f32 = fl_berth_x(4, 0, true)
+    const bx: f32 = fl_berth_x(4, 0, false)
+
+    core : FlHull { Position: {0, 0, 0}; Cylinder: {length: 150, radius: 30, segments: 32, smooth: true} }
+    conc : FlWinUv { Position: {0, 0, 0}; Cylinder: {length: 24, radius: 46, segments: 40, smooth: true}; TextureTransform: {2 * PI * 46 / 48, 0.5, 0, 0} }
+    conc_top : FlHull { Position: {0, 13.5, 0}; Cylinder: {length: 3, radius: 48, segments: 40, smooth: true} }
+    conc_bot : FlHull { Position: {0, -13.5, 0}; Cylinder: {length: 3, radius: 48, segments: 40, smooth: true} }
+    band_a { Position: {0, 16, 0}; Cylinder: {length: 2, radius: 46, segments: 40, smooth: true}; Rgb: accent; PbrMaterial: {metallic: 0.3, roughness: 0.4} }
+    hab_a : FlWinUv { Position: {0, 48, 0}; Cylinder: {length: 30, radius: 30.6, segments: 32, smooth: true}; TextureTransform: {2 * PI * 30 / 48, 0.625, 0.3, 0} }
+    hab_b : FlWinUv { Position: {0, -44, 0}; Cylinder: {length: 18, radius: 30.6, segments: 32, smooth: true}; TextureTransform: {2 * PI * 30 / 48, 0.375, 0.6, 0} }
+    cap_top : FlHullDark { Position: {0, 77, 0}; Cylinder: {length: 6, radius: 33, segments: 32, smooth: true} }
+    cap_bot : FlHullDark { Position: {0, -77, 0}; Cylinder: {length: 6, radius: 33, segments: 32, smooth: true} }
+    tower : FlHull { Position: {0, 96, 0}; Cylinder: {length: 34, radius: 12, segments: 20, smooth: true} }
+    cab : FlHullDark { Position: {0, 119, 0}; Frustum: {length: 12, radius_bottom: 16, radius_top: 22, segments: 20} }
+    cab_win : FlPane { Position: {0, 119, 0}; Frustum: {length: 7, radius_bottom: 18, radius_top: 21.4, segments: 20}; TextureTransform: {10, 1, 0, 0}; Emissive: {strength: 2.6, color: {200, 230, 255}} }
+    cab_roof : FlHull { Position: {0, 126.5, 0}; Cylinder: {length: 3, radius: 23, segments: 20} }
+    mast : FlSteel { Position: {0, 150, 0}; Cylinder: {length: 44, radius: 1.2, segments: 8} }
+    mast_tip : FlBlinkR { Position: {0, 173, 0}; Sphere: {radius: 1.6, segments: 8} }
+    radar {
+      Position: {0, 131, 0}
+      AngularVelocity: {0, 0.7, 0}
+      bar : FlWhite { Position: {0, 2, 0}; Box: {26, 4, 1.4} }
+    }
+    dish_boom : FlSteel { Position: {0, -92, 0}; Cylinder: {length: 26, radius: 1.6, segments: 8} }
+    dish : FlWhite { Position: {0, -108, 0}; Rotation: {PI + 0.5, 0, 0.2}; HemiSphere: {radius: 18, segments: 20, smooth: true} }
+    for i in 0..2 {
+      const sz: f32 = i == 0 ? -1 : 1
+      "wing_arm_{i}" : FlSteel { Position: {0, 60, sz * 60}; Box: {2, 2, 60} }
+      "wing_{i}" : FlSolar { Position: {0, 60, sz * 120}; Rotation: {0, 0, 0.5}; Box: {50, 1, 100} }
+      "tank_{i}" : FlWhite { Position: {sz * 20, -62, 30}; Capsule: {length: 16, radius: 7, segments: 12, smooth: true} }
+    }
+    link : FlHullDark { Position: {120, -30, 100}; Rotation: {0, -0.6947, 0}; Box: {300, 8, 8} }
+    link_b : FlSteel { Position: {120, -20, 100}; Rotation: {0, -0.6947, 0}; Box: {300, 1.2, 1.2} }
+    small_arm { Position: {-46, 0, 0}; Rotation: {0, PI, 0}; FlJetty arm(reach: 0 - sx - 46 - 14.5 + 18, gangway: 0, accent: accent) }
+    berth { Position: {sx, 0, 0}; FlCradle cradle(gangway: gangway, accent: accent) }
+    liner_arm { Position: {46, 0, 0}; FlJetty arm(reach: bx - 30 - 46, gangway: gangway, accent: accent) }
+  }
+
+  template FlGate {
+    prop charge: f32 = 0
+    prop accent: Rgb = {90, 170, 255}
+    prop queue: i32 = 0
+    prop gangway: f32 = 0
+
+    const c: f32 = clamp(charge, 0, 1)
+    const iris: f32 = clamp((c - 0.6) / 0.4, 0, 1)
+
+    SpatialIgnore
+    ring : FlHull { Position: {0, 0, 0}; Rotation: {PI / 2, 0, 0}; Tube: {radius: 318, thickness: 52, length: 40, segments: 96, smooth: true} }
+    ring_core : FlHullDark { Position: {0, 0, 0}; Rotation: {PI / 2, 0, 0}; Tube: {radius: 322, thickness: 60, length: 24, segments: 96, smooth: true} }
+    lip_a { Position: {0, 0, 20.4}; Rotation: {PI / 2, 0, 0}; Tube: {radius: 300, thickness: 6, length: 1, segments: 96, smooth: true}; Rgb: accent; PbrMaterial: {metallic: 0.3, roughness: 0.4} }
+    lip_b { Position: {0, 0, -20.4}; Rotation: {PI / 2, 0, 0}; Tube: {radius: 300, thickness: 6, length: 1, segments: 96, smooth: true}; Rgb: accent; PbrMaterial: {metallic: 0.3, roughness: 0.4} }
+    glow_a { Position: {0, 0, 0}; Rotation: {PI / 2, 0, 0}; Tube: {radius: 266.4, thickness: 1, length: 30, segments: 96, smooth: true}; Rgb: {4, 8, 14}; Emissive: {strength: 0.5 + 9 * c, color: accent}; NoShadow }
+    stator {
+      Position: {0, 0, 0}
+      AngularVelocity: {0, 0, 0.05 + 0.5 * c}
+      for i in 0..16 {
+        "tooth_{i}" : FlIron { Position: {cos(i * PI / 8) * 266, sin(i * PI / 8) * 266, 0}; Rotation: {0, 0, i * PI / 8}; Box: {7, 10, 34} }
+        "spark_{i}" { Position: {cos(i * PI / 8) * 262, sin(i * PI / 8) * 262, 0}; Rotation: {0, 0, i * PI / 8}; Box: {1.2, 6, 26}; Rgb: {4, 8, 14}; Emissive: {strength: 1 + 16 * c, color: accent}; NoShadow }
+      }
+    }
+    for i in 0..12 {
+      const a: f32 = i * PI / 6 + PI / 12
+      "house_{i}" {
+        Position: {cos(a) * 318, sin(a) * 318, 0}
+        Rotation: {0, 0, a}
+        block : FlHullDark { Position: {4, 0, 0}; Box: {46, 70, 56}; Bevel: {radius: 5, segments: 1} }
+        win : FlWin { Position: {-14, 0, 28.2}; Box: {12, 54, 0.4}; TextureTransform: {1, 1, 0.1 * i, 0.03125} }
+        coil : FlSteel { Position: {28, 0, 0}; Rotation: {0, 0, 0}; Cylinder: {length: 60, radius: 6, segments: 12, smooth: true} }
+        lamp_a : FlLampW { Position: {27.4, 30, 28.4}; Box: {1.4, 1.4, 1.4} }
+      }
+    }
+    for i in 0..4 {
+      const a: f32 = i * PI / 2 + PI / 4
+      "pylon_{i}" {
+        Position: {cos(a) * 344, sin(a) * 344, 0}
+        Rotation: {0, 0, a}
+        arm : FlHull { Position: {50, 0, 0}; Box: {100, 16, 20}; Bevel: {radius: 4, segments: 1} }
+        fin : FlHullDark { Position: {60, 0, -30}; Box: {70, 5, 60}; Bevel: {back_right: 30, segments: 1} }
+        tip : FlHullDark { Position: {104, 0, 0}; Box: {14, 26, 30}; Bevel: {radius: 4, segments: 1} }
+        stripe { Position: {50, 0, 10.2}; Box: {90, 3, 0.4}; Rgb: accent; PbrMaterial: {metallic: 0.3, roughness: 0.4} }
+        beacon : FlBlinkR { Position: {113, 0, 0}; Sphere: {radius: 2.2, segments: 8}; Animator: {clip: fl_blink_clip, time: i * 0.55} }
+        strobe : FlStrobe { Position: {104, 0, 16.5}; Sphere: {radius: 1.4, segments: 8}; Animator: {clip: fl_strobe_clip, time: i * 0.4} }
+      }
+    }
+    name_a {
+      Position: {0, 286, 20.6}
+      Scale: {0.36, 0.36, 0.36}
+      Text: {value: "KEEP CLEAR OF THE EVENT", size: 16, align: Center}
+      Rgb: {250, 250, 250}
+      NoShadow
+    }
+    name_b {
+      Position: {0, 286, -20.6}
+      Rotation: {0, PI, 0}
+      Scale: {0.36, 0.36, 0.36}
+      Text: {value: "PLEASE HAVE YOUR MASS READY", size: 16, align: Center}
+      Rgb: {250, 250, 250}
+      NoShadow
+    }
+    film_a {
+      Position: {0, 0, 0}
+      AngularVelocity: {0, 0, 0.11}
+      disc : FlFilm { Position: {0, 0, 0}; Rotation: {PI / 2, 0, 0}; Cylinder: {length: 0.4, radius: 265, segments: 64}; Emissive: {strength: 0.045 + 1.6 * c, color: accent} }
+    }
+    film_b {
+      Position: {0, 0, 0}
+      AngularVelocity: {0, 0, -0.07}
+      disc : FlFilm { Position: {0, 0, 1}; Rotation: {PI / 2, 0, 0}; Cylinder: {length: 0.4, radius: 265, segments: 64}; TextureMapping: {MappingObject, size: 610, blend: 0}; Emissive: {strength: 0.03 + 1.2 * c, color: {200, 225, 255}} }
+    }
+    if iris > 0.001 {
+      flash { Position: {0, 0, 2}; Rotation: {PI / 2, 0, 0}; Cylinder: {length: 0.4, radius: 265 * iris, segments: 64}; Rgb: {0, 0, 0}; Emissive: {strength: 4 + 30 * iris, color: {235, 245, 255}}; BlendMode: Additive; NoShadow }
+      flare { Position: {0, 0, 0}; PointLight: {intensity: 1500000 * iris, range: 900}; Rgb: {200, 225, 255} }
+    }
+
+    for i in 0..4 {
+      const qz: f32 = -700 - 420 * i
+      const busy: bool = i < queue
+      "slot_{i}" {
+        Position: {120, 0, qz}
+        for j in 0..4 {
+          "post_{j}" : FlIron { Position: {(j % 2 == 0 ? -1 : 1) * 62, -52, (j < 2 ? -1 : 1) * 190}; Box: {2.4, 9, 2.4} }
+          if busy {
+            "lamp_{j}" : FlLampR { Position: {(j % 2 == 0 ? -1 : 1) * 62, -46, (j < 2 ? -1 : 1) * 190}; Sphere: {radius: 2.2, segments: 8}; Emissive: {strength: 10, color: {255, 50, 36}} }
+          } else {
+            "lamp_{j}" : FlPulseG { Position: {(j % 2 == 0 ? -1 : 1) * 62, -46, (j < 2 ? -1 : 1) * 190}; Sphere: {radius: 2.2, segments: 8} }
+          }
+        }
+        board : FlBlack { Position: {84, 0, -150}; Box: {40, 26, 2}; Bevel: {radius: 0.8, segments: 1} }
+        board_post : FlIron { Position: {84, -32, -150}; Box: {1.6, 40, 1.6} }
+        board_num {
+          Position: {84, 0, -151.2}
+          Rotation: {0, PI, 0}
+          Scale: {1.2, 1.2, 1.2}
+          Text: {value: "{i + 1}", size: 16, align: Center}
+          Rgb: {10, 10, 10}
+          Emissive: {strength: 6, color: busy ? {255, 60, 40} : {90, 255, 120}}
+          NoShadow
+        }
+      }
+    }
+    for i in 0..6 {
+      "lead_p_{i}" : FlStrobe { Position: {-150, -150, -200 - i * 250}; Sphere: {radius: 2, segments: 8}; Animator: {clip: fl_strobe_clip, time: 1.6 - i * 0.26} }
+      "lead_s_{i}" : FlStrobe { Position: {150, -150, -200 - i * 250}; Sphere: {radius: 2, segments: 8}; Animator: {clip: fl_strobe_clip, time: 1.6 - i * 0.26} }
+    }
+
+    station { Position: {-520, 0, -200}; FlGateStation hub(gangway: gangway, accent: accent) }
+  }
+
+  template FlHoop {
+    prop lit: f32 = 1
+
+    SpatialIgnore
+    ring : FlHullGrey { Position: {0, 0, 0}; Rotation: {PI / 2, 0, 0}; Tube: {radius: 100, thickness: 8, length: 7, segments: 64, smooth: true}; TextureMapping: {MappingObject, size: 30, blend: 0.2} }
+    glow_in { Position: {0, 0, 0}; Rotation: {PI / 2, 0, 0}; Tube: {radius: 92.3, thickness: 0.6, length: 3, segments: 64, smooth: true}; Rgb: {4, 8, 14}; Emissive: {strength: 0.4 + 7 * lit, color: {90, 170, 255}}; NoShadow }
+    glow_out { Position: {0, 0, -3.7}; Rotation: {PI / 2, 0, 0}; Tube: {radius: 99, thickness: 1.4, length: 0.5, segments: 64, smooth: true}; Rgb: {4, 8, 14}; Emissive: {strength: 0.3 + 4 * lit, color: {90, 170, 255}}; NoShadow }
+    for i in 0..4 {
+      const a: f32 = i * PI / 2 + PI / 4
+      "pod_{i}" {
+        Position: {cos(a) * 100, sin(a) * 100, 0}
+        Rotation: {0, 0, a}
+        box : FlHullDark { Position: {3, 0, 0}; Box: {14, 18, 12}; Bevel: {radius: 2, segments: 1}; TextureMapping: {MappingObject, size: 18, blend: 0.2} }
+        panel : FlSolar { Position: {16, 0, 0}; Box: {14, 0.5, 9}; TextureMapping: {MappingObject, size: 8, blend: 0} }
+        strobe : FlStrobe { Position: {10.6, 0, -6.4}; Sphere: {radius: 0.9, segments: 8}; Animator: {clip: fl_strobe_clip, time: i * 0.4} }
+        if lit > 0.05 {
+          chevron { Position: {-4.4, 0, 2}; Rotation: {0, 0, 0}; Box: {0.6, 8, 2}; Rgb: {4, 12, 6}; Emissive: {strength: 6 * lit, color: {90, 255, 120}}; NoShadow }
+        }
+      }
+    }
+    for i in 0..4 {
+      const a: f32 = i * PI / 2
+      "mark_{i}" : FlLampA { Position: {cos(a) * 104.4, sin(a) * 104.4, 0}; Box: {1.4, 1.4, 5}; Emissive: {strength: 1 + 6 * lit, color: {255, 168, 40}} }
+    }
+  }
+
+  template FlBuoy {
+    prop lit: f32 = 1
+
+    SpatialIgnore
+    body : FlHullGrey { Position: {0, 0, 0}; Cylinder: {length: 8, radius: 1.6, segments: 12, smooth: true}; TextureMapping: {MappingObject, size: 8, blend: 0.2} }
+    collar : FlYellow { Position: {0, 2, 0}; Cylinder: {length: 1.2, radius: 2.1, segments: 12, smooth: true} }
+    cage : FlIron { Position: {0, 5.4, 0}; Cylinder: {length: 2.8, radius: 0.5, segments: 8} }
+    lamp { Position: {0, 7.4, 0}; Sphere: {radius: 1.3, segments: 10, smooth: true}; Rgb: {4, 8, 14}; Emissive: {strength: 0.5 + 9 * lit, color: {90, 170, 255}}; NoShadow }
+    keel : FlIron { Position: {0, -6.5, 0}; Cylinder: {length: 5, radius: 0.4, segments: 8} }
+    weight : FlIron { Position: {0, -9.4, 0}; Sphere: {radius: 1.1, segments: 8} }
+    wing_a : FlSolar { Position: {3.6, -1, 0}; Box: {4.4, 3, 0.2}; TextureMapping: {MappingObject, size: 4, blend: 0} }
+    wing_b : FlSolar { Position: {-3.6, -1, 0}; Box: {4.4, 3, 0.2}; TextureMapping: {MappingObject, size: 4, blend: 0} }
+    tip : FlBlinkR { Position: {0, -10.8, 0}; Sphere: {radius: 0.45, segments: 6} }
+  }
+}

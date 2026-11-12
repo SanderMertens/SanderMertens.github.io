@@ -1,0 +1,43 @@
+include ui/widgets
+include terraformer/state
+include terraformer/galaxy
+include terraformer/rules
+include terraformer/clock
+include terraformer/frame
+include terraformer/theme
+include terraformer/dev
+include terraformer/planet
+include terraformer/bodies
+include terraformer/system
+include terraformer/tunnel
+include terraformer/navmap
+include terraformer/route
+include terraformer/nav_ui
+include terraformer/station
+include terraformer/player
+include terraformer/flight
+include terraformer/sim_jobs
+include terraformer/sim_market
+include terraformer/sim_freight
+include terraformer/sim_sites
+include terraformer/sim_bar
+include terraformer/hud
+include terraformer/panel_jobs
+include terraformer/panel_assets
+include terraformer/menu_trade
+include terraformer/menu_freight
+include terraformer/menu_passenger
+include terraformer/menu_shipyard
+include terraformer/menu_site
+include terraformer/menu_bar
+include terraformer/gameover
+include terraformer/layers
+include terraformer/sky
+
+window {
+  box.surface.Surface: {width: 1600, height: 1000, vsync: true}
+}
+
+$ {
+  box.app.FpsTarget: {60}
+}

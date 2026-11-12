@@ -1,0 +1,312 @@
+using flecs.script
+using flecs.script.math
+using state
+
+state {
+  export mut ship_t0: f64[16] = {}
+
+  fn freight_here() -> bool {
+    mode == MODE_STATION && poi_has(at_poi, FAC_FREIGHT)
+  }
+
+  fn manifest_qty(g: i32) -> f32 {
+    g >= 0 && g < N_GOODS ? max(min(manifest[g], stock_at(at_poi, g)), 0) : 0
+  }
+
+  fn manifest_total() -> f32 {
+    manifest_qty(0) + manifest_qty(1) + manifest_qty(2) + manifest_qty(3) + manifest_qty(4) + manifest_qty(5) + manifest_qty(6) + manifest_qty(7)
+  }
+
+  fn dest_block(poi: i32) -> i32 {
+    poi < 0 || !poi_exists(poi) ? 1 : poi == at_poi ? 2 : !poi_has_depot(poi) ? 3 : 0
+  }
+
+  fn dest_block_tag(code: i32) -> string {
+    match code {
+      0: ""
+      1: "NONE SET"
+      2: "YOU ARE HERE"
+      _: "NO DEPOT"
+    }
+  }
+
+  fn manifest_dest_ok(poi: i32) -> bool {
+    dest_block(poi) == 0
+  }
+
+  fn freight_jumps(poi: i32) -> i32 {
+    poi >= 0 ? sys_dist(poi_sys(at_poi), poi_sys(poi)) : 0
+  }
+
+  fn shipment_free(i: i32) -> bool {
+    i >= 0 && i < N_SHIPMENTS && shipments[i].status == 0
+  }
+
+  fn shipment_free_slot() -> i32 {
+    shipment_free(0) ? 0 : shipment_free(1) ? 1 : shipment_free(2) ? 2 : shipment_free(3) ? 3 : shipment_free(4) ? 4 : shipment_free(5) ? 5 : shipment_free(6) ? 6 : shipment_free(7) ? 7 : shipment_free(8) ? 8 : shipment_free(9) ? 9 : shipment_free(10) ? 10 : shipment_free(11) ? 11 : shipment_free(12) ? 12 : shipment_free(13) ? 13 : shipment_free(14) ? 14 : shipment_free(15) ? 15 : -1
+  }
+
+  fn shipment_units(i: i32) -> f32 {
+    i >= 0 && i < N_SHIPMENTS ? ship_cargo[i * 8] + ship_cargo[i * 8 + 1] + ship_cargo[i * 8 + 2] + ship_cargo[i * 8 + 3] + ship_cargo[i * 8 + 4] + ship_cargo[i * 8 + 5] + ship_cargo[i * 8 + 6] + ship_cargo[i * 8 + 7] : 0
+  }
+
+  fn shipment_progress(i: i32) -> f32 {
+    i >= 0 && i < N_SHIPMENTS && shipments[i].status == 1 && shipments[i].eta > ship_t0[i] ? clamp((today - ship_t0[i]) / (shipments[i].eta - ship_t0[i]), 0, 1) : 0
+  }
+
+  fn shipment_active(i: i32) -> i32 {
+    i >= 0 && i < N_SHIPMENTS && shipments[i].status != 0 ? 1 : 0
+  }
+
+  fn shipments_active() -> i32 {
+    shipment_active(0) + shipment_active(1) + shipment_active(2) + shipment_active(3) + shipment_active(4) + shipment_active(5) + shipment_active(6) + shipment_active(7) + shipment_active(8) + shipment_active(9) + shipment_active(10) + shipment_active(11) + shipment_active(12) + shipment_active(13) + shipment_active(14) + shipment_active(15)
+  }
+
+  fn shipment_of(f: i32) -> i32 {
+    f < 0 ? -1 : shipments[0].status != 0 && shipments[0].freighter == f ? 0 : shipments[1].status != 0 && shipments[1].freighter == f ? 1 : shipments[2].status != 0 && shipments[2].freighter == f ? 2 : shipments[3].status != 0 && shipments[3].freighter == f ? 3 : shipments[4].status != 0 && shipments[4].freighter == f ? 4 : shipments[5].status != 0 && shipments[5].freighter == f ? 5 : shipments[6].status != 0 && shipments[6].freighter == f ? 6 : shipments[7].status != 0 && shipments[7].freighter == f ? 7 : shipments[8].status != 0 && shipments[8].freighter == f ? 8 : shipments[9].status != 0 && shipments[9].freighter == f ? 9 : shipments[10].status != 0 && shipments[10].freighter == f ? 10 : shipments[11].status != 0 && shipments[11].freighter == f ? 11 : shipments[12].status != 0 && shipments[12].freighter == f ? 12 : shipments[13].status != 0 && shipments[13].freighter == f ? 13 : shipments[14].status != 0 && shipments[14].freighter == f ? 14 : shipments[15].status != 0 && shipments[15].freighter == f ? 15 : -1
+  }
+
+  fn ship_jumps() -> i32 {
+    freight_jumps(manifest_dest)
+  }
+
+  fn freighter_ok(f: i32) -> bool {
+    f >= 0 && f < N_FREIGHTERS && freighters[f].status != 0
+  }
+
+  fn ship_lead(f: i32) -> f64 {
+    f >= 0 && f < N_FREIGHTERS && freighters[f].status != 0 && poi_sys(freighters[f].poi) != poi_sys(at_poi) ? freight_days(sys_dist(poi_sys(freighters[f].poi), poi_sys(at_poi))) : 0
+  }
+
+  fn ship_days(f: i32) -> f64 {
+    ship_lead(f) + freight_days(ship_jumps())
+  }
+
+  fn ship_cost(f: i32) -> f64 {
+    f < 0 ? freight_fee(manifest_total(), ship_jumps()) : freight_fuel(manifest_total(), ship_jumps())
+  }
+
+  fn ship_block(f: i32) -> i32 {
+    const total = manifest_total()
+    !freight_here() ? 1 : total <= 0 ? 2 : !manifest_dest_ok(manifest_dest) ? 3 : f >= N_FREIGHTERS || (f >= 0 && freighters[f].status == 0) ? 7 : f >= 0 && freighters[f].status != 1 ? 8 : f >= 0 && total > freighters[f].cap ? 9 : shipment_free_slot() < 0 ? 4 : total > depot_room(manifest_dest) ? 5 : money < ship_cost(f) ? 6 : 0
+  }
+
+  fn ship_block_text(code: i32) -> string {
+    match code {
+      0: ""
+      1: "No freight terminal here. Carry it yourself."
+      2: "The manifest is empty. So is the gesture."
+      3: "Pick a destination with a depot. Any depot."
+      4: "Sixteen shipments in flight. The forms ran out."
+      5: "No room at the far end. It would just float there."
+      6: "Can't cover the freight bill. They checked twice."
+      7: "No such freighter. It may have been a dream."
+      8: "That freighter is busy. It said so itself."
+      _: "Too much for that hull. It did the maths."
+    }
+  }
+
+  fn ship_block_tag(code: i32) -> string {
+    match code {
+      0: ""
+      1: "NO TERMINAL"
+      2: "NO CARGO"
+      3: "NO DESTINATION"
+      4: "NO SLOT"
+      5: "DEPOT FULL"
+      6: "NO FUNDS"
+      7: "NO SHIP"
+      8: "BUSY"
+      _: "OVER CAPACITY"
+    }
+  }
+
+  fn freighter_slot_free(f: i32) -> bool {
+    f >= 0 && f < N_FREIGHTERS && freighters[f].status == 0
+  }
+
+  fn freighter_free_slot() -> i32 {
+    freighter_slot_free(0) ? 0 : freighter_slot_free(1) ? 1 : freighter_slot_free(2) ? 2 : freighter_slot_free(3) ? 3 : freighter_slot_free(4) ? 4 : freighter_slot_free(5) ? 5 : freighter_slot_free(6) ? 6 : freighter_slot_free(7) ? 7 : -1
+  }
+
+  fn dozer_free_slot() -> i32 {
+    dozers[0].status == 0 ? 0 : dozers[1].status == 0 ? 1 : dozers[2].status == 0 ? 2 : dozers[3].status == 0 ? 3 : -1
+  }
+
+  fn freighter_owned(f: i32, cap: i32) -> i32 {
+    f >= 0 && f < N_FREIGHTERS && freighters[f].status != 0 && (cap <= 0 || freighters[f].cap == cap) ? 1 : 0
+  }
+
+  fn freighters_owned(cap: i32) -> i32 {
+    freighter_owned(0, cap) + freighter_owned(1, cap) + freighter_owned(2, cap) + freighter_owned(3, cap) + freighter_owned(4, cap) + freighter_owned(5, cap) + freighter_owned(6, cap) + freighter_owned(7, cap)
+  }
+
+  fn dozers_owned() -> i32 {
+    b2i(dozers[0].status != 0) + b2i(dozers[1].status != 0) + b2i(dozers[2].status != 0) + b2i(dozers[3].status != 0)
+  }
+
+  fn yard_here() -> bool {
+    mode == MODE_STATION && poi_has(at_poi, FAC_SHIPYARD)
+  }
+
+  fn yard_block_freighter(tier: i32) -> i32 {
+    !yard_here() ? 1 : tier < 0 || tier > 3 ? 2 : freighter_free_slot() < 0 ? 3 : money < freighter_price(tier) ? 4 : 0
+  }
+
+  fn yard_block_dozer() -> i32 {
+    !yard_here() ? 1 : dozer_free_slot() < 0 ? 3 : money < DOZER_PRICE ? 4 : 0
+  }
+
+  fn yard_block_text(code: i32) -> string {
+    match code {
+      0: ""
+      1: "No shipyard here. Try somewhere with a crane."
+      2: "They don't build that one. They looked it up."
+      3: "The fleet is full. Insurance drew a line."
+      _: "Can't afford it. The salesman stopped smiling."
+    }
+  }
+
+  fn yard_block_tag(code: i32) -> string {
+    match code {
+      0: ""
+      1: "NO SHIPYARD"
+      2: "NOT BUILT HERE"
+      3: "FLEET FULL"
+      _: "NO FUNDS"
+    }
+  }
+
+  proc freight_manifest(g: i32, delta: i32) {
+    if !freight_here() {
+      toast_as(ship_block_text(1), TOAST_BAD)
+    } else if g >= 0 && g < N_GOODS {
+      const v: f32 = clamp(manifest[g] + delta, 0, stock_at(at_poi, g))
+      if manifest[g] != v {
+        manifest[g] = v
+      }
+    }
+  }
+
+  proc freight_dest(poi: i32) {
+    if poi < 0 {
+      manifest_dest = -1
+    } else if manifest_dest_ok(poi) {
+      manifest_dest = poi
+    } else {
+      toast_as(ship_block_text(3), TOAST_BAD)
+    }
+  }
+
+  proc freight_ship(f: i32) {
+    const code = ship_block(f)
+    if code != 0 {
+      toast_as(ship_block_text(code), TOAST_BAD)
+    } else {
+      const slot = shipment_free_slot()
+      const dest = manifest_dest
+      const total = manifest_total()
+      const cost = ship_cost(f)
+      const days = ship_days(f)
+      if slot >= 0 && slot < N_SHIPMENTS {
+        for g in 0..N_GOODS {
+          const q = manifest_qty(g)
+          ship_cargo[slot * 8 + g] = q
+          if q > 0 {
+            stock_add(at_poi, g, 0 - q)
+          }
+        }
+        const carrier: i32 = f >= 0 ? f : -1
+        const eta: f64 = now + days
+        shipments[slot] = {1, at_poi, dest, eta, carrier}
+        ship_t0[slot] = now
+        if f >= 0 && f < N_FREIGHTERS {
+          freighters[f].status = 2
+          freighters[f].poi = at_poi
+        }
+        pay(LED_FREIGHT, cost)
+        manifest = {}
+        toast_as("{total:.0} units off to {poi_name(dest)}. {days:.1} d.", TOAST_GOOD)
+      }
+    }
+  }
+
+  proc shipments_arrive(t: f64) {
+    for i in 0..N_SHIPMENTS {
+      if shipments[i].status == 1 && shipments[i].eta <= t {
+        const to = shipments[i].to
+        const f = shipments[i].freighter
+        mut units: f32 = 0
+        for g in 0..N_GOODS {
+          const q = ship_cargo[i * 8 + g]
+          if q > 0 {
+            stock_add(to, g, q)
+            units += q
+            ship_cargo[i * 8 + g] = 0
+          }
+        }
+        if f >= 0 && f < N_FREIGHTERS {
+          freighters[f].status = 1
+          freighters[f].poi = to
+        }
+        shipments[i] = SHIPMENT_NONE
+        toast_as("{units:.0} units reached {poi_name(to)}. Mostly.", TOAST_INFO)
+      }
+    }
+  }
+
+  proc yard_buy_freighter(tier: i32) {
+    const code = yard_block_freighter(tier)
+    if code != 0 {
+      toast_as(yard_block_text(code), TOAST_BAD)
+    } else {
+      const slot = freighter_free_slot()
+      if slot >= 0 && slot < N_FREIGHTERS {
+        freighters[slot] = {1, freighter_cap(tier), at_poi}
+        pay(LED_SHIPS, freighter_price(tier))
+        toast_as("{freighter_name(tier)} acquired. It has a cup holder.", TOAST_GOOD)
+      }
+    }
+  }
+
+  proc yard_buy_dozer() {
+    const code = yard_block_dozer()
+    if code != 0 {
+      toast_as(yard_block_text(code), TOAST_BAD)
+    } else {
+      const slot = dozer_free_slot()
+      if slot >= 0 && slot < N_DOZERS {
+        dozers[slot] = {1, at_poi, -1, 0}
+        pay(LED_SHIPS, DOZER_PRICE)
+        toast_as("Dozer acquired. It can flatten a continent. Please don't.", TOAST_GOOD)
+      }
+    }
+  }
+}
+
+async {
+  while true {
+    const e = await Request
+    if screen != SCREEN_GAMEOVER {
+      if e.op == OP_MANIFEST {
+        freight_manifest(e.a, e.b)
+      } else if e.op == OP_MANIFEST_DEST {
+        freight_dest(e.a)
+      } else if e.op == OP_SHIP {
+        freight_ship(e.a)
+      } else if e.op == OP_BUY_FREIGHTER {
+        yard_buy_freighter(e.a)
+      } else if e.op == OP_BUY_DOZER {
+        yard_buy_dozer()
+      }
+    }
+  }
+}
+
+async {
+  while true {
+    const e = await Arrived
+    manifest = {}
+    manifest_dest = -1
+  }
+}

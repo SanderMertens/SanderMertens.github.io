@@ -1,0 +1,1525 @@
+using flecs.script
+using flecs.script.math
+using box.input
+using state
+
+state {
+  export mut fl_lcls: i32[96] = {}
+  export mut fl_wm: i32[96] = {}
+  export mut fl_stop_idx: i32[16] = {}
+
+  fn fl_gate_toward(s: i32, t: i32) -> i32 {
+    const d = sys_dir_to(s, t)
+    d >= 0 && sys_lane(s, d) ? gate_poi(s, d) : sys_lane(s, 0) ? gate_poi(s, 0) : sys_lane(s, 1) ? gate_poi(s, 1) : sys_lane(s, 2) ? gate_poi(s, 2) : gate_poi(s, 3)
+  }
+
+  fn fl_is_port(poi: i32) -> bool {
+    poi_kind(poi) == KIND_PORT || poi_kind(poi) == KIND_PLAYER_PORT
+  }
+
+  fn fl_stop_name(i: i32) -> string {
+    i < 0 || i >= 16 || i >= fl_stop_n ? "" : fl_stop_kind[i] == 2 ? sys_name(poi_sys(fl_stop_poi[i])) : poi_name(fl_stop_poi[i])
+  }
+
+  proc fl_announce(text: string) {
+    say(line_title(fl_line_a, fl_line_b, fl_cls), ship_class_name(fl_cls), text, false)
+    fl_say_mine = say_seq
+    fl_say_left = 6.5
+  }
+
+  proc fl_board() {
+    if mode == MODE_STATION && !trav_active && !fl_req && !fl_on && screen != SCREEN_GAMEOVER {
+      const n: i32 = clamp(route_n, 0, ROUTE_MAX)
+      mut ok: bool = n >= 2
+      if ok {
+        for i in 0..n {
+          if !poi_exists(route_poi[i]) {
+            ok = false
+          }
+        }
+      }
+      if ok {
+        ok = route_poi[0] == at_poi && route_poi[n - 1] != at_poi
+      }
+      if !ok {
+        toast_as("No route on file. The gate agent declines to guess.", 4)
+      } else if money < route_cost {
+        toast_as("Fare declined. The network only takes money.", 5)
+      } else {
+        mut p: i32[96] = ROUTE_EMPTY
+        mut m: i32 = 0
+        for i in 0..n {
+          const w = route_poi[i]
+          if m > 0 && m < 93 {
+            const prev = p[m - 1]
+            if poi_sys(prev) != poi_sys(w) {
+              if poi_kind(prev) != KIND_GATE {
+                const g = fl_gate_toward(poi_sys(prev), poi_sys(w))
+                if g >= 0 {
+                  p[m] = g
+                  m += 1
+                }
+              }
+              if poi_kind(w) != KIND_GATE {
+                const g2 = fl_gate_toward(poi_sys(w), poi_sys(prev))
+                if g2 >= 0 {
+                  p[m] = g2
+                  m += 1
+                }
+              }
+            }
+          }
+          if m < 96 {
+            if m == 0 {
+              p[m] = w
+              m += 1
+            } else if p[m - 1] != w {
+              p[m] = w
+              m += 1
+            }
+          }
+        }
+        mut jumps: i32 = 0
+        for j in 1..m {
+          if poi_sys(p[j - 1]) != poi_sys(p[j]) {
+            jumps += 1
+          }
+        }
+        mut cls: i32[96] = {}
+        mut j0: i32 = 0
+        for j in 1..m {
+          if j == m - 1 || fl_is_port(p[j]) {
+            mut same: bool = true
+            mut ports: bool = true
+            const je: i32 = j + 1
+            for q in j0..je {
+              if poi_sys(p[q]) != poi_sys(p[j0]) {
+                same = false
+              }
+              if !sys_has_port(poi_sys(p[q])) {
+                ports = false
+              }
+            }
+            const c: i32 = same ? (ports ? CLS_SHUTTLE : CLS_CHARTER) : (ports ? CLS_LINER : CLS_CHARTER)
+            for q in j0..j {
+              cls[q] = c
+            }
+            j0 = j
+          }
+        }
+        mut wm: i32[96] = {}
+        mut sp: i32[16] = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1]
+        mut sk: i32[16] = {}
+        mut si: i32[16] = {}
+        mut sn: i32 = 1
+        sp[0] = p[0]
+        wm[0] = WM_START
+        for j in 1..m {
+          const k = poi_kind(p[j])
+          if j == m - 1 {
+            wm[j] = WM_END
+            if sn < 16 {
+              sp[sn] = p[j]
+              sk[sn] = 0
+              si[sn] = j
+              sn += 1
+            }
+          } else if k == KIND_GATE {
+            wm[j] = WM_GATE
+            if poi_sys(p[j - 1]) != poi_sys(p[j]) && poi_kind(p[j + 1]) == KIND_GATE && j + 1 < m - 1 && sn < 15 {
+              sp[sn] = p[j]
+              sk[sn] = 2
+              si[sn] = j
+              sn += 1
+            }
+          } else {
+            const full: bool = fl_is_port(p[j]) && (cls[j - 1] != cls[j] || (cls[j] == CLS_LINER && jumps <= 2))
+            wm[j] = full ? WM_CALL : WM_PASS
+            if sn < 15 {
+              sp[sn] = p[j]
+              sk[sn] = full ? 0 : 1
+              si[sn] = j
+              sn += 1
+            }
+          }
+        }
+        fl_path = p
+        fl_path_n = m
+        fl_lcls = cls
+        fl_wm = wm
+        fl_stop_poi = sp
+        fl_stop_kind = sk
+        fl_stop_idx = si
+        fl_stop_n = sn
+        fl_stop_at = 0
+        fl_stop_moving = false
+        fl_jumps = jumps
+        fl_eta = today + ceil(route_days - 0.01)
+        money -= route_cost
+        screen_close()
+        clock_hold = true
+        trav_sys = poi_sys(at_poi)
+        trav_from = at_poi
+        trav_to = at_poi
+        trav_t = 0
+        trav_jump = false
+        trav_active = true
+        fl_fade_t = 0
+        fl_fade = true
+        mode = MODE_TRAVEL
+        fl_req = true
+      }
+    }
+  }
+}
+
+async {
+  while true {
+    const e = await Request
+    if e.op == OP_BOARD {
+      fl_board()
+    }
+  }
+}
+
+async {
+  while true {
+    await Reset
+    fl_gen += 1
+    fl_req = false
+  }
+}
+
+async {
+  mut gen: i32 = -1
+  mut run: bool = false
+  mut stage: i32 = 0
+  mut phase: i32 = 0
+  mut leg: i32 = 0
+  mut n: i32 = 0
+  mut cls: i32 = 0
+  mut sys: i32 = HOME
+  mut psys: i32 = HOME
+  mut busy: bool = false
+  mut need_sys: bool = false
+  mut clock: f64 = 0
+  mut pk: i32 = 0
+  mut pt: f64 = 0
+  mut pT: f64 = 1
+  mut b0x: f64 = 0
+  mut b0z: f64 = 0
+  mut b1x: f64 = 0
+  mut b1z: f64 = 0
+  mut b2x: f64 = 0
+  mut b2z: f64 = 0
+  mut b3x: f64 = 0
+  mut b3z: f64 = 0
+  mut m0: f64 = 0
+  mut m1: f64 = 0
+  mut y0: f64 = 0
+  mut y1: f64 = 0
+  mut ck: f64 = 1
+  mut cv0: f64 = 100
+  mut cv1: f64 = 100
+  mut cL: f64 = 1
+  mut ctm: f64 = 1
+  mut cux: f64 = 0
+  mut cuz: f64 = 1
+  mut cx0: f64 = 0
+  mut cz0: f64 = 0
+  mut hx: f64 = 0
+  mut hz: f64 = 0
+  mut hyaw: f64 = 0
+  mut hroll: f64 = 0
+  mut hspd: f64 = 0
+  mut fox: f64 = 0
+  mut foz: f64 = 0
+  mut f0x: f64 = 0
+  mut f0z: f64 = 0
+  mut cur: i32 = 0
+  mut spx: f64[2] = {}
+  mut spz: f64[2] = {}
+  mut spyaw: f64[2] = {}
+  mut sppoi: i32[2] = [-1, -1]
+  mut spon: bool[2] = {}
+  mut spsw: bool = false
+  mut spgl: i32[2] = [-1, -1]
+  mut spgs: i32[2] = [-1, -1]
+  mut spgsa: i32[2] = {}
+  mut th: f64 = 0
+  mut th_t: f64 = 0
+  mut rc: f64 = 0
+  mut rc_t: f64 = 0
+  mut gw: f64 = 1
+  mut gw_t: f64 = 1
+  mut sapp: f64 = 0
+  mut lane: bool = false
+  mut lane_off: f64 = 700
+  mut dmode: i32 = 0
+  mut dq: i32 = 0
+  mut stx: f64 = 0
+  mut stz: f64 = 0
+  mut dyaw: f64 = 0
+  mut dapp: f64 = 0
+  mut dT: f64 = 8
+  mut e2x: f64 = 0
+  mut e2z: f64 = 0
+  mut e2yaw: f64 = 0
+  mut pD: f64 = 2000
+  mut qt: f64 = 0
+  mut qon: bool = false
+  mut qhero: i32 = 0
+  mut qdone: i32 = 0
+  mut qgate: i32 = 0
+  mut qx: f64[6] = {}
+  mut qz: f64[6] = {}
+  mut qlive: bool[6] = {}
+  mut qarr: f64 = -1
+  mut chg: f64 = 0
+  mut chg_t: f64 = 0
+  mut hop_left: f64 = 0
+  mut jump_left: f64 = 0
+  mut swapped: bool = false
+  mut said: bool = false
+  mut said_at: f64 = -100
+  mut faded: bool = false
+  mut jumped: bool = false
+  mut pcx: f64[6] = {}
+  mut pcy: f64[6] = {}
+  mut pcz: f64[6] = {}
+  mut prr: f64[6] = {}
+  mut pn: i32 = 0
+  mut pass_t: f64 = 0
+  mut pass_z0: f64 = 0
+  mut pass_z1: f64 = 0
+  mut bd: f32[32] = {}
+  mut so: f32[8] = {}
+  mut si: i32[16] = [-1, -1, 0, -1, 0, -1, 0, 0, -1, -1, 0, -1, 0, -1, 0, 0]
+  mut ho: f32[12] = {}
+  mut qo: f32[12] = {}
+  mut po: f32[4] = {}
+  mut lastx: f64 = 0
+  mut lastz: f64 = 0
+  mut lastyaw: f64 = 0
+  mut plan: i32 = 0
+  while true {
+    await next_frame()
+    if fl_req {
+      fl_req = false
+      gen = fl_gen
+      run = true
+      n = clamp(fl_path_n, 0, ROUTE_MAX)
+      leg = 0
+      clock = 0
+      cls = fl_lcls[0]
+      const a0 = fl_wp(0)
+      const b0 = fl_wp(1)
+      sys = poi_sys(a0)
+      need_sys = true
+      cur = 0
+      sppoi = [-1, -1]
+      spon = [false, false]
+      spx[0] = fl_px(a0)
+      spz[0] = fl_pz(a0)
+      const jump0 = poi_sys(a0) != poi_sys(b0)
+      const lx0 = fl_berth_lx(a0, cls)
+      const sg0: f64 = lx0 > 0 ? 1 : -1
+      const hd0 = jump0 ? atan2(spx[0], spz[0]) : atan2(fl_px(b0) - spx[0], fl_pz(b0) - spz[0])
+      const turn0: f64 = poi_kind(a0) == KIND_ORBIT ? 0 : cls == CLS_LINER ? 0.6 : 0.75
+      spyaw[0] = jump0 ? hd0 : hd0 - sg0 * turn0
+      sppoi[0] = a0
+      spon[0] = true
+      const cy0 = cos(spyaw[0])
+      const sy0 = sin(spyaw[0])
+      const lz0 = fl_berth_lz(a0)
+      hx = spx[0] + lx0 * cy0 + lz0 * sy0
+      hz = spz[0] - lx0 * sy0 + lz0 * cy0
+      hyaw = spyaw[0]
+      hroll = 0
+      hspd = 0
+      fox = 0
+      foz = 0
+      lastx = hx
+      lastz = hz
+      lastyaw = hyaw
+      th = 0
+      th_t = 0
+      rc = 0
+      rc_t = 0
+      gw = 1
+      gw_t = 1
+      lane = false
+      sapp = 0
+      qon = false
+      qlive = [false, false, false, false, false, false]
+      qarr = -1
+      chg = 0.1
+      chg_t = 0.1
+      said = false
+      said_at = -100
+      faded = false
+      jumped = false
+      swapped = false
+      hop_left = jump0 ? 0 : HOP_DAYS
+      trav_from = a0
+      trav_to = jump0 ? a0 : b0
+      jump_left = 0
+      pass_t = -1
+      spgl[0] = fl_is_port(a0) && cls != CLS_LINER ? CLS_LINER : -1
+      spgs[0] = cls == CLS_LINER ? CLS_SHUTTLE : -1
+      spgsa[0] = sys
+      spgl[1] = -1
+      spgs[1] = -1
+      stage = FS_START
+      plan = FS_START
+      pk = 0
+      pt = 0
+      pT = 2.4
+      phase = PH_UNDOCK
+      fl_cls = cls
+      fl_liv_sys = sys
+      fl_line_a = sys
+      mut lb0: i32 = sys
+      for j in 0..n {
+        if lb0 == sys && poi_sys(fl_wp(j)) != sys {
+          lb0 = poi_sys(fl_wp(j))
+        }
+      }
+      fl_line_b = lb0
+      fl_on = true
+      fl_seat = 0
+      fl_lane_on = false
+      fl_warp = false
+      fl_gw = 1
+      fl_thrust = 0
+      fl_rcs = 0
+      fl_charge = 0.1
+      fl_q_mask = 0
+      fl_q_n = 0
+      fl_q_run = -1
+      fl_cut += 1
+    }
+    if run && (fl_gen != gen || mode != MODE_TRAVEL || !trav_active) {
+      run = false
+      stage = FS_IDLE
+      fl_on = false
+      fl_stage = FS_IDLE
+      fl_phase = PH_NONE
+      fl_lane_on = false
+      fl_warp = false
+      fl_fade_t = 0
+      fl_fade = false
+      fl_spi = [-1, -1, 0, -1, 0, -1, 0, 0, -1, -1, 0, -1, 0, -1, 0, 0]
+      if fl_gen == gen {
+        if trav_jump {
+          trav_jump = false
+        }
+        if mode == MODE_TRAVEL {
+          mode = MODE_STATION
+        }
+        if trav_active {
+          trav_active = false
+        }
+        if clock_hold {
+          clock_hold = false
+        }
+      }
+      if say_on && say_seq == fl_say_mine {
+        say_end()
+      }
+    }
+    if run {
+      if need_sys {
+        need_sys = false
+        busy = sys_has_port(sys)
+        pn = clamp(sys_planets(sys), 0, 6)
+        mut mask: i32 = 0
+        for k in 0..6 {
+          if k < pn {
+            const pp = sys * 6 + k
+            const ppoi = planet_poi(pp)
+            const ox = fl_px(ppoi)
+            const oz = fl_pz(ppoi)
+            const ol = max(sqrt(ox * ox + oz * oz), 1)
+            const rr = fl_pl_r(pp)
+            const rh = rr + fl_pl_h(pp)
+            prr[k] = rr
+            pcx[k] = ox + rh * FL_TILT_S * ox / ol
+            pcy[k] = 0 - rh * FL_TILT_C
+            pcz[k] = oz + rh * FL_TILT_S * oz / ol
+            mut hero: bool = false
+            for j in 0..n {
+              if fl_wp(j) == ppoi {
+                hero = true
+              }
+            }
+            if hero {
+              mask += 1 << k
+            }
+          }
+        }
+        if fl_sys != sys {
+          fl_sys = sys
+        }
+        if fl_hero_mask != mask {
+          fl_hero_mask = mask
+        }
+        if fl_lane_port != busy {
+          fl_lane_port = busy
+        }
+      }
+
+      const rush: f64 = state.actions.Interact[ActionState].down ? FL_RUSH : 1
+      const ds: f64 = dt * rush
+      clock += ds
+      pt += ds
+
+      mut guard: i32 = 0
+      while pt >= pT && guard < 4 && run {
+        guard += 1
+        const over = pt - pT
+        const a = fl_wp(leg)
+        const b = fl_wp(leg + 1)
+        mut next: i32 = stage
+        if stage == FS_START {
+          const sl = poi_kind(a) == KIND_ORBIT ? 0 : fl_slide(cls)
+          next = sl > 0 ? FS_SLIDE : (poi_sys(a) != poi_sys(b) ? FS_GCRAB : FS_DEPART)
+        } else if stage == FS_SLIDE {
+          next = poi_sys(a) != poi_sys(b) ? FS_GCRAB : FS_DEPART
+        } else if stage == FS_DEPART {
+          next = FS_BURN
+        } else if stage == FS_BURN || stage == FS_EXIT {
+          next = FS_CRUISE
+          if stage == FS_EXIT && leg >= n - 1 {
+            next = FS_DOCKED
+          }
+        } else if stage == FS_CRUISE {
+          next = dmode == WM_GATE ? (dq > 0 ? FS_GAPP : FS_GRUN) : dmode == WM_PASS ? FS_PASS : FS_ARRIVE
+        } else if stage == FS_GAPP {
+          next = FS_QUEUE
+        } else if stage == FS_QUEUE {
+          next = FS_QUEUE
+        } else if stage == FS_ALIGN || stage == FS_GCRAB {
+          next = FS_RUN
+        } else if stage == FS_RUN || stage == FS_GRUN {
+          next = FS_TUNNEL
+        } else if stage == FS_TUNNEL {
+          next = FS_EXIT
+        } else if stage == FS_ARRIVE {
+          const k2 = poi_kind(b)
+          next = k2 == KIND_ORBIT || (k2 == KIND_GATE && cls == CLS_LINER) ? FS_DOCKED : FS_DOCK
+        } else if stage == FS_DOCK {
+          next = FS_DOCKED
+        } else if stage == FS_DOCKED {
+          next = leg + 1 >= n - 1 ? FS_END : (fl_lcls[min(leg + 1, 95)] != cls ? FS_TRANSFER : FS_START)
+        } else if stage == FS_TRANSFER {
+          next = FS_START
+        } else if stage == FS_PASS {
+          next = FS_CRUISE
+        } else if stage == FS_END {
+          next = FS_IDLE
+        }
+
+        if stage == FS_GAPP || (stage == FS_CRUISE && next == FS_GRUN) {
+          if hop_left > 0 {
+            clock_advance(hop_left)
+            hop_left = 0
+          }
+          leg = min(leg + 1, n - 1)
+          trav_t = 1
+          trav_from = fl_wp(leg)
+          trav_to = fl_wp(leg)
+        }
+        if stage == FS_DOCKED || stage == FS_PASS {
+          if hop_left > 0 {
+            clock_advance(hop_left)
+            hop_left = 0
+          }
+          leg = min(leg + 1, n - 1)
+          trav_t = 1
+          mut sat: i32 = fl_stop_at
+          for q in 0..16 {
+            if q < fl_stop_n && fl_stop_idx[q] <= leg {
+              sat = max(sat, q)
+            }
+          }
+          fl_stop_at = sat
+          fl_stop_moving = false
+          if leg < n - 1 {
+            const na = fl_wp(leg)
+            const nb = fl_wp(leg + 1)
+            if poi_sys(na) == poi_sys(nb) {
+              hop_left = HOP_DAYS
+              trav_from = na
+              trav_to = nb
+              trav_t = 0
+            } else {
+              trav_from = na
+              trav_to = na
+            }
+          }
+        }
+        if stage == FS_TUNNEL {
+          if jump_left > 0 {
+            clock_advance(jump_left)
+            jump_left = 0
+          }
+          trav_jump = false
+          jumped = false
+          if leg < n - 1 {
+            hop_left = HOP_DAYS
+            trav_from = fl_wp(leg)
+            trav_to = fl_wp(leg + 1)
+            trav_t = 0
+          }
+          mut sat2: i32 = fl_stop_at
+          for q in 0..16 {
+            if q < fl_stop_n && fl_stop_idx[q] <= leg {
+              sat2 = max(sat2, q)
+            }
+          }
+          fl_stop_at = sat2
+        }
+
+        const pa = fl_wp(leg)
+        const pb = fl_wp(leg + 1)
+        const uy = sin(hyaw)
+        const uz = cos(hyaw)
+        stage = next
+        pt = over
+        said = false
+        if next == FS_START {
+          pk = 0
+          pT = 1.6
+          gw_t = 0
+          th_t = 0
+          rc_t = 0
+          phase = PH_UNDOCK
+          lane = false
+          cls = fl_lcls[min(leg, 95)]
+        } else if next == FS_SLIDE {
+          const lx = (hx - spx[cur]) * cos(spyaw[cur]) - (hz - spz[cur]) * sin(spyaw[cur])
+          const sg: f64 = lx > 0 ? 1 : -1
+          const sl = fl_slide(cls)
+          pk = 2
+          pT = cls == CLS_LINER ? 4.4 : cls == CLS_SHUTTLE ? 2.2 : 3
+          b0x = hx
+          b0z = hz
+          b3x = hx + uz * sg * sl
+          b3z = hz - uy * sg * sl
+          b1x = b0x + (b3x - b0x) / 3
+          b1z = b0z + (b3z - b0z) / 3
+          b2x = b0x + (b3x - b0x) * 2 / 3
+          b2z = b0z + (b3z - b0z) * 2 / 3
+          m0 = 0
+          m1 = 0
+          y0 = hyaw
+          y1 = hyaw
+          rc_t = 1
+          gw_t = 0
+          phase = PH_UNDOCK
+        } else if next == FS_DEPART {
+          const hd = atan2(fl_px(pb) - spx[cur], fl_pz(pb) - spz[cur])
+          const dl = fl_wrap(hd - hyaw)
+          const ad = abs(dl)
+          const sgn: f64 = dl >= 0 ? 1 : -1
+          const lx = (hx - spx[cur]) * cos(spyaw[cur]) - (hz - spz[cur]) * sin(spyaw[cur])
+          const sg: f64 = lx > 0 ? 1 : -1
+          const toward = sgn * sg < 0 && ad > 0.3
+          const big = cls == CLS_LINER
+          const rad: f64 = big ? 520 : 170
+          const df: f64 = (big ? 170 : 50) + (toward ? fl_place_r(pa) * 1.3 + 250 : 0)
+          const hy = sin(hd)
+          const hzz = cos(hd)
+          pk = 1
+          pT = (big ? 7.6 : 4.4) + (toward ? 3 : 0) + (ad > 1.6 ? 2 : 0)
+          b0x = hx
+          b0z = hz
+          b3x = hx + uy * (df + rad * sin(min(ad, PI / 2))) + uz * sgn * rad * (1 - cos(ad))
+          b3z = hz + uz * (df + rad * sin(min(ad, PI / 2))) - uy * sgn * rad * (1 - cos(ad))
+          b1x = b0x + uy * (df * 0.6 + 0.45 * rad * ad + 20)
+          b1z = b0z + uz * (df * 0.6 + 0.45 * rad * ad + 20)
+          b2x = b3x - hy * (0.45 * rad * ad + 60)
+          b2z = b3z - hzz * (0.45 * rad * ad + 60)
+          const vdep: f64 = big ? 95 : 70
+          m0 = 0
+          m1 = vdep * pT / (3 * (0.45 * rad * ad + 60))
+          th_t = 0.45
+          rc_t = 0.5
+          phase = PH_UNDOCK
+        } else if next == FS_BURN {
+          const big = cls == CLS_LINER
+          const lb: f64 = big ? 1500 : 700
+          pk = 1
+          pT = big ? 6 : 3.6
+          const v0 = max(hspd, 20)
+          const v1 = max(2 * lb / pT - v0, v0)
+          b0x = hx
+          b0z = hz
+          b3x = hx + uy * lb
+          b3z = hz + uz * lb
+          b1x = b0x + (b3x - b0x) / 3
+          b1z = b0z + (b3z - b0z) / 3
+          b2x = b0x + (b3x - b0x) * 2 / 3
+          b2z = b0z + (b3z - b0z) * 2 / 3
+          m0 = v0 * pT / lb
+          m1 = v1 * pT / lb
+          th_t = 1
+          rc_t = 0
+          phase = PH_BURN
+          lane = true
+          lane_off = 700
+          sapp = 0
+        } else if next == FS_EXIT {
+          const le: f64 = 2600
+          const fin = leg >= n - 1
+          pk = 1
+          pT = fin ? 7 : 3
+          const v1 = fin ? 0 : 420
+          const v0 = 2 * le / pT - v1
+          b0x = hx
+          b0z = hz
+          b3x = hx + uy * le
+          b3z = hz + uz * le
+          b1x = b0x + (b3x - b0x) / 3
+          b1z = b0z + (b3z - b0z) / 3
+          b2x = b0x + (b3x - b0x) * 2 / 3
+          b2z = b0z + (b3z - b0z) * 2 / 3
+          m0 = v0 * pT / le
+          m1 = v1 * pT / le
+          if fin {
+            const side = fl_berth_lx(pa, cls) - 160
+            b3x = hx + uy * 520 - uz * side
+            b3z = hz + uz * 520 + uy * side
+            b1x = b0x + uy * 800
+            b1z = b0z + uz * 800
+            b2x = b3x - uy * 500
+            b2z = b3z - uz * 500
+            m0 = 1.9
+            m1 = 0
+            dmode = WM_END
+          }
+          th_t = 0.3
+          rc_t = 0
+          phase = PH_EXIT
+          lane = !fin
+          lane_off = 3600
+          sapp = 0
+          cls = fl_lcls[min(leg, 95)]
+        } else if next == FS_CRUISE {
+          const sxp = fl_px(pb)
+          const szp = fl_pz(pb)
+          const bm = fl_wm[min(leg + 1, 95)]
+          const bk = poi_kind(pb)
+          const big = cls == CLS_LINER
+          const nx2 = 1 - cur
+          mut lx: f64 = 0
+          mut lz: f64 = 0
+          mut v1: f64 = 420
+          dmode = bm
+          dapp = 0
+          if bm == WM_GATE {
+            const first = fl_stop_at == 0 && busy
+            dq = busy ? (first ? 1 + hash_int(pb + today, 251, 2) : hash_int(pb + today, 252, 4) == 0 ? 1 : 0) : 0
+            if dq > 0 {
+              lx = 120
+              lz = 0 - 700 - 420 * dq
+              dapp = 2600
+              dT = 7.5
+              v1 = 2 * dapp / dT
+            } else {
+              lx = 0
+              lz = -1900
+              v1 = 420
+            }
+          } else if bm == WM_PASS {
+            v1 = 520
+          } else {
+            const blx = fl_berth_lx(pb, cls)
+            const sg: f64 = blx > 0 ? 1 : -1
+            const liner_at_gate = bk == KIND_GATE && big
+            lx = bk == KIND_ORBIT ? 0 : blx + sg * (liner_at_gate ? 150 : fl_slide(cls))
+            lz = fl_berth_lz(pb)
+            dapp = big ? 3000 : 1500
+            dT = big ? 11 : 8
+            v1 = 2 * dapp / dT
+          }
+          mut thd: f64 = atan2(sxp - hx, szp - hz)
+          if bm == WM_PASS {
+            const pc = fl_wp(leg + 2)
+            const hn = atan2(fl_px(pc) - sxp, fl_pz(pc) - szp)
+            const dl = fl_wrap(hn - thd)
+            const side: f64 = dl >= 0 ? -1 : 1
+            const pr = fl_place_r(pb)
+            const offp = pr + 700
+            pD = 1500 + pr
+            mut e1x: f64 = sxp - sin(thd) * pD + cos(thd) * side * offp
+            mut e1z: f64 = szp - cos(thd) * pD - sin(thd) * side * offp
+            thd = atan2(e1x - hx, e1z - hz)
+            e1x = sxp - sin(thd) * pD + cos(thd) * side * offp
+            e1z = szp - cos(thd) * pD - sin(thd) * side * offp
+            thd = atan2(e1x - hx, e1z - hz)
+            stx = e1x
+            stz = e1z
+            e2yaw = hn
+            e2x = sxp + sin(hn) * pD + cos(hn) * side * offp
+            e2z = szp + cos(hn) * pD - sin(hn) * side * offp
+          } else {
+            for it in 0..3 {
+              const cy = cos(thd)
+              const sy = sin(thd)
+              stx = sxp + lx * cy + lz * sy
+              stz = szp - lx * sy + lz * cy
+              thd = atan2(stx - sy * dapp - hx, stz - cy * dapp - hz)
+            }
+            const cy = cos(thd)
+            const sy = sin(thd)
+            stx = sxp + lx * cy + lz * sy
+            stz = szp - lx * sy + lz * cy
+          }
+          dyaw = thd
+          const ax = stx - sin(thd) * dapp
+          const az = stz - cos(thd) * dapp
+          spx[nx2] = sxp
+          spz[nx2] = szp
+          spyaw[nx2] = thd
+          sppoi[nx2] = pb
+          spon[nx2] = false
+          spsw = false
+          const fin = bm == WM_END || bm == WM_CALL
+          const ncls = fl_lcls[min(leg + 1, 95)]
+          const xfer = bm == WM_CALL && ncls != cls
+          const xss = xfer && cls != CLS_LINER && ncls != CLS_LINER
+          spgl[nx2] = fl_is_port(pb) && fin && cls != CLS_LINER ? (xss ? ncls : (busy || xfer ? CLS_LINER : -1)) : -1
+          spgs[nx2] = fin && cls == CLS_LINER ? (xfer ? ncls : (busy ? CLS_SHUTTLE : -1)) : bm == WM_PASS && busy ? CLS_SHUTTLE : bk == KIND_GATE && busy && !fin ? CLS_SHUTTLE : -1
+          spgsa[nx2] = sys
+          if bm == WM_PASS && busy && fl_is_port(pb) {
+            spgl[nx2] = CLS_LINER
+          }
+          pk = 3
+          cx0 = hx
+          cz0 = hz
+          cL = max(sqrt((ax - hx) * (ax - hx) + (az - hz) * (az - hz)), 1000)
+          cux = (ax - hx) / cL
+          cuz = (az - hz) / cL
+          cv0 = max(hspd, 60)
+          cv1 = max(v1, 60)
+          pT = fl_jumps > 2 ? (busy ? 5 : 6.6) : 7
+          ck = 1.5
+          for it in 0..18 {
+            ck = 2 / pT * log((cL * ck + cv0 + cv1) / (2 * sqrt(cv0 * cv1)))
+          }
+          ck = max(ck, 0.05)
+          ctm = clamp(pT / 2 + log(cv1 / cv0) / (2 * ck), 0.2, pT - 0.2)
+          th_t = 1
+          rc_t = 0
+          phase = PH_CRUISE
+          fl_stop_moving = true
+          if busy && pass_t < 0 {
+            pass_t = 0
+          }
+        } else if next == FS_GAPP || next == FS_ARRIVE {
+          pk = 1
+          pT = dT
+          b0x = hx
+          b0z = hz
+          b3x = stx
+          b3z = stz
+          b1x = b0x + (b3x - b0x) / 3
+          b1z = b0z + (b3z - b0z) / 3
+          b2x = b0x + (b3x - b0x) * 2 / 3
+          b2z = b0z + (b3z - b0z) * 2 / 3
+          m0 = 2
+          m1 = 0
+          th_t = 0.12
+          rc_t = 0.4
+          lane = false
+          phase = next == FS_GAPP ? PH_GATE : (dmode == WM_CALL ? PH_CALL : PH_ARRIVE)
+          if next == FS_GAPP {
+            qon = true
+            qt = 0
+            qhero = dq
+            qdone = 0
+          }
+        } else if next == FS_QUEUE {
+          phase = PH_QUEUE
+          th_t = 0
+          rc_t = 0
+          const left = dq - qdone
+          if qhero > left {
+            const cy = cos(spyaw[cur])
+            const sy = sin(spyaw[cur])
+            qhero -= 1
+            const tzl: f64 = 0 - 700 - 420 * qhero
+            pk = 2
+            pT = cls == CLS_LINER ? 3.4 : 2.4
+            b0x = hx
+            b0z = hz
+            b3x = spx[cur] + 120 * cy + tzl * sy
+            b3z = spz[cur] - 120 * sy + tzl * cy
+            b1x = b0x + (b3x - b0x) / 3
+            b1z = b0z + (b3z - b0z) / 3
+            b2x = b0x + (b3x - b0x) * 2 / 3
+            b2z = b0z + (b3z - b0z) * 2 / 3
+            m0 = 0
+            m1 = 0
+            y0 = hyaw
+            y1 = hyaw
+            rc_t = 0.6
+          } else if qhero == 0 && left <= 0 && qt >= dT - 2.5 + (dq - 1) * 4.6 + 3.7 {
+            const cy = cos(spyaw[cur])
+            const sy = sin(spyaw[cur])
+            stage = FS_ALIGN
+            phase = PH_JUMP
+            pk = 2
+            pT = cls == CLS_LINER ? 3.6 : 2.4
+            b0x = hx
+            b0z = hz
+            b3x = spx[cur] - 540 * sy
+            b3z = spz[cur] - 540 * cy
+            b1x = b0x + (b3x - b0x) / 3
+            b1z = b0z + (b3z - b0z) / 3
+            b2x = b0x + (b3x - b0x) * 2 / 3
+            b2z = b0z + (b3z - b0z) * 2 / 3
+            m0 = 0
+            m1 = 0
+            y0 = hyaw
+            y1 = hyaw
+            rc_t = 1
+            chg_t = 0.55
+          } else {
+            pk = 0
+            pT = 0.25
+          }
+        } else if next == FS_GCRAB {
+          const cy = cos(spyaw[cur])
+          const sy = sin(spyaw[cur])
+          pk = 2
+          pT = 6.5
+          b0x = hx
+          b0z = hz
+          b3x = spx[cur] - 540 * sy
+          b3z = spz[cur] - 540 * cy
+          b1x = b0x - 420 * sy
+          b1z = b0z - 420 * cy
+          b2x = b3x - 300 * cy - 260 * sy
+          b2z = b3z + 300 * sy - 260 * cy
+          m0 = 0
+          m1 = 0
+          y0 = hyaw
+          y1 = spyaw[cur]
+          rc_t = 1
+          chg_t = 0.55
+          phase = PH_JUMP
+          qon = false
+        } else if next == FS_RUN {
+          const cy = cos(spyaw[cur])
+          const sy = sin(spyaw[cur])
+          pk = 1
+          pT = 3
+          b0x = hx
+          b0z = hz
+          b3x = spx[cur] + 320 * sy
+          b3z = spz[cur] + 320 * cy
+          b1x = b0x + (b3x - b0x) / 3
+          b1z = b0z + (b3z - b0z) / 3
+          b2x = b0x + (b3x - b0x) * 2 / 3
+          b2z = b0z + (b3z - b0z) * 2 / 3
+          m0 = 0
+          m1 = 2
+          th_t = 1
+          rc_t = 0
+          chg_t = 1
+          phase = PH_JUMP
+          qon = false
+          fl_q_n = 0
+        } else if next == FS_GRUN {
+          const cy = cos(spyaw[cur])
+          const sy = sin(spyaw[cur])
+          const lg = sqrt((spx[cur] + 320 * sy - hx) * (spx[cur] + 320 * sy - hx) + (spz[cur] + 320 * cy - hz) * (spz[cur] + 320 * cy - hz))
+          pk = 1
+          pT = 4.2
+          b0x = hx
+          b0z = hz
+          b3x = spx[cur] + 320 * sy
+          b3z = spz[cur] + 320 * cy
+          b1x = b0x + (b3x - b0x) / 3
+          b1z = b0z + (b3z - b0z) / 3
+          b2x = b0x + (b3x - b0x) * 2 / 3
+          b2z = b0z + (b3z - b0z) * 2 / 3
+          m0 = clamp(hspd * pT / max(lg, 1), 0.3, 2.4)
+          m1 = 2.4
+          th_t = 1
+          rc_t = 0
+          chg_t = 1
+          lane = false
+          phase = PH_JUMP
+        } else if next == FS_TUNNEL {
+          pk = 0
+          pT = 2.9
+          swapped = false
+          jump_left = JUMP_DAYS
+          phase = PH_JUMP
+          lane = false
+        } else if next == FS_DOCK {
+          const lx = fl_berth_lx(pb, cls)
+          const sg: f64 = lx > 0 ? 1 : -1
+          const sl = fl_slide(cls)
+          pk = 2
+          pT = cls == CLS_LINER ? 4.6 : 2.6
+          b0x = hx
+          b0z = hz
+          b3x = hx - uz * sg * sl
+          b3z = hz + uy * sg * sl
+          b1x = b0x + (b3x - b0x) / 3
+          b1z = b0z + (b3z - b0z) / 3
+          b2x = b0x + (b3x - b0x) * 2 / 3
+          b2z = b0z + (b3z - b0z) * 2 / 3
+          m0 = 0
+          m1 = 0
+          y0 = hyaw
+          y1 = hyaw
+          th_t = 0
+          rc_t = 1
+        } else if next == FS_DOCKED {
+          pk = 0
+          pT = dmode == WM_CALL ? 4.2 : 2.2
+          gw_t = 1
+          th_t = 0
+          rc_t = 0
+        } else if next == FS_TRANSFER {
+          const ncls = fl_lcls[min(leg, 95)]
+          const cy = cos(spyaw[cur])
+          const sy = sin(spyaw[cur])
+          const lx = cls != CLS_LINER ? fl_berth_lx(pa, CLS_LINER) : fl_berth_lx(pa, ncls)
+          const lz = fl_berth_lz(pa)
+          const nx = spx[cur] + lx * cy + lz * sy
+          const nz = spz[cur] - lx * sy + lz * cy
+          if cls == CLS_LINER {
+            spgl[cur] = CLS_LINER
+            spgs[cur] = -1
+          } else {
+            spgs[cur] = cls
+            spgl[cur] = -1
+          }
+          f0x = hx - nx
+          f0z = hz - nz
+          fox = f0x
+          foz = f0z
+          hx = nx
+          hz = nz
+          lastx = hx
+          lastz = hz
+          cls = ncls
+          pk = 0
+          pT = cls == CLS_LINER ? 5.5 : 4.5
+          phase = PH_CALL
+        } else if next == FS_PASS {
+          const k1 = pD * 0.9
+          pk = 1
+          pT = 6
+          b0x = hx
+          b0z = hz
+          b3x = e2x
+          b3z = e2z
+          b1x = b0x + uy * k1
+          b1z = b0z + uz * k1
+          b2x = b3x - sin(e2yaw) * k1
+          b2z = b3z - cos(e2yaw) * k1
+          m0 = max(hspd, 100) * pT / (3 * k1)
+          m1 = 520 * pT / (3 * k1)
+          th_t = 0.3
+          rc_t = 0.3
+          lane = false
+          phase = PH_CALL
+        } else if next == FS_END {
+          pk = 0
+          pT = 0.75
+          fl_fade_t = 0.6
+          fl_fade = true
+        } else if next == FS_IDLE {
+          const dest = fl_wp(n - 1)
+          if poi_exists(dest) {
+            at_poi = dest
+          }
+          if hop_left > 0 {
+            clock_advance(hop_left)
+            hop_left = 0
+          }
+          run = false
+          fl_on = false
+          trav_jump = false
+          trav_active = false
+          trav_t = 1
+          mode = MODE_STATION
+          clock_hold = false
+          fl_trips += 1
+          fl_stage = FS_IDLE
+          fl_phase = PH_NONE
+          fl_lane_on = false
+          fl_warp = false
+          fl_fade_t = 0
+          fl_fade = false
+          fl_spi = [-1, -1, 0, -1, 0, -1, 0, 0, -1, -1, 0, -1, 0, -1, 0, 0]
+          if say_on && say_seq == fl_say_mine {
+            say_end()
+          }
+          emit Arrived(poi: at_poi)
+          emit Request(op: OP_NAV_CLEAR, a: 0, b: 0)
+        }
+        if next == FS_START || next == FS_TRANSFER || next == FS_EXIT {
+          if fl_cls != cls {
+            fl_cls = cls
+            fl_liv_sys = sys
+          }
+          mut lb2: i32 = sys
+          for j in 0..n {
+            if j > leg && lb2 == sys && poi_sys(fl_wp(j)) != sys {
+              lb2 = poi_sys(fl_wp(j))
+            }
+          }
+          if lb2 != sys {
+            if fl_line_a != sys {
+              fl_line_a = sys
+            }
+            if fl_line_b != lb2 {
+              fl_line_b = lb2
+            }
+          }
+        }
+      }
+    }
+    if run {
+      const rush: f64 = state.actions.Interact[ActionState].down ? FL_RUSH : 1
+      const ds: f64 = dt * rush
+      const tau: f64 = clamp(pt / max(pT, 0.001), 0, 1)
+      chg_t = 0.1
+      if pk == 1 || pk == 2 {
+        const w = clamp(fl_herm(tau, m0, m1), 0, 1)
+        hx = fl_bez(b0x, b1x, b2x, b3x, w)
+        hz = fl_bez(b0z, b1z, b2z, b3z, w)
+        if pk == 1 {
+          const dx = fl_bez_d(b0x, b1x, b2x, b3x, w)
+          const dz = fl_bez_d(b0z, b1z, b2z, b3z, w)
+          if dx * dx + dz * dz > 0.0001 {
+            hyaw = atan2(dx, dz)
+          }
+        } else {
+          hyaw = y0 + fl_wrap(y1 - y0) * fl_smooth(tau)
+        }
+      } else if pk == 3 {
+        const d = pt < ctm ? cv0 / ck * (exp(ck * pt) - 1) : cL - cv1 / ck * (exp(ck * max(pT - pt, 0)) - 1)
+        const dc = clamp(d, 0, cL)
+        hx = cx0 + cux * dc
+        hz = cz0 + cuz * dc
+        hyaw = atan2(cux, cuz)
+      }
+      const mvx = hx - lastx
+      const mvz = hz - lastz
+      const spd = ds > 0 ? sqrt(mvx * mvx + mvz * mvz) / ds : hspd
+      hspd = spd
+      const yr = ds > 0 ? fl_wrap(hyaw - lastyaw) / ds : 0
+      hroll += (clamp(0 - yr * 1.1, -0.2, 0.2) - hroll) * min(1, dt * 1.6)
+      lastx = hx
+      lastz = hz
+      lastyaw = hyaw
+
+      if stage == FS_START {
+        if pt > 0.9 {
+          gw_t = 0
+        }
+        if leg == 0 && !faded && pt > 0.4 {
+          faded = true
+          fl_fade_t = 1.3
+          fl_fade = false
+        }
+        if !said && pt > 1.1 && clock - said_at > 9 {
+          said = true
+          if leg == 0 || fl_lcls[min(leg, 95)] != fl_lcls[max(leg - 1, 0)] {
+            said_at = clock
+            const dest = fl_wp(n - 1)
+            const dname = poi_name(dest)
+            if cls == CLS_LINER {
+              const nxs = fl_stop_at + 1 < fl_stop_n - 1 ? "Calling at {fl_stop_name(fl_stop_at + 1)}. " : ""
+              fl_announce(fl_say_depart(line_code(fl_line_a, fl_line_b, cls), dname, nxs, today + leg))
+            } else if cls == CLS_SHUTTLE {
+              fl_announce(fl_say_shuttle(poi_name(fl_wp(leg + 1)), today + leg))
+            } else {
+              fl_announce(fl_say_charter(dname, today + leg))
+            }
+          }
+        }
+      } else if stage == FS_TRANSFER {
+        const e = 1 - fl_smooth(tau)
+        fox = f0x * e
+        foz = f0z * e
+      } else if stage == FS_CRUISE {
+        const o = 1 - cur
+        if !spsw && sppoi[cur] >= 0 && spon[cur] {
+          const ddx = hx - spx[cur]
+          const ddz = hz - spz[cur]
+          if ddx * ddx + ddz * ddz > 70000.0 * 70000.0 {
+            spon[cur] = false
+            qon = false
+            fl_q_mask = 0
+          }
+        }
+        if !spon[o] && sppoi[o] >= 0 {
+          const ddx = hx - spx[o]
+          const ddz = hz - spz[o]
+          if ddx * ddx + ddz * ddz < 90000.0 * 90000.0 && !spon[cur] {
+            spon[o] = true
+            spsw = true
+            cur = o
+            const gp = sppoi[o]
+            qlive = [false, false, false, false, false, false]
+            qarr = -1
+            if poi_kind(gp) == KIND_GATE && busy {
+              const cnt: i32 = dmode == WM_GATE ? (dq > 0 ? dq : hash_int(gp + today, 253, 2)) : 0
+              for j in 0..5 {
+                if j < cnt {
+                  qlive[j] = true
+                  qx[j] = 120
+                  qz[j] = 0 - 700 - 420 * j
+                }
+              }
+              qgate = gp
+              if dmode == WM_GATE && dq > 0 {
+                qarr = 0.9
+              }
+            }
+          }
+        }
+        fl_warp = spd > 2500
+        trav_t = 0.15 + 0.7 * tau
+        if !said && dmode == WM_GATE && tau > 0.72 && clock - said_at > 9 && fl_stop_at == 0 {
+          said = true
+          said_at = clock
+          fl_announce(fl_say_gate(dq, today + leg))
+        }
+      } else if stage == FS_GAPP || stage == FS_ARRIVE {
+        trav_t = 0.85 + 0.15 * tau
+        if fl_warp {
+          fl_warp = false
+        }
+        if stage == FS_ARRIVE && !said && pt > 0.6 && clock - said_at > 7 {
+          said = true
+          said_at = clock
+          const pb2 = fl_wp(leg + 1)
+          if dmode == WM_END {
+            fl_announce(fl_say_arrive(poi_name(pb2), poi_kind(pb2), today + leg))
+          } else if fl_lcls[min(leg + 1, 95)] != cls {
+            fl_announce(fl_say_change(poi_name(pb2), ship_class_name(fl_lcls[min(leg + 1, 95)]), today + leg))
+          } else {
+            fl_announce(fl_say_call(poi_name(pb2), false, today + leg))
+          }
+        }
+      } else if stage == FS_PASS {
+        if !said && pt > 0.8 && clock - said_at > 12 {
+          said = true
+          said_at = clock
+          fl_announce(fl_say_call(poi_name(fl_wp(leg + 1)), true, today + leg))
+        }
+      } else if stage == FS_EXIT {
+        if !said && pt > 0.9 && clock - said_at > 8 && leg < n - 1 {
+          said = true
+          const nb2 = fl_wp(leg + 1)
+          if sys_region(sys) != sys_region(psys) {
+            said_at = clock
+            fl_announce(fl_say_region(region_name(sys_region(sys)), sys_name(sys), today + leg))
+          } else if busy || fl_stop_at <= 2 {
+            said_at = clock
+            fl_announce(fl_say_enter(sys_name(sys), fl_wm[min(leg + 1, 95)] == WM_GATE ? "the gate" : poi_name(nb2), busy, today + leg))
+          }
+        }
+        trav_t = 0.15 * tau
+      } else if stage == FS_DEPART || stage == FS_BURN {
+        trav_t = stage == FS_BURN ? 0.08 + 0.07 * tau : 0.08 * tau
+      } else if stage == FS_RUN || stage == FS_GRUN {
+        const cy = cos(spyaw[cur])
+        const sy = sin(spyaw[cur])
+        const zl = (hx - spx[cur]) * sy + (hz - spz[cur]) * cy
+        chg_t = clamp(1.15 + zl / 900, 0.3, 1)
+        if !jumped && zl + spd * 0.4 >= 0 {
+          jumped = true
+          trav_jump = true
+          const g = fl_wp(leg)
+          trav_from = g
+          trav_to = g
+        }
+      } else if stage == FS_TUNNEL {
+        if !jumped {
+          jumped = true
+          trav_jump = true
+        }
+        const part = min(jump_left, JUMP_DAYS * ds / pT)
+        if part > 0 {
+          clock_advance(part)
+          jump_left -= part
+        }
+        if !swapped && pt >= 1.35 {
+          swapped = true
+          leg = min(leg + 1, n - 1)
+          const g = fl_wp(leg)
+          const g2 = fl_wp(leg + 1)
+          psys = sys
+          sys = poi_sys(g)
+          need_sys = true
+          busy = sys_has_port(sys)
+          cur = 0
+          sppoi = [-1, -1]
+          spon = [false, false]
+          spx[0] = fl_px(g)
+          spz[0] = fl_pz(g)
+          const out = atan2(spx[0], spz[0])
+          spyaw[0] = leg < n - 1 && poi_sys(g2) == sys ? atan2(fl_px(g2) - spx[0], fl_pz(g2) - spz[0]) + PI : out
+          sppoi[0] = g
+          spon[0] = true
+          spgl[0] = -1
+          spgs[0] = busy && leg < n - 1 ? CLS_SHUTTLE : -1
+          spgsa[0] = sys
+          hx = spx[0]
+          hz = spz[0]
+          hyaw = spyaw[0] + PI
+          lastx = hx
+          lastz = hz
+          lastyaw = hyaw
+          hroll = 0
+          fox = 0
+          foz = 0
+          qon = false
+          qarr = -1
+          qlive = [false, false, false, false, false, false]
+          if busy {
+            const cnt: i32 = hash_int(g + today, 254, 3)
+            for j in 0..5 {
+              if j < cnt {
+                qlive[j] = true
+                qx[j] = 120
+                qz[j] = 0 - 700 - 420 * j
+              }
+            }
+            qgate = g
+          }
+          chg = 1
+          chg_t = 0.1
+          trav_sys = sys
+          trav_from = g
+          trav_to = g
+          pass_t = -1
+          fl_cut += 1
+        }
+      } else if stage == FS_ALIGN || stage == FS_GCRAB {
+        chg_t = 0.2 + 0.4 * tau
+      }
+
+      if hop_left > 0 && (stage == FS_DEPART || stage == FS_BURN || stage == FS_CRUISE || stage == FS_EXIT || stage == FS_ARRIVE || stage == FS_GAPP || stage == FS_PASS) {
+        const part = min(hop_left, HOP_DAYS * ds / 26)
+        clock_advance(part)
+        hop_left -= part
+      }
+
+      if qon {
+        qt += ds
+        mut run_j: i32 = -1
+        mut left: i32 = 0
+        mut qc: f64 = 0.1
+        for j in 0..5 {
+          if j < dq && qlive[j] {
+            const tj = qt - (dT - 2.5 + j * 4.6)
+            if tj >= 0 {
+              const e1 = fl_smooth(tj / 1.9)
+              qx[j] = 120 * (1 - e1)
+              qz[j] = -700 + 180 * e1
+              if tj > 1.7 {
+                qz[j] = -520 + 230 * (tj - 1.7) * (tj - 1.7)
+                run_j = j
+              }
+              qc = max(qc, tj < 2.9 ? 0.15 + 0.45 * tj / 2.9 : 1)
+              if qz[j] >= -20 {
+                qlive[j] = false
+                qdone = max(qdone, j + 1)
+                chg = 1
+              }
+            } else {
+              left += 1
+              const tz: f64 = 0 - 700 - 420 * (j - qdone)
+              qz[j] += (tz - qz[j]) * min(1, ds * 1.3)
+            }
+          }
+        }
+        mut started: i32 = 0
+        for j in 0..5 {
+          if j < dq && qt >= dT - 2.5 + j * 4.6 {
+            started = j + 1
+          }
+        }
+        qdone = max(qdone, started)
+        chg_t = max(chg_t, qc)
+        if fl_q_run != run_j {
+          fl_q_run = run_j
+        }
+        const occ: i32 = dq - started + ((stage == FS_QUEUE || stage == FS_GAPP) ? 1 : 0)
+        if fl_q_n != occ {
+          fl_q_n = occ
+        }
+      }
+      if qarr >= 0 {
+        qarr -= ds
+        if qarr < 0 {
+          qarr = -1
+          qlive[5] = true
+          qx[5] = 0
+          qz[5] = 0
+          chg = 1
+        }
+      }
+      if qlive[5] {
+        qz[5] -= max(1150 - 260 * (0 - qz[5]) / 1150, 300) * ds
+        qx[5] = -180 * fl_smooth((0 - qz[5]) / 2600)
+        if qz[5] < -9000 {
+          qlive[5] = false
+        }
+      }
+
+      chg += (chg_t - chg) * min(1, ds * (chg_t > chg ? 2.2 : 1.4))
+      th += (th_t - th) * min(1, ds * 0.9)
+      rc += (rc_t - rc) * min(1, ds * 3)
+      gw += clamp(gw_t - gw, 0 - ds * 0.7, ds * 0.7)
+
+      const fx = hx + fox
+      const fz = hz + foz
+      for i in 0..2 {
+        so[i * 4] = spx[i] - fx
+        so[i * 4 + 1] = spz[i] - fz
+        so[i * 4 + 2] = spyaw[i]
+        const on = spon[i] && sppoi[i] >= 0
+        si[i * 8] = on ? sppoi[i] : -1
+        si[i * 8 + 1] = spgl[i]
+        si[i * 8 + 2] = spgsa[i]
+        si[i * 8 + 3] = spgs[i]
+        si[i * 8 + 4] = spgsa[i]
+        si[i * 8 + 5] = -1
+        si[i * 8 + 6] = busy ? 1 : 0
+      }
+      for i in 0..2 {
+        if si[i * 8] >= 0 {
+          const pp = si[i * 8]
+          for f in 0..16 {
+            if shipments[f].status == 1 && shipments[f].freighter >= 0 && shipments[f].freighter < 8 && (shipments[f].from == pp || shipments[f].to == pp) {
+              si[i * 8 + 5] = freighter_tier(freighters[shipments[f].freighter].cap)
+            }
+          }
+        }
+      }
+      fl_sp = so
+      fl_spi = si
+
+      const sl = max(sqrt(fx * fx + fz * fz), 1)
+      const syaw: f32 = atan2(fx / sl, fz / sl)
+      if abs(fl_sun_yaw - syaw) > 0.0015 {
+        fl_sun_yaw = syaw
+      }
+      for i in 0..8 {
+        if i == 0 || (i <= pn && i < 7) {
+          const bx: f64 = i == 0 ? 0 - fx : pcx[i - 1] - fx
+          const by: f64 = i == 0 ? 0 : pcy[i - 1]
+          const bz: f64 = i == 0 ? 0 - fz : pcz[i - 1] - fz
+          const br: f64 = i == 0 ? FL_STAR_R * star_size(sys_star(sys)) : prr[i - 1]
+          const d = max(sqrt(bx * bx + by * by + bz * bz), 1)
+          const f = d > FL_D0 ? (FL_D0 + (FL_D1 - FL_D0) * (1 - exp(0 - (d - FL_D0) / FL_DL))) / d : 1
+          bd[i * 4] = bx * f
+          bd[i * 4 + 1] = by * f
+          bd[i * 4 + 2] = bz * f
+          bd[i * 4 + 3] = br * f / 1000
+        }
+      }
+      fl_body = bd
+
+      if lane {
+        sapp += min(spd, FL_APP_V) * ds
+        const base = floor(sapp / FL_HOOP_S)
+        const frac = sapp - base * FL_HOOP_S
+        const rem: f64 = stage == FS_CRUISE ? sqrt((cx0 + cux * cL - hx) * (cx0 + cux * cL - hx) + (cz0 + cuz * cL - hz) * (cz0 + cuz * cL - hz)) : 1.0e12
+        const eff: f64 = stage == FS_CRUISE ? rem * min(1, FL_APP_V / max(spd, 1)) : rem
+        for i in 0..12 {
+          const z = (i - 2) * FL_HOOP_S - frac + lane_off
+          const idx = base + i - 2
+          ho[i] = (idx >= 0 && z < eff - 200) ? z : -60000000
+        }
+        fl_hoop = ho
+        if pass_t >= 0 && stage == FS_CRUISE {
+          pass_t += ds
+          po[0] = 30000 - (pass_t - 1.2) * (min(spd, FL_APP_V) + 2600)
+          po[1] = 30000 - (pass_t - 3.3) * (min(spd, FL_APP_V) + 1900)
+          if po[0] > 60000 || po[0] < -40000 || po[0] > eff {
+            po[0] = -70000000
+          }
+          if po[1] > 60000 || po[1] < -40000 || po[1] > eff {
+            po[1] = -70000000
+          }
+        } else {
+          po[0] = -70000000
+          po[1] = -70000000
+        }
+        fl_pass = po
+      }
+      if fl_lane_on != lane {
+        fl_lane_on = lane
+      }
+
+      mut mask2: i32 = 0
+      for j in 0..6 {
+        if qlive[j] {
+          mask2 += 1 << j
+          qo[j * 2] = qx[j]
+          qo[j * 2 + 1] = qz[j]
+        }
+      }
+      if fl_q_mask != mask2 {
+        fl_q_mask = mask2
+      }
+      if mask2 != 0 {
+        fl_q = qo
+      }
+
+      const qth: f32 = floor(th * 20 + 0.5) / 20
+      if fl_thrust != qth {
+        fl_thrust = qth
+      }
+      const qrc: f32 = floor(rc * 5 + 0.5) / 5
+      if fl_rcs != qrc {
+        fl_rcs = qrc
+      }
+      const qgw: f32 = floor(gw * 10 + 0.5) / 10
+      if fl_gw != qgw {
+        fl_gw = qgw
+      }
+      const qch: f32 = floor(chg * 25 + 0.5) / 25
+      if fl_charge != qch {
+        fl_charge = qch
+      }
+      fl_sx = 0 - fox
+      fl_sz = 0 - foz
+      fl_syaw = hyaw
+      fl_sroll = hroll
+      fl_speed = spd
+      fl_clock = clock
+      if fl_stage != stage {
+        fl_stage = stage
+      }
+      if fl_phase != phase {
+        fl_phase = phase
+      }
+      if fl_leg != leg {
+        fl_leg = leg
+      }
+    }
+    if fl_say_left > 0 {
+      fl_say_left -= dt
+      if fl_say_left <= 0 && say_on && say_seq == fl_say_mine {
+        say_end()
+      }
+    }
+  }
+}

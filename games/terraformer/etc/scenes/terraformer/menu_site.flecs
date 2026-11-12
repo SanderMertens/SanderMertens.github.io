@@ -1,0 +1,459 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.layout
+using box.text
+using box.picking
+using state
+using terra
+
+state {
+  fn site_here() -> i32 {
+    pl_site(poi_planet(at_poi))
+  }
+
+  fn site_st(i: i32, k: i32) -> i32 {
+    site_ok(i) && k >= 0 && k < N_STRUCT ? site_struct[i * 16 + k] : 0
+  }
+
+  fn site_prog(i: i32, k: i32) -> f32 {
+    site_ok(i) && k >= 0 && k < N_STRUCT ? clamp(site_progress[i * 16 + k], 0, 1) : 0
+  }
+
+  fn site_job_row(i: i32) -> i32 {
+    const j = site_ok(i) ? sites[i].job : -1
+    j >= 0 && j < N_JOBS && jobs[j].status != 0 ? j : -1
+  }
+
+  fn stat_name(w: i32) -> string {
+    match w {
+      0: "ATMOSPHERE"
+      1: "WATER"
+      2: "TEMPERATURE"
+      _: "BIOMASS"
+    }
+  }
+
+  fn stat_driver(w: i32) -> i32 {
+    match w {
+      0: 6
+      1: 7
+      2: 8
+      _: 9
+    }
+  }
+
+  fn stat_rate(w: i32) -> f32 {
+    match w {
+      0: RATE_ATM
+      1: RATE_WATER
+      2: RATE_TEMP
+      _: RATE_BIO
+    }
+  }
+
+  fn stat_lo(p: i32, w: i32) -> f32 {
+    p < 0 ? 0 : match w {
+      0: req_atm(p)
+      1: req_water(p)
+      2: req_temp_lo(p)
+      _: req_bio(p)
+    }
+  }
+
+  fn stat_hi(p: i32, w: i32) -> f32 {
+    p < 0 ? 100 : match w {
+      0: req_max_atm(p)
+      2: req_temp_hi(p)
+      _: 100
+    }
+  }
+
+  fn stat_has_req(p: i32, w: i32) -> bool {
+    p >= 0 && (stat_lo(p, w) > 0 || stat_hi(p, w) < 100)
+  }
+
+  fn stat_met(p: i32, w: i32, v: f32) -> bool {
+    v >= stat_lo(p, w) && v <= stat_hi(p, w)
+  }
+
+  fn stat_req_text(p: i32, w: i32) -> string {
+    !stat_has_req(p, w) ? "" : stat_hi(p, w) >= 100 ? "{stat_lo(p, w):.0}+" : stat_lo(p, w) <= 0 ? "max {stat_hi(p, w):.0}" : "{stat_lo(p, w):.0}-{stat_hi(p, w):.0}"
+  }
+
+  fn stat_trend(i: i32, w: i32) -> string {
+    const k = stat_driver(w)
+    const st = site_st(i, k)
+    st == 3 ? "STALLED" : st != 2 ? "" : site_holding(i, k) ? "HOLDING" : w == 2 && site_stat(i, 8) > site_goal(i, 8) ? "-{stat_rate(w):.1} /d" : "+{stat_rate(w):.1} /d"
+  }
+
+  fn stat_trend_tone(i: i32, w: i32) -> i32 {
+    const k = stat_driver(w)
+    site_st(i, k) == 3 ? 4 : site_holding(i, k) ? 1 : 3
+  }
+
+  fn site_plannable(i: i32, k: i32) -> bool {
+    (k == S_PORT || site_st(i, S_PORT) >= 1) && (!struct_needs_power(k) || site_st(i, S_FUSION) >= 1) && (k != S_PURPOSE || site_job_live(i) >= 0)
+  }
+
+  fn site_stall_reason(i: i32, k: i32) -> string {
+    feed_block_tag(i, k) != "" ? feed_block_tag(i, k) : "STALLED"
+  }
+
+  fn struct_feeds(k: i32) -> bool {
+    k >= 6 && k <= 9
+  }
+
+  fn struct_status(i: i32, k: i32) -> string {
+    match site_st(i, k) {
+      0: ""
+      1: "BUILDING"
+      3: site_stall_reason(i, k)
+      _: struct_feeds(k) && site_holding(i, k) ? "HOLDING" : "ACTIVE"
+    }
+  }
+
+  fn struct_status_tone(i: i32, k: i32) -> i32 {
+    match site_st(i, k) {
+      1: 6
+      3: 4
+      _: struct_feeds(k) && site_holding(i, k) ? 1 : 3
+    }
+  }
+
+  fn struct_does(k: i32, p: i32) -> string {
+    match k {
+      0: "Landing pad, freight, depot"
+      1: "Earns \${struct_income(1):.0} /d"
+      2: "Earns \${struct_income(2):.0} /d"
+      3: "Earns \${struct_income(3):.0} /d"
+      4: p >= 0 && req_struct(p) == 4 ? "Depot +{PORT_DEPOT:.0}, in the contract" : "Depot +{PORT_DEPOT:.0}"
+      5: "Powers {POWER_SLOTS} machines"
+      6: "Air +{RATE_ATM:.1} /d for {struct_eats_qty(6):.0} {good_name(struct_eats(6))}"
+      7: "Water +{RATE_WATER:.1} /d for {struct_eats_qty(7):.0} {good_name(struct_eats(7))}"
+      8: "Moves heat {RATE_TEMP:.1} /d"
+      9: "Life +{RATE_BIO:.1} /d for {struct_eats_qty(9):.0} {good_name(struct_eats(9))}"
+      10: "Feeds the staff"
+      11: "Airs the staff"
+      12: "Closes the contract"
+      _: ""
+    }
+  }
+
+  fn site_food_cover(i: i32) -> i32 {
+    site_has(i, S_GREENHOUSE) ? 1 : site_food_covered(i) ? 2 : 0
+  }
+
+  fn site_air_cover(i: i32) -> i32 {
+    site_has(i, S_AIRPLANT) ? 1 : site_air_covered(i) ? 2 : 0
+  }
+
+  fn upkeep_text(staff: i32, cover: i32, per: f32, a: string, b: string) -> string {
+    staff <= 0 ? "No staff yet" : cover == 1 ? a : cover == 2 ? b : "{staff * per:.0} /d from the depot"
+  }
+
+  fn site_kind_line(poi: i32) -> string {
+    const p = poi_planet(poi)
+    "{pl_type_name(pl_type(p))} world. {kind_name(poi_kind(poi))}. {planet_region_name(p)}."
+  }
+
+  fn dozer_text(poi: i32) -> string {
+    const d = dozer_at(poi)
+    d < 0 || d >= N_DOZERS ? "Away" : dozers[d].status == 3 ? "Building" : "Idle"
+  }
+
+  fn job_due_text(j: i32, day: i32) -> string {
+    j < 0 || j >= N_JOBS ? "" : jobs[j].status == 2 ? "Delivered" : jobs[j].status == 3 ? "Missed" : "{jobs[j].deadline - day} d"
+  }
+
+  fn job_due_tone(j: i32, day: i32) -> i32 {
+    j < 0 || j >= N_JOBS ? 1 : jobs[j].status == 2 ? 3 : jobs[j].status == 3 ? 5 : jobs[j].deadline - day < 15 ? 5 : jobs[j].deadline - day < 40 ? 4 : 0
+  }
+}
+
+terra {
+  export const SM_ZONE: Rgb = {62, 72, 92}
+  export const SM_ZONE_MET: Rgb = {38, 84, 58}
+
+  template SmGauge {
+    prop value: f32 = 0
+    prop lo: f32 = 0
+    prop hi: f32 = 100
+    prop band: bool = false
+    prop met: bool = false
+    prop width: f32 = 200
+
+    const v = clamp(value, 0, 100) / 100
+    const a = clamp(lo, 0, 100) / 100
+    const b = clamp(hi, 0, 100) / 100
+
+    Layout: {}
+    LayoutItem: {width: {mode: Fixed, value: width}, height: {mode: Fixed, value: 14}}
+    box.spatial.SpatialIgnore
+
+    track {
+      LayoutItem: {h: Left, v: Middle, width: {mode: Fixed, value: width}, height: {mode: Fixed, value: 8}}
+      Rect: {1, 1}
+      Rgb: T_PANEL_ALT
+      Border: {radius: 2}
+      box.spatial.SpatialIgnore
+    }
+    zone {
+      LayoutItem: {h: Left, v: Middle, x: band ? a * width : 0, width: {mode: Fixed, value: band ? max((b - a) * width, 2) : 0.01}, height: {mode: Fixed, value: 8}}
+      Rect: {1, 1}
+      Rgb: met ? SM_ZONE_MET : SM_ZONE
+      Border: {radius: 2}
+      Opacity: {band ? 1 : 0}
+      box.spatial.SpatialIgnore
+    }
+    fill {
+      LayoutItem: {h: Left, v: Middle, width: {mode: Fixed, value: v * width + 0.01}, height: {mode: Fixed, value: 4}}
+      Rect: {1, 1}
+      Rgb: met ? T_GOOD : T_ACCENT
+      Border: {radius: 2}
+      box.spatial.SpatialIgnore
+    }
+    knob {
+      LayoutItem: {h: Left, v: Middle, x: clamp(v * width - 1, 0, width - 2), width: {mode: Fixed, value: 2}, height: {mode: Fixed, value: 14}}
+      Rect: {1, 1}
+      Rgb: T_TEXT
+      box.spatial.SpatialIgnore
+    }
+  }
+
+  template SmStatRow {
+    prop site: i32 = -1
+    prop w: i32 = 0
+
+    const p = site_live_purpose(site)
+    const v = site_stat(site, stat_driver(w))
+    const wanted = stat_has_req(p, w)
+    const met = wanted && stat_met(p, w, v)
+
+    Layout: {direction: Column, spacing: 3}
+    LayoutItem: {width: {mode: Grow}}
+
+    line {
+      Layout: {direction: Row, spacing: 8, v: Middle}
+      LayoutItem: {width: {mode: Grow}}
+      SmCell what(text: stat_name(w), width: 96, size: F_TINY, tone: TONE_MUTED, side: 0)
+      SmCell amount(text: "{v:.0}", width: 30, size: F_HEAD, tone: !wanted ? TONE_TEXT : met ? TONE_GOOD : TONE_ACCENT)
+      SmCell need(text: wanted ? "/ {stat_req_text(p, w)}" : "", width: 70, size: F_SMALL, tone: TONE_MUTED, side: 0)
+      SmCell trend(text: stat_trend(site, w), size: F_SMALL, tone: stat_trend_tone(site, w), grow: true)
+    }
+    SmGauge gauge(value: v, lo: stat_lo(p, w), hi: stat_hi(p, w), band: wanted, met: met, width: 380)
+  }
+
+  template SmDepotRow {
+    prop site: i32 = -1
+    prop g: i32 = 0
+
+    const have = stock_at(at_poi, g)
+    const eats = site_draw(site, g)
+    const lasts = eats > 0 ? floor(have / eats) : -1
+    const staffed = site_staff(site) > 0
+    const covered = staffed && ((g == 2 && site_food_cover(site) != 0) || (g == 3 && site_air_cover(site) != 0))
+
+    Layout: {direction: Row, spacing: 8, v: Middle}
+    LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: 23}}
+
+    SmSwatch dot(g: g, size: 8)
+    SmCell what(text: good_name(g), size: 13, tone: have > 0 || eats > 0 ? TONE_TEXT : TONE_MUTED, side: 0, grow: true)
+    SmCell held(text: "{have:.0}", width: 48, size: 13, tone: have > 0 ? TONE_TEXT : TONE_MUTED)
+    SmCell rate(text: eats > 0 ? "-{eats:.0} /d" : covered ? "covered" : "", width: 70, size: F_SMALL, tone: covered ? TONE_GOOD : TONE_MUTED)
+    SmCell runway(text: lasts < 0 ? "" : "{lasts:.0} d", width: 44, size: F_SMALL, tone: lasts < 1 ? TONE_BAD : lasts < 6 ? TONE_WARN : TONE_MUTED)
+  }
+
+  template SmCost {
+    prop g: i32 = 0
+    prop need: i32 = 0
+    prop live: bool = true
+
+    const have = stock_at(at_poi, g)
+    const short = live && have < need
+
+    Layout: {direction: Row, spacing: 5, v: Middle}
+    box.spatial.SpatialIgnore
+
+    SmSwatch dot(g: g, size: 8)
+    what {
+      Text: {value: short ? "{good_name(g)} {have:.0}/{need}" : "{good_name(g)} {need}", size: 12}
+      Rgb: short ? T_BAD : T_MUTED
+      box.spatial.SpatialIgnore
+    }
+  }
+
+  template SmStructRow {
+    prop site: i32 = -1
+    prop k: i32 = 0
+
+    const st = site_st(site, k)
+    const p = site_live_purpose(site)
+    const cp = site_cost_purpose(site)
+    const prog = site_prog(site, k)
+    const open = k == S_PURPOSE && st == 0 && p < 0
+    const tag = build_block_tag(build_block(at_poi, k))
+    const days_left = max(1, ceil((1 - prog) * struct_days(k)))
+
+    Layout: {direction: Row, spacing: 10, v: Middle}
+    LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: 33}}
+
+    pip {
+      LayoutItem: {width: {mode: Fixed, value: 6}, height: {mode: Fixed, value: 6}}
+      Rect: {1, 1}
+      Rgb: st == 2 ? T_GOOD : st == 3 ? T_WARN : st == 1 ? T_INFO : T_LINE
+      Border: {radius: 3}
+      box.spatial.SpatialIgnore
+    }
+    SmCell what(text: open ? "Contract structure" : struct_name(k, cp), width: 156, size: F_BODY, side: 0)
+    SmCell does(text: struct_does(k, p), width: 172, size: F_SMALL, tone: TONE_MUTED, side: 0)
+    detail {
+      Layout: {direction: Row, spacing: 12, v: Middle}
+      LayoutItem: {width: {mode: Grow}}
+      if st == 0 {
+        if open {
+          Txt wait(text: "Awaiting a client", size: F_SMALL, tone: TONE_MUTED)
+        } else {
+          for g in 0..N_GOODS {
+            if struct_cost(k, cp, g) > 0 {
+              SmCost "cost_{g}"(g: g, need: struct_cost(k, cp, g), live: site_plannable(site, k))
+            }
+          }
+        }
+      } else if st == 1 {
+        Bar progress(value: prog, width: 150, tone: TONE_INFO)
+        Txt pct(text: "{prog * 100:.0}%", size: F_SMALL, tone: TONE_INFO)
+        Txt due(text: "{days_left:.0} d left", size: F_SMALL, tone: TONE_MUTED)
+      } else {
+        Txt status(text: struct_status(site, k), size: F_TINY, tone: struct_status_tone(site, k))
+      }
+    }
+    if st == 0 {
+      SmCell days(text: open ? "" : "{struct_days(k)} d", width: 34, size: F_SMALL, tone: TONE_MUTED)
+      SmAct build(label: "BUILD", op: OP_BUILD, a: k, kind: BTN_PRIMARY, width: 116, height: 26, tag: tag, tone: tag == "MISSING GOODS" ? TONE_WARN : TONE_MUTED)
+    } else {
+      SmCell days(width: 34)
+      SmCell built(width: 116)
+    }
+  }
+
+  template SmSiteHead {
+    prop site: i32 = -1
+
+    const planet = poi_planet(at_poi)
+    const j = site_job_row(site)
+    const p = j >= 0 ? jobs[clamp(j, 0, 3)].purpose : -1
+
+    Layout: {direction: Column, spacing: 6}
+    LayoutItem: {width: {mode: Grow}}
+
+    Txt title(text: pl_name(planet), size: F_TITLE)
+    Txt line(text: site_kind_line(at_poi), size: F_SMALL, tone: TONE_MUTED)
+    Gap air(size: 2)
+    chips {
+      Layout: {direction: Row, spacing: 6, v: Middle}
+      LayoutItem: {width: {mode: Grow}}
+      Chip client(label: j >= 0 ? client_short(purpose_client(p)) : "CONTRACT", value: j >= 0 ? purpose_struct_name(p) : "None", tone: j >= 0 ? TONE_ACCENT : TONE_MUTED)
+      Chip due(label: "DUE", value: j >= 0 ? job_due_text(j, today) : "-", tone: j >= 0 ? job_due_tone(j, today) : TONE_MUTED)
+      Chip rig(label: "DOZER", value: dozer_text(at_poi), tone: dozer_at(at_poi) < 0 ? TONE_MUTED : TONE_TEXT)
+    }
+    Txt brief(text: j >= 0 ? purpose_brief(p) : "Terraforming on spec. Bold.", size: F_SMALL, tone: TONE_MUTED)
+  }
+
+  template SmSiteLeft {
+    prop site: i32 = -1
+
+    const cap = depot_cap(at_poi)
+    const total = stock_total(at_poi)
+    const staff = site_staff(site)
+    const income = site_income(site)
+
+    Layout: {direction: Column, spacing: 6}
+    LayoutItem: {width: {mode: Fixed, value: 380}}
+
+    SmSiteHead head(site: site)
+    Gap air_a(size: 4)
+    SmHead stats_head(text: "CONDITIONS")
+    for w in 0..4 {
+      SmStatRow "stat_{w}"(site: site, w: w)
+    }
+    Gap air_b(size: 4)
+    SmHead depot_head(text: "DEPOT", note: "{total:.0} / {cap:.0}", tone: total >= cap ? TONE_BAD : TONE_TEXT)
+    Bar fill(value: total / max(cap, 1), width: 380, height: 4, tone: total >= cap ? TONE_BAD : TONE_ACCENT)
+    table {
+      Layout: {direction: Column, spacing: 0}
+      LayoutItem: {width: {mode: Grow}}
+      cols {
+        Layout: {direction: Row, spacing: 8, v: Middle}
+        LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: 18}}
+        SmCell c_what(grow: true)
+        SmCell c_held(text: "STOCK", width: 48, size: 10, tone: TONE_MUTED)
+        SmCell c_rate(text: "USE", width: 70, size: 10, tone: TONE_MUTED)
+        SmCell c_runway(text: "LASTS", width: 44, size: 10, tone: TONE_MUTED)
+      }
+      for g in 0..N_GOODS {
+        SmDepotRow "good_{g}"(site: site, g: g)
+      }
+    }
+    Gap air_c(size: 4)
+    SmHead upkeep_head(text: "UPKEEP")
+    Row food(label: "Staff food", value: upkeep_text(staff, site_food_cover(site), STAFF_FOOD, "Greenhouse", "Grown outside"), tone: staff > 0 && site_food_cover(site) != 0 ? TONE_GOOD : TONE_TEXT, size: 12)
+    Row air(label: "Staff air", value: upkeep_text(staff, site_air_cover(site), STAFF_AIR, "Air Plant", "Open a window"), tone: staff > 0 && site_air_cover(site) != 0 ? TONE_GOOD : TONE_TEXT, size: 12)
+    Row earn(label: "Site income", value: income > 0 ? "+\${income:.0} /d" : "None", tone: income > 0 ? TONE_GOOD : TONE_MUTED, size: 12)
+  }
+
+  template SmSiteRight {
+    prop site: i32 = -1
+
+    const p = site_live_purpose(site)
+    const used = site_power_used(site)
+    const slots = site_power_cap(site)
+    const powered = slots > 0
+
+    Layout: {direction: Column, spacing: 0}
+    LayoutItem: {width: {mode: Grow}}
+
+    SmHead port_head(text: "PORT")
+    for k in 0..5 {
+      SmStructRow "port_{k}"(site: site, k: k)
+    }
+    Gap air_a(size: 8)
+    SmHead planet_head(text: "PLANET", note: powered ? "POWER {used} / {slots}" : "NO POWER", tone: powered ? TONE_INFO : TONE_MUTED)
+    for k in 5..12 {
+      SmStructRow "planet_{k}"(site: site, k: k)
+    }
+    Gap air_b(size: 8)
+    SmHead purpose_head(text: "PURPOSE", note: p >= 0 ? purpose_name(p) : site_st(site, S_PURPOSE) != 0 ? purpose_name(site_cost_purpose(site)) : "", tone: TONE_ACCENT)
+    SmStructRow purpose_12(site: site, k: 12)
+  }
+
+  template MenuSite {
+    const site = site_here()
+
+    LayoutItem: {h: Center, v: Middle, y: -24}
+    Layout: {direction: Column}
+
+    Frame card(title: "SITE OFFICE", width: 1340) {
+      body {
+        Layout: {direction: Row, spacing: 20}
+        LayoutItem: {width: {mode: Grow}}
+
+        SmClose close()
+        if site >= 0 {
+          SmSiteLeft left(site: site)
+          SmDivider rule()
+          SmSiteRight right(site: site)
+        } else {
+          wait {
+            Layout: {direction: Column, spacing: 6}
+            LayoutItem: {width: {mode: Grow}}
+            Txt title(text: poi_name(at_poi), size: F_TITLE)
+            Txt line(text: "Survey pending. The dozer is looking at it.", size: F_BODY, tone: TONE_MUTED)
+          }
+        }
+      }
+    }
+  }
+}

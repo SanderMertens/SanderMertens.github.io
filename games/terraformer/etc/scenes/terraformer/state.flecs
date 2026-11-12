@@ -1,0 +1,310 @@
+using flecs.script
+using flecs.script.math
+
+state {
+  export const N_SYS: i32 = 100
+  export const GRID: i32 = 10
+  export const HOME: i32 = 44
+  export const HOME_PORT_K: i32 = 1
+  export const HOME_POI: i32 = 529
+  export const MAX_PLANETS: i32 = 6
+  export const N_PLANETS: i32 = 600
+  export const POI_SLOTS: i32 = 12
+  export const N_POI: i32 = 1200
+  export const N_GOODS: i32 = 8
+  export const N_JOBS: i32 = 4
+  export const N_SITES: i32 = 16
+  export const N_STRUCT: i32 = 16
+  export const N_FREIGHTERS: i32 = 8
+  export const N_DOZERS: i32 = 4
+  export const N_SHIPMENTS: i32 = 16
+  export const ROUTE_MAX: i32 = 96
+  export const DAY_SECONDS: f64 = 5
+  export const START_MONEY: f64 = 40000
+
+  export const MODE_STATION: i32 = 0
+  export const MODE_TRAVEL: i32 = 1
+
+  export const SCREEN_NONE: i32 = 0
+  export const SCREEN_PANEL: i32 = 1
+  export const SCREEN_BAR: i32 = 2
+  export const SCREEN_TRADE: i32 = 3
+  export const SCREEN_FREIGHT: i32 = 4
+  export const SCREEN_PASSENGER: i32 = 5
+  export const SCREEN_SHIPYARD: i32 = 6
+  export const SCREEN_SITE: i32 = 7
+  export const SCREEN_GAMEOVER: i32 = 8
+
+  export const TAB_NAV: i32 = 0
+  export const TAB_JOBS: i32 = 1
+  export const TAB_ASSETS: i32 = 2
+
+  export const NAV_GALAXY: i32 = 0
+  export const NAV_SYSTEM: i32 = 1
+
+  export const LAYER_STATION: i32 = 0
+  export const LAYER_SPACE: i32 = 1
+  export const LAYER_GALAXY: i32 = 2
+  export const LAYER_FLIGHT: i32 = 3
+
+  export const FAC_BAR: i32 = 1
+  export const FAC_TRADE: i32 = 2
+  export const FAC_FREIGHT: i32 = 4
+  export const FAC_PASSENGER: i32 = 8
+  export const FAC_DEPOT: i32 = 16
+  export const FAC_SHIPYARD: i32 = 32
+  export const FAC_SITE: i32 = 64
+
+  export const KIND_ORBIT: i32 = 0
+  export const KIND_CAMP: i32 = 1
+  export const KIND_PORT: i32 = 2
+  export const KIND_PLAYER_PORT: i32 = 3
+  export const KIND_GATE: i32 = 4
+  export const KIND_MINE: i32 = 5
+  export const KIND_ODDITY: i32 = 6
+
+  export const DIR_N: i32 = 0
+  export const DIR_E: i32 = 1
+  export const DIR_S: i32 = 2
+  export const DIR_W: i32 = 3
+
+  export const SLOT_GATE: i32 = 6
+  export const SLOT_MINE: i32 = 10
+  export const SLOT_ODDITY: i32 = 11
+
+  export const GOOD_ALLOYS: i32 = 0
+  export const GOOD_MACHINERY: i32 = 1
+  export const GOOD_FOOD: i32 = 2
+  export const GOOD_AIR: i32 = 3
+  export const GOOD_ICE: i32 = 4
+  export const GOOD_BIOSTOCK: i32 = 5
+  export const GOOD_REAGENTS: i32 = 6
+  export const GOOD_LUXURIES: i32 = 7
+
+  export const JOB_EMPTY: i32 = 0
+  export const JOB_ACTIVE: i32 = 1
+  export const JOB_DONE: i32 = 2
+  export const JOB_FAILED: i32 = 3
+
+  export const ST_NONE: i32 = 0
+  export const ST_BUILDING: i32 = 1
+  export const ST_ACTIVE: i32 = 2
+  export const ST_STALLED: i32 = 3
+
+  export const SHIP_NONE: i32 = 0
+  export const SHIP_IDLE: i32 = 1
+  export const SHIP_BUSY: i32 = 2
+  export const DOZER_BUILDING: i32 = 3
+
+  export const OP_OPEN: i32 = 100
+  export const OP_CLOSE: i32 = 101
+  export const OP_TAB: i32 = 102
+  export const OP_SPEED: i32 = 103
+  export const OP_RESTART: i32 = 104
+  export const OP_NAV_LEVEL: i32 = 200
+  export const OP_NAV_DEST: i32 = 201
+  export const OP_NAV_CLEAR: i32 = 202
+  export const OP_BOARD: i32 = 203
+  export const OP_OFFER_ACCEPT: i32 = 300
+  export const OP_OFFER_DECLINE: i32 = 301
+  export const OP_BUY: i32 = 400
+  export const OP_SELL: i32 = 401
+  export const OP_MANIFEST: i32 = 500
+  export const OP_MANIFEST_DEST: i32 = 501
+  export const OP_SHIP: i32 = 502
+  export const OP_BUY_FREIGHTER: i32 = 600
+  export const OP_BUY_DOZER: i32 = 601
+  export const OP_DOZER_SEND: i32 = 602
+  export const OP_BUILD: i32 = 700
+  export const OP_TALK: i32 = 800
+  export const OP_TALK_NEXT: i32 = 801
+  export const OP_DEV_MONEY: i32 = 900
+  export const OP_DEV_TELEPORT: i32 = 901
+  export const OP_DEV_DAYS: i32 = 902
+  export const OP_DEV_GOODS: i32 = 903
+  export const OP_DEV_DOZER: i32 = 904
+  export const OP_DEV_SITE: i32 = 905
+  export const OP_DEV_STRUCT: i32 = 906
+  export const OP_DEV_FREIGHTER: i32 = 907
+  export const OP_DEV_MODE: i32 = 908
+  export const OP_DEV_TOAST: i32 = 909
+  export const OP_DEV_STAT: i32 = 910
+  export const OP_DEV_HOLD: i32 = 911
+  export const OP_DEV_JOB: i32 = 912
+  export const OP_DEV_SCREEN: i32 = 913
+  export const OP_DEV_OFFER: i32 = 914
+
+  struct Job(status: i32, client: i32, purpose: i32, planet: i32, fee: f64, deadline: i32, accepted: i32)
+  struct Site(used: bool, planet: i32, job: i32, atm: f32, water: f32, temp: f32, bio: f32, dozer: i32)
+  struct Freighter(status: i32, cap: i32, poi: i32)
+  struct Dozer(status: i32, poi: i32, dest: i32, eta: f64)
+  struct Shipment(status: i32, from: i32, to: i32, eta: f64, freighter: i32)
+
+  event Request(op: i32, a: i32, b: i32)
+  event DayTick(day: i32)
+  event Arrived(poi: i32)
+  event Toast(kind: i32)
+  event Reset()
+
+  export const JOB_NONE: Job = {0, 0, 0, -1, 0, 0, 0}
+  export const SITE_NONE: Site = {false, -1, -1, 0, 0, 50, 0, -1}
+  export const FREIGHTER_NONE: Freighter = {0, 0, -1}
+  export const DOZER_NONE: Dozer = {0, -1, -1, 0}
+  export const SHIPMENT_NONE: Shipment = {0, -1, -1, 0, -1}
+
+  export const ROUTE_EMPTY: i32[96] = [
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
+  ]
+  export const JOBS_EMPTY: Job[4] = [JOB_NONE, JOB_NONE, JOB_NONE, JOB_NONE]
+  export const SITES_EMPTY: Site[16] = [
+    SITE_NONE, SITE_NONE, SITE_NONE, SITE_NONE, SITE_NONE, SITE_NONE, SITE_NONE, SITE_NONE,
+    SITE_NONE, SITE_NONE, SITE_NONE, SITE_NONE, SITE_NONE, SITE_NONE, SITE_NONE, SITE_NONE
+  ]
+  export const FREIGHTERS_EMPTY: Freighter[8] = [
+    FREIGHTER_NONE, FREIGHTER_NONE, FREIGHTER_NONE, FREIGHTER_NONE,
+    FREIGHTER_NONE, FREIGHTER_NONE, FREIGHTER_NONE, FREIGHTER_NONE
+  ]
+  export const DOZERS_EMPTY: Dozer[4] = [DOZER_NONE, DOZER_NONE, DOZER_NONE, DOZER_NONE]
+  export const SHIPMENTS_EMPTY: Shipment[16] = [
+    SHIPMENT_NONE, SHIPMENT_NONE, SHIPMENT_NONE, SHIPMENT_NONE,
+    SHIPMENT_NONE, SHIPMENT_NONE, SHIPMENT_NONE, SHIPMENT_NONE,
+    SHIPMENT_NONE, SHIPMENT_NONE, SHIPMENT_NONE, SHIPMENT_NONE,
+    SHIPMENT_NONE, SHIPMENT_NONE, SHIPMENT_NONE, SHIPMENT_NONE
+  ]
+
+  export mut now: f64 = 0
+  export mut today: i32 = 0
+  export mut speed: i32 = 1
+  export mut dt: f64 = 0
+  export mut real_time: f64 = 0
+  export mut clock_hold: bool = false
+
+  export mut mode: i32 = MODE_STATION
+  export mut screen: i32 = SCREEN_NONE
+  export mut tab: i32 = TAB_NAV
+  export mut money: f64 = START_MONEY
+  export mut reputation: i32 = 0
+  export mut at_poi: i32 = HOME_POI
+
+  export mut px: f32 = 0
+  export mut pz: f32 = 0
+  export mut pyaw: f32 = 0
+  export mut near: i32 = 0
+
+  export mut nav_level: i32 = NAV_GALAXY
+  export mut nav_sys: i32 = HOME
+  export mut nav_dest: i32 = -1
+  export mut route_n: i32 = 0
+  export mut route_poi: i32[96] = ROUTE_EMPTY
+  export mut route_cost: f64 = 0
+  export mut route_days: f64 = 0
+  export mut route_sys: bool[100] = {}
+
+  export mut trav_active: bool = false
+  export mut trav_from: i32 = HOME_POI
+  export mut trav_to: i32 = HOME_POI
+  export mut trav_t: f32 = 0
+  export mut trav_jump: bool = false
+  export mut trav_sys: i32 = HOME
+
+  export mut stock: f32[9600] = {}
+  export mut offer: Job = JOB_NONE
+  export mut offer_expires: i32 = 0
+  export mut jobs: Job[4] = JOBS_EMPTY
+  export mut jobs_done: i32 = 0
+  export mut jobs_failed: i32 = 0
+  export mut sites: Site[16] = SITES_EMPTY
+  export mut site_struct: i32[256] = {}
+  export mut site_progress: f32[256] = {}
+  export mut sys_site: i32[100] = {}
+  export mut freighters: Freighter[8] = FREIGHTERS_EMPTY
+  export mut dozers: Dozer[4] = DOZERS_EMPTY
+  export mut shipments: Shipment[16] = SHIPMENTS_EMPTY
+  export mut ship_cargo: f32[128] = {}
+  export mut manifest: f32[8] = {}
+  export mut manifest_dest: i32 = -1
+  export mut toast_text: string = ""
+  export mut toast_seq: i32 = 0
+  export mut toast_kind: i32 = 0
+  export mut toast_show: bool = false
+  export mut talk_npc: i32 = -1
+  export mut talk_line: i32 = 0
+  export mut near_npc: i32 = -1
+  export mut near_text: string = ""
+  export mut say_on: bool = false
+  export mut say_name: string = ""
+  export mut say_tag: string = ""
+  export mut say_text: string = ""
+  export mut say_more: bool = false
+  export mut say_seq: i32 = 0
+
+  export mut view_layer: i32 = LAYER_STATION
+  export mut flight_on: bool = false
+  export mut view_sys: i32 = HOME
+  export mut view_nav: bool = false
+  export mut view_dim: bool = false
+
+  export mut cam_x: f32 = 0
+  export mut cam_z: f32 = 0
+  export mut cam_dist: f32 = 26
+  export mut cam_pitch: f32 = 0.95
+  export mut cam_yaw: f32 = 0
+
+  export mut scam_x: f32 = 0
+  export mut scam_z: f32 = 0
+  export mut scam_dist: f32 = 205
+  export mut scam_pitch: f32 = 1.0
+  export mut scam_yaw: f32 = 0
+
+  export mut gcam_x: f32 = 0
+  export mut gcam_y: f32 = 0
+  export mut gcam_h: f32 = 150
+
+  fn stock_at(poi: i32, g: i32) -> f32 {
+    poi >= 0 && poi < N_POI && g >= 0 && g < N_GOODS ? stock[poi * 8 + g] : 0
+  }
+
+  fn stock_total(poi: i32) -> f32 {
+    poi >= 0 && poi < N_POI ? stock[poi * 8] + stock[poi * 8 + 1] + stock[poi * 8 + 2] + stock[poi * 8 + 3] + stock[poi * 8 + 4] + stock[poi * 8 + 5] + stock[poi * 8 + 6] + stock[poi * 8 + 7] : 0
+  }
+
+  proc stock_add(poi: i32, g: i32, delta: f32) {
+    if poi >= 0 && poi < N_POI && g >= 0 && g < N_GOODS {
+      stock[poi * 8 + g] = max(stock[poi * 8 + g] + delta, 0)
+    }
+  }
+
+  proc toast_as(text: string, kind: i32) {
+    toast_text = text
+    toast_kind = kind
+    toast_seq += 1
+    toast_show = true
+    emit Toast(kind: kind)
+  }
+
+  proc toast(text: string) {
+    toast_as(text, 0)
+  }
+
+  proc say(name: string, tag: string, text: string, more: bool) {
+    say_name = name
+    say_tag = tag
+    say_text = text
+    say_more = more
+    say_seq += 1
+    say_on = true
+  }
+
+  proc say_end() {
+    if say_on {
+      say_on = false
+    }
+  }
+}

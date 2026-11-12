@@ -1,0 +1,413 @@
+using flecs.script
+using flecs.script.math
+using state
+
+state {
+  export const NAV_POPS_PER_FRAME: i32 = 16
+
+  event NavPlan(seq: i32)
+
+  export mut nav_plan_seq: i32 = 0
+  export mut nav_busy: bool = false
+  export mut nav_port_sig: i32 = 0
+  export mut nav_plans: i32 = 0
+  export mut nav_plan_pops: i32 = 0
+  export mut nav_plan_frames: i32 = 0
+  export mut route_jumps: i32 = 0
+  export mut route_charters: i32 = 0
+  export mut route_seq: i32[48] = {}
+  export mut route_seq_n: i32 = 0
+
+  fn nav_ports_sig() -> i32 {
+    b2i(site_port_done(0)) + b2i(site_port_done(1)) * 2 + b2i(site_port_done(2)) * 4 + b2i(site_port_done(3)) * 8 + b2i(site_port_done(4)) * 16 + b2i(site_port_done(5)) * 32 + b2i(site_port_done(6)) * 64 + b2i(site_port_done(7)) * 128
+  }
+
+  fn nav_wp(i: i32) -> i32 {
+    i >= 0 && i < ROUTE_MAX ? route_poi[i] : -1
+  }
+
+  fn nav_seq_at(i: i32) -> i32 {
+    i >= 0 && i < min(route_seq_n, 48) ? route_seq[i] : -1
+  }
+
+  fn nav_route_row() -> string {
+    "{route_n}|{route_cost:.3}|{route_days:.3}|{route_jumps}|{route_charters}|{nav_dest}|{at_poi}|{b2i(nav_busy)}|{nav_plan_pops}|{nav_plan_frames}|{nav_plans}|{route_seq_n}"
+  }
+
+  fn nav_route_list(from: i32) -> string {
+    "{nav_wp(from)},{nav_wp(from + 1)},{nav_wp(from + 2)},{nav_wp(from + 3)},{nav_wp(from + 4)},{nav_wp(from + 5)},{nav_wp(from + 6)},{nav_wp(from + 7)},{nav_wp(from + 8)},{nav_wp(from + 9)},{nav_wp(from + 10)},{nav_wp(from + 11)}"
+  }
+
+  proc nav_route_clear() {
+    if route_n != 0 || route_seq_n != 0 {
+      route_n = 0
+      route_poi = ROUTE_EMPTY
+      route_cost = 0
+      route_days = 0
+      route_sys = {}
+      route_jumps = 0
+      route_charters = 0
+      route_seq = {}
+      route_seq_n = 0
+    }
+  }
+
+  proc nav_plan_request() {
+    nav_plan_seq += 1
+    nav_busy = true
+    emit NavPlan(seq: nav_plan_seq)
+  }
+
+  proc nav_dest_clear() {
+    nav_plan_seq += 1
+    nav_busy = false
+    nav_dest = -1
+    nav_route_clear()
+  }
+}
+
+async {
+  while true {
+    const e = await Request
+    if e.op == OP_NAV_LEVEL {
+      if e.a == NAV_SYSTEM && sys_ok(e.b) {
+        nav_sys = e.b
+        nav_level = NAV_SYSTEM
+      } else if e.a == NAV_GALAXY {
+        nav_level = NAV_GALAXY
+      }
+    } else if e.op == OP_NAV_DEST {
+      if !trav_active && mode == MODE_STATION && poi_exists(e.a) && e.a != at_poi && e.a != nav_dest {
+        nav_dest = e.a
+        nav_route_clear()
+        nav_plan_request()
+      }
+    } else if e.op == OP_NAV_CLEAR {
+      if !trav_active {
+        nav_dest_clear()
+      }
+    }
+  }
+}
+
+async {
+  while true {
+    await Arrived
+    if poi_ok(at_poi) && nav_sys != poi_sys(at_poi) {
+      nav_sys = poi_sys(at_poi)
+    }
+    if nav_dest >= 0 {
+      if at_poi == nav_dest || !poi_exists(nav_dest) {
+        nav_dest_clear()
+      } else {
+        nav_route_clear()
+        nav_plan_request()
+      }
+    }
+  }
+}
+
+async {
+  while true {
+    await DayTick
+    const sig = nav_ports_sig()
+    if sig != nav_port_sig {
+      nav_port_sig = sig
+      if nav_dest >= 0 && !trav_active && mode == MODE_STATION {
+        nav_plan_request()
+      }
+    }
+  }
+}
+
+async {
+  while true {
+    await Reset
+    nav_dest_clear()
+    nav_port_sig = 0
+    nav_level = NAV_GALAXY
+    nav_sys = HOME
+  }
+}
+
+async {
+  mut nb: i32[400] = {}
+  mut nat: i32[100] = {}
+  mut pp: i32[100] = {}
+  mut ch: f64[13] = {}
+  mut lcost: f64[1300] = {}
+  mut lkey: f64[1300] = {}
+  mut lhops: i32[1300] = {}
+  mut ljumps: i32[1300] = {}
+  mut lwn: i32[1300] = {}
+  mut lprev: i32[1300] = {}
+  mut llo: i64[1300] = {}
+  mut lhi: i64[1300] = {}
+  mut lseen: i32[1300] = {}
+  mut ldone: i32[1300] = {}
+  mut open: i32[1300] = {}
+  mut rp: i32[96] = {}
+  mut seqr: i32[64] = {}
+  mut seqo: i32[48] = {}
+  mut out: i32[96] = ROUTE_EMPTY
+  mut rs: bool[100] = {}
+  mut pid: i32 = 0
+  mut init: i32 = 0
+  mut n: i32 = 0
+  mut m: i32 = 0
+  mut k: i32 = 0
+  mut cost: f64 = 0
+  mut hops: i32 = 0
+  mut jumps: i32 = 0
+  mut charters: i32 = 0
+  mut pops: i32 = 0
+  mut frames: i32 = 0
+  mut ok: bool = false
+  mut stale: bool = false
+  mut bare: i32 = -1
+  mut n_open: i32 = 0
+  mut found: i32 = -1
+  mut bi: i32 = 0
+  mut bk: f64 = 0
+  mut walk: i32 = -1
+
+  while init < N_SYS {
+    const k0 = sys_native_port(init)
+    nat[init] = k0 >= 0 ? init * 12 + k0 : -1
+    for d in 0..4 {
+      nb[init * 4 + d] = sys_lane(init, d) ? sys_nb(init, d) : -1
+    }
+    init += 1
+    if init % 20 == 0 {
+      await next_frame()
+    }
+  }
+
+  while true {
+    const e = await NavPlan
+    const start = at_poi
+    const dest = nav_dest
+    if e.seq == nav_plan_seq && poi_exists(start) && poi_exists(dest) && start != dest && !trav_active {
+      const seq = e.seq
+      const S: i32 = poi_sys(start)
+      const D: i32 = poi_sys(dest)
+      const rmax: i32 = min(ROUTE_MAX, 96)
+      const hop = hop_cost()
+      n = 1
+      m = 0
+      cost = 0
+      hops = 0
+      jumps = 0
+      charters = 0
+      pops = 0
+      frames = 1
+      ok = false
+      stale = false
+      seqo = {}
+
+      pp = nat
+      for i in 0..N_SITES {
+        if site_port_done(i) {
+          const pl = sites[i].planet
+          if pl_ok(pl) {
+            pp[pl_sys(pl)] = planet_poi(pl)
+          }
+        }
+      }
+
+      rp[0] = start
+      if S == D {
+        const port = pp[S]
+        if port >= 0 && start != port && dest != port {
+          rp[1] = port
+          n = 2
+        }
+        rp[n] = dest
+        n += 1
+        hops = n - 1
+        cost = hops * hop
+        seqo[0] = S
+        m = 1
+        ok = true
+      } else {
+        bare = -1
+        for s in 0..N_SYS {
+          if bare < 0 && pp[s] < 0 {
+            bare = s
+          }
+        }
+        const cport = sys_enter_cost(HOME, 0)
+        for r in 1..13 {
+          ch[r] = bare >= 0 ? sys_enter_cost(bare, r) : cport
+        }
+        const hk = min(cport, ch[1])
+        const dgx: i32 = D % 10
+        const dgy: i32 = floor(D / 10)
+        const sport = pp[S]
+        const dport = pp[D]
+        const first: i32 = S * 13 + (sport >= 0 ? 0 : 1)
+
+        pid += 1
+        n_open = 1
+        found = -1
+        open[0] = first
+        lseen[first] = pid
+        lcost[first] = 0
+        lhops[first] = 0
+        ljumps[first] = 0
+        lwn[first] = 1
+        lprev[first] = -1
+        lkey[first] = hk * (abs(S % 10 - dgx) + abs(floor(S / 10) - dgy))
+        llo[first] = S < 50 ? 1 << S : 0
+        lhi[first] = S >= 50 ? 1 << (S - 50) : 0
+
+        while n_open > 0 && found < 0 && !stale {
+          bi = 0
+          bk = lkey[open[0]]
+          for i in 1..n_open {
+            if lkey[open[i]] < bk {
+              bk = lkey[open[i]]
+              bi = i
+            }
+          }
+          const cur: i32 = open[bi]
+          n_open -= 1
+          open[bi] = open[n_open]
+          ldone[cur] = pid
+          pops += 1
+          const s: i32 = floor(cur / 13)
+          const r: i32 = cur % 13
+          if s == D {
+            found = cur
+          } else {
+            for d in 0..4 {
+              const t = nb[s * 4 + d]
+              if t >= 0 {
+                const tport = pp[t] >= 0
+                const nr: i32 = tport ? 0 : min(r + 1, 12)
+                const nl: i32 = t * 13 + nr
+                const on: i64 = t < 50 ? (llo[cur] >> t) & 1 : (lhi[cur] >> (t - 50)) & 1
+                if on == 0 && ldone[nl] != pid {
+                  const gate = s * 12 + 6 + d
+                  const sh: i32 = cur == first ? (sport >= 0 ? (start == sport ? 1 : 2) : (start == gate ? 0 : 1)) : (pp[s] >= 0 ? 2 : 1)
+                  const eh: i32 = t != D ? 0 : dest == t * 12 + 6 + (d + 2) % 4 ? 0 : !tport ? 1 : dest == dport ? 1 : 2
+                  const md: i32 = abs(t % 10 - dgx) + abs(floor(t / 10) - dgy)
+                  const nwn: i32 = lwn[cur] + sh + 1 + eh
+                  if nwn + 2 * md <= rmax {
+                    const ncost = lcost[cur] + (sh + eh) * hop + (tport ? cport : ch[nr])
+                    const nh: i32 = lhops[cur] + sh + eh
+                    const nj: i32 = ljumps[cur] + 1
+                    const nkey = ncost + (nj * JUMP_DAYS + nh * HOP_DAYS) * 0.001 + hk * md
+                    if lseen[nl] != pid || nkey < lkey[nl] {
+                      if lseen[nl] != pid {
+                        lseen[nl] = pid
+                        open[n_open] = nl
+                        n_open += 1
+                      }
+                      lcost[nl] = ncost
+                      lkey[nl] = nkey
+                      lhops[nl] = nh
+                      ljumps[nl] = nj
+                      lwn[nl] = nwn
+                      lprev[nl] = cur
+                      llo[nl] = t < 50 ? llo[cur] | (1 << t) : llo[cur]
+                      lhi[nl] = t >= 50 ? lhi[cur] | (1 << (t - 50)) : lhi[cur]
+                    }
+                  }
+                }
+              }
+            }
+          }
+          if pops % NAV_POPS_PER_FRAME == 0 && found < 0 {
+            await next_frame()
+            frames += 1
+            stale = seq != nav_plan_seq
+          }
+        }
+
+        if found >= 0 && !stale {
+          walk = found
+          k = 0
+          while walk >= 0 && k < 64 {
+            seqr[k] = floor(walk / 13)
+            k += 1
+            walk = lprev[walk]
+          }
+          m = min(k, 48)
+          for i in 0..m {
+            seqo[i] = seqr[k - 1 - i]
+          }
+          const legs: i32 = m - 1
+          for i in 0..legs {
+            const a = seqo[i]
+            const b = seqo[i + 1]
+            const d = b == a - 10 ? 0 : b == a + 1 ? 1 : b == a + 10 ? 2 : 3
+            const gate = a * 12 + 6 + d
+            const port = pp[a]
+            if port >= 0 && (i > 0 || start != port) && n < 95 {
+              rp[n] = port
+              n += 1
+            }
+            if (i > 0 || port >= 0 || start != gate) && n < 95 {
+              rp[n] = gate
+              n += 1
+            }
+            if n < 95 {
+              rp[n] = b * 12 + 6 + (d + 2) % 4
+              n += 1
+            }
+            if pp[b] < 0 {
+              charters += 1
+            }
+          }
+          if dest != rp[n - 1] {
+            if dport >= 0 && dest != dport && n < 95 {
+              rp[n] = dport
+              n += 1
+            }
+            if n < 95 {
+              rp[n] = dest
+              n += 1
+            }
+          }
+          cost = lcost[found]
+          hops = lhops[found]
+          jumps = ljumps[found]
+          ok = n <= rmax && k <= 48
+        }
+      }
+
+      if !stale && seq == nav_plan_seq {
+        if ok && !trav_active && mode == MODE_STATION && at_poi == start && nav_dest == dest {
+          out = ROUTE_EMPTY
+          rs = {}
+          for i in 0..n {
+            out[i] = rp[i]
+          }
+          for i in 0..m {
+            rs[seqo[i]] = true
+          }
+          route_poi = out
+          route_sys = rs
+          route_seq = seqo
+          route_seq_n = m
+          route_cost = cost
+          route_days = jumps * JUMP_DAYS + hops * HOP_DAYS
+          route_jumps = jumps
+          route_charters = charters
+          route_n = n
+        } else if !ok && nav_dest == dest {
+          nav_dest = -1
+          nav_route_clear()
+          toast("No through ticket that far. Change somewhere on the way.")
+        }
+        nav_busy = false
+        nav_plans += 1
+        nav_plan_pops = pops
+        nav_plan_frames = frames
+      }
+    } else if e.seq == nav_plan_seq {
+      nav_busy = false
+    }
+  }
+}

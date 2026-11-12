@@ -1,0 +1,636 @@
+using flecs.script
+using flecs.script.math
+using state
+
+state {
+  export const BAR_PATRONS: i32 = 3
+  export const BAR_LINES: i32 = 6
+  export const BAR_EPOCH_DAYS: i32 = 15
+
+  fn bar_h(poi: i32, npc: i32, salt: i32, n: i32) -> i32 {
+    hash_int(poi * 3 + npc, salt, n)
+  }
+
+  fn bar_name(poi: i32) -> string {
+    match hash_int(poi, 100, 16) {
+      0: "The Airlock"
+      1: "Last Gasp"
+      2: "The Dry Dock"
+      3: "Zero Proof"
+      4: "The Accrual"
+      5: "Low Orbit"
+      6: "The Write-Off"
+      7: "Billable Hours"
+      8: "The Layover"
+      9: "Hard Vacuum"
+      10: "The Per Diem"
+      11: "Second Sun"
+      12: "The Thirsty Auditor"
+      13: "Gravity Well"
+      14: "The Long Lunch"
+      _: "Escape Velocity"
+    }
+  }
+
+  fn bar_idle_line(poi: i32) -> string {
+    match hash_int(poi, 101, 8) {
+      0: "The bartender polishes a glass that was already clean."
+      1: "A sign reads: No tabs. No refunds. No terraforming at the bar."
+      2: "Today's special is the same as yesterday's. It was not special then either."
+      3: "Three patrons. None of them is looking at you, pointedly."
+      4: "The jukebox is between songs. It has been for a year."
+      5: "A ceiling fan turns slowly. There is no air for it to move."
+      6: "Someone carved ON BUDGET into the bar. Below it, in another hand: LIAR."
+      _: "The menu lists one drink. It is called Drink."
+    }
+  }
+
+  fn bar_first(i: i32) -> string {
+    match i {
+      0: "Dolores"
+      1: "Brick"
+      2: "Aino"
+      3: "Wendell"
+      4: "Priya"
+      5: "Otis"
+      6: "Marguerite"
+      7: "Tomasz"
+      8: "Bex"
+      9: "Ignatius"
+      10: "Yuki"
+      11: "Gordon"
+      12: "Saoirse"
+      13: "Lev"
+      14: "Odalys"
+      15: "Kip"
+      16: "Nadia"
+      17: "Rufus"
+      18: "Imelda"
+      19: "Cho"
+      20: "Barnaby"
+      21: "Zora"
+      22: "Milos"
+      _: "Petra"
+    }
+  }
+
+  fn bar_last(i: i32) -> string {
+    match i {
+      0: "Vance"
+      1: "Okafor"
+      2: "Lindqvist"
+      3: "Marsh"
+      4: "Adeyemi"
+      5: "Kowalski"
+      6: "Tanaka"
+      7: "Brandt"
+      8: "Osei"
+      9: "Halloran"
+      10: "Nakamura"
+      11: "Pruitt"
+      12: "Varga"
+      13: "Castellan"
+      14: "Dubois"
+      15: "Achterberg"
+      16: "Mbeki"
+      17: "Sorensen"
+      18: "Quill"
+      19: "Ramos"
+      20: "Thackeray"
+      21: "Yilmaz"
+      22: "Novak"
+      _: "Ferreira"
+    }
+  }
+
+  fn bar_npc_name(poi: i32, npc: i32) -> string {
+    "{bar_first((hash_int(poi, 105, 24) + npc * 5) % 24)} {bar_last((hash_int(poi, 106, 24) + npc * 7) % 24)}"
+  }
+
+  fn bar_npc_faction(poi: i32, npc: i32) -> i32 {
+    npc == 2 ? match poi_kind(poi) {
+      4: 9
+      5: 8
+      6: 7
+      _: 7 + hash_int(poi, 103, 3)
+    } : (hash_int(poi, 102, 7) + npc * 3) % 7
+  }
+
+  fn bar_faction_name(f: i32) -> string {
+    match f {
+      7: "Independent Spacers"
+      8: "Rock Miners, Local 12"
+      9: "Liner Pilots' Guild"
+      _: client_name(f)
+    }
+  }
+
+  fn bar_faction_tag(f: i32) -> string {
+    match f {
+      0: "MINISTRY"
+      1: "HELIOS"
+      2: "AGRICORP"
+      3: "CORRECTIONS"
+      4: "INSTITUTE"
+      5: "FRIENDS"
+      6: "DEFENSE"
+      7: "SPACER"
+      8: "MINER"
+      _: "PILOT"
+    }
+  }
+
+  fn bar_npc_tag(poi: i32, npc: i32) -> string {
+    bar_faction_name(bar_npc_faction(poi, npc))
+  }
+
+  fn bar_npc_look(poi: i32, npc: i32) -> i32 {
+    hash_int(poi * 3 + npc, 125, 1000)
+  }
+
+  fn bar_line_count(poi: i32, npc: i32) -> i32 {
+    BAR_LINES
+  }
+
+  fn bar_npc_pose(poi: i32, npc: i32) -> string {
+    match (hash_int(poi, 107, 16) + npc * 5) % 16 {
+      0: "Nursing something blue"
+      1: "Asleep, technically"
+      2: "Counting coasters"
+      3: "On a third lunch"
+      4: "Reading the menu again"
+      5: "Wearing two lanyards"
+      6: "Guarding a suitcase"
+      7: "Watching the door"
+      8: "Arguing with a napkin"
+      9: "Eating the garnish"
+      10: "Expensing this"
+      11: "Between meetings"
+      12: "Waiting for a call"
+      13: "Holding a clipboard"
+      14: "Stirring, not drinking"
+      _: "In yesterday's suit"
+    }
+  }
+
+  fn bar_opener(f: i32, v: i32) -> string {
+    match f * 3 + v {
+      0: "Ministry of Elsewhere. We relocate people to places that do not exist yet."
+      1: "I work for the Ministry. We have a population and nowhere to keep it."
+      2: "Elsewhere is a real department. I have a badge. It says Elsewhere."
+      3: "Helios Leisure Group. We sell relaxation, by force if necessary."
+      4: "I scout beaches. Mostly I scout places where a beach could be installed."
+      5: "Helios. If it has a horizon, we can put a sun lounger in front of it."
+      6: "AgriCorp Unlimited. The Limited is for legal reasons."
+      7: "I am in vegetables. Strategically."
+      8: "AgriCorp feeds nine systems. Eight of them wanted it."
+      9: "Department of Corrections and Amendments. I am off duty. Mostly."
+      10: "Corrections. We prefer planets with one exit."
+      11: "I inspect prisons. A good one is hard to leave and harder to review."
+      12: "The Institute of Things. I study things. That one, for instance."
+      13: "I am a researcher. My field is miscellaneous."
+      14: "The Institute sent me to observe. I am observing this drink."
+      15: "Friends of Nature. The Armed part is mostly a formality."
+      16: "We protect wilderness. Sometimes we have to build it first."
+      17: "I am a Friend of Nature. Nature has not said it back."
+      18: "Sector Defense Collective. I cannot say more. I do not know more."
+      19: "Defense. We secure things. Planets, perimeters, the last bar stool."
+      20: "I am here on a classified errand. It is lunch."
+      21: "Freelance. I go where the freight goes and complain when I get there."
+      22: "I have been to every system on the map. Twice by accident."
+      23: "No fixed address. It kept moving, so I stopped writing it down."
+      24: "Rock miner. I hit rocks until they are smaller rocks. It pays."
+      25: "Twenty years on the rigs. I can tell alloy ore by the taste. Do not ask."
+      26: "I dig. The company sells. We both call it a partnership."
+      27: "Liner pilot. Yes, the shaking in the tunnel is normal. Probably."
+      28: "I fly the port run. One day per jump, every jump, forever."
+      _: "Pilot. The ship flies itself. I am there for the announcements."
+    }
+  }
+
+  fn bar_colour(i: i32) -> string {
+    match i {
+      0: "I terraformed a moon once. They made me put it back."
+      1: "The drinks here are priced per sip. Read the coaster."
+      2: "My last employer went bankrupt in three systems at once. Efficient."
+      3: "They say space is infinite. My expense account says otherwise."
+      4: "I filed a complaint about the gravity. Still pending."
+      5: "The bartender used to run a comet lasso. Do not let him throw you a drink."
+      6: "Somebody ordered a planet with two sunsets. The change request took a year."
+      7: "I am not saying the liner food is bad. I am eating the napkin by choice."
+      8: "There is a form for everything out here. There is a form to request the form."
+      9: "My horoscope said to avoid large bodies of water. So this is the right sector."
+      10: "The last contractor through here delivered a week early. They are still being audited."
+      11: "I once sold four hundred units of Air to a planet that already had some. Sales is a mindset."
+      12: "They call it a gate station because toll booth tested poorly."
+      13: "Never trust a planet described as cozy. It means the atmosphere is mostly a rumour."
+      14: "My cousin lives on a finished world. Says the weather is as specified."
+      15: "I asked for a window seat. They gave me a window. No seat."
+      16: "The company motto used to be longer. Legal took out the promises."
+      17: "A dozer went missing last year. Turned up on a beach it had built for itself."
+      18: "Every planet is a fixer-upper if you squint. Most of them, you squint hard."
+      19: "I have been waiting for my luggage since the last fiscal year."
+      20: "You can tell a rookie by the way they read the contract after signing it."
+      21: "The ice haulers and the reagent haulers do not speak. Something about a wedding."
+      22: "They tried naming systems by number once. Marketing wept."
+      23: "I do not gamble. I ship freight on a deadline, which is the same thing with paperwork."
+      24: "This drink is called a Soft Landing. It is neither."
+      25: "Somebody terraformed the wrong planet last quarter. The right one is still waiting, politely."
+      26: "My retirement plan is a rock with a view. So far I have the rock."
+      27: "They say you never forget your first atmosphere. Mine leaked."
+      28: "The jukebox only plays hold music. People dance anyway."
+      29: "I was promised hazard pay. The hazard arrived. The pay is in transit."
+      30: "Lava worlds are just desert worlds with ambition."
+      31: "A gas giant is a planet that declined the meeting."
+      32: "The safety briefing here is one word. The word is Don't."
+      33: "My job title has eleven words. None of them is a verb."
+      34: "I knew a pilot who took a shortcut. She arrived yesterday. She leaves last week."
+      35: "The peanuts are complimentary. The bowl is forty dollars."
+      36: "People kept ordering Biostock for the goat. Now we just ship the goat."
+      37: "The view is the same from every bar out here. Black, with dots. Five stars."
+      38: "I asked the Institute what they study. They wrote down that I asked."
+      _: "A planet is done when the client stops calling. Not before."
+    }
+  }
+
+  fn bar_aside(f: i32, v: i32) -> string {
+    match f * 2 + v {
+      0: "We counted the population twice. It got bigger in between."
+      1: "Our maps have a lot of blank space. We call it capacity."
+      2: "Our guests rate planets out of five. Four is grounds for a lawsuit."
+      3: "We tried a resort on an ice world once. Marketing called it brisk."
+      4: "A potato does not care about your deadline. I respect that."
+      5: "We grow food on nine worlds. The tenth grows something. We are monitoring it."
+      6: "Our guests rarely leave reviews. Or at all."
+      7: "The brochure says rehabilitation. The budget says walls."
+      8: "We discovered a new element last year. Then we lost it. It is very small."
+      9: "My grant covers observation. Conclusions are extra."
+      10: "We planted a forest on a deadline once. The trees are still catching up."
+      11: "Wildlife is easy. It is the paperwork that bites."
+      12: "The threat level is classified. I can tell you it has a level."
+      13: "We guard the sector. From what, I am not cleared to wonder."
+      14: "I own what I carry and I carry very little. It keeps the audits short."
+      15: "Home is wherever the docking fee is lowest."
+      16: "People think asteroids are quiet. They have not heard one settle."
+      17: "The rig has one rule. If it hums, leave it alone. If it stops humming, leave."
+      18: "Passengers ask if we are there yet. In the tunnel, nobody is anywhere."
+      _: "I have seen every sunrise in this sector. From the wrong side of a windshield."
+    }
+  }
+
+  fn bar_closer(i: i32) -> string {
+    match i {
+      0: "That is everything I know. It took less time than I expected."
+      1: "Anyway. I have a meeting with this glass."
+      2: "If anyone asks, we talked about the weather. There is none, so it was brief."
+      3: "Good luck out there. Keep your receipts."
+      4: "I should go. I will not, but I should."
+      5: "Buy low, build fast, breathe when possible."
+      6: "You look like someone with a deadline. I will not keep you."
+      7: "Tell them nobody sent you. It is true and it sounds mysterious."
+      8: "We never spoke. Company policy."
+      9: "Come back when the planet is done. I want to see if it took."
+      10: "Mind the gap between the quote and the invoice."
+      _: "That is my professional opinion. My personal one costs extra."
+    }
+  }
+
+  fn tip_cand(poi: i32, i: i32) -> i32 {
+    const s = poi_sys(poi)
+    const d = i >= 4 ? (i - 4) % 4 : -1
+    const n = d >= 0 && sys_lane(s, d) ? sys_nb(s, d) : -1
+    match i {
+      0: poi
+      1: sys_port_poi(s)
+      2: sys_has_mine(s) ? s * 12 + 10 : -1
+      3: sys_has_oddity(s) ? s * 12 + 11 : -1
+      _: n < 0 ? -1 : i < 8 ? sys_port_poi(n) : sys_has_mine(n) ? n * 12 + 10 : -1
+    }
+  }
+
+  fn tip_sells(c: i32, g: i32) -> bool {
+    c >= 0 && poi_exists(c) && poi_sells(c, g)
+  }
+
+  fn tip_buys(c: i32, g: i32) -> bool {
+    c >= 0 && poi_exists(c) && poi_buys(c, g)
+  }
+
+  fn tip_lo(a: i32, b: i32, g: i32, day: i32) -> i32 {
+    !tip_sells(a, g) ? (tip_sells(b, g) ? b : -1) : !tip_sells(b, g) ? a : price_buy(b, g, day) < price_buy(a, g, day) ? b : a
+  }
+
+  fn tip_hi(a: i32, b: i32, g: i32, day: i32) -> i32 {
+    !tip_buys(a, g) ? (tip_buys(b, g) ? b : -1) : !tip_buys(b, g) ? a : price_sell(b, g, day) > price_sell(a, g, day) ? b : a
+  }
+
+  fn tip_buy_at(poi: i32, g: i32, day: i32) -> i32 {
+    const a = tip_lo(tip_lo(tip_cand(poi, 0), tip_cand(poi, 1), g, day), tip_lo(tip_cand(poi, 2), tip_cand(poi, 3), g, day), g, day)
+    const b = tip_lo(tip_lo(tip_cand(poi, 4), tip_cand(poi, 5), g, day), tip_lo(tip_cand(poi, 6), tip_cand(poi, 7), g, day), g, day)
+    const c = tip_lo(tip_lo(tip_cand(poi, 8), tip_cand(poi, 9), g, day), tip_lo(tip_cand(poi, 10), tip_cand(poi, 11), g, day), g, day)
+    tip_lo(a, tip_lo(b, c, g, day), g, day)
+  }
+
+  fn tip_sell_at(poi: i32, g: i32, day: i32) -> i32 {
+    const a = tip_hi(tip_hi(tip_cand(poi, 0), tip_cand(poi, 1), g, day), tip_hi(tip_cand(poi, 2), tip_cand(poi, 3), g, day), g, day)
+    const b = tip_hi(tip_hi(tip_cand(poi, 4), tip_cand(poi, 5), g, day), tip_hi(tip_cand(poi, 6), tip_cand(poi, 7), g, day), g, day)
+    const c = tip_hi(tip_hi(tip_cand(poi, 8), tip_cand(poi, 9), g, day), tip_hi(tip_cand(poi, 10), tip_cand(poi, 11), g, day), g, day)
+    tip_hi(a, tip_hi(b, c, g, day), g, day)
+  }
+
+  fn bar_epoch(day: i32) -> i32 {
+    floor(max(day, 0) / BAR_EPOCH_DAYS)
+  }
+
+  fn good_plural(g: i32) -> bool {
+    g == 0 || g == 6 || g == 7
+  }
+
+  fn verb_is(g: i32) -> string {
+    good_plural(g) ? "are" : "is"
+  }
+
+  fn verb_go(g: i32) -> string {
+    good_plural(g) ? "go" : "goes"
+  }
+
+  fn bar_tip_good(poi: i32, npc: i32, day: i32) -> i32 {
+    const g = hash_int(poi * 3 + npc + bar_epoch(day) * 977, 110, 8)
+    const alt = (g + 3) % 8
+    tip_buy_at(poi, g, day) >= 0 ? g : tip_buy_at(poi, alt, day) >= 0 ? alt : tip_buy_at(poi, 2, day) >= 0 ? 2 : g
+  }
+
+  fn bar_tip_buy(poi: i32, npc: i32, day: i32) -> string {
+    const g = bar_tip_good(poi, npc, day)
+    const spot = tip_buy_at(poi, g, day)
+    const p = spot >= 0 ? price_buy(spot, g, day) : 0
+    const r = p / good_base(g)
+    const v = bar_h(poi, npc, 111, 3)
+    spot < 0 ? "Nobody within a jump sells {good_name(g)}. I asked. They laughed." : spot == poi ? match v {
+      0: "{good_name(g)} {verb_is(g)} \${p:.0} right here. Cheapest for a jump around. I checked so you do not have to."
+      1: "You want {good_name(g)}? \${p:.0} at the hub downstairs. Nobody nearby beats it."
+      _: "Best price on {good_name(g)} is this very station. \${p:.0}. I know. I was surprised too."
+    } : r < 0.8 ? match v {
+      0: "{good_name(g)} {verb_go(g)} for \${p:.0} at {poi_name(spot)}. You did not hear it from me."
+      1: "{poi_name(spot)} is practically giving {good_name(g)} away. \${p:.0} a unit."
+      _: "If you need {good_name(g)}, try {poi_name(spot)}. \${p:.0} a unit. Bring a freighter and a straight face."
+    } : r > 1.15 ? match v {
+      0: "{good_name(g)}? Cheapest is \${p:.0} at {poi_name(spot)}. I did not say cheap. I said cheapest."
+      1: "Closest place for {good_name(g)} is {poi_name(spot)}, \${p:.0} a unit. That is the good news."
+      _: "{poi_name(spot)} sells {good_name(g)} at \${p:.0}. It is robbery, but it is local robbery."
+    } : match v {
+      0: "{good_name(g)} {verb_is(g)} \${p:.0} at {poi_name(spot)}. Nothing nearby is cheaper."
+      1: "For {good_name(g)}, try {poi_name(spot)}. \${p:.0}. Fair, which out here is suspicious."
+      _: "{poi_name(spot)} has {good_name(g)} at \${p:.0}. Best you will do without a longer trip."
+    }
+  }
+
+  fn tip_place(c: i32, poi: i32) -> string {
+    c == poi ? "right here" : "at {poi_name(c)}"
+  }
+
+  fn bar_tip_sell(poi: i32, npc: i32, day: i32) -> string {
+    const g = hash_int(poi * 3 + npc + bar_epoch(day) * 977, 112, 8)
+    const dst = tip_sell_at(poi, g, day)
+    const src = tip_buy_at(poi, g, day)
+    const ps = dst >= 0 ? price_sell(dst, g, day) : 0
+    const pb = src >= 0 ? price_buy(src, g, day) : 0
+    const v = bar_h(poi, npc, 113, 2)
+    dst < 0 ? "Nobody within a jump is buying anything. Hold on to your cargo and your hopes." : src >= 0 && src != dst && ps >= pb * 1.15 ? match v {
+      0: "{good_name(g)}: \${pb:.0} {tip_place(src, poi)}, \${ps:.0} {tip_place(dst, poi)}. I am only reading numbers aloud."
+      _: "Buy {good_name(g)} {tip_place(src, poi)} for \${pb:.0}. Sell {tip_place(dst, poi)} for \${ps:.0}. Not advice. Arithmetic."
+    } : dst == poi ? match v {
+      0: "They pay \${ps:.0} for {good_name(g)} right here. Best offer for a jump around."
+      _: "Got {good_name(g)}? Sell downstairs. \${ps:.0} a unit and nobody nearby pays more."
+    } : match v {
+      0: "{poi_name(dst)} pays \${ps:.0} for {good_name(g)}. Nobody around pays more."
+      _: "Sitting on {good_name(g)}? {poi_name(dst)} pays \${ps:.0} a unit. That is the ceiling around here."
+    }
+  }
+
+  fn client_purpose(c: i32, v: i32) -> i32 {
+    match c {
+      0: 0
+      1: v == 0 ? 1 : 2
+      2: 3
+      3: 4
+      4: 5
+      5: 6
+      _: 7
+    }
+  }
+
+  fn bar_job_line(p: i32, v: i32) -> string {
+    match p * 2 + v {
+      0: "The Ministry wants air at {req_atm(0):.0}, water at {req_water(0):.0}, biomass at {req_bio(0):.0} and a Colony Hub. They pay {money_text(purpose_fee(0))}. Slowly, but they pay."
+      1: "Expansion jobs run {purpose_days(0)} days. That sounds long until you price a Colony Hub."
+      2: "Helios wants water at {req_water(1):.0}. Guests expect an ocean. They do not expect to pay for it."
+      3: "A resort has to be warm. {req_temp_lo(1):.0} to {req_temp_hi(1):.0} on the dial. Colder and the brochure gets sued."
+      4: "A casino only needs air at {req_atm(2):.0}. Nobody in there looks outside."
+      5: "Helios pays {money_text(purpose_fee(2))} for a casino world. The Casino wants {purpose_cost(2, 7)} Luxuries before it opens. It is a whole thing."
+      6: "AgriCorp wants biomass at {req_bio(3):.0}. That is a lot of Biostock and one very tired Seeder."
+      7: "Farms want {req_temp_lo(3):.0} to {req_temp_hi(3):.0} on the thermostat and water at {req_water(3):.0}. Crops are fussy."
+      8: "Corrections wants it breathable. Barely. Go over {req_max_atm(4):.0} air and they say it is too nice."
+      9: "Prison jobs are quick. Air at {req_atm(4):.0}, one Penitentiary, {money_text(purpose_fee(4))}. Nobody asks for a view."
+      10: "The Institute wants air at {req_atm(5):.0} and water at {req_water(5):.0}. Then they study it until it stops."
+      11: "A Research Campus needs {purpose_cost(5, 6)} Reagents up front. For science. Do not ask which science."
+      12: "Friends of Nature want biomass at {req_bio(6):.0}. Pristine wilderness, built to spec."
+      13: "Preservation pays {money_text(purpose_fee(6))} and takes {purpose_days(6)} days. The Friends are armed, so do deliver."
+      14: "Defense wants a Garrison, a Depot Expansion and air at {req_atm(7):.0}. In {purpose_days(7)} days. They said please, once."
+      _: "Security pays {money_text(purpose_fee(7))} because the deadline is a joke. Stock the depot before you sign."
+    }
+  }
+
+  fn bar_trade_line(i: i32) -> string {
+    match i {
+      0: "A Biosphere Seeder sulks until air hits {SEED_MIN_ATM:.0} and water hits {SEED_MIN_WATER:.0}. Ask me how I know."
+      1: "One Fusion Plant runs {POWER_SLOTS} machines. The fifth runs on optimism."
+      2: "Staff eat. Build a Greenhouse or pay {EMERGENCY_FACTOR:.0} times retail for emergency lunch."
+      3: "Get air to {SELF_AIR_ATM:.0} and the staff can just breathe. Saves a fortune in bottles."
+      4: "Biomass at {SELF_FOOD_BIO:.0} and a site feeds itself. Until then it is sandwiches by freighter."
+      5: "A dozer camp holds {DOZER_DEPOT:.0} units. A Space Port wants {struct_cost_units(0, 0)}. The numbers work. Barely."
+      6: "Carriers bill by the unit and by the jump. Your own freighter only bills fuel. And {money_text(freighter_price(1))} up front."
+      7: "Miss a deadline and they take the fee back. Plus {(CLAWBACK_FACTOR - 1) * 100:.0} percent, for the paperwork."
+      8: "Chartering through a system with no port is \${CHARTER_COST:.0}. Two in a row and it doubles. Build a port, save a fortune."
+      9: "An Atmosphere Processor eats {struct_eats_qty(6):.0} Reagents a day. Run dry and it just sits there, judging you."
+      10: "A Comet Lasso wants {struct_eats_qty(7):.0} Ice a day. Mining rigs sell it cheap."
+      11: "A full depot turns freighters away. Build the Depot Expansion before you need it."
+      12: "The Thermal Regulator needs no feeding. It is the only employee like that."
+      _: "Dozers build one thing at a time. Order the materials first, the miracle second."
+    }
+  }
+
+  fn sys_yard(s: i32) -> bool {
+    sys_ok(s) && ((sys_native_port(s) >= 0 && port_has_yard(s)) || (sys_has_oddity(s) && oddity_kind(s) == 3))
+  }
+
+  fn sys_feature(s: i32, w: i32) -> bool {
+    w == 0 ? sys_yard(s) : sys_has_mine(s)
+  }
+
+  fn near_pick(a: i32, b: i32, s: i32) -> i32 {
+    a < 0 ? b : b < 0 ? a : sys_dist(b, s) < sys_dist(a, s) ? b : a
+  }
+
+  fn near_feature(lo: i32, hi: i32, s: i32, w: i32) -> i32 {
+    const mid: i32 = floor((lo + hi) / 2)
+    hi - lo <= 1 ? (sys_feature(lo, w) ? lo : -1) : near_pick(near_feature(lo, mid, s, w), near_feature(mid, hi, s, w), s)
+  }
+
+  fn nb_port(s: i32, d: i32) -> bool {
+    sys_lane(s, d) && sys_native_port(sys_nb(s, d)) >= 0
+  }
+
+  fn nb_bare(s: i32, d: i32) -> bool {
+    sys_lane(s, d) && sys_native_port(sys_nb(s, d)) < 0
+  }
+
+  fn nb_ports(s: i32) -> i32 {
+    b2i(nb_port(s, 0)) + b2i(nb_port(s, 1)) + b2i(nb_port(s, 2)) + b2i(nb_port(s, 3))
+  }
+
+  fn nb_port_dir(s: i32, start: i32) -> i32 {
+    nb_port(s, start % 4) ? start % 4 : nb_port(s, (start + 1) % 4) ? (start + 1) % 4 : nb_port(s, (start + 2) % 4) ? (start + 2) % 4 : nb_port(s, (start + 3) % 4) ? (start + 3) % 4 : -1
+  }
+
+  fn nb_bare_dir(s: i32, start: i32) -> i32 {
+    nb_bare(s, start % 4) ? start % 4 : nb_bare(s, (start + 1) % 4) ? (start + 1) % 4 : nb_bare(s, (start + 2) % 4) ? (start + 2) % 4 : nb_bare(s, (start + 3) % 4) ? (start + 3) % 4 : -1
+  }
+
+  fn bar_geo_ports(poi: i32, npc: i32) -> string {
+    const s = poi_sys(poi)
+    const n = nb_ports(s)
+    const d = nb_port_dir(s, bar_h(poi, npc, 114, 4))
+    const e = nb_bare_dir(s, bar_h(poi, npc, 115, 4))
+    const v = bar_h(poi, npc, 116, 2)
+    n == 0 ? "Not one port next door, whichever gate you take. It is charter rates from here, friend." : n == sys_lanes(s) ? match v {
+      0: "Every gate out of here leads to a port. {sys_name(sys_nb(s, d))}, for one. Practically downtown."
+      _: "Ports in every direction. Try {sys_name(sys_nb(s, d))}. Liners run cheap when both ends are civilised."
+    } : v == 0 || e < 0 ? "Take the {sys_name(sys_nb(s, d))} gate. There is a port on the other side. People live there on purpose." : "Through the {sys_name(sys_nb(s, e))} gate there is no port at all. Charter rates. Bring money or a reason."
+  }
+
+  fn jumps_word(n: i32) -> string {
+    n == 1 ? "One jump" : n == 2 ? "Two jumps" : n == 3 ? "Three jumps" : "{n} jumps"
+  }
+
+  fn bar_geo_far(poi: i32, npc: i32) -> string {
+    const s = poi_sys(poi)
+    const w = bar_h(poi, npc, 117, 2)
+    const t = near_feature(0, N_SYS, s, w)
+    const n = t >= 0 ? sys_dist(s, t) : 0
+    t < 0 ? "I would tell you where to go, but there is nowhere." : w == 0 ? (n == 0 ? "There is a shipyard in this very system. Try not to buy anything." : "Nearest shipyard is at {sys_name(t)}. {jumps_word(n)}. They sell dozers to anyone.") : (n == 0 ? "There is a mining rig in this system. Alloys, Ice and Reagents, straight off the rock." : "Nearest mining rig is at {sys_name(t)}. {jumps_word(n)}. Alloys, Ice and Reagents at rock prices.")
+  }
+
+  fn bar_job_talk(poi: i32, npc: i32) -> string {
+    const f = bar_npc_faction(poi, npc)
+    const v = bar_h(poi, npc, 118, 2)
+    f < 7 ? bar_job_line(client_purpose(f, bar_h(poi, npc, 119, 2)), v) : bar_trade_line(bar_h(poi, npc, 120, 14))
+  }
+
+  fn bar_shop_talk(poi: i32, npc: i32) -> string {
+    const f = bar_npc_faction(poi, npc)
+    f < 7 ? bar_job_line(client_purpose(f, 1 - bar_h(poi, npc, 119, 2)), 1 - bar_h(poi, npc, 118, 2)) : bar_trade_line((bar_h(poi, npc, 120, 14) + 5) % 14)
+  }
+
+  fn bar_role(poi: i32, npc: i32) -> i32 {
+    (npc + hash_int(poi, 104, 3)) % 3
+  }
+
+  fn bar_info(poi: i32, npc: i32, slot: i32, day: i32) -> string {
+    match bar_role(poi, npc) * 2 + slot {
+      0: bar_tip_buy(poi, npc, day)
+      1: bar_geo_ports(poi, npc)
+      2: bar_tip_sell(poi, npc, day)
+      3: bar_job_talk(poi, npc)
+      4: bar_shop_talk(poi, npc)
+      _: bar_geo_far(poi, npc)
+    }
+  }
+
+  fn bar_line(poi: i32, npc: i32, i: i32, day: i32) -> string {
+    const base = hash_int(poi, 108, 40)
+    match i {
+      0: bar_opener(bar_npc_faction(poi, npc), bar_h(poi, npc, 109, 3))
+      1: bar_info(poi, npc, 0, day)
+      2: bar_colour((base + npc * 7) % 40)
+      3: bar_info(poi, npc, 1, day)
+      4: bar_aside(bar_npc_faction(poi, npc), bar_h(poi, npc, 124, 2))
+      _: bar_closer((hash_int(poi, 123, 12) + npc * 5) % 12)
+    }
+  }
+
+  fn bar_dump(poi: i32, npc: i32, day: i32) -> string {
+    "{bar_npc_name(poi, npc)} / {bar_npc_tag(poi, npc)} / {bar_npc_pose(poi, npc)} # {bar_line(poi, npc, 0, day)} # {bar_line(poi, npc, 1, day)} # {bar_line(poi, npc, 2, day)} # {bar_line(poi, npc, 3, day)} # {bar_line(poi, npc, 4, day)} # {bar_line(poi, npc, 5, day)}"
+  }
+
+  proc talk_say() {
+    if talk_npc >= 0 && talk_npc < BAR_PATRONS {
+      say(bar_npc_name(at_poi, talk_npc), bar_npc_tag(at_poi, talk_npc), bar_line(at_poi, talk_npc, talk_line, today), talk_line < bar_line_count(at_poi, talk_npc) - 1)
+    }
+  }
+
+  proc talk_clear() {
+    if talk_npc != -1 {
+      talk_npc = -1
+    }
+    if talk_line != 0 {
+      talk_line = 0
+    }
+  }
+
+  proc talk_stop() {
+    talk_clear()
+    say_end()
+  }
+}
+
+async {
+  while true {
+    const e = await Request
+    if e.op == OP_TALK {
+      if e.a >= 0 && e.a < BAR_PATRONS && mode == MODE_STATION && poi_has(at_poi, FAC_BAR) {
+        talk_npc = e.a
+        talk_line = 0
+        talk_say()
+      } else {
+        talk_stop()
+      }
+    } else if e.op == OP_TALK_NEXT {
+      if talk_npc >= 0 && talk_npc < BAR_PATRONS && mode == MODE_STATION {
+        if talk_line + 1 < bar_line_count(at_poi, talk_npc) {
+          talk_line += 1
+          talk_say()
+        } else {
+          talk_stop()
+        }
+      }
+    }
+  }
+}
+
+async {
+  while true {
+    const e = await Arrived
+    talk_stop()
+  }
+}
+
+async {
+  while true {
+    await Reset
+    talk_stop()
+  }
+}
+
+async {
+  while true {
+    await next_frame()
+    if talk_npc >= 0 {
+      if mode != MODE_STATION {
+        talk_stop()
+      } else if !say_on {
+        talk_clear()
+      }
+    }
+  }
+}

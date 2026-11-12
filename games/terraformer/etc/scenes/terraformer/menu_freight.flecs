@@ -1,0 +1,322 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.layout
+using box.text
+using box.picking
+using box.widgets
+using state
+using terra
+
+state {
+  export const FREIGHT_ALL: i32 = 100000
+  export const FREIGHT_DEST_ROWS: i32 = 5
+  export const FREIGHT_FLIGHT_ROWS: i32 = 6
+
+  fn carrier_tag(f: i32) -> string {
+    f >= 0 && f < N_FREIGHTERS && freighters[f].status == 2 ? "BUSY" : ship_block_tag(ship_block(f))
+  }
+
+  fn freighter_label(f: i32) -> string {
+    f >= 0 && f < N_FREIGHTERS ? "{freighter_name(freighter_tier(freighters[f].cap))} {f + 1}" : ""
+  }
+
+  fn freighter_where(f: i32) -> string {
+    f < 0 || f >= N_FREIGHTERS ? "" : freighters[f].status == 2 ? "In transit" : freighters[f].poi == at_poi ? "Docked here" : poi_name(freighters[f].poi)
+  }
+
+  fn shipment_here(i: i32) -> bool {
+    i >= 0 && i < N_SHIPMENTS && shipments[i].status != 0 && (shipments[i].from == at_poi || shipments[i].to == at_poi)
+  }
+
+  fn shipments_here() -> i32 {
+    b2i(shipment_here(0)) + b2i(shipment_here(1)) + b2i(shipment_here(2)) + b2i(shipment_here(3)) + b2i(shipment_here(4)) + b2i(shipment_here(5)) + b2i(shipment_here(6)) + b2i(shipment_here(7)) + b2i(shipment_here(8)) + b2i(shipment_here(9)) + b2i(shipment_here(10)) + b2i(shipment_here(11)) + b2i(shipment_here(12)) + b2i(shipment_here(13)) + b2i(shipment_here(14)) + b2i(shipment_here(15))
+  }
+
+  fn shipment_carrier(i: i32) -> string {
+    i < 0 || i >= N_SHIPMENTS ? "" : shipments[i].freighter < 0 ? "Contract carrier" : freighter_label(shipments[i].freighter)
+  }
+
+  fn jumps_text(n: i32) -> string {
+    n <= 0 ? "In system" : n == 1 ? "1 jump" : "{n} jumps"
+  }
+
+  fn room_text(poi: i32) -> string {
+    depot_cap(poi) >= 50000 ? "Plenty" : "{depot_room(poi):.0}"
+  }
+
+  fn camp_shortcut(d: i32) -> bool {
+    d >= 0 && d < N_DOZERS && (dozers[d].status == 1 || dozers[d].status == 3) && poi_planet(dozers[d].poi) >= 0 && pl_site(poi_planet(dozers[d].poi)) < 0 && manifest_dest_ok(dozers[d].poi)
+  }
+
+  fn site_shortcut(i: i32) -> bool {
+    i >= 0 && i < N_SITES && sites[i].used && manifest_dest_ok(planet_poi(sites[i].planet))
+  }
+
+  fn dest_shortcuts() -> i32 {
+    b2i(site_shortcut(0)) + b2i(site_shortcut(1)) + b2i(site_shortcut(2)) + b2i(site_shortcut(3)) + b2i(site_shortcut(4)) + b2i(site_shortcut(5)) + b2i(site_shortcut(6)) + b2i(site_shortcut(7)) + b2i(site_shortcut(8)) + b2i(site_shortcut(9)) + b2i(site_shortcut(10)) + b2i(site_shortcut(11)) + b2i(site_shortcut(12)) + b2i(site_shortcut(13)) + b2i(site_shortcut(14)) + b2i(site_shortcut(15)) + b2i(camp_shortcut(0)) + b2i(camp_shortcut(1)) + b2i(camp_shortcut(2)) + b2i(camp_shortcut(3))
+  }
+}
+
+terra {
+  template SmManifestRow {
+    prop g: i32 = 0
+
+    const have = stock_at(at_poi, g)
+    const load = manifest_qty(g)
+    const none = have < 1
+    const full = load >= have
+
+    Layout: {direction: Row, spacing: 6, v: Middle}
+    LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: 32}}
+    Opacity: {none ? 0.45 : 1}
+
+    SmSwatch dot(g: g)
+    Gap pad(size: 2)
+    SmCell what(text: good_name(g), size: F_BODY, side: 0, grow: true)
+    SmCell held(text: "{have:.0}", width: 52, size: F_BODY, tone: TONE_MUTED)
+    SmCell loaded(text: "{load:.0}", width: 52, size: F_BODY, tone: load > 0 ? TONE_ACCENT : TONE_MUTED)
+    acts {
+      Layout: {direction: Row, spacing: 6, h: Right, v: Middle}
+      LayoutItem: {width: {mode: Fixed, value: 240}}
+      OpButton less_10(label: "-10", op: OP_MANIFEST, a: g, b: -10, disabled: load <= 0, width: 42, height: 26, size: 12)
+      OpButton less_1(label: "-1", op: OP_MANIFEST, a: g, b: -1, disabled: load <= 0, width: 36, height: 26, size: 12)
+      OpButton more_1(label: "+1", op: OP_MANIFEST, a: g, b: 1, disabled: full, width: 36, height: 26, size: 12)
+      OpButton more_10(label: "+10", op: OP_MANIFEST, a: g, b: 10, disabled: full, width: 42, height: 26, size: 12)
+      if full && !none {
+        OpButton all(label: "NONE", op: OP_MANIFEST, a: g, b: 0 - FREIGHT_ALL, width: 52, height: 26, size: 12)
+      } else {
+        OpButton all(label: "ALL", op: OP_MANIFEST, a: g, b: FREIGHT_ALL, disabled: none, width: 52, height: 26, size: 12)
+      }
+    }
+  }
+
+  template SmDestRow {
+    prop label: string = ""
+    prop poi: i32 = -1
+
+    const tag = dest_block_tag(dest_block(poi))
+    const chosen = poi >= 0 && poi == manifest_dest
+
+    Layout: {direction: Row, spacing: 10, v: Middle}
+    LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: 30}}
+
+    SmCell src(text: label, width: 62, size: F_TINY, tone: TONE_MUTED, side: 0)
+    SmCell what(text: poi >= 0 && poi_exists(poi) ? poi_name(poi) : "Nothing selected on the nav map", size: 13, tone: tag == "" ? TONE_TEXT : TONE_MUTED, side: 0, grow: true)
+    SmCell hops(text: tag == "" ? jumps_text(freight_jumps(poi)) : "", width: 70, size: F_SMALL, tone: TONE_MUTED)
+    SmCell room(text: tag == "" ? room_text(poi) : "", width: 48, size: F_SMALL, tone: tag == "" && depot_room(poi) < 1 ? TONE_BAD : TONE_MUTED)
+    SmAct pick(label: "SELECT", op: OP_MANIFEST_DEST, a: poi, width: 96, height: 26, tag: chosen ? "SELECTED" : tag, tone: chosen ? TONE_ACCENT : TONE_MUTED)
+  }
+
+  template SmCarrierRow {
+    prop f: i32 = -1
+
+    const own = f >= 0
+    const load = manifest_total()
+    const ready = manifest_dest_ok(manifest_dest)
+    const tag = carrier_tag(f)
+    const busy = own && freighters[clamp(f, 0, 7)].status == 2
+    const cost = ship_cost(f)
+    const days = ship_days(f)
+    const quote = ready && load > 0 && !busy
+
+    Layout: {direction: Row, spacing: 10, v: Middle}
+    LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: 32}}
+
+    SmCell what(text: own ? freighter_label(f) : "Contract carrier", width: 132, size: F_BODY, side: 0)
+    SmCell cap(text: own ? "{freighters[clamp(f, 0, 7)].cap}" : "Any", width: 40, size: 13, tone: own && load > freighters[clamp(f, 0, 7)].cap ? TONE_BAD : TONE_TEXT)
+    SmCell where(text: own ? freighter_where(f) : "On call", size: F_SMALL, tone: TONE_MUTED, side: 0, grow: true)
+    SmCell eta(text: quote ? "{days:.1} d" : "-", width: 52, size: 13, tone: quote ? TONE_TEXT : TONE_MUTED)
+    SmCell fee(text: quote ? "\${cost:.0}" : "-", width: 60, size: 13, tone: !quote ? TONE_MUTED : money < cost ? TONE_BAD : TONE_TEXT)
+    SmAct ship(label: "SHIP", op: OP_SHIP, a: f, kind: BTN_PRIMARY, width: 112, tag: tag, tone: tag == "NO CARGO" || tag == "NO DESTINATION" ? TONE_MUTED : TONE_WARN)
+  }
+
+  template SmShipmentRow {
+    prop i: i32 = 0
+
+    const s = shipments[clamp(i, 0, 15)]
+    const out = s.from == at_poi
+    const left = max(0, ceil(s.eta - today))
+
+    Layout: {direction: Row, spacing: 10, v: Middle}
+    LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: 24}}
+
+    SmCell way(text: out ? "OUT" : "IN", width: 28, size: F_TINY, tone: out ? TONE_INFO : TONE_GOOD, side: 0)
+    SmCell what(text: poi_name(out ? s.to : s.from), size: F_SMALL, side: 0, grow: true)
+    SmCell by(text: shipment_carrier(i), width: 124, size: F_SMALL, tone: TONE_MUTED, side: 0)
+    SmCell units(text: "{shipment_units(i):.0} u", width: 52, size: F_SMALL)
+    SmCell eta(text: left <= 0 ? "Due" : "{left:.0} d", width: 44, size: F_SMALL, tone: TONE_MUTED)
+  }
+
+  template SmFreightDest {
+    const ready = manifest_dest_ok(manifest_dest)
+    const rows = 1 + dest_shortcuts()
+    const inbound = ready ? depot_incoming(manifest_dest) : 0
+
+    Layout: {direction: Column, spacing: 4}
+    LayoutItem: {width: {mode: Grow}}
+
+    current {
+      Layout: {direction: Row, spacing: 8, v: Middle}
+      LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: 34}}
+      if ready {
+        Txt target(text: poi_name(manifest_dest), size: F_HEAD)
+        Gap flex()
+        Chip hops(label: "DISTANCE", value: jumps_text(ship_jumps()))
+        due {
+          Layout: {direction: Row}
+          if inbound > 0 {
+            Chip chip(label: "INBOUND", value: "{inbound:.0}", tone: TONE_INFO)
+          }
+        }
+        Chip room(label: "ROOM", value: room_text(manifest_dest), tone: manifest_total() > depot_room(manifest_dest) ? TONE_BAD : TONE_TEXT)
+      } else {
+        Txt target(text: "No destination", size: F_HEAD, tone: TONE_MUTED)
+        Gap flex()
+      }
+    }
+
+    ScrollView list(height: min(rows, FREIGHT_DEST_ROWS) * 30, frame: false, focusable: false, keys: false) {
+      body {
+        Layout: {direction: Column}
+        LayoutItem: {width: {mode: Grow}}
+
+        SmDestRow from_nav(label: "NAV MAP", poi: nav_dest)
+        for i in 0..N_SITES {
+          "site_{i}" {
+            Layout: {direction: Column}
+            LayoutItem: {width: {mode: Grow}}
+            if site_shortcut(i) {
+              SmDestRow row(label: site_port_done(i) ? "PORT" : "CAMP", poi: planet_poi(sites[i].planet))
+            }
+          }
+        }
+        for d in 0..N_DOZERS {
+          "camp_{d}" {
+            Layout: {direction: Column}
+            LayoutItem: {width: {mode: Grow}}
+            if camp_shortcut(d) {
+              SmDestRow row(label: "CAMP", poi: dozers[d].poi)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  template SmFreightCarriers {
+    Layout: {direction: Column, spacing: 0}
+    LayoutItem: {width: {mode: Grow}}
+
+    cols {
+      Layout: {direction: Row, spacing: 10, v: Middle}
+      LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: 20}}
+      SmCell c_what(text: "CARRIER", width: 132, size: F_TINY, tone: TONE_MUTED, side: 0)
+      SmCell c_cap(text: "CAP", width: 40, size: F_TINY, tone: TONE_MUTED)
+      SmCell c_where(text: "LOCATION", size: F_TINY, tone: TONE_MUTED, side: 0, grow: true)
+      SmCell c_eta(text: "TIME", width: 52, size: F_TINY, tone: TONE_MUTED)
+      SmCell c_fee(text: "COST", width: 60, size: F_TINY, tone: TONE_MUTED)
+      SmCell c_act(width: 112)
+    }
+    SmCarrierRow carrier(f: -1)
+    for f in 0..N_FREIGHTERS {
+      if freighters[f].status != 0 {
+        SmCarrierRow "own_{f}"(f: f)
+      }
+    }
+  }
+
+  template SmFreightFlights {
+    const n = shipments_here()
+
+    Layout: {direction: Column, spacing: 0}
+    LayoutItem: {width: {mode: Grow}}
+
+    idle {
+      Layout: {direction: Column}
+      LayoutItem: {width: {mode: Grow}}
+      if n == 0 {
+        Txt line(text: "Nothing in flight. The void is patient.", size: F_SMALL, tone: TONE_MUTED)
+      }
+    }
+    ScrollView list(height: min(n, FREIGHT_FLIGHT_ROWS) * 24 + 0.01, frame: false, focusable: false, keys: false) {
+      body {
+        Layout: {direction: Column}
+        LayoutItem: {width: {mode: Grow}}
+        for i in 0..N_SHIPMENTS {
+          "flight_{i}" {
+            Layout: {direction: Column}
+            LayoutItem: {width: {mode: Grow}}
+            if shipment_here(i) {
+              SmShipmentRow row(i: i)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  template MenuFreight {
+    const load = manifest_total()
+
+    LayoutItem: {h: Center, v: Middle, y: -20}
+    Layout: {direction: Column}
+
+    Frame card(title: "FREIGHT TERMINAL", width: 1180) {
+      body {
+        Layout: {direction: Column, spacing: 12}
+        LayoutItem: {width: {mode: Grow}}
+
+        SmClose close()
+        top {
+          Layout: {direction: Column, spacing: 4}
+          Txt place(text: poi_name(at_poi), size: F_TITLE)
+          Txt line(text: "Things go in here. They come out elsewhere. Usually.", size: F_SMALL, tone: TONE_MUTED)
+        }
+
+        split {
+          Layout: {direction: Row, spacing: 20}
+          LayoutItem: {width: {mode: Grow}}
+
+          left {
+            Layout: {direction: Column, spacing: 2}
+            LayoutItem: {width: {mode: Fixed, value: 480}}
+
+            SmHead head(text: "MANIFEST", note: "{load:.0} units", tone: load > 0 ? TONE_ACCENT : TONE_MUTED)
+            cols {
+              Layout: {direction: Row, spacing: 6, v: Middle}
+              LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: 20}}
+              Gap dot(size: 10)
+              Gap pad(size: 2)
+              SmCell c_good(text: "GOOD", size: F_TINY, tone: TONE_MUTED, side: 0, grow: true)
+              SmCell c_held(text: "DEPOT", width: 52, size: F_TINY, tone: TONE_MUTED)
+              SmCell c_load(text: "LOAD", width: 52, size: F_TINY, tone: TONE_MUTED)
+              SmCell c_act(width: 240)
+            }
+            for g in 0..N_GOODS {
+              SmManifestRow "row_{g}"(g: g)
+            }
+          }
+
+          SmDivider rule()
+
+          right {
+            Layout: {direction: Column, spacing: 6}
+            LayoutItem: {width: {mode: Grow}}
+
+            SmHead dest_head(text: "DESTINATION")
+            SmFreightDest dest()
+            Gap air_a(size: 4)
+            SmHead carriers_head(text: "CARRIERS")
+            SmFreightCarriers carriers()
+            Gap air_b(size: 4)
+            SmHead flights_head(text: "IN FLIGHT")
+            SmFreightFlights flights()
+          }
+        }
+      }
+    }
+  }
+}

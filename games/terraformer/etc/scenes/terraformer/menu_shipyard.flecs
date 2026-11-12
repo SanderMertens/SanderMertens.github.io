@@ -1,0 +1,105 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.layout
+using box.text
+using box.picking
+using state
+using terra
+
+state {
+  fn yard_line(tier: i32) -> string {
+    match tier {
+      0: "Fits a pallet and a sandwich. Usually the sandwich."
+      1: "Reliable. Complains at a pitch you learn to ignore."
+      2: "Turns slowly. Everything else turns for it."
+      3: "Moves 400 units and your accountant to tears."
+      _: "Flattens, digs, builds. Never asks why."
+    }
+  }
+
+  fn yard_flavor(kind: i32) -> string {
+    kind == 6 ? "Pre-owned. Pre-dented. Priced as new." : "New and nearly new. No refunds, some regrets."
+  }
+}
+
+terra {
+  template SmYardRow {
+    prop tier: i32 = 0
+
+    const dozer = tier < 0
+    const price = dozer ? DOZER_PRICE : freighter_price(tier)
+    const owned = dozer ? dozers_owned() : freighters_owned(freighter_cap(tier))
+    const tag = yard_block_tag(dozer ? yard_block_dozer() : yard_block_freighter(tier))
+
+    Layout: {direction: Row, spacing: 14, v: Middle}
+    LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: 54}}
+
+    mark {
+      LayoutItem: {width: {mode: Fixed, value: 3}, height: {mode: Fixed, value: 34}}
+      Rect: {1, 1}
+      Rgb: dozer ? T_INFO : T_ACCENT
+      Opacity: {dozer ? 1 : 0.4 + tier * 0.2}
+      box.spatial.SpatialIgnore
+    }
+    what {
+      Layout: {direction: Column, spacing: 5}
+      LayoutItem: {width: {mode: Grow}}
+      Txt title(text: dozer ? "Dozer" : freighter_name(tier), size: F_HEAD)
+      Txt line(text: yard_line(dozer ? 4 : tier), size: F_SMALL, tone: TONE_MUTED)
+    }
+    SmCell cap(text: dozer ? "{DOZER_DEPOT:.0} u" : "{freighter_cap(tier)} u", width: 70, size: F_BODY)
+    SmCell have(text: "{owned}", width: 60, size: F_BODY, tone: owned > 0 ? TONE_TEXT : TONE_MUTED)
+    SmCell cost(text: money_text(price), width: 84, size: F_HEAD, tone: money < price ? TONE_BAD : TONE_TEXT)
+    SmAct buy(label: "BUY", op: dozer ? OP_BUY_DOZER : OP_BUY_FREIGHTER, a: dozer ? 0 : tier, kind: BTN_PRIMARY, width: 108, height: 30, tag: tag, tone: TONE_WARN)
+  }
+
+  template MenuShipyard {
+    const ships = freighters_owned(0)
+    const diggers = dozers_owned()
+
+    LayoutItem: {h: Center, v: Middle, y: -10}
+    Layout: {direction: Column}
+
+    Frame card(title: "SHIPYARD", width: 860) {
+      body {
+        Layout: {direction: Column, spacing: 6}
+        LayoutItem: {width: {mode: Grow}}
+
+        SmClose close()
+        top {
+          Layout: {direction: Row, spacing: 8, v: Middle}
+          LayoutItem: {width: {mode: Grow}}
+          where {
+            Layout: {direction: Column, spacing: 4}
+            Txt place(text: poi_name(at_poi), size: F_TITLE)
+            Txt line(text: yard_flavor(poi_kind(at_poi)), size: F_SMALL, tone: TONE_MUTED)
+          }
+          Gap flex()
+          Chip funds(label: "FUNDS", value: money_text(money), tone: money < 0 ? TONE_BAD : TONE_TEXT)
+        }
+
+        Gap air(size: 6)
+        SmHead fleet_head(text: "FREIGHTERS", note: "{ships} / {N_FREIGHTERS}", tone: ships >= N_FREIGHTERS ? TONE_WARN : TONE_TEXT)
+        cols {
+          Layout: {direction: Row, spacing: 14, v: Middle}
+          LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: 16}}
+          SmCell c_what(text: "CLASS", size: F_TINY, tone: TONE_MUTED, side: 0, grow: true)
+          SmCell c_cap(text: "HOLD", width: 70, size: F_TINY, tone: TONE_MUTED)
+          SmCell c_have(text: "OWNED", width: 60, size: F_TINY, tone: TONE_MUTED)
+          SmCell c_cost(text: "PRICE", width: 84, size: F_TINY, tone: TONE_MUTED)
+          SmCell c_act(width: 108)
+        }
+        for t in 0..4 {
+          SmYardRow "class_{t}"(tier: t)
+        }
+
+        Gap air_b(size: 6)
+        SmHead dozer_head(text: "HEAVY EQUIPMENT", note: "{diggers} / {N_DOZERS}", tone: diggers >= N_DOZERS ? TONE_WARN : TONE_TEXT)
+        SmYardRow dozer(tier: -1)
+      }
+    }
+  }
+}

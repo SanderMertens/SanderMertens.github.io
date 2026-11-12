@@ -1,0 +1,15 @@
+include flight/models
+include flight/lines
+include flight/core
+include flight/space
+include flight/scene
+include flight/seq
+include flight/camera
+include flight/readout
+
+using flecs.script
+using state
+
+async {
+  flight_on = true
+}

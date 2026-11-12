@@ -1,0 +1,802 @@
+include state
+
+using flecs.script
+using flecs.script.math
+using state
+
+state {
+  export const GALAXY_R: f64 = 80
+  export const GALAXY_TWIST: f64 = 1.15
+  export const GALAXY_JITTER: f64 = 0.4
+  export const PORT_FRACTION: f64 = 0.47
+  export const MINE_FRACTION: f64 = 0.3
+  export const ODDITY_FRACTION: f64 = 0.24
+  export const EXTRA_LANES: f64 = 0.6
+  export const YARD_FRACTION: f64 = 0.4
+  export const N_REGIONS: i32 = 8
+  export const N_NEB: i32 = 124
+  export const CLUSTER_JITTER: f64 = 0.24
+  export const CLUSTER_PAIRS: f64 = 0.3
+  export const CLUSTER_PAIR_PULL: f64 = 0.13
+  export const CLUSTER_LONERS: f64 = 0.07
+  export const GALAXY_HX: f64 = 80
+  export const GALAXY_HY: f64 = 60
+
+  export const REGION_MAP: i32[100] = [
+    1, 1, 1, 2, 2, 2, 2, 3, 3, 3,
+    1, 1, 1, 1, 2, 2, 2, 3, 3, 3,
+    1, 1, 0, 0, 0, 2, 2, 3, 3, 3,
+    7, 7, 0, 0, 0, 0, 2, 3, 3, 4,
+    7, 7, 7, 0, 0, 0, 0, 4, 4, 4,
+    7, 7, 6, 0, 0, 0, 5, 4, 4, 4,
+    7, 6, 6, 6, 5, 5, 5, 5, 4, 4,
+    6, 6, 6, 6, 5, 5, 5, 5, 4, 4,
+    6, 6, 6, 6, 5, 5, 5, 4, 4, 4,
+    6, 6, 6, 5, 5, 5, 5, 4, 4, 4
+  ]
+
+  export const STAR_R: f32 = 3
+  export const ORBIT_FIRST: f32 = 10
+  export const ORBIT_STEP: f32 = 7
+  export const BELT_R: f32 = 53
+  export const RIM_R: f32 = 62
+  export const SYSTEM_R: f32 = 66
+
+  fn hmix(x: i64) -> i64 {
+    const a: i64 = (x % 2147483648) * 1103515245 + 12345
+    const b: i64 = a % 2147483648
+    const c: i64 = (b ^ (b >> 15)) * 1664525 + 1013904223
+    const d: i64 = c % 2147483648
+    d ^ (d >> 13)
+  }
+
+  fn hash01(i: i32, salt: i32) -> f64 {
+    const k: i64 = max(i, 0 - i)
+    const s: i64 = max(salt, 0 - salt)
+    hmix(hmix(k * 7919 + 17) + s * 104729 + 1) / 2147483648.0
+  }
+
+  fn hash_int(i: i32, salt: i32, n: i32) -> i32 {
+    floor(hash01(i, salt) * max(n, 1))
+  }
+
+  fn hash_range(i: i32, salt: i32, lo: f64, hi: f64) -> f64 {
+    lo + hash01(i, salt) * (hi - lo)
+  }
+
+  fn sys_ok(s: i32) -> bool {
+    s >= 0 && s < N_SYS
+  }
+
+  fn sys_gx(s: i32) -> i32 {
+    s % GRID
+  }
+
+  fn sys_gy(s: i32) -> i32 {
+    floor(s / GRID)
+  }
+
+  fn sys_at(gx: i32, gy: i32) -> i32 {
+    gx >= 0 && gx < GRID && gy >= 0 && gy < GRID ? gy * GRID + gx : -1
+  }
+
+  fn region_ok(r: i32) -> bool {
+    r >= 0 && r < N_REGIONS
+  }
+
+  fn sys_region(s: i32) -> i32 {
+    sys_ok(s) ? REGION_MAP[s] : 0
+  }
+
+  fn sys_same(a: i32, b: i32) -> bool {
+    sys_ok(a) && sys_ok(b) && REGION_MAP[a] == REGION_MAP[b]
+  }
+
+  fn region_name(r: i32) -> string {
+    match r {
+      0: "The Commuter Belt"
+      1: "Accrual Reach"
+      2: "The Greater Miscellaneous"
+      3: "Outer Escrow"
+      4: "The Deductible"
+      5: "Lower Overhead"
+      6: "The Fine Print"
+      _: "Pending Expanse"
+    }
+  }
+
+  fn region_faction(r: i32) -> i32 {
+    match r {
+      0: 0
+      1: 1
+      2: 4
+      3: 3
+      4: 6
+      5: 2
+      6: 5
+      _: -1
+    }
+  }
+
+  fn region_r(r: i32) -> i32 {
+    match r { 0: 50; 1: 232; 2: 150; 3: 232; 4: 110; 5: 245; 6: 120; _: 222 }
+  }
+
+  fn region_g(r: i32) -> i32 {
+    match r { 0: 195; 1: 78; 2: 112; 3: 120; 4: 170; 5: 182; 6: 212; _: 62 }
+  }
+
+  fn region_b(r: i32) -> i32 {
+    match r { 0: 205; 1: 196; 2: 255; 3: 56; 4: 255; 5: 60; 6: 96; _: 62 }
+  }
+
+  fn region2_r(r: i32) -> i32 {
+    match r { 0: 60; 1: 255; 2: 90; 3: 200; 4: 190; 5: 200; 6: 40; _: 150 }
+  }
+
+  fn region2_g(r: i32) -> i32 {
+    match r { 0: 110; 1: 150; 2: 170; 3: 60; 4: 225; 5: 215; 6: 170; _: 50 }
+  }
+
+  fn region2_b(r: i32) -> i32 {
+    match r { 0: 230; 1: 110; 2: 255; 3: 60; 4: 255; 5: 90; 6: 130; _: 120 }
+  }
+
+  fn region_cx(r: i32) -> f32 {
+    match r { 0: -13; 1: -55; 2: 3; 3: 69; 4: 53; 5: 1; 6: -45; _: -75 }
+  }
+
+  fn region_cy(r: i32) -> f32 {
+    match r { 0: 9; 1: 37; 2: 47; 3: 15; 4: -23; 5: -37; 6: -25; _: 3 }
+  }
+
+  fn region_gx(r: i32) -> f64 {
+    match r { 0: 3.8; 1: 1.1; 2: 5.0; 3: 7.9; 4: 8.2; 5: 5.2; 6: 1.5; _: 0.6 }
+  }
+
+  fn region_gy(r: i32) -> f64 {
+    match r { 0: 3.5; 1: 0.9; 2: 1.0; 3: 1.4; 4: 6.3; 5: 7.3; 6: 7.3; _: 4.25 }
+  }
+
+  fn region_seed(r: i32) -> i32 {
+    match r { 0: 44; 1: 11; 2: 5; 3: 18; 4: 68; 5: 85; 6: 71; _: 40 }
+  }
+
+  fn region_scale(r: i32) -> f64 {
+    match r { 0: 6.4; 1: 6.6; 2: 6.4; 3: 6.2; 4: 6.6; 5: 6.4; 6: 6.6; _: 6.8 }
+  }
+
+  fn region_ax(r: i32) -> f64 {
+    match r { 1: 1.3; 2: 1.2; 5: 1.25; 6: 1.05; _: 1.0 }
+  }
+
+  fn region_ay(r: i32) -> f64 {
+    match r { 3: 1.15; 4: 1.2; 7: 1.25; _: 1.0 }
+  }
+
+  fn region_rot(r: i32) -> f64 {
+    match r { 0: 0.25; 1: -0.35; 2: 0.3; 3: -0.5; 4: 0.45; 5: -0.2; 6: 0.4; _: 0.15 }
+  }
+
+  fn region_swirl(r: i32) -> f64 {
+    match r { 0: 0.16; 1: 0.1; 2: -0.12; 3: 0.14; 4: -0.1; 5: 0.12; 6: -0.14; _: 0.08 }
+  }
+
+  fn sys_ux(s: i32) -> f64 {
+    (sys_gx(s) - 4.5 + (hash01(s, 11) - 0.5) * GALAXY_JITTER) / (4.5 + GALAXY_JITTER * 0.5)
+  }
+
+  fn sys_uy(s: i32) -> f64 {
+    (4.5 - sys_gy(s) + (hash01(s, 12) - 0.5) * GALAXY_JITTER) / (4.5 + GALAXY_JITTER * 0.5)
+  }
+
+  fn sys_dx(s: i32) -> f64 {
+    const uy = sys_uy(s)
+    sys_ux(s) * sqrt(1 - uy * uy * 0.5)
+  }
+
+  fn sys_dy(s: i32) -> f64 {
+    const ux = sys_ux(s)
+    sys_uy(s) * sqrt(1 - ux * ux * 0.5)
+  }
+
+  fn sys_pair(s: i32) -> f64 {
+    const even = sys_gx(s) % 2 == 0
+    even ? (sys_same(s, s + 1) && hash01(s, 114) < CLUSTER_PAIRS ? CLUSTER_PAIR_PULL : 0.0) : (sys_same(s, s - 1) && hash01(s - 1, 114) < CLUSTER_PAIRS ? 0.0 - CLUSTER_PAIR_PULL : 0.0)
+  }
+
+  fn sys_cdx(s: i32) -> f64 {
+    sys_gx(s) - region_gx(sys_region(s)) + (hash01(s, 111) - 0.5) * 2 * CLUSTER_JITTER + sys_pair(s)
+  }
+
+  fn sys_cdy(s: i32) -> f64 {
+    region_gy(sys_region(s)) - sys_gy(s) + (hash01(s, 112) - 0.5) * 2 * CLUSTER_JITTER
+  }
+
+  fn sys_cdist(s: i32) -> f64 {
+    const dx = sys_cdx(s)
+    const dy = sys_cdy(s)
+    sqrt(dx * dx + dy * dy)
+  }
+
+  fn sys_ck(s: i32) -> f64 {
+    const d = sys_cdist(s)
+    region_scale(sys_region(s)) * (0.8 + 0.12 * d) * (hash01(s, 113) < CLUSTER_LONERS && d > 1.2 ? 1.4 : 1)
+  }
+
+  fn sys_px(r: i32, dx: f64, dy: f64, loner: bool) -> f64 {
+    const d = sqrt(dx * dx + dy * dy)
+    const k = region_scale(r) * (0.8 + 0.12 * d) * (loner && d > 1.2 ? 1.4 : 1)
+    const a = region_rot(r) + region_swirl(r) * d
+    (dx * region_ax(r) * cos(a) - dy * region_ay(r) * sin(a)) * k
+  }
+
+  fn sys_py(r: i32, dx: f64, dy: f64, loner: bool) -> f64 {
+    const d = sqrt(dx * dx + dy * dy)
+    const k = region_scale(r) * (0.8 + 0.12 * d) * (loner && d > 1.2 ? 1.4 : 1)
+    const a = region_rot(r) + region_swirl(r) * d
+    (dx * region_ax(r) * sin(a) + dy * region_ay(r) * cos(a)) * k
+  }
+
+  fn sys_x(s: i32) -> f32 {
+    region_cx(sys_region(s)) + sys_px(sys_region(s), sys_cdx(s), sys_cdy(s), hash01(s, 113) < CLUSTER_LONERS)
+  }
+
+  fn sys_y(s: i32) -> f32 {
+    region_cy(sys_region(s)) + sys_py(sys_region(s), sys_cdx(s), sys_cdy(s), hash01(s, 113) < CLUSTER_LONERS)
+  }
+
+  fn neb_region(i: i32) -> i32 {
+    i < N_SYS ? sys_region(i) : clamp(floor((i - N_SYS) / 3), 0, N_REGIONS - 1)
+  }
+
+  fn neb_x(i: i32) -> f32 {
+    i < N_SYS ? sys_x(i) + hash_range(i, 121, -4, 4) : region_cx(neb_region(i)) + hash_range(i, 121, -13, 13)
+  }
+
+  fn neb_y(i: i32) -> f32 {
+    i < N_SYS ? sys_y(i) + hash_range(i, 122, -4, 4) : region_cy(neb_region(i)) + hash_range(i, 122, -13, 13)
+  }
+
+  fn neb_size(i: i32) -> f32 {
+    i < N_SYS ? hash_range(i, 123, 9, 15) : hash_range(i, 123, 20, 30)
+  }
+
+  fn neb_rot(i: i32) -> f32 {
+    hash01(i, 124) * 2 * PI
+  }
+
+  fn neb_stretch(i: i32) -> f32 {
+    hash_range(i, 125, 1, 1.7)
+  }
+
+  fn neb_alt(i: i32) -> bool {
+    hash01(i, 126) < (i < N_SYS ? 0.3 : 0.6)
+  }
+
+  fn neb_r(i: i32) -> i32 {
+    neb_alt(i) ? region2_r(neb_region(i)) : region_r(neb_region(i))
+  }
+
+  fn neb_g(i: i32) -> i32 {
+    neb_alt(i) ? region2_g(neb_region(i)) : region_g(neb_region(i))
+  }
+
+  fn neb_b(i: i32) -> i32 {
+    neb_alt(i) ? region2_b(neb_region(i)) : region_b(neb_region(i))
+  }
+
+  fn neb_kind(i: i32) -> i32 {
+    hash_int(i, 127, 4)
+  }
+
+  fn neb_gain(i: i32) -> f32 {
+    hash_range(i, 128, 0.55, 1)
+  }
+
+  fn name_a(i: i32) -> string {
+    match i {
+      0: "New New"
+      1: "Kepler's"
+      2: "Greater"
+      3: "Lesser"
+      4: "Upper"
+      5: "Port"
+      6: "Saint"
+      7: "Fort"
+      8: "Old"
+      _: "Tax-Free"
+    }
+  }
+
+  fn name_b(i: i32) -> string {
+    match i {
+      0: "Jersey"
+      1: "Regret"
+      2: "Slough"
+      3: "Margin"
+      4: "Compliance"
+      5: "Tuesday"
+      6: "Refund"
+      7: "Beige"
+      8: "Layover"
+      _: "Appendix"
+    }
+  }
+
+  fn sys_name_id(s: i32) -> i32 {
+    (max(s, 0) * 37 + 72) % 100
+  }
+
+  fn sys_name(s: i32) -> string {
+    const p = sys_name_id(s)
+    "{name_a(p % 10)} {name_b(floor(p / 10))}"
+  }
+
+  fn sys_star(s: i32) -> i32 {
+    const h = hash01(s, 21)
+    h < 0.3 ? 0 : h < 0.55 ? 1 : h < 0.8 ? 2 : h < 0.93 ? 3 : 4
+  }
+
+  fn star_name(c: i32) -> string {
+    match c {
+      0: "Red dwarf"
+      1: "Orange dwarf"
+      2: "Yellow dwarf"
+      3: "White star"
+      _: "Blue giant"
+    }
+  }
+
+  fn star_color_r(c: i32) -> i32 {
+    match c { 0: 255; 1: 255; 2: 255; 3: 236; _: 150 }
+  }
+
+  fn star_color_g(c: i32) -> i32 {
+    match c { 0: 96; 1: 168; 2: 226; 3: 240; _: 190 }
+  }
+
+  fn star_color_b(c: i32) -> i32 {
+    match c { 0: 64; 1: 84; 2: 150; 3: 255; _: 255 }
+  }
+
+  fn star_size(c: i32) -> f32 {
+    match c { 0: 0.75; 1: 0.9; 2: 1; 3: 1.1; _: 1.35 }
+  }
+
+  fn sys_planets(s: i32) -> i32 {
+    2 + hash_int(s, 22, 5)
+  }
+
+  fn sys_native_port(s: i32) -> i32 {
+    s == HOME ? HOME_PORT_K : hash01(s, 23) < PORT_FRACTION ? min(1 + hash_int(s, 24, 2), sys_planets(s) - 1) : -1
+  }
+
+  fn sys_site_idx(s: i32) -> i32 {
+    sys_ok(s) ? sys_site[s] - 1 : -1
+  }
+
+  fn site_ok(i: i32) -> bool {
+    i >= 0 && i < N_SITES
+  }
+
+  fn site_has(i: i32, k: i32) -> bool {
+    i >= 0 && i < N_SITES && k >= 0 && k < N_STRUCT && site_struct[i * 16 + k] >= 2
+  }
+
+  fn site_port_done(i: i32) -> bool {
+    i >= 0 && i < N_SITES && sites[i].used && site_struct[i * 16] >= 2
+  }
+
+  fn planet_poi(p: i32) -> i32 {
+    p >= 0 && p < N_PLANETS ? floor(p / 6) * 12 + p % 6 : -1
+  }
+
+  fn sys_player_port(s: i32) -> bool {
+    site_port_done(sys_site_idx(s))
+  }
+
+  fn sys_has_port(s: i32) -> bool {
+    sys_ok(s) && (sys_native_port(s) >= 0 || sys_player_port(s))
+  }
+
+  fn sys_port_poi(s: i32) -> i32 {
+    const k = sys_native_port(s)
+    const i = sys_site_idx(s)
+    !sys_ok(s) ? -1 : k >= 0 ? s * 12 + k : site_port_done(i) ? planet_poi(sites[i].planet) : -1
+  }
+
+  fn sys_parent(s: i32) -> i32 {
+    const seed = region_seed(sys_region(s))
+    const hd = sys_gx(seed) > sys_gx(s) ? 1 : 3
+    const vd = sys_gy(seed) > sys_gy(s) ? 2 : 0
+    const h = sys_gx(seed) != sys_gx(s) && sys_same(s, sys_nb(s, hd))
+    const v = sys_gy(seed) != sys_gy(s) && sys_same(s, sys_nb(s, vd))
+    !sys_ok(s) || s == seed ? -1 : h && v ? (hash01(s, 31) < 0.5 ? hd : vd) : h ? hd : v ? vd : -1
+  }
+
+  fn lane_bridge_n(s: i32) -> bool {
+    match s { 13, 23, 31, 35, 42, 63, 64, 70, 87, 93: true; _: false }
+  }
+
+  fn lane_bridge_w(s: i32) -> bool {
+    match s { 37, 39, 47: true; _: false }
+  }
+
+  fn lane_n(s: i32) -> bool {
+    const n = sys_nb(s, 0)
+    n >= 0 && (sys_same(s, n) ? sys_parent(s) == 0 || sys_parent(n) == 2 || hash01(s, 32) < EXTRA_LANES : lane_bridge_n(s))
+  }
+
+  fn lane_w(s: i32) -> bool {
+    const w = sys_nb(s, 3)
+    w >= 0 && (sys_same(s, w) ? sys_parent(s) == 3 || sys_parent(w) == 1 || hash01(s, 33) < EXTRA_LANES : lane_bridge_w(s))
+  }
+
+  fn sys_nb(s: i32, d: i32) -> i32 {
+    !sys_ok(s) ? -1 : match d {
+      0: sys_at(sys_gx(s), sys_gy(s) - 1)
+      1: sys_at(sys_gx(s) + 1, sys_gy(s))
+      2: sys_at(sys_gx(s), sys_gy(s) + 1)
+      3: sys_at(sys_gx(s) - 1, sys_gy(s))
+      _: -1
+    }
+  }
+
+  fn sys_lane(s: i32, d: i32) -> bool {
+    match d {
+      0: lane_n(s)
+      1: lane_w(sys_nb(s, 1))
+      2: lane_n(sys_nb(s, 2))
+      3: lane_w(s)
+      _: false
+    }
+  }
+
+  fn dir_opp(d: i32) -> i32 {
+    (d + 2) % 4
+  }
+
+  fn dir_name(d: i32) -> string {
+    match d { 0: "N"; 1: "E"; 2: "S"; _: "W" }
+  }
+
+  fn b2i(b: bool) -> i32 {
+    b ? 1 : 0
+  }
+
+  fn sys_lanes(s: i32) -> i32 {
+    b2i(sys_lane(s, 0)) + b2i(sys_lane(s, 1)) + b2i(sys_lane(s, 2)) + b2i(sys_lane(s, 3))
+  }
+
+  fn sys_has_mine(s: i32) -> bool {
+    sys_ok(s) && hash01(s, 25) < MINE_FRACTION
+  }
+
+  fn sys_has_oddity(s: i32) -> bool {
+    sys_ok(s) && s != HOME && hash01(s, 26) < ODDITY_FRACTION
+  }
+
+  fn sys_dist(a: i32, b: i32) -> i32 {
+    abs(sys_gx(a) - sys_gx(b)) + abs(sys_gy(a) - sys_gy(b))
+  }
+
+  fn sys_dir_to(a: i32, b: i32) -> i32 {
+    b == a - GRID ? 0 : b == a + 1 ? 1 : b == a + GRID ? 2 : b == a - 1 ? 3 : -1
+  }
+
+  fn pl_ok(p: i32) -> bool {
+    p >= 0 && p < N_PLANETS
+  }
+
+  fn pl_sys(p: i32) -> i32 {
+    floor(p / 6)
+  }
+
+  fn pl_k(p: i32) -> i32 {
+    p % 6
+  }
+
+  fn pl_exists(p: i32) -> bool {
+    pl_ok(p) && pl_k(p) < sys_planets(pl_sys(p))
+  }
+
+  fn pl_native(p: i32) -> bool {
+    pl_ok(p) && sys_native_port(pl_sys(p)) == pl_k(p)
+  }
+
+  fn pl_wild_type(k: i32, h: f64) -> i32 {
+    match k {
+      0: h < 0.45 ? 3 : h < 0.8 ? 0 : 1
+      1: h < 0.4 ? 0 : h < 0.75 ? 1 : h < 0.9 ? 3 : 2
+      2: h < 0.3 ? 1 : h < 0.55 ? 0 : h < 0.75 ? 2 : 4
+      3: h < 0.45 ? 4 : h < 0.75 ? 2 : 0
+      _: h < 0.5 ? 4 : h < 0.85 ? 2 : 0
+    }
+  }
+
+  fn pl_type(p: i32) -> i32 {
+    pl_native(p) ? 5 : pl_wild_type(pl_k(p), hash01(p, 41))
+  }
+
+  fn pl_type_name(t: i32) -> string {
+    match t {
+      0: "Rock"
+      1: "Desert"
+      2: "Ice"
+      3: "Lava"
+      4: "Gas giant"
+      _: "Garden"
+    }
+  }
+
+  fn pl_seed(p: i32) -> i32 {
+    hash_int(p, 42, 100000)
+  }
+
+  fn pl_radius(p: i32) -> f32 {
+    match pl_type(p) {
+      4: hash_range(p, 43, 1.6, 2.0)
+      5: hash_range(p, 43, 1.0, 1.2)
+      _: hash_range(p, 43, 0.6, 1.1)
+    }
+  }
+
+  fn pl_orbit(p: i32) -> f32 {
+    ORBIT_FIRST + pl_k(p) * ORBIT_STEP + hash_range(p, 44, -1, 1)
+  }
+
+  fn pl_angle(p: i32) -> f32 {
+    hash01(p, 45) * 2 * PI
+  }
+
+  fn pl_rings(p: i32) -> bool {
+    pl_type(p) == 4 && hash01(p, 46) < 0.5
+  }
+
+  fn roman(k: i32) -> string {
+    match k {
+      0: "I"
+      1: "II"
+      2: "III"
+      3: "IV"
+      4: "V"
+      _: "VI"
+    }
+  }
+
+  fn pl_name(p: i32) -> string {
+    "{sys_name(pl_sys(p))} {roman(pl_k(p))}"
+  }
+
+  fn pl_site(p: i32) -> i32 {
+    const i = pl_ok(p) ? sys_site_idx(pl_sys(p)) : -1
+    i >= 0 && i < N_SITES && sites[i].used && sites[i].planet == p ? i : -1
+  }
+
+  fn pl_terraformable(p: i32) -> bool {
+    pl_exists(p) && pl_type(p) != 4 && pl_type(p) != 5 && sys_native_port(pl_sys(p)) < 0
+  }
+
+  fn pl_base_atm(p: i32) -> f32 {
+    match pl_type(p) {
+      0: hash_range(p, 51, 2, 12)
+      1: hash_range(p, 51, 14, 30)
+      2: hash_range(p, 51, 5, 22)
+      3: hash_range(p, 51, 18, 36)
+      4: 100
+      _: hash_range(p, 51, 85, 98)
+    }
+  }
+
+  fn pl_base_water(p: i32) -> f32 {
+    match pl_type(p) {
+      0: hash_range(p, 52, 0, 10)
+      1: hash_range(p, 52, 2, 12)
+      2: hash_range(p, 52, 35, 60)
+      3: 0
+      4: 0
+      _: hash_range(p, 52, 55, 80)
+    }
+  }
+
+  fn pl_base_temp(p: i32) -> f32 {
+    match pl_type(p) {
+      0: hash_range(p, 53, 28, 62)
+      1: hash_range(p, 53, 62, 80)
+      2: hash_range(p, 53, 6, 24)
+      3: hash_range(p, 53, 86, 100)
+      4: hash_range(p, 53, 20, 60)
+      _: hash_range(p, 53, 45, 58)
+    }
+  }
+
+  fn pl_base_bio(p: i32) -> f32 {
+    match pl_type(p) {
+      1: hash_range(p, 54, 0, 4)
+      5: hash_range(p, 54, 75, 95)
+      _: 0
+    }
+  }
+
+  fn pl_atm(p: i32) -> f32 {
+    const i = pl_site(p)
+    i >= 0 && i < N_SITES ? sites[i].atm : pl_base_atm(p)
+  }
+
+  fn pl_water(p: i32) -> f32 {
+    const i = pl_site(p)
+    i >= 0 && i < N_SITES ? sites[i].water : pl_base_water(p)
+  }
+
+  fn pl_temp(p: i32) -> f32 {
+    const i = pl_site(p)
+    i >= 0 && i < N_SITES ? sites[i].temp : pl_base_temp(p)
+  }
+
+  fn pl_bio(p: i32) -> f32 {
+    const i = pl_site(p)
+    i >= 0 && i < N_SITES ? sites[i].bio : pl_base_bio(p)
+  }
+
+  fn pl_lights(p: i32) -> bool {
+    pl_native(p) || site_port_done(pl_site(p))
+  }
+
+  fn poi_ok(poi: i32) -> bool {
+    poi >= 0 && poi < N_POI
+  }
+
+  fn poi_sys(poi: i32) -> i32 {
+    floor(poi / 12)
+  }
+
+  fn poi_slot(poi: i32) -> i32 {
+    poi % 12
+  }
+
+  fn poi_planet(poi: i32) -> i32 {
+    poi_ok(poi) && poi_slot(poi) < 6 ? poi_sys(poi) * 6 + poi_slot(poi) : -1
+  }
+
+  fn gate_poi(s: i32, d: i32) -> i32 {
+    sys_lane(s, d) ? s * 12 + 6 + d : -1
+  }
+
+  fn poi_exists(poi: i32) -> bool {
+    const s = poi_sys(poi)
+    const k = poi_slot(poi)
+    poi_ok(poi) && (k < 6 ? k < sys_planets(s) : k < 10 ? sys_lane(s, k - 6) : k == 10 ? sys_has_mine(s) : sys_has_oddity(s))
+  }
+
+  fn dozer_on(i: i32, poi: i32) -> bool {
+    i >= 0 && i < N_DOZERS && dozers[i].poi == poi && (dozers[i].status == 1 || dozers[i].status == 3)
+  }
+
+  fn dozer_at(poi: i32) -> i32 {
+    dozer_on(0, poi) ? 0 : dozer_on(1, poi) ? 1 : dozer_on(2, poi) ? 2 : dozer_on(3, poi) ? 3 : -1
+  }
+
+  fn poi_kind(poi: i32) -> i32 {
+    const k = poi_slot(poi)
+    const p = poi_planet(poi)
+    k >= 6 ? (k < 10 ? 4 : k == 10 ? 5 : 6) : pl_native(p) ? 2 : site_port_done(pl_site(p)) ? 3 : dozer_at(poi) >= 0 ? 1 : 0
+  }
+
+  fn kind_name(kind: i32) -> string {
+    match kind {
+      0: "Orbit"
+      1: "Dozer camp"
+      2: "Space port"
+      3: "Company port"
+      4: "Gate station"
+      5: "Mining rig"
+      _: "Oddity"
+    }
+  }
+
+  fn oddity_kind(s: i32) -> i32 {
+    hash_int(s, 27, 5)
+  }
+
+  fn oddity_name(kind: i32) -> string {
+    match kind {
+      0: "Research Outpost"
+      1: "Casino Barge"
+      2: "Listening Post"
+      3: "Used Ship Lot"
+      _: "Monastery of Quiet Accounting"
+    }
+  }
+
+  fn mine_name(s: i32) -> string {
+    match hash_int(s, 28, 4) {
+      0: "Mining Rig"
+      1: "Extraction Concern"
+      2: "Rock Bothering Facility"
+      _: "Asteroid Works"
+    }
+  }
+
+  fn poi_name(poi: i32) -> string {
+    const s = poi_sys(poi)
+    const k = poi_slot(poi)
+    const p = poi_planet(poi)
+    !poi_ok(poi) ? "Nowhere" : match poi_kind(poi) {
+      0: "{pl_name(p)} Orbit"
+      1: "{pl_name(p)} Dozer Camp"
+      2: "{pl_name(p)} Spaceport"
+      3: "{pl_name(p)} Site Office"
+      4: "{sys_name(sys_nb(s, k - 6))} Gate"
+      5: "{sys_name(s)} {mine_name(s)}"
+      _: "{sys_name(s)} {oddity_name(oddity_kind(s))}"
+    }
+  }
+
+  fn port_has_yard(s: i32) -> bool {
+    s == HOME || hash01(s, 29) < YARD_FRACTION
+  }
+
+  fn poi_fac(poi: i32) -> i32 {
+    const s = poi_sys(poi)
+    const i = pl_site(poi_planet(poi))
+    !poi_exists(poi) ? 0 : match poi_kind(poi) {
+      0: 8
+      1: 8 + 16 + 64
+      2: 1 + 2 + 4 + 8 + 16 + (port_has_yard(s) ? 32 : 0)
+      3: 4 + 8 + 16 + 64 + (site_has(i, 1) ? 1 : 0) + (site_has(i, 2) ? 2 : 0)
+      4: 2 + 4 + 8 + 16 + (hash01(poi, 61) < 0.5 ? 1 : 0)
+      5: 2 + 4 + 8 + 16 + (hash01(poi, 61) < 0.6 ? 1 : 0)
+      _: match oddity_kind(s) {
+        1: 1 + 2 + 4 + 8 + 16
+        3: 1 + 8 + 32
+        _: 1 + 8
+      }
+    }
+  }
+
+  fn poi_has(poi: i32, fac: i32) -> bool {
+    (poi_fac(poi) & fac) != 0
+  }
+
+  fn poi_has_depot(poi: i32) -> bool {
+    poi_has(poi, 16)
+  }
+
+  fn depot_cap(poi: i32) -> f32 {
+    const i = pl_site(poi_planet(poi))
+    match poi_kind(poi) {
+      1: 150
+      3: 400 + (site_has(i, 4) ? 400 : 0)
+      _: poi_has(poi, 16) ? 100000 : 0
+    }
+  }
+
+  fn gate_angle(s: i32, d: i32) -> f32 {
+    const n = sys_nb(s, d)
+    n < 0 ? d * 0.5 * PI : atan2(sys_y(n) - sys_y(s), sys_x(n) - sys_x(s))
+  }
+
+  fn mine_angle(s: i32) -> f32 {
+    hash01(s, 62) * 2 * PI
+  }
+
+  fn poi_r(poi: i32) -> f32 {
+    const k = poi_slot(poi)
+    k < 6 ? pl_orbit(poi_planet(poi)) : k < 10 ? RIM_R : BELT_R
+  }
+
+  fn poi_a(poi: i32) -> f32 {
+    const s = poi_sys(poi)
+    const k = poi_slot(poi)
+    k < 6 ? pl_angle(poi_planet(poi)) : k < 10 ? gate_angle(s, k - 6) : k == 10 ? mine_angle(s) : mine_angle(s) + PI + hash_range(s, 63, -0.6, 0.6)
+  }
+
+  fn poi_x(poi: i32) -> f32 {
+    poi_r(poi) * cos(poi_a(poi))
+  }
+
+  fn poi_z(poi: i32) -> f32 {
+    0 - poi_r(poi) * sin(poi_a(poi))
+  }
+}

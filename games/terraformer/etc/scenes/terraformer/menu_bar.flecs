@@ -1,0 +1,151 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.layout
+using box.text
+using box.picking
+using box.transition
+using box.ui
+using box.widgets
+using state
+using terra
+
+terra {
+  export const TALK_WIDTH: f32 = 720
+  export const TALK_TEXT: f32 = 664
+
+  template MenuBar {
+  }
+
+  template TalkMore {
+    mut low = false
+
+    Layout: {direction: Row, spacing: 6, v: Middle}
+    box.spatial.SpatialIgnore
+
+    KeyHint key(key: "E")
+    drop {
+      Layout: {}
+      LayoutItem: {width: {mode: Fixed, value: 12}, height: {mode: Fixed, value: 14}}
+      box.spatial.SpatialIgnore
+      mark {
+        LayoutItem: {h: Center, v: Middle, y: low ? -2 : 2}
+        Layout: {direction: Row}
+        Transition: [Position: {duration: 0.45, timing_function: EaseInOut}]
+        box.spatial.SpatialIgnore
+        Chevron glyph(direction: "down", size: 12, color: T_ACCENT)
+      }
+    }
+
+    async {
+      while true {
+        await delay(0.45)
+        low = !low
+      }
+    }
+  }
+
+  template TalkBox {
+    mut shown = false
+    mut fresh = true
+    mut seen: i32 = -1
+
+    LayoutItem: {h: Center, v: Bottom, y: shown ? 42 : 28, width: {min: TALK_WIDTH, max: TALK_WIDTH}}
+    Layout: {direction: Row, spacing: 0}
+    Rect: {1, 1}
+    Rgb: T_BG
+    Border: {width: 1, radius: 6, color: {52, 62, 80, 255}}
+    BoxShadow: {offset_y: -6, blur: 24, color: {0, 0, 0, 150}}
+    Opacity: {shown ? 0.96 : 0}
+    Transition: [
+      Opacity: {duration: 0.18, timing_function: EaseOut},
+      Position: {duration: 0.18, timing_function: EaseOut}
+    ]
+    box.spatial.SpatialIgnore
+
+    edge {
+      LayoutItem: {width: {mode: Fixed, value: 3}, height: {mode: Grow}}
+      Rect: {1, 1}
+      Rgb: T_ACCENT
+      Border: {radius: 2}
+      box.spatial.SpatialIgnore
+    }
+    content {
+      Layout: {direction: Column, spacing: 8, padding: {14, 12, 22, 22}}
+      LayoutItem: {width: {mode: Grow}}
+      box.spatial.SpatialIgnore
+
+      who {
+        Layout: {direction: Row, spacing: 10, v: Bottom}
+        LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: say_name != "" ? 18 : 0}}
+        box.spatial.SpatialIgnore
+        name {
+          Text: {value: say_name, size: 15}
+          Rgb: T_ACCENT
+          box.spatial.SpatialIgnore
+        }
+        tag {
+          Text: {value: say_name != "" ? say_tag : "", size: 11}
+          Rgb: T_MUTED
+          box.spatial.SpatialIgnore
+        }
+      }
+      said {
+        Layout: {direction: Row}
+        LayoutItem: {width: {mode: Grow}, height: {min: 50}}
+        Opacity: {fresh ? 0 : 1}
+        Transition: [Opacity: {duration: fresh ? 0 : 0.22, timing_function: EaseOut}]
+        box.spatial.SpatialIgnore
+        words {
+          Text: {value: say_text, size: 18, width: TALK_TEXT, line_height: 25}
+          Rgb: T_TEXT
+          box.spatial.SpatialIgnore
+        }
+      }
+      foot {
+        Layout: {direction: Row, h: Right, v: Middle}
+        LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: 20}}
+        box.spatial.SpatialIgnore
+        if say_more {
+          TalkMore more()
+        }
+      }
+    }
+
+    async {
+      await next_frame()
+      await next_frame()
+      seen = say_seq
+      shown = true
+      fresh = false
+      while true {
+        await next_frame()
+        if seen != say_seq {
+          seen = say_seq
+          fresh = true
+          await next_frame()
+          await next_frame()
+          fresh = false
+        }
+      }
+    }
+  }
+}
+
+window {}
+
+hud {
+  talk {
+    Position: {0, 0, 15}
+    LayoutFill: {surface: window}
+    Layout: {}
+    PickThrough
+    box.spatial.SpatialIgnore
+
+    if say_on && mode == MODE_STATION && screen == SCREEN_NONE {
+      TalkBox line()
+    }
+  }
+}

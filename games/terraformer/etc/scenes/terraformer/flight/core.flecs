@@ -1,0 +1,228 @@
+using flecs.script
+using flecs.script.math
+using box.input
+using box.material
+using state
+
+state {
+  export const FL_U: f64 = 100000
+  export const FL_PR: f64 = 22000
+  export const FL_STAR_R: f64 = 70000
+  export const FL_D0: f64 = 120000
+  export const FL_D1: f64 = 220000
+  export const FL_DL: f64 = 2500000
+  export const FL_SKY: f32 = 250000
+  export const FL_TILT_S: f64 = 0.4078
+  export const FL_TILT_C: f64 = 0.9131
+  export const FL_HOOP_S: f64 = 1500
+  export const FL_HOOPS: i32 = 12
+  export const FL_APP_V: f64 = 3600
+  export const FL_RUSH: f64 = 4
+
+  export const FS_IDLE: i32 = 0
+  export const FS_START: i32 = 1
+  export const FS_SLIDE: i32 = 2
+  export const FS_DEPART: i32 = 3
+  export const FS_BURN: i32 = 4
+  export const FS_EXIT: i32 = 5
+  export const FS_CRUISE: i32 = 7
+  export const FS_GAPP: i32 = 8
+  export const FS_QUEUE: i32 = 9
+  export const FS_ALIGN: i32 = 10
+  export const FS_RUN: i32 = 11
+  export const FS_GRUN: i32 = 12
+  export const FS_TUNNEL: i32 = 13
+  export const FS_ARRIVE: i32 = 14
+  export const FS_DOCK: i32 = 15
+  export const FS_DOCKED: i32 = 16
+  export const FS_TRANSFER: i32 = 17
+  export const FS_PASS: i32 = 18
+  export const FS_END: i32 = 19
+  export const FS_GCRAB: i32 = 20
+
+  export const PH_NONE: i32 = 0
+  export const PH_UNDOCK: i32 = 1
+  export const PH_BURN: i32 = 2
+  export const PH_CRUISE: i32 = 3
+  export const PH_GATE: i32 = 4
+  export const PH_QUEUE: i32 = 5
+  export const PH_JUMP: i32 = 6
+  export const PH_EXIT: i32 = 7
+  export const PH_CALL: i32 = 8
+  export const PH_ARRIVE: i32 = 9
+
+  export const WM_START: i32 = 0
+  export const WM_CALL: i32 = 1
+  export const WM_PASS: i32 = 2
+  export const WM_GATE: i32 = 3
+  export const WM_END: i32 = 4
+
+  flight_actions {
+    Look { Action: {description: "Look around the ship"}; Binding: {key: MouseLeft} }
+    Seat { Action: {description: "Change seat"}; Binding: {key: C} }
+  }
+
+  export mut fl_gen: i32 = 0
+  export mut fl_req: bool = false
+  export mut fl_on: bool = false
+  export mut fl_stage: i32 = 0
+  export mut fl_phase: i32 = 0
+  export mut fl_path: i32[96] = ROUTE_EMPTY
+  export mut fl_path_n: i32 = 0
+  export mut fl_leg: i32 = 0
+  export mut fl_cls: i32 = 0
+  export mut fl_sys: i32 = HOME
+  export mut fl_line_a: i32 = HOME
+  export mut fl_line_b: i32 = HOME
+  export mut fl_liv_sys: i32 = HOME
+  export mut fl_hero_mask: i32 = 0
+  export mut fl_trips: i32 = 0
+  export mut fl_clock: f64 = 0
+  export mut fl_speed: f64 = 0
+  export mut fl_jumps: i32 = 0
+
+  export mut fl_sx: f32 = 0
+  export mut fl_sy: f32 = 0
+  export mut fl_sz: f32 = 0
+  export mut fl_syaw: f32 = 0
+  export mut fl_sroll: f32 = 0
+  export mut fl_thrust: f32 = 0
+  export mut fl_rcs: f32 = 0
+  export mut fl_gw: f32 = 1
+
+  export mut fl_cx: f32 = 0
+  export mut fl_cy: f32 = 200
+  export mut fl_cz: f32 = -900
+  export mut fl_cyaw: f32 = 3.14159
+  export mut fl_cpitch: f32 = -0.2
+  export mut fl_cfov: f32 = 40
+  export mut fl_seat: i32 = 0
+  export mut fl_look: bool = false
+
+  export mut fl_sun_yaw: f32 = 0
+  export mut fl_sun_pitch: f32 = 0.14
+  export mut fl_body: f32[32] = {}
+  export mut fl_sp: f32[8] = {}
+  export mut fl_spi: i32[16] = [-1, -1, 0, -1, 0, -1, 0, 0, -1, -1, 0, -1, 0, -1, 0, 0]
+  export mut fl_lane_on: bool = false
+  export mut fl_lane_port: bool = false
+  export mut fl_warp: bool = false
+  export mut fl_hoop: f32[12] = {}
+  export mut fl_pass: f32[4] = {}
+  export mut fl_q: f32[12] = {}
+  export mut fl_q_mask: i32 = 0
+  export mut fl_q_n: i32 = 0
+  export mut fl_q_run: i32 = -1
+  export mut fl_charge: f32 = 0
+  export mut fl_fade: bool = false
+  export mut fl_fade_t: f32 = 0
+
+  export mut fl_stop_n: i32 = 0
+  export mut fl_stop_poi: i32[16] = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1]
+  export mut fl_stop_kind: i32[16] = {}
+  export mut fl_stop_at: i32 = 0
+  export mut fl_stop_moving: bool = false
+  export mut fl_eta: i32 = 0
+  export mut fl_say_mine: i32 = -1
+  export mut fl_say_left: f64 = 0
+
+  fn fl_wrap(a: f64) -> f64 {
+    a - 2 * PI * floor((a + PI) / (2 * PI))
+  }
+
+  fn fl_smooth(x: f64) -> f64 {
+    const c = clamp(x, 0, 1)
+    c * c * (3 - 2 * c)
+  }
+
+  fn fl_herm(t: f64, m0: f64, m1: f64) -> f64 {
+    (t * t * t - 2 * t * t + t) * m0 + (3 * t * t - 2 * t * t * t) + (t * t * t - t * t) * m1
+  }
+
+  fn fl_herm_d(t: f64, m0: f64, m1: f64) -> f64 {
+    (3 * t * t - 4 * t + 1) * m0 + (6 * t - 6 * t * t) + (3 * t * t - 2 * t) * m1
+  }
+
+  fn fl_bez(a: f64, b: f64, c: f64, d: f64, t: f64) -> f64 {
+    const u = 1 - t
+    u * u * u * a + 3 * u * u * t * b + 3 * u * t * t * c + t * t * t * d
+  }
+
+  fn fl_bez_d(a: f64, b: f64, c: f64, d: f64, t: f64) -> f64 {
+    const u = 1 - t
+    3 * u * u * (b - a) + 6 * u * t * (c - b) + 3 * t * t * (d - c)
+  }
+
+  fn fl_wp(i: i32) -> i32 {
+    i >= 0 && i < ROUTE_MAX && i < fl_path_n ? fl_path[i] : -1
+  }
+
+  fn fl_px(poi: i32) -> f64 {
+    poi_x(poi) * FL_U
+  }
+
+  fn fl_pz(poi: i32) -> f64 {
+    poi_z(poi) * FL_U
+  }
+
+  fn fl_pl_r(p: i32) -> f64 {
+    pl_radius(p) * FL_PR
+  }
+
+  fn fl_pl_h(p: i32) -> f64 {
+    fl_pl_r(p) * 0.1 + 600
+  }
+
+  fn fl_kind_small(kind: i32, cls: i32) -> bool {
+    !(cls == CLS_LINER && (kind == KIND_PORT || kind == KIND_PLAYER_PORT))
+  }
+
+  fn fl_berth_lx(poi: i32, cls: i32) -> f64 {
+    const kind = poi_kind(poi)
+    kind == KIND_ORBIT ? 0 : kind == KIND_GATE ? -520 + fl_berth_x(KIND_GATE, 0, true) : fl_berth_x(kind, fl_tier(poi_sys(poi)), fl_kind_small(kind, cls))
+  }
+
+  fn fl_berth_lz(poi: i32) -> f64 {
+    poi_kind(poi) == KIND_GATE ? -200 : 0
+  }
+
+  fn fl_place_r(poi: i32) -> f64 {
+    match poi_kind(poi) {
+      0: 0
+      1: 140
+      2: match fl_tier(poi_sys(poi)) { 0: 430; 1: 590; _: 800 }
+      3: 300
+      4: 190
+      5: 320
+      _: 260
+    }
+  }
+
+  fn fl_slide(cls: i32) -> f64 {
+    match cls { 0: 110; 1: 40; _: 50 }
+  }
+
+  fn fl_cls_len(cls: i32) -> f64 {
+    match cls { 0: 360; 1: 30; _: 46 }
+  }
+
+  fn fl_q_cls(gate: i32, j: i32) -> i32 {
+    hash_int(gate * 7 + j, 221, 5)
+  }
+
+  fn fl_q_len(c: i32) -> f64 {
+    match c { 0: 360; 1: 170; 2: 110; 3: 46; _: 30 }
+  }
+
+  fn fl_stage_row() -> string {
+    "{fl_stage}|{fl_phase}|{fl_leg}|{fl_path_n}|{fl_cls}|{fl_sys}|{trav_sys}|{trav_from}|{trav_to}|{b2i(trav_jump)}|{trav_t:.3}|{today}|{now:.3}|{money:.1}|{at_poi}|{mode}|{b2i(trav_active)}|{b2i(clock_hold)}|{fl_clock:.2}|{fl_speed:.1}|{fl_stop_at}|{fl_stop_n}|{fl_q_n}|{fl_trips}"
+  }
+
+  fn fl_path_row(from: i32) -> string {
+    "{fl_wp(from)},{fl_wp(from + 1)},{fl_wp(from + 2)},{fl_wp(from + 3)},{fl_wp(from + 4)},{fl_wp(from + 5)},{fl_wp(from + 6)},{fl_wp(from + 7)},{fl_wp(from + 8)},{fl_wp(from + 9)},{fl_wp(from + 10)},{fl_wp(from + 11)}"
+  }
+
+  fn fl_cam_row() -> string {
+    "{fl_cx:.1}|{fl_cy:.1}|{fl_cz:.1}|{fl_cyaw:.3}|{fl_cpitch:.3}|{fl_cfov:.1}|{fl_seat}|{fl_sx:.1}|{fl_sz:.1}|{fl_syaw:.3}"
+  }
+}

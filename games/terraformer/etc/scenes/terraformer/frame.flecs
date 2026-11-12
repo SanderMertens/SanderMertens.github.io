@@ -1,0 +1,190 @@
+include state
+include galaxy
+include rules
+include clock
+
+using flecs.script
+using flecs.script.math
+using box.input
+using state
+
+state {
+  export const TOAST_SECONDS: f64 = 4.5
+
+  actions {
+    MoveUp { Action: {description: "Walk up"}; Binding: {key: W}; alt { Binding: {key: Up} } }
+    MoveDown { Action: {description: "Walk down"}; Binding: {key: S}; alt { Binding: {key: Down} } }
+    MoveLeft { Action: {description: "Walk left"}; Binding: {key: A}; alt { Binding: {key: Left} } }
+    MoveRight { Action: {description: "Walk right"}; Binding: {key: D}; alt { Binding: {key: Right} } }
+    Interact { Action: {description: "Interact, or open and close the panel"}; Binding: {key: E} }
+    Back { Action: {description: "Close the open screen"}; Binding: {key: Escape} }
+    Map { Action: {description: "Open the nav map"}; Binding: {key: M} }
+    Speed0 { Action: {description: "Pause"}; Binding: {key: Num1} }
+    Speed1 { Action: {description: "Normal speed"}; Binding: {key: Num2} }
+    Speed4 { Action: {description: "Fast"}; Binding: {key: Num3} }
+  }
+
+  proc reset_core() {
+    clock_reset()
+    mode = MODE_STATION
+    screen = SCREEN_NONE
+    tab = TAB_NAV
+    money = START_MONEY
+    reputation = 0
+    at_poi = HOME_POI
+    px = 0
+    pz = 0
+    pyaw = 0
+    near = 0
+    nav_level = NAV_GALAXY
+    nav_sys = HOME
+    nav_dest = -1
+    route_n = 0
+    route_poi = ROUTE_EMPTY
+    route_cost = 0
+    route_days = 0
+    route_sys = {}
+    trav_active = false
+    trav_from = HOME_POI
+    trav_to = HOME_POI
+    trav_t = 0
+    trav_jump = false
+    trav_sys = HOME
+    stock = {}
+    offer = JOB_NONE
+    offer_expires = 0
+    jobs = JOBS_EMPTY
+    jobs_done = 0
+    jobs_failed = 0
+    sites = SITES_EMPTY
+    site_struct = {}
+    site_progress = {}
+    sys_site = {}
+    freighters = FREIGHTERS_EMPTY
+    dozers = DOZERS_EMPTY
+    shipments = SHIPMENTS_EMPTY
+    ship_cargo = {}
+    manifest = {}
+    manifest_dest = -1
+    toast_text = ""
+    toast_show = false
+    talk_npc = -1
+    talk_line = 0
+    near_npc = -1
+    near_text = ""
+    say_on = false
+    say_more = false
+    cam_x = 0
+    cam_z = 0
+  }
+
+  proc screen_open(scr: i32) {
+    if mode == MODE_STATION && screen != SCREEN_GAMEOVER && scr >= SCREEN_PANEL && scr <= SCREEN_SITE {
+      const fac = screen_fac(scr)
+      if fac == 0 || poi_has(at_poi, fac) {
+        screen = scr
+      }
+    }
+  }
+
+  proc screen_close() {
+    if screen != SCREEN_GAMEOVER {
+      screen = SCREEN_NONE
+    }
+  }
+}
+
+async {
+  while true {
+    const e = await Request
+    if e.op == OP_OPEN {
+      screen_open(e.a)
+    } else if e.op == OP_CLOSE {
+      screen_close()
+    } else if e.op == OP_TAB {
+      if e.a >= TAB_NAV && e.a <= TAB_ASSETS {
+        tab = e.a
+      }
+    } else if e.op == OP_SPEED {
+      if e.a >= 0 && e.a <= 64 {
+        speed = e.a
+      }
+    } else if e.op == OP_RESTART {
+      reset_core()
+      emit Reset()
+    }
+  }
+}
+
+async {
+  while true {
+    await on.pressed(state.actions.Back)
+    emit Request(op: OP_CLOSE, a: 0, b: 0)
+  }
+}
+
+async {
+  while true {
+    await on.pressed(state.actions.Map)
+    if screen == SCREEN_PANEL && tab == TAB_NAV {
+      emit Request(op: OP_CLOSE, a: 0, b: 0)
+    } else {
+      emit Request(op: OP_TAB, a: TAB_NAV, b: 0)
+      emit Request(op: OP_OPEN, a: SCREEN_PANEL, b: 0)
+    }
+  }
+}
+
+async {
+  while true {
+    await on.pressed(state.actions.Speed0)
+    emit Request(op: OP_SPEED, a: 0, b: 0)
+  }
+}
+
+async {
+  while true {
+    await on.pressed(state.actions.Speed1)
+    emit Request(op: OP_SPEED, a: 1, b: 0)
+  }
+}
+
+async {
+  while true {
+    await on.pressed(state.actions.Speed4)
+    emit Request(op: OP_SPEED, a: 4, b: 0)
+  }
+}
+
+async {
+  mut seen: i32 = 0
+  mut left: f64 = 0
+  while true {
+    await next_frame()
+    const layer: i32 = flight_on && mode == MODE_TRAVEL ? LAYER_FLIGHT : layer_of(mode, screen, tab, nav_level)
+    if view_layer != layer {
+      view_layer = layer
+    }
+    const nav = screen == SCREEN_PANEL && tab == TAB_NAV
+    if view_nav != nav {
+      view_nav = nav
+    }
+    const sys = nav ? nav_sys : mode == MODE_TRAVEL ? trav_sys : poi_sys(at_poi)
+    if view_sys != sys {
+      view_sys = sys
+    }
+    const dim = screen != SCREEN_NONE && !nav
+    if view_dim != dim {
+      view_dim = dim
+    }
+    if toast_seq != seen {
+      seen = toast_seq
+      left = TOAST_SECONDS
+    } else if left > 0 {
+      left -= dt
+      if left <= 0 && toast_show {
+        toast_show = false
+      }
+    }
+  }
+}

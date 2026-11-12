@@ -1,0 +1,156 @@
+using flecs.script
+using flecs.script.math
+using state
+
+state {
+  export const SELL_CAP_DAILY: f32 = 25
+
+  export mut sold_today: f32[8] = {}
+  export mut sold_day: i32 = 0
+
+  fn ship_inbound(i: i32, poi: i32) -> f32 {
+    i >= 0 && i < N_SHIPMENTS && shipments[i].status == 1 && shipments[i].to == poi ? ship_cargo[i * 8] + ship_cargo[i * 8 + 1] + ship_cargo[i * 8 + 2] + ship_cargo[i * 8 + 3] + ship_cargo[i * 8 + 4] + ship_cargo[i * 8 + 5] + ship_cargo[i * 8 + 6] + ship_cargo[i * 8 + 7] : 0
+  }
+
+  fn depot_incoming(poi: i32) -> f32 {
+    ship_inbound(0, poi) + ship_inbound(1, poi) + ship_inbound(2, poi) + ship_inbound(3, poi) + ship_inbound(4, poi) + ship_inbound(5, poi) + ship_inbound(6, poi) + ship_inbound(7, poi) + ship_inbound(8, poi) + ship_inbound(9, poi) + ship_inbound(10, poi) + ship_inbound(11, poi) + ship_inbound(12, poi) + ship_inbound(13, poi) + ship_inbound(14, poi) + ship_inbound(15, poi)
+  }
+
+  fn depot_room(poi: i32) -> f32 {
+    max(depot_cap(poi) - stock_total(poi) - depot_incoming(poi), 0)
+  }
+
+  fn market_here() -> bool {
+    mode == MODE_STATION && poi_has(at_poi, FAC_TRADE)
+  }
+
+  fn sell_room(g: i32) -> f32 {
+    g < 0 || g >= N_GOODS ? 0 : sold_day == today ? max(SELL_CAP_DAILY - sold_today[g], 0) : SELL_CAP_DAILY
+  }
+
+  fn buy_max(g: i32) -> i32 {
+    market_here() && poi_sells(at_poi, g) ? floor(max(min(money / price_buy(at_poi, g, today), depot_room(at_poi)), 0)) : 0
+  }
+
+  fn sell_max(g: i32) -> i32 {
+    market_here() && poi_buys(at_poi, g) ? floor(max(min(stock_at(at_poi, g), sell_room(g)), 0)) : 0
+  }
+
+  fn buy_block(g: i32) -> i32 {
+    !market_here() ? 1 : g < 0 || g >= N_GOODS ? 2 : !poi_sells(at_poi, g) ? 3 : depot_room(at_poi) < 1 ? 4 : money < price_buy(at_poi, g, today) ? 5 : 0
+  }
+
+  fn buy_block_text(code: i32) -> string {
+    match code {
+      0: ""
+      1: "No trade hub here. Just vacuum."
+      2: "Nobody trades that. Nobody."
+      3: "Not sold here. They checked the back."
+      4: "Depot's full. Physics insists."
+      _: "Can't afford that. Accounting insists."
+    }
+  }
+
+  fn buy_block_tag(code: i32) -> string {
+    match code {
+      0: ""
+      1: "NO TRADE HUB"
+      2: "NOT TRADED"
+      3: "NOT STOCKED"
+      4: "DEPOT FULL"
+      _: "NO FUNDS"
+    }
+  }
+
+  fn sell_block(g: i32) -> i32 {
+    !market_here() ? 1 : g < 0 || g >= N_GOODS ? 2 : !poi_buys(at_poi, g) ? 3 : stock_at(at_poi, g) < 1 ? 4 : sell_room(g) < 1 ? 5 : 0
+  }
+
+  fn sell_block_text(code: i32) -> string {
+    match code {
+      0: ""
+      1: "No trade hub here. Just vacuum."
+      2: "Nobody trades that. Nobody."
+      3: "They don't buy that here."
+      4: "Nothing to sell. Bold pitch, though."
+      _: "Buyers are full for today. Try tomorrow."
+    }
+  }
+
+  fn sell_block_tag(code: i32) -> string {
+    match code {
+      0: ""
+      1: "NO TRADE HUB"
+      2: "NOT TRADED"
+      3: "NOT WANTED"
+      4: "NONE HELD"
+      _: "SOLD OUT TODAY"
+    }
+  }
+
+  proc manifest_clamp() {
+    for g in 0..N_GOODS {
+      const have = stock_at(at_poi, g)
+      if manifest[g] > have {
+        manifest[g] = have
+      }
+    }
+  }
+
+  proc market_buy(g: i32, qty: i32) {
+    const code = buy_block(g)
+    if code != 0 {
+      toast_as(buy_block_text(code), TOAST_BAD)
+    } else if qty > 0 {
+      const price = price_buy(at_poi, g, today)
+      const n: i32 = min(qty, buy_max(g))
+      if n > 0 {
+        pay(LED_GOODS, n * price)
+        stock_add(at_poi, g, n)
+        if n < qty {
+          toast_as("{n * 1.0:.0} {good_name(g)} bought. All that fits, or all you can afford.", TOAST_WARN)
+        } else {
+          toast_as("{n * 1.0:.0} {good_name(g)} bought. They were someone else's problem a minute ago.", TOAST_GOOD)
+        }
+      }
+    }
+  }
+
+  proc market_sell(g: i32, qty: i32) {
+    if sold_day != today {
+      sold_today = {}
+      sold_day = today
+    }
+    const code = sell_block(g)
+    if code != 0 {
+      toast_as(sell_block_text(code), TOAST_BAD)
+    } else if qty > 0 {
+      const price = price_sell(at_poi, g, today)
+      const n: i32 = min(qty, sell_max(g))
+      if n > 0 {
+        earn(LED_SALES, n * price)
+        stock_add(at_poi, g, 0 - n)
+        sold_today[g] += n
+        manifest_clamp()
+        if n < qty {
+          toast_as("{n * 1.0:.0} {good_name(g)} sold. The buyers lost interest after that.", TOAST_WARN)
+        } else {
+          toast_as("{n * 1.0:.0} {good_name(g)} sold. Someone else's problem again.", TOAST_GOOD)
+        }
+      }
+    }
+  }
+}
+
+async {
+  while true {
+    const e = await Request
+    if screen != SCREEN_GAMEOVER {
+      if e.op == OP_BUY {
+        market_buy(e.a, e.b)
+      } else if e.op == OP_SELL {
+        market_sell(e.a, e.b)
+      }
+    }
+  }
+}

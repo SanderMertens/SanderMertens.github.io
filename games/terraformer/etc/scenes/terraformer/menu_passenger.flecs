@@ -1,0 +1,269 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.layout
+using box.text
+using box.picking
+using box.transition
+using box.input
+using box.ui
+using box.widgets
+using state
+using terra
+
+state {
+  export mut pass_jumps: i32 = 0
+  export mut pass_hops: i32 = 0
+  export mut pass_wild: i32 = 0
+
+  export const PASS_ROWS: i32 = 8
+
+  fn pass_jump_text(n: i32) -> string {
+    n == 1 ? "1 jump" : "{n} jumps"
+  }
+
+  fn pass_hop_text(n: i32) -> string {
+    n == 1 ? "1 shuttle hop" : "{n} shuttle hops"
+  }
+
+  fn pass_summary(j: i32, h: i32, w: i32) -> string {
+    j <= 0 ? (h <= 0 ? "—" : pass_hop_text(h)) : w > 0 ? (h > 0 ? "{pass_jump_text(j)}  ·  {w} uncharted  ·  {pass_hop_text(h)}" : "{pass_jump_text(j)}  ·  {w} uncharted") : h > 0 ? "{pass_jump_text(j)}  ·  {pass_hop_text(h)}" : pass_jump_text(j)
+  }
+
+  fn pass_site_listed(i: i32) -> bool {
+    i >= 0 && i < N_SITES && sites[i].used && site_job_live(i) < 0
+  }
+
+  fn pass_sites_listed() -> i32 {
+    b2i(pass_site_listed(0)) + b2i(pass_site_listed(1)) + b2i(pass_site_listed(2)) + b2i(pass_site_listed(3)) + b2i(pass_site_listed(4)) + b2i(pass_site_listed(5)) + b2i(pass_site_listed(6)) + b2i(pass_site_listed(7)) + b2i(pass_site_listed(8)) + b2i(pass_site_listed(9)) + b2i(pass_site_listed(10)) + b2i(pass_site_listed(11)) + b2i(pass_site_listed(12)) + b2i(pass_site_listed(13)) + b2i(pass_site_listed(14)) + b2i(pass_site_listed(15))
+  }
+}
+
+terra {
+  template PassMapButton : OpButton {
+    async {
+      while true {
+        const e = await on.activate(this)
+        if ui.activation(e) == this && !disabled {
+          emit Request(op: OP_OPEN, a: SCREEN_PANEL, b: 0)
+        }
+      }
+    }
+  }
+
+  template PassPick : HeadlessButton {
+    prop poi: i32 = -1
+    prop tag: string = ""
+    prop pip: i32 = -1
+
+    const here = poi == at_poi
+    const jumps = sys_dist(poi_sys(at_poi), poi_sys(poi))
+    const look = down ? 2 : hover ? 1 : 0
+
+    Layout: {direction: Row, spacing: 8, padding: {0, 0, 10, 10}, v: Middle}
+    LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: 30}}
+    Rect: {1, 1}
+    Rgb: btn_fill(BTN_PLAIN, look)
+    Border: {width: 1, radius: 4, color: btn_line(BTN_PLAIN, look)}
+    Opacity: {here ? 0.4 : 1}
+    Transition: [Rgb: {duration: 0.08}]
+
+    dot {
+      LayoutItem: {width: {mode: Fixed, value: 7}, height: {mode: Fixed, value: 7}}
+      Rect: {1, 1}
+      Rgb: pip >= 0 ? hud_purpose_rgb(pip) : T_MUTED
+      Border: {radius: 2}
+      box.spatial.SpatialIgnore
+    }
+    kind {
+      Layout: {direction: Row, v: Middle}
+      LayoutItem: {width: {mode: Fixed, value: 92}}
+      HudCap cap(text: tag, tone: pip >= 0 ? TONE_ACCENT : TONE_MUTED)
+    }
+    name {
+      Text: {value: poi_name(poi), size: 13}
+      Rgb: T_TEXT
+      box.spatial.SpatialIgnore
+    }
+    Gap flex()
+    far {
+      Text: {value: here ? "HERE" : pass_jump_text(jumps), size: 11}
+      Rgb: T_MUTED
+      box.spatial.SpatialIgnore
+    }
+
+    async {
+      while true {
+        const e = await on.activate(this)
+        if ui.activation(e) == this && poi != at_poi {
+          emit Request(op: OP_NAV_DEST, a: poi, b: 0)
+        }
+      }
+    }
+  }
+
+  template PassRoute {
+    const routed = route_n >= 2
+    const broke = money < route_cost
+    const after = money - route_cost
+
+    Layout: {direction: Column, spacing: 10}
+    LayoutItem: {width: {mode: Grow}}
+
+    goal {
+      Layout: {direction: Column, spacing: 5}
+      LayoutItem: {width: {mode: Grow}}
+      HudCap cap(text: "DESTINATION", tone: TONE_ACCENT)
+      name {
+        Text: {value: poi_name(nav_dest), size: 20, width: 428}
+        Rgb: T_TEXT
+      }
+      HudCap about(text: "{hud_kind_caps(poi_kind(nav_dest))}  ·  {sys_name(poi_sys(nav_dest))}")
+    }
+    Rule rule_a()
+    Row path(label: "Itinerary", value: routed ? pass_summary(pass_jumps, pass_hops, pass_wild) : "No route")
+    Row fare(label: "Fare", value: routed ? hud_cash(route_cost) : "—", tone: broke ? TONE_BAD : TONE_ACCENT)
+    Row days(label: "Travel time", value: routed ? "{route_days:.1} d" : "—")
+    Row rest(label: "Funds after", value: routed ? hud_cash(after) : "—", tone: broke ? TONE_BAD : TONE_TEXT)
+    Rule rule_b()
+    buttons {
+      Layout: {direction: Row, spacing: 6}
+      LayoutItem: {width: {mode: Grow}}
+      OpButton board(label: !routed ? "NO ROUTE" : broke ? "CANNOT AFFORD" : "BOARD", op: OP_BOARD, kind: BTN_PRIMARY, disabled: !routed || broke, grow: true)
+      PassMapButton map(label: "MAP", op: OP_TAB, a: TAB_NAV, width: 64)
+      OpButton clear(label: "CLEAR", op: OP_NAV_CLEAR, width: 70)
+      OpButton close(label: "CLOSE", op: OP_CLOSE, kind: BTN_QUIET, width: 70)
+    }
+  }
+
+  template PassPicks {
+    const away = at_poi != HOME_POI
+    const any = away || jobs_active() > 0 || sites_used() > 0
+    const rows = jobs_active() + pass_sites_listed() + (away ? 1 : 0)
+
+    Layout: {direction: Column, spacing: 10}
+    LayoutItem: {width: {mode: Grow}}
+
+    intro {
+      Layout: {direction: Column, spacing: 5}
+      LayoutItem: {width: {mode: Grow}}
+      HudCap cap(text: "DESTINATION", tone: TONE_ACCENT)
+      name {
+        Text: {value: "Nowhere", size: 20}
+        Rgb: T_MUTED
+      }
+      HudCap about(text: "THE PILOT IS OPEN TO SUGGESTIONS")
+    }
+    buttons {
+      Layout: {direction: Row, spacing: 6}
+      LayoutItem: {width: {mode: Grow}}
+      PassMapButton map(label: "OPEN NAV MAP", op: OP_TAB, a: TAB_NAV, kind: BTN_PRIMARY, grow: true)
+      OpButton close(label: "CLOSE", op: OP_CLOSE, kind: BTN_QUIET, width: 70)
+    }
+    quick {
+      Layout: {direction: Column, spacing: 10}
+      LayoutItem: {width: {mode: Grow}}
+      if any {
+        Rule line()
+        HudCap cap(text: "QUICK PICKS")
+      }
+    }
+    ScrollView picks(height: min(rows, PASS_ROWS) * 34 + 0.01, frame: false, focusable: false, keys: false) {
+     body {
+      Layout: {direction: Column}
+      LayoutItem: {width: {mode: Grow}}
+      for i in 0..N_JOBS {
+        "job_{i}" {
+          Layout: {direction: Column}
+          LayoutItem: {width: {mode: Grow}}
+          if jobs[i].status == JOB_ACTIVE {
+            PassPick pick(poi: planet_poi(jobs[i].planet), tag: hud_purpose_caps(jobs[i].purpose), pip: jobs[i].purpose)
+            Gap pad(size: 4)
+          }
+        }
+      }
+      for i in 0..N_SITES {
+        "site_{i}" {
+          Layout: {direction: Column}
+          LayoutItem: {width: {mode: Grow}}
+          if pass_site_listed(i) {
+            PassPick pick(poi: planet_poi(sites[i].planet), tag: "SITE")
+            Gap pad(size: 4)
+          }
+        }
+      }
+      home {
+        Layout: {direction: Column}
+        LayoutItem: {width: {mode: Grow}}
+        if away {
+          PassPick pick(poi: HOME_POI, tag: "HEAD OFFICE")
+          Gap pad(size: 4)
+        }
+      }
+     }
+    }
+  }
+
+  template MenuPassenger {
+    LayoutItem: {h: Center, v: Middle}
+    Layout: {direction: Column}
+
+    Frame card(title: "PASSENGER TERMINAL", width: 460) {
+      body {
+        Layout: {direction: Column}
+        LayoutItem: {width: {mode: Grow}}
+        if nav_dest >= 0 {
+          PassRoute route()
+        } else {
+          PassPicks picks()
+        }
+      }
+    }
+  }
+}
+
+async {
+  mut sig_n: i32 = -1
+  mut sig_dest: i32 = -2
+  mut sig_cost: f64 = -1
+  mut sig_day: i32 = -1
+  while true {
+    await next_frame()
+    if sig_n != route_n || sig_dest != nav_dest || sig_cost != route_cost || sig_day != today {
+      sig_n = route_n
+      sig_dest = nav_dest
+      sig_cost = route_cost
+      sig_day = today
+      mut jumps: i32 = 0
+      mut hops: i32 = 0
+      mut wild: i32 = 0
+      if route_n >= 2 && route_n <= ROUTE_MAX {
+        for i in 1..route_n {
+          const a = route_poi[i - 1]
+          const b = route_poi[i]
+          if a >= 0 && b >= 0 {
+            if poi_sys(a) != poi_sys(b) {
+              jumps += 1
+              if !sys_has_port(poi_sys(b)) {
+                wild += 1
+              }
+            } else {
+              hops += 1
+            }
+          }
+        }
+      }
+      if pass_jumps != jumps {
+        pass_jumps = jumps
+      }
+      if pass_hops != hops {
+        pass_hops = hops
+      }
+      if pass_wild != wild {
+        pass_wild = wild
+      }
+    }
+  }
+}

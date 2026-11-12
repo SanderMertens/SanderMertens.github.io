@@ -1,0 +1,42 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using state
+using terra
+
+state {
+  fn odd_room(poi: i32, i: i32) -> Room {
+    basic_room(poi, i)
+  }
+
+  fn odd_link(poi: i32, j: i32) -> Link {
+    basic_link(poi, j)
+  }
+
+  fn odd_spot(poi: i32, i: i32, k: i32) -> Spot {
+    basic_spot(poi, i, k)
+  }
+
+  fn odd_act(poi: i32, i: i32, k: i32) -> Act {
+    basic_act(poi, i, k)
+  }
+
+  fn odd_spawn(poi: i32) -> Act {
+    basic_spawn(poi)
+  }
+}
+
+terra {
+  template OddRoom {
+    prop poi: i32 = 0
+    prop i: i32 = 0
+    BasicRoom body(poi: poi, i: i) { Position: {0, 0, 0} }
+  }
+
+  template OddOutside {
+    prop poi: i32 = 0
+    BasicOutside body(poi: poi) { Position: {0, 0, 0} }
+  }
+}

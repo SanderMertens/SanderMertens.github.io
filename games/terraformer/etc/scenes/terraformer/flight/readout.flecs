@@ -1,0 +1,143 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.layout
+using box.text
+using box.picking
+using box.transition
+using box.surface
+using box.ui
+using state
+using terra
+
+terra {
+  template FlPip {
+    prop i: i32 = 0
+
+    const kind: i32 = fl_stop_kind[i]
+    const done: bool = i < fl_stop_at || (i == fl_stop_at && fl_stop_moving)
+    const here: bool = i == fl_stop_at && !fl_stop_moving
+    const next: bool = i == fl_stop_at + 1 && fl_stop_moving
+    const big: bool = kind == 0
+    const size: f32 = here ? 14 : big ? 10 : 6
+    const span: f32 = fl_stop_n > 10 ? 26 : fl_stop_n > 6 ? 44 : 72
+
+    Layout: {direction: Row, spacing: 0, v: Middle}
+    box.spatial.SpatialIgnore
+    if i > 0 {
+      seg {
+        LayoutItem: {width: {mode: Fixed, value: span}, height: {mode: Fixed, value: 3}}
+        Rect: {1, 1}
+        Rgb: i <= fl_stop_at ? T_GOOD : next ? T_ACCENT : T_LINE
+        Transition: [Rgb: {duration: 0.5}]
+        box.spatial.SpatialIgnore
+      }
+    }
+    dot {
+      LayoutItem: {width: {mode: Fixed, value: size}, height: {mode: Fixed, value: size}}
+      Rect: {1, 1}
+      Rgb: here ? T_ACCENT : done ? T_GOOD : next ? T_PANEL : T_PANEL
+      Border: {width: here ? 0 : 2, radius: size / 2, color: done ? {72, 200, 130, 255} : next ? {255, 170, 40, 255} : {84, 96, 118, 255}}
+      Transition: [Rgb: {duration: 0.5}, Border: {duration: 0.5}]
+      box.spatial.SpatialIgnore
+    }
+  }
+
+  template FlPa {
+    LayoutItem: {h: Center, v: Bottom, y: 138, width: {mode: Fixed, value: 700}}
+    Layout: {direction: Column, spacing: 5, h: Center, padding: {10, 12, 20, 20}}
+    Rect: {1, 1}
+    Rgb: T_BG
+    Border: {width: 1, radius: 6, color: {150, 104, 36, 255}}
+    BoxShadow: {offset_y: -6, blur: 24, color: {0, 0, 0, 150}}
+    Opacity: {0.94}
+    box.spatial.SpatialIgnore
+    who {
+      Layout: {direction: Row, spacing: 8, v: Middle}
+      box.spatial.SpatialIgnore
+      Txt name(text: say_name, size: F_SMALL, tone: TONE_ACCENT)
+      Txt tag(text: say_tag, size: F_TINY, tone: TONE_MUTED)
+    }
+    Txt words(text: say_text, size: 15, width: 660, align: Center)
+  }
+
+  template FlReadout {
+    const left: i32 = fl_eta - today
+    const nxt: i32 = fl_stop_moving ? fl_stop_at + 1 : fl_stop_at
+    const last: i32 = fl_stop_n - 1
+
+    LayoutItem: {h: Center, v: Bottom, y: 30}
+    Layout: {direction: Column, spacing: 9, padding: {12, 12, 20, 20}, h: Center}
+    Rect: {1, 1}
+    Rgb: T_PANEL
+    Border: {width: 1, radius: 6, color: {52, 62, 80, 255}}
+    BoxShadow: {offset_y: -6, blur: 24, color: {0, 0, 0, 150}}
+    Opacity: {0.94}
+    InputBlocker
+    box.spatial.SpatialIgnore
+
+    head {
+      Layout: {direction: Row, spacing: 10, v: Middle}
+      LayoutItem: {width: {mode: Grow}}
+      box.spatial.SpatialIgnore
+      badge {
+        Layout: {direction: Row, padding: {2, 2, 8, 8}, h: Center, v: Middle}
+        Rect: {1, 1}
+        Rgb: line_livery(fl_liv_sys, fl_cls)
+        Border: {radius: 4}
+        box.spatial.SpatialIgnore
+        code {
+          Text: {value: fl_cls == CLS_SHUTTLE ? line_code(fl_sys, fl_sys, fl_cls) : line_code(fl_line_a, fl_line_b, fl_cls), size: 13}
+          Rgb: {12, 14, 20}
+          box.spatial.SpatialIgnore
+        }
+      }
+      Txt title(text: fl_cls == CLS_LINER ? line_name(fl_line_a, fl_line_b) : fl_cls == CLS_SHUTTLE ? "Shuttle · {sys_name(fl_sys)} local" : "Charter · {fl_stop_name(last)}", size: F_BODY)
+      Gap pad()
+      Txt days(text: left > 1 ? "{left} DAYS TO GO" : left == 1 ? "1 DAY TO GO" : "ARRIVING TODAY", size: F_TINY, tone: TONE_MUTED)
+    }
+
+    stops {
+      Layout: {direction: Row, spacing: 0, v: Middle}
+      box.spatial.SpatialIgnore
+      for i in 0..16 {
+        if i < fl_stop_n {
+          FlPip "pip_{i}"(i: i)
+        }
+      }
+    }
+
+    foot {
+      Layout: {direction: Row, spacing: 10, v: Middle}
+      LayoutItem: {width: {mode: Grow}}
+      box.spatial.SpatialIgnore
+      Txt cap(text: fl_stop_moving ? "NEXT" : "NOW AT", size: F_TINY, tone: TONE_ACCENT)
+      Txt stop(text: fl_stop_name(nxt), size: F_SMALL)
+      Gap pad()
+      Txt goal(text: nxt < last ? "→  {fl_stop_name(last)}" : "TERMINUS", size: F_SMALL, tone: TONE_MUTED)
+      Gap pad2(size: 6)
+      KeyHint seat(key: "C")
+      Txt view(text: fl_seat == 0 ? "CHASE" : fl_seat == 1 ? "WIDE" : "CABIN", size: F_TINY, tone: TONE_MUTED)
+    }
+  }
+}
+
+window {}
+
+hud {
+  flight_ui {
+    Position: {0, 0, 16}
+    LayoutFill: {surface: window}
+    Layout: {}
+    PickThrough
+    box.spatial.SpatialIgnore
+    if flight_on && mode == MODE_TRAVEL && fl_on && screen != SCREEN_GAMEOVER {
+      FlReadout readout()
+      if say_on && say_seq == fl_say_mine {
+        FlPa pa()
+      }
+    }
+  }
+}

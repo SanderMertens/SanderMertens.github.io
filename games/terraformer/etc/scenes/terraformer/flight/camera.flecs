@@ -1,0 +1,366 @@
+using flecs.script
+using flecs.script.math
+using box.input
+using state
+
+state {
+  export mut fl_cut: i32 = 0
+  export mut fl_blink: bool = false
+  export mut fl_seat_req: i32 = 0
+  export mut fl_cam_user: f32 = 0
+}
+
+async {
+  while true {
+    await on.pressed(state.flight_actions.Seat)
+    if fl_on && mode == MODE_TRAVEL {
+      fl_seat_req += 1
+    }
+  }
+}
+
+async {
+  mut psi: f64 = 0
+  mut psi_v: f64 = 0
+  mut el: f64 = 0.2
+  mut el_v: f64 = 0
+  mut dist: f64 = 600
+  mut dist_v: f64 = 0
+  mut fov: f64 = 40
+  mut fov_v: f64 = 0
+  mut lead: f64 = 0
+  mut lead_v: f64 = 0
+  mut yref: f64 = 0
+  mut uyaw: f64 = 0
+  mut uyaw_v: f64 = 0
+  mut upitch: f64 = 0
+  mut upitch_v: f64 = 0
+  mut uzoom: f64 = 1
+  mut idle: f64 = 10
+  mut cut_seen: i32 = -1
+  mut seat: i32 = 0
+  mut seat_seen: i32 = 0
+  mut blink: f64 = -1
+  mut side: f64 = -1
+  mut tx: f64 = 0
+  mut tz: f64 = 0
+  while true {
+    await next_frame()
+    if fl_on {
+      const st = fl_stage
+      const cls = fl_cls
+      const len: f64 = fl_cls_len(cls)
+      const lc: f64 = max(len, 80)
+      const hyaw: f64 = fl_syaw
+      const hxr: f64 = fl_sx
+      const hzr: f64 = fl_sz
+      const rx = cos(hyaw)
+      const rz = 0 - sin(hyaw)
+
+      mut best: f64 = 9000.0 * 9000.0
+      for i in 0..2 {
+        if fl_spi[i * 8] >= 0 {
+          const dx = fl_sp[i * 4] - hxr
+          const dz = fl_sp[i * 4 + 1] - hzr
+          const d2 = dx * dx + dz * dz
+          if d2 < best && d2 > 400 {
+            best = d2
+            side = dx * rx + dz * rz >= 0 ? 1 : -1
+          }
+        }
+      }
+      const o: f64 = 0 - side
+
+      mut p_psi: f64 = PI
+      mut p_el: f64 = 0.2
+      mut p_dist: f64 = 1.4
+      mut p_fov: f64 = 44
+      mut p_lead: f64 = 0
+      mut w: f64 = 0.9
+      const sway: f64 = sin(fl_clock * 0.21) * 0.09
+      const lit: f64 = 0 - (sin(fl_sun_yaw) * rx + cos(fl_sun_yaw) * rz) >= 0 ? 1 : -1
+      if st == FS_START {
+        p_psi = o * 0.78 + sway
+        p_el = 0.24
+        p_dist = len > 100 ? 2.7 : 3.4
+        p_fov = 38
+        w = 0.6
+      } else if st == FS_SLIDE {
+        p_psi = o * 0.62 + sway
+        p_el = 0.2
+        p_dist = len > 100 ? 2.0 : 2.6
+        p_fov = 35
+        w = 0.6
+      } else if st == FS_DEPART {
+        p_psi = o * 2.25
+        p_el = 0.27
+        p_dist = 1.75
+        p_fov = 38
+        w = 0.7
+      } else if st == FS_BURN {
+        p_psi = PI - o * 0.32
+        p_el = 0.2
+        p_dist = 1.35
+        p_fov = 46
+      } else if st == FS_CRUISE {
+        p_psi = PI - lit * 0.24
+        p_el = 0.17
+        p_dist = 1.3
+        p_fov = 56
+        p_lead = 0.2
+      } else if st == FS_GAPP {
+        p_psi = PI - 0.42
+        p_el = 0.15
+        p_dist = 1.7
+        p_fov = 36
+        p_lead = 0.35
+      } else if st == FS_QUEUE {
+        p_psi = PI - 0.75 + sway
+        p_el = 0.17
+        p_dist = 1.55
+        p_fov = 36
+        p_lead = 0.3
+        w = 0.6
+      } else if st == FS_ALIGN || st == FS_GCRAB {
+        p_psi = PI - 0.3
+        p_el = 0.12
+        p_dist = 1.35
+        p_fov = 40
+        p_lead = 0.3
+      } else if st == FS_RUN || st == FS_GRUN {
+        p_psi = PI
+        p_el = 0.075
+        p_dist = 1.15
+        p_fov = 58
+        p_lead = 0.3
+        w = 1.3
+      } else if st == FS_TUNNEL || st == FS_EXIT {
+        p_psi = 0.48
+        p_el = 0.11
+        p_dist = 2.0
+        p_fov = 32
+        p_lead = -0.3
+      } else if st == FS_ARRIVE {
+        p_psi = PI - o * 0.62
+        p_el = 0.22
+        p_dist = 1.75
+        p_fov = 36
+        p_lead = 0.3
+      } else if st == FS_DOCK || st == FS_DOCKED || st == FS_END {
+        p_psi = o * 2.2 + sway
+        p_el = 0.2
+        p_dist = 1.95
+        p_fov = 33
+        w = 0.7
+      } else if st == FS_TRANSFER {
+        p_psi = o * 2.2
+        p_el = 0.3
+        p_dist = 2.3
+        p_fov = 36
+        w = 0.7
+      } else if st == FS_PASS {
+        p_psi = PI - o * 0.7
+        p_el = 0.2
+        p_dist = 1.7
+        p_fov = 38
+        p_lead = 0.3
+      }
+      if st == FS_TRANSFER {
+        p_dist = p_dist * 360 / lc
+      }
+      if seat == 1 {
+        const moving = st == FS_CRUISE || st == FS_BURN || st == FS_RUN || st == FS_GRUN || st == FS_EXIT
+        p_psi = moving ? PI - o * 0.95 : o * 1.75
+        p_dist = p_dist * (moving ? 2.2 : 3.1)
+        p_fov = p_fov * (moving ? 0.6 : 0.48)
+        p_el = p_el * 0.7 + 0.03
+      }
+
+      if fl_seat_req != seat_seen {
+        seat_seen = fl_seat_req
+        const want = (seat + 1) % 3
+        if want == 2 || seat == 2 {
+          blink = 0
+          fl_blink = true
+        } else {
+          seat = want
+          fl_seat = seat
+        }
+      }
+      if blink >= 0 {
+        blink += dt
+        if blink > 0.2 && fl_blink {
+          seat = (seat + 1) % 3
+          fl_seat = seat
+          fl_blink = false
+          uyaw = 0
+          upitch = 0
+          uyaw_v = 0
+          upitch_v = 0
+        }
+        if blink > 0.5 {
+          blink = -1
+        }
+      }
+
+      const cutnow = cut_seen != fl_cut
+      if cutnow {
+        cut_seen = fl_cut
+        psi = p_psi
+        psi_v = 0
+        el = p_el
+        el_v = 0
+        dist = p_dist * lc
+        dist_v = 0
+        fov = p_fov
+        fov_v = 0
+        lead = p_lead
+        lead_v = 0
+        yref = hyaw
+        uyaw = 0
+        upitch = 0
+        uzoom = 1
+        uyaw_v = 0
+        upitch_v = 0
+        idle = 10
+      }
+      const k = min(dt, 0.05)
+      const dpsi = fl_wrap(p_psi - psi)
+      psi_v += (w * w * dpsi - 2 * w * psi_v) * k
+      psi += psi_v * k
+      el_v += (w * w * (p_el - el) - 2 * w * el_v) * k
+      el += el_v * k
+      const wd = w * 1.2
+      dist_v += (wd * wd * (p_dist * lc - dist) - 2 * wd * dist_v) * k
+      dist += dist_v * k
+      const fsp: f64 = st == FS_CRUISE ? clamp(log(max(fl_speed, 300) / 300) / 2.3, 0, 3) * 4 : 0
+      fov_v += (wd * wd * (p_fov + fsp - fov) - 2 * wd * fov_v) * k
+      fov += fov_v * k
+      lead_v += (w * w * (p_lead - lead) - 2 * w * lead_v) * k
+      lead += lead_v * k
+      yref += fl_wrap(hyaw - yref) * min(1, dt * 2.2)
+
+      const inp = Input[Input]
+      const locked = st == FS_RUN || st == FS_GRUN || st == FS_TUNNEL || (st == FS_START && fl_clock < 1.2)
+      const held = state.flight_actions.Look[ActionState].down && !locked
+      const wheel = locked ? 0 : inp.mouse.scroll.y
+      if held {
+        uyaw -= inp.mouse.delta.x * 0.0055
+        upitch += inp.mouse.delta.y * 0.0045
+        uyaw_v = 0
+        upitch_v = 0
+        idle = 0
+      }
+      if wheel != 0 {
+        uzoom = clamp(uzoom * pow(0.88, wheel), 0.5, 2.4)
+        idle = 0
+      }
+      if fl_look != held {
+        fl_look = held
+      }
+      if !held {
+        idle += dt
+        if idle > 1.4 || locked {
+          const wu: f64 = locked ? 2.4 : 1.1
+          uyaw = fl_wrap(uyaw)
+          uyaw_v += (0 - wu * wu * uyaw - 2 * wu * uyaw_v) * k
+          uyaw += uyaw_v * k
+          upitch_v += (0 - wu * wu * upitch - 2 * wu * upitch_v) * k
+          upitch += upitch_v * k
+          uzoom += (1 - uzoom) * min(1, dt * wu * 0.9)
+        }
+      }
+      upitch = clamp(upitch, -1.1, 1.1)
+      fl_cam_user = abs(uyaw) + abs(upitch) + abs(uzoom - 1)
+
+      const fwx = sin(hyaw)
+      const fwz = cos(hyaw)
+      mut cx: f64 = 0
+      mut cy: f64 = 0
+      mut cz: f64 = 0
+      mut lyaw: f64 = 0
+      mut lpitch: f64 = 0
+      mut cfov: f64 = fov
+      if seat == 2 {
+        const beam: f64 = cls == CLS_LINER ? 44 : cls == CLS_SHUTTLE ? 16 : 20
+        const ox = o * (beam / 2 + max(2.6, beam * 0.14))
+        const oy = cls == CLS_LINER ? 9 : 3
+        const oz = len * 0.1
+        cx = hxr + rx * ox + fwx * oz
+        cy = oy
+        cz = hzr + rz * ox + fwz * oz
+        const look = hyaw + o * 0.32 + uyaw
+        lyaw = atan2(0 - sin(look), 0 - cos(look))
+        lpitch = clamp(-0.06 - upitch, -1.2, 1.2)
+        cfov = 64 / clamp(uzoom, 0.6, 1.8)
+      } else {
+        const d = max(dist * uzoom, len * 0.62 + 24)
+        const e = clamp(el + upitch, -0.45, 1.25)
+        const phi = yref + psi + uyaw
+        tx = hxr + fwx * lead * len
+        tz = hzr + fwz * lead * len
+        const ty = len * 0.03
+        cx = tx + d * cos(e) * sin(phi)
+        cy = ty + d * sin(e)
+        cz = tz + d * cos(e) * cos(phi)
+        for i in 0..2 {
+          if fl_spi[i * 8] >= 0 {
+            const pp = fl_spi[i * 8]
+            const gate = poi_kind(pp) == KIND_GATE
+            const yw: f64 = fl_sp[i * 4 + 2]
+            const sx2: f64 = gate ? fl_sp[i * 4] - 520 * cos(yw) - 200 * sin(yw) : fl_sp[i * 4]
+            const sz2: f64 = gate ? fl_sp[i * 4 + 1] + 520 * sin(yw) - 200 * cos(yw) : fl_sp[i * 4 + 1]
+            const r = fl_place_r(pp) + 90
+            const dx = cx - sx2
+            const dy = cy
+            const dz = cz - sz2
+            const dd = sqrt(dx * dx + dy * dy + dz * dz)
+            if dd < r && r > 100 {
+              const f = r / max(dd, 1)
+              cx = sx2 + dx * f
+              cy = max(dy, 1) * f
+              cz = sz2 + dz * f
+            }
+          }
+        }
+        for kk in 0..6 {
+          if (fl_hero_mask >> kk) % 2 == 1 {
+            const pr: f64 = fl_body[7 + kk * 4] * 1035 + 250
+            const dx = cx - fl_body[4 + kk * 4]
+            const dy = cy - fl_body[5 + kk * 4]
+            const dz = cz - fl_body[6 + kk * 4]
+            const dd = sqrt(dx * dx + dy * dy + dz * dz)
+            if dd < pr {
+              const f = pr / max(dd, 1)
+              cx = fl_body[4 + kk * 4] + dx * f
+              cy = fl_body[5 + kk * 4] + dy * f
+              cz = fl_body[6 + kk * 4] + dz * f
+            }
+          }
+        }
+        const lx = tx - cx
+        const ly = ty - cy
+        const lz = tz - cz
+        const ll = max(sqrt(lx * lx + ly * ly + lz * lz), 0.001)
+        lyaw = atan2(0 - lx, 0 - lz)
+        lpitch = asin(clamp(ly / ll, -1, 1))
+      }
+      fl_cx = cx
+      fl_cy = cy
+      fl_cz = cz
+      fl_cyaw = lyaw
+      fl_cpitch = lpitch
+      const qf: f32 = floor(cfov * 10 + 0.5) / 10
+      if fl_cfov != qf {
+        fl_cfov = qf
+      }
+    } else {
+      if fl_blink {
+        fl_blink = false
+      }
+      seat = 0
+      seat_seen = fl_seat_req
+      blink = -1
+    }
+  }
+}

@@ -1,0 +1,164 @@
+include station/plan
+include station/kit
+include station/people
+include station/port
+include station/gate
+include station/mine
+include station/odd
+include station/site
+
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using state
+using terra
+
+state {
+  fn plan_room(poi: i32, i: i32) -> Room {
+    match plan_arch(poi) {
+      1: port_room(poi, i)
+      2: gate_room(poi, i)
+      3: mine_room(poi, i)
+      4: odd_room(poi, i)
+      _: site_room(poi, i)
+    }
+  }
+
+  fn plan_link(poi: i32, j: i32) -> Link {
+    match plan_arch(poi) {
+      1: port_link(poi, j)
+      2: gate_link(poi, j)
+      3: mine_link(poi, j)
+      4: odd_link(poi, j)
+      _: site_link(poi, j)
+    }
+  }
+
+  fn plan_spot_l(poi: i32, i: i32, k: i32) -> Spot {
+    match plan_arch(poi) {
+      1: port_spot(poi, i, k)
+      2: gate_spot(poi, i, k)
+      3: mine_spot(poi, i, k)
+      4: odd_spot(poi, i, k)
+      _: site_spot(poi, i, k)
+    }
+  }
+
+  fn plan_act_l(poi: i32, i: i32, k: i32) -> Act {
+    match plan_arch(poi) {
+      1: port_act(poi, i, k)
+      2: gate_act(poi, i, k)
+      3: mine_act(poi, i, k)
+      4: odd_act(poi, i, k)
+      _: site_act(poi, i, k)
+    }
+  }
+
+  fn plan_spawn(poi: i32) -> Act {
+    match plan_arch(poi) {
+      1: port_spawn(poi)
+      2: gate_spawn(poi)
+      3: mine_spawn(poi)
+      4: odd_spawn(poi)
+      _: site_spawn(poi)
+    }
+  }
+
+  fn plan_spot(poi: i32, i: i32, k: i32) -> Spot {
+    const r = plan_room(poi, i)
+    const s = plan_spot_l(poi, i, k)
+    r.role == 0 || s.hx <= 0 ? SPOT_NONE : spot(r.x + s.x, r.z + s.z, s.hx, s.hz)
+  }
+
+  fn plan_act(poi: i32, i: i32, k: i32) -> Act {
+    const r = plan_room(poi, i)
+    const a = plan_act_l(poi, i, k)
+    r.role == 0 || a.kind == 0 ? ACT_NONE : act(r.x + a.x, r.z + a.z, a.kind, a.arg)
+  }
+
+  fn plan_theme(poi: i32, i: i32) -> Theme {
+    theme_role(theme_base(poi), plan_room(poi, i).role)
+  }
+
+  fn room_free(poi: i32, i: i32, x: f32, z: f32) -> bool {
+    room_in(plan_room(poi, i), x, z, ROOM_MARGIN) && !(spot_hit(plan_spot(poi, i, 0), x, z) || spot_hit(plan_spot(poi, i, 1), x, z) || spot_hit(plan_spot(poi, i, 2), x, z) || spot_hit(plan_spot(poi, i, 3), x, z) || spot_hit(plan_spot(poi, i, 4), x, z) || spot_hit(plan_spot(poi, i, 5), x, z) || spot_hit(plan_spot(poi, i, 6), x, z) || spot_hit(plan_spot(poi, i, 7), x, z))
+  }
+
+  fn link_free(poi: i32, j: i32, x: f32, z: f32) -> bool {
+    link_in(plan_link(poi, j), plan_room(poi, plan_link(poi, j).a), x, z)
+  }
+
+  fn walk_ok(poi: i32, x: f32, z: f32) -> bool {
+    room_free(poi, 0, x, z) || room_free(poi, 1, x, z) || room_free(poi, 2, x, z) || room_free(poi, 3, x, z) || room_free(poi, 4, x, z) || room_free(poi, 5, x, z) || room_free(poi, 6, x, z) || room_free(poi, 7, x, z) || room_free(poi, 8, x, z) || room_free(poi, 9, x, z) || link_free(poi, 0, x, z) || link_free(poi, 1, x, z) || link_free(poi, 2, x, z) || link_free(poi, 3, x, z) || link_free(poi, 4, x, z) || link_free(poi, 5, x, z) || link_free(poi, 6, x, z) || link_free(poi, 7, x, z) || link_free(poi, 8, x, z) || link_free(poi, 9, x, z)
+  }
+
+  fn spawn_x(poi: i32) -> f32 {
+    plan_spawn(poi).x
+  }
+
+  fn spawn_z(poi: i32) -> f32 {
+    plan_spawn(poi).z
+  }
+}
+
+terra {
+  template StationDeck {
+    prop poi: i32 = 0
+
+    const arch = plan_arch(poi)
+    const l0 = plan_link(poi, 0)
+    const l1 = plan_link(poi, 1)
+    const l2 = plan_link(poi, 2)
+    const l3 = plan_link(poi, 3)
+    const l4 = plan_link(poi, 4)
+    const l5 = plan_link(poi, 5)
+    const l6 = plan_link(poi, 6)
+    const l7 = plan_link(poi, 7)
+    const l8 = plan_link(poi, 8)
+    const l9 = plan_link(poi, 9)
+
+    KitBackdrop backdrop(poi: poi)
+    for i in 0..10 {
+      if plan_room(poi, i).role != 0 {
+        KitRoom "shell_{i}"(r: plan_room(poi, i), th: plan_theme(poi, i), l0: l0, l1: l1, l2: l2, l3: l3, l4: l4, l5: l5, l6: l6, l7: l7, l8: l8, l9: l9)
+        "room_{i}" {
+          Position: {plan_room(poi, i).x, 0, plan_room(poi, i).z}
+          if arch == 1 {
+            PortRoom body(poi: poi, i: i) { Position: {0, 0, 0} }
+          } else if arch == 2 {
+            GateRoom body(poi: poi, i: i) { Position: {0, 0, 0} }
+          } else if arch == 3 {
+            MineRoom body(poi: poi, i: i) { Position: {0, 0, 0} }
+          } else if arch == 4 {
+            OddRoom body(poi: poi, i: i) { Position: {0, 0, 0} }
+          } else {
+            SiteRoom body(poi: poi, i: i) { Position: {0, 0, 0} }
+          }
+        }
+        for k in 0..8 {
+          if plan_act(poi, i, k).kind == 1 {
+            KitRing "ring_{i}_{k}"(ink: fac_ink(plan_act(poi, i, k).arg), reach: ACT_REACH) { Position: {plan_act(poi, i, k).x, 0, plan_act(poi, i, k).z} }
+          }
+        }
+      }
+    }
+    for j in 0..10 {
+      if plan_link(poi, j).a >= 0 {
+        KitLink "link_{j}"(l: plan_link(poi, j), ra: plan_room(poi, plan_link(poi, j).a), th: plan_theme(poi, plan_link(poi, j).b >= 0 ? plan_link(poi, j).b : plan_link(poi, j).a), role: plan_link(poi, j).b >= 0 ? plan_room(poi, plan_link(poi, j).b).role : 0, j: j)
+      }
+    }
+    if arch == 1 {
+      PortOutside outside(poi: poi)
+    } else if arch == 2 {
+      GateOutside outside(poi: poi)
+    } else if arch == 3 {
+      MineOutside outside(poi: poi)
+    } else if arch == 4 {
+      OddOutside outside(poi: poi)
+    } else {
+      SiteOutside outside(poi: poi)
+    }
+  }
+}

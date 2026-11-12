@@ -1,0 +1,460 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.light
+using box.movement
+using box.texture
+using box.particle
+using box.animation
+using box.spatial
+using box.text
+using state
+
+state {
+  fn fl_berth_x(kind: i32, tier: i32, small: bool) -> f32 {
+    const b: f32 = match kind {
+      2: match tier { 0: 300; 1: 420; _: 560 }
+      3: 220
+      4: 180
+      5: 200
+      6: 180
+      _: 150
+    }
+    small ? 0 - b * 0.6 : b
+  }
+}
+
+terra {
+  prefab FlPh { Rgb: {150, 156, 168}; PbrMaterial: {metallic: 0.4, roughness: 0.5} }
+
+  fn fl_mix(a: f32, b: f32, t: f32) -> f32 {
+    a + (b - a) * t
+  }
+
+  fl_plate_h {
+    TextureGen: {
+      width: 512, height: 512, seed: 71
+      layers: [
+        {kind: GenBlocks, courses: 8, per_course: 2, gap: 0.0025, stagger: 0.41, jitter: 0.3, softness: 0.003, amount: 0.6, id_amount: 0.08, seed: 3}
+        {kind: GenBlocks, courses: 32, per_course: 8, gap: 0.0016, stagger: 0.5, jitter: 0.2, softness: 0.002, amount: 0.08, id_amount: 0.05, seed: 4}
+        {kind: GenNoise, frequency: 4, octaves: 5, gain: 0.55, amount: 0.16, seed: 9}
+      ]
+    }
+  }
+
+  fl_plate {
+    TextureGen: {source: fl_plate_h, output: GenAlbedo, colors: [
+      {0, {132, 134, 140}}
+      {0.3, {170, 172, 178}}
+      {0.42, {212, 214, 220}}
+      {0.74, {230, 232, 236}}
+      {0.88, {244, 245, 248}}
+      {1, {255, 255, 255}}
+    ]}
+  }
+
+  fl_plate_n {
+    TextureGen: {source: fl_plate_h, output: GenNormal, strength: 0.28}
+  }
+
+  fl_win_h {
+    TextureGen: {
+      width: 1024, height: 512, seed: 12
+      layers: [
+        {kind: GenBlocks, courses: 16, per_course: 28, amount: 0.3, id_amount: 0.7, seed: 5}
+        {kind: GenBlocks, op: GenMultiply, courses: 16, per_course: 28, gap: 0.021, softness: 0.0015, amount: 1, seed: 5}
+      ]
+    }
+  }
+
+  fl_win_e {
+    TextureGen: {source: fl_win_h, output: GenAlbedo, colors: [
+      {0, {0, 0, 0}}
+      {0.29, {0, 0, 0}}
+      {0.3, {4, 6, 10}}
+      {0.73, {5, 8, 14}}
+      {0.74, {150, 104, 62}}
+      {0.8, {160, 112, 66}}
+      {0.81, {255, 200, 134}}
+      {0.95, {255, 228, 186}}
+      {0.96, {200, 226, 255}}
+      {1, {226, 240, 255}}
+    ]}
+  }
+
+  fl_win_a {
+    TextureGen: {source: fl_win_h, output: GenAlbedo, colors: [
+      {0, {236, 238, 242}}
+      {0.27, {250, 250, 252}}
+      {0.3, {40, 48, 66}}
+      {1, {58, 68, 92}}
+    ]}
+  }
+
+  fl_pane_h {
+    TextureGen: {
+      width: 256, height: 256, seed: 19
+      layers: [
+        {kind: GenBlocks, courses: 8, per_course: 8, amount: 0.4, id_amount: 0.6, seed: 6}
+        {kind: GenBlocks, op: GenMultiply, courses: 8, per_course: 8, gap: 0.012, softness: 0.004, amount: 1, seed: 6}
+      ]
+    }
+  }
+
+  fl_pane_e {
+    TextureGen: {source: fl_pane_h, output: GenAlbedo, colors: [
+      {0, {0, 0, 0}}
+      {0.38, {0, 0, 0}}
+      {0.4, {40, 30, 20}}
+      {0.8, {120, 96, 66}}
+      {0.9, {255, 214, 160}}
+      {1, {255, 236, 200}}
+    ]}
+  }
+
+  fl_pane_a {
+    TextureGen: {source: fl_pane_h, output: GenAlbedo, colors: [
+      {0, {210, 214, 220}}
+      {0.36, {220, 224, 230}}
+      {0.4, {18, 30, 50}}
+      {1, {30, 48, 76}}
+    ]}
+  }
+
+  fl_cont_h {
+    TextureGen: {
+      width: 512, height: 512, seed: 44
+      layers: [
+        {kind: GenBlocks, courses: 10, per_course: 3, gap: 0.005, softness: 0.004, tones: 7, amount: 0.8, id_amount: 0.2, seed: 8}
+      ]
+    }
+  }
+
+  fl_cont {
+    TextureGen: {source: fl_cont_h, output: GenAlbedo,
+      palette: [{150, 74, 60}, {70, 96, 132}, {176, 144, 70}, {84, 116, 96}, {142, 146, 152}, {168, 108, 66}, {196, 196, 190}],
+      colors: [{0, {40, 40, 44}}, {0.5, {200, 200, 200}}, {1, {255, 255, 255}}]}
+  }
+
+  fl_cont_n {
+    TextureGen: {source: fl_cont_h, output: GenNormal, strength: 0.9}
+  }
+
+  fl_rock_h {
+    TextureGen: {
+      width: 512, height: 512, seed: 91
+      layers: [
+        {kind: GenNoise, frequency: 3, octaves: 6, gain: 0.62, amount: 0.8, seed: 4}
+        {kind: GenCells, count: 14, distance: GenNearest, amount: 0.2, seed: 6}
+      ]
+    }
+  }
+
+  fl_rock {
+    TextureGen: {source: fl_rock_h, output: GenAlbedo, colors: [
+      {0, {96, 88, 82}}
+      {0.4, {138, 128, 118}}
+      {0.7, {168, 158, 146}}
+      {1, {204, 196, 184}}
+    ]}
+  }
+
+  fl_rock_n {
+    TextureGen: {source: fl_rock_h, output: GenNormal, strength: 3}
+  }
+
+  fl_solar_h {
+    TextureGen: {
+      width: 256, height: 256, seed: 3
+      layers: [
+        {kind: GenBlocks, courses: 8, per_course: 4, gap: 0.012, softness: 0.004, amount: 0.9, id_amount: 0.1, seed: 2}
+      ]
+    }
+  }
+
+  fl_solar {
+    TextureGen: {source: fl_solar_h, output: GenAlbedo, colors: [
+      {0, {190, 196, 210}}
+      {0.4, {20, 34, 92}}
+      {1, {34, 56, 140}}
+    ]}
+  }
+
+  fl_film_h {
+    TextureGen: {
+      width: 256, height: 256, seed: 21
+      layers: [
+        {kind: GenNoise, frequency: 3, octaves: 4, gain: 0.55, amount: 1, seed: 2}
+      ]
+    }
+  }
+
+  fl_film {
+    TextureGen: {source: fl_film_h, output: GenAlbedo, colors: [
+      {0, {0, 0, 0}}
+      {0.4, {4, 14, 40}}
+      {0.56, {30, 90, 190}}
+      {0.72, {120, 200, 255}}
+      {1, {235, 250, 255}}
+    ]}
+  }
+
+  prefab FlHull { Rgb: {226, 229, 234}; PbrMaterial: {metallic: 0.3, roughness: 0.45}; PbrTextures: {albedo: fl_plate, normal: fl_plate_n}; TextureMapping: {MappingObject, size: 60, blend: 0.2} }
+  prefab FlHullGrey { Rgb: {150, 157, 170}; PbrMaterial: {metallic: 0.6, roughness: 0.45}; PbrTextures: {albedo: fl_plate, normal: fl_plate_n}; TextureMapping: {MappingObject, size: 60, blend: 0.2} }
+  prefab FlHullDark { Rgb: {74, 80, 94}; PbrMaterial: {metallic: 0.75, roughness: 0.48}; PbrTextures: {albedo: fl_plate, normal: fl_plate_n}; TextureMapping: {MappingObject, size: 50, blend: 0.2} }
+  prefab FlHullFine { Rgb: {226, 229, 234}; PbrMaterial: {metallic: 0.3, roughness: 0.45}; PbrTextures: {albedo: fl_plate, normal: fl_plate_n}; TextureMapping: {MappingObject, size: 20, blend: 0.2} }
+  prefab FlHullFineDark { Rgb: {74, 80, 94}; PbrMaterial: {metallic: 0.75, roughness: 0.48}; PbrTextures: {albedo: fl_plate, normal: fl_plate_n}; TextureMapping: {MappingObject, size: 18, blend: 0.2} }
+  prefab FlWin { Rgb: {226, 229, 234}; PbrMaterial: {metallic: 0.3, roughness: 0.4}; Emissive: {strength: 2.2, color: {255, 232, 200}}; PbrTextures: {albedo: fl_win_a, emissive: fl_win_e}; TextureMapping: {MappingObject, size: 48, blend: 0} }
+  prefab FlPane { Rgb: {255, 255, 255}; PbrMaterial: {metallic: 0.6, roughness: 0.15}; Emissive: {strength: 1.6, color: {255, 226, 190}}; PbrTextures: {albedo: fl_pane_a, emissive: fl_pane_e} }
+  prefab FlWinUv { Rgb: {226, 229, 234}; PbrMaterial: {metallic: 0.3, roughness: 0.4}; Emissive: {strength: 2.2, color: {255, 232, 200}}; PbrTextures: {albedo: fl_win_a, emissive: fl_win_e} }
+  prefab FlFilm { Rgb: {0, 0, 0}; Emissive: {strength: 1, color: {150, 200, 255}}; PbrTextures: {emissive: fl_film}; TextureMapping: {MappingObject, size: 420, blend: 0}; BlendMode: Additive; NoShadow }
+  prefab FlCont { Rgb: {235, 235, 235}; PbrMaterial: {metallic: 0.35, roughness: 0.6}; PbrTextures: {albedo: fl_cont, normal: fl_cont_n}; TextureMapping: {MappingObject, size: 30, blend: 0} }
+  prefab FlSolar { Rgb: {255, 255, 255}; PbrMaterial: {metallic: 0.7, roughness: 0.25}; PbrTextures: {albedo: fl_solar}; TextureMapping: {MappingObject, size: 24, blend: 0} }
+  prefab FlRock { Rgb: {150, 140, 128}; PbrMaterial: {metallic: 0, roughness: 0.95}; PbrTextures: {albedo: fl_rock, normal: fl_rock_n}; TextureMapping: {MappingObject, size: 120, blend: 0.3} }
+  prefab FlStone { Rgb: {196, 186, 166}; PbrMaterial: {metallic: 0, roughness: 0.9}; PbrTextures: {albedo: fl_plate, normal: fl_plate_n}; TextureMapping: {MappingObject, size: 30, blend: 0.2} }
+  prefab FlSteel { Rgb: {132, 140, 154}; PbrMaterial: {metallic: 0.7, roughness: 0.45} }
+  prefab FlIron { Rgb: {50, 55, 66}; PbrMaterial: {metallic: 0.8, roughness: 0.5} }
+  prefab FlBlack { Rgb: {14, 16, 21}; PbrMaterial: {metallic: 0.4, roughness: 0.75} }
+  prefab FlWhite { Rgb: {224, 228, 234}; PbrMaterial: {metallic: 0.3, roughness: 0.45} }
+  prefab FlOrange { Rgb: {214, 98, 36}; PbrMaterial: {metallic: 0.3, roughness: 0.55} }
+  prefab FlYellow { Rgb: {232, 172, 30}; PbrMaterial: {metallic: 0.25, roughness: 0.55} }
+  prefab FlGlass { Rgb: {16, 30, 48}; PbrMaterial: {metallic: 0.7, roughness: 0.08}; Emissive: {strength: 0.5, color: {255, 206, 150}} }
+  prefab FlGlassCool { Rgb: {14, 30, 50}; PbrMaterial: {metallic: 0.7, roughness: 0.08}; Emissive: {strength: 0.8, color: {110, 180, 240}} }
+  prefab FlLampW { Rgb: {30, 30, 30}; Emissive: {strength: 6, color: {235, 244, 255}}; NoShadow }
+  prefab FlLampWarm { Rgb: {40, 30, 16}; Emissive: {strength: 6, color: {255, 208, 150}}; NoShadow }
+  prefab FlLampR { Rgb: {40, 6, 4}; Emissive: {strength: 8, color: {255, 50, 36}}; NoShadow }
+  prefab FlLampG { Rgb: {6, 30, 10}; Emissive: {strength: 8, color: {70, 255, 110}}; NoShadow }
+  prefab FlLampA { Rgb: {40, 24, 4}; Emissive: {strength: 7, color: {255, 168, 40}}; NoShadow }
+  prefab FlLampP { Rgb: {40, 6, 30}; Emissive: {strength: 7, color: {255, 70, 190}}; NoShadow }
+  prefab FlLampC { Rgb: {6, 30, 40}; Emissive: {strength: 7, color: {70, 230, 255}}; NoShadow }
+  prefab FlLampB { Rgb: {6, 16, 40}; Emissive: {strength: 7, color: {90, 170, 255}}; NoShadow }
+
+  prefab fl_strobe_clip {
+    AnimationClip: {duration: 1.6}
+    strength { AnimationTrack: {component: Emissive, member: "strength", curve: {keys: [{0, 0}, {0.03, 30}, {0.1, 30}, {0.14, 0}, {0.26, 0}, {0.29, 30}, {0.36, 30}, {0.4, 0}, {1.6, 0}]}} }
+  }
+
+  prefab fl_blink_clip {
+    AnimationClip: {duration: 2.2}
+    strength { AnimationTrack: {component: Emissive, member: "strength", curve: {keys: [{0, 0.3}, {0.06, 12}, {0.5, 12}, {0.62, 0.3}, {2.2, 0.3}]}} }
+  }
+
+  prefab fl_pulse_clip {
+    AnimationClip: {duration: 2.8}
+    strength { AnimationTrack: {component: Emissive, member: "strength", curve: {keys: [{0, 2}, {1.4, 9}, {2.8, 2}]}} }
+  }
+
+  prefab FlStrobe { Rgb: {30, 30, 30}; Emissive: {strength: 0, color: {235, 244, 255}}; Animator: {clip: fl_strobe_clip}; NoShadow }
+  prefab FlBlinkR { Rgb: {40, 6, 4}; Emissive: {strength: 6, color: {255, 50, 36}}; Animator: {clip: fl_blink_clip}; NoShadow }
+  prefab FlBlinkA { Rgb: {40, 24, 4}; Emissive: {strength: 6, color: {255, 168, 40}}; Animator: {clip: fl_blink_clip}; NoShadow }
+  prefab FlBlinkB { Rgb: {6, 16, 40}; Emissive: {strength: 6, color: {70, 130, 255}}; Animator: {clip: fl_blink_clip}; NoShadow }
+  prefab FlPulseG { Rgb: {6, 30, 10}; Emissive: {strength: 6, color: {70, 255, 110}}; Animator: {clip: fl_pulse_clip}; NoShadow }
+
+  template FlBell {
+    prop power: f32 = 0
+    prop r: f32 = 10
+    prop hue: Rgb = {120, 190, 255}
+    prop seed: i32 = 0
+
+    bell : FlIron {
+      Position: {0, 0, 0}
+      Rotation: {PI / 2, 0, 0}
+      Frustum: {length: r * 1.8, radius_bottom: r, radius_top: r * 0.52, segments: 24, smooth: true}
+    }
+    lip : FlSteel {
+      Position: {0, 0, 0 - r * 0.9}
+      Rotation: {PI / 2, 0, 0}
+      Torus: {radius: r, tube: r * 0.06, segments: 24, rings: 6}
+    }
+    throat : FlSteel {
+      Position: {0, 0, r * 0.9}
+      Rotation: {PI / 2, 0, 0}
+      Torus: {radius: r * 0.56, tube: r * 0.1, segments: 16, rings: 6}
+    }
+    glow {
+      Position: {0, 0, 0 - r * 0.62}
+      Rotation: {PI / 2, 0, 0}
+      Cylinder: {length: r * 0.06, radius: r * 0.9, segments: 24}
+      Rgb: {0, 0, 0}
+      Emissive: {strength: 0.25 + power * 16, color: hue}
+      NoShadow
+    }
+    if power > 0.01 {
+      halo {
+        Position: {0, 0, 0 - r * 0.9}
+        Sphere: {radius: r * (0.8 + 0.3 * power), segments: 16, smooth: true}
+        Rgb: {0, 0, 0}
+        Emissive: {strength: 0.4 + 0.8 * power, color: hue}
+        BlendMode: Additive
+        NoShadow
+      }
+      core {
+        Position: {0, 0, 0 - r * (0.5 + 1.2 + 3 * power)}
+        Scale: {1, 1, 2.4 + 6 * power}
+        Sphere: {radius: r * 0.5, segments: 16, smooth: true}
+        Rgb: {0, 0, 0}
+        Emissive: {strength: 1.6 + 2.6 * power, color: {fl_mix(hue.r, 255, 0.4), fl_mix(hue.g, 255, 0.4), fl_mix(hue.b, 255, 0.4)}}
+        BlendMode: Additive
+        NoShadow
+      }
+    }
+    plume {
+      Position: {0, 0, 0 - r * 0.7}
+      Rotation: {0 - PI / 2, 0, 0}
+      ParticleEmitter: {
+        max: 512, rate: power > 0.01 ? 200 + 420 * power : 0,
+        shape: EmitterDisc, radius: r * 0.4,
+        spread: 1.2, speed: {r * (8 + 22 * power), r * (11 + 30 * power)},
+        lifetime: {0.3, 0.62}, size: {r * 1.2, r * 1.8}, opacity: {0.035, 0.08},
+        inherit_velocity: 1,
+        color: {hue.r, hue.g, hue.b}, seed: 31 + seed
+      }
+      ParticleAppearance: {blend: ParticleAdditive}
+      ParticleCurves: {
+        size: {keys: [{0, 0.85}, {0.3, 1}, {1, 0.3}]},
+        opacity: {keys: [{0, 0}, {0.06, 1}, {0.5, 0.55}, {1, 0}]}
+      }
+      ParticleForces: {gravity: {0, 0, 0}}
+      SpatialIgnore
+    }
+  }
+
+  template FlPuff {
+    prop power: f32 = 0
+    prop size: f32 = 1.5
+
+    pod : FlIron { Position: {0, 0, 0}; Box: {size * 1.6, size * 1.6, size * 2.2} }
+    nozzle : FlBlack { Position: {size * 0.9, 0, 0}; Rotation: {0, 0, 0 - PI / 2}; Frustum: {length: size * 0.7, radius_bottom: size * 0.3, radius_top: size * 0.55, segments: 10} }
+    if power > 0.02 {
+      flash {
+        Position: {size * 1.3, 0, 0}
+        Scale: {1.6 + 2 * power, 1, 1}
+        Sphere: {radius: size * (0.4 + 0.3 * power), segments: 8, smooth: true}
+        Rgb: {0, 0, 0}
+        Emissive: {strength: 6, color: {235, 242, 255}}
+        BlendMode: Additive
+        NoShadow
+      }
+    }
+    jet {
+      Position: {size * 1.1, 0, 0}
+      Rotation: {0, 0, 0 - PI / 2}
+      ParticleEmitter: {
+        max: 192, rate: power > 0.02 ? 120 + 160 * power : 0,
+        shape: EmitterDisc, radius: size * 0.3,
+        spread: 7, speed: {size * (10 + 14 * power), size * (16 + 22 * power)},
+        lifetime: {0.2, 0.5}, size: {size * 1, size * 1.8}, opacity: {0.04, 0.1},
+        inherit_velocity: 1,
+        color: {214, 230, 255}, seed: 77
+      }
+      ParticleAppearance: {blend: ParticleAdditive}
+      ParticleCurves: {
+        size: {keys: [{0, 0.5}, {1, 2.4}]},
+        opacity: {keys: [{0, 0}, {0.1, 1}, {1, 0}]}
+      }
+      ParticleForces: {gravity: {0, 0, 0}}
+      SpatialIgnore
+    }
+  }
+
+  template FlCollar {
+    prop r: f32 = 4
+    prop len: f32 = 8
+    prop lights: f32 = 1
+
+    tube : FlIron { Position: {0 - len / 2, 0, 0}; Rotation: {0, 0, PI / 2}; Cylinder: {length: len, radius: r, segments: 20, smooth: true} }
+    flange : FlSteel { Position: {0 - len + r * 0.12, 0, 0}; Rotation: {0, 0, PI / 2}; Cylinder: {length: r * 0.24, radius: r * 1.18, segments: 20, smooth: true} }
+    hatch : FlBlack { Position: {0 - len - 0.02, 0, 0}; Rotation: {0, 0, PI / 2}; Cylinder: {length: 0.1, radius: r * 0.74, segments: 20} }
+    ring : FlLampG { Position: {0 - len - 0.05, 0, 0}; Rotation: {0, 0, PI / 2}; Torus: {radius: r * 0.92, tube: r * 0.05, segments: 24, rings: 4}; Emissive: {strength: 7 * lights, color: {70, 255, 110}} }
+    base : FlSteel { Position: {0 - r * 0.2, 0, 0}; Box: {r * 0.5, r * 3, r * 3.4}; Bevel: {radius: r * 0.2, segments: 1} }
+  }
+
+  fn fl_h(seed: i32, i: i32, salt: i32) -> f32 {
+    hash01(seed * 131 + i * 17 + 7, 300 + salt)
+  }
+
+  fn fl_cult_hull(c: i32) -> Rgb {
+    match c {
+      0: {214, 200, 170}
+      1: {238, 224, 190}
+      2: {206, 222, 198}
+      3: {124, 128, 136}
+      4: {242, 244, 248}
+      5: {146, 156, 116}
+      6: {114, 120, 86}
+      _: {226, 229, 234}
+    }
+  }
+
+  fn fl_cult_trim(c: i32) -> Rgb {
+    match c {
+      0: {112, 98, 80}
+      1: {176, 132, 50}
+      2: {60, 98, 68}
+      3: {50, 52, 58}
+      4: {124, 134, 154}
+      5: {96, 72, 48}
+      6: {58, 64, 44}
+      _: {74, 80, 94}
+    }
+  }
+
+  fn fl_cult_glow(c: i32) -> Rgb {
+    match c {
+      0: {255, 226, 170}
+      1: {255, 204, 124}
+      2: {222, 255, 204}
+      3: {196, 218, 255}
+      4: {222, 238, 255}
+      5: {255, 222, 164}
+      6: {255, 188, 120}
+      _: {255, 232, 200}
+    }
+  }
+
+  template FlCradle {
+    prop gangway: f32 = 0
+    prop accent: Rgb = {255, 150, 30}
+    prop hull: Rgb = {226, 229, 234}
+
+    const g: f32 = clamp(gangway, 0, 1)
+
+    post_in : FlHull { Position: {14.5, 6, 0}; Box: {3, 19, 7}; Rgb: hull }
+    beam : FlHull { Position: {-4, 15, 0}; Box: {40, 3, 7}; Rgb: hull }
+    post_out : FlHull { Position: {-22.5, 4, 0}; Box: {3, 25, 7}; Rgb: hull }
+    stripe { Position: {-4, 15, 3.6}; Box: {40, 1, 0.3}; Rgb: accent; PbrMaterial: {metallic: 0.3, roughness: 0.4} }
+    lamp_a : FlLampW { Position: {9, 13.2, 0}; Box: {1.6, 0.5, 3} }
+    lamp_b : FlLampW { Position: {-16, 13.2, 0}; Box: {1.6, 0.5, 3} }
+    strobe : FlStrobe { Position: {-22.5, 17.6, 0}; Sphere: {radius: 0.7, segments: 8}; Animator: {clip: fl_strobe_clip, time: 0.5} }
+    tube : FlWhite { Position: {-21 + (1.5 + 11 * g) / 2, 0, 0}; Rotation: {0, 0, PI / 2}; Cylinder: {length: 1.5 + 11 * g, radius: 1.8, segments: 12, smooth: true} }
+    ring { Position: {-19.5 + 11 * g, 0, 0}; Rotation: {0, 0, PI / 2}; Torus: {radius: 1.9, tube: 0.22, segments: 16, rings: 4}; Rgb: {20, 20, 10}; Emissive: {strength: 8, color: g > 0.97 ? {70, 255, 110} : {255, 168, 40}}; NoShadow }
+  }
+
+  template FlJetty {
+    prop reach: f32 = 100
+    prop gangway: f32 = 0
+    prop accent: Rgb = {255, 150, 30}
+    prop hull: Rgb = {226, 229, 234}
+
+    const g: f32 = clamp(gangway, 0, 1)
+    const fix: f32 = reach - 18
+    const n: i32 = max(floor(fix / 30), 1)
+
+    tube : FlHull { Position: {fix / 2, 0, 0}; Rotation: {0, 0, PI / 2}; Cylinder: {length: fix, radius: 4.2, segments: 12, smooth: true}; Rgb: hull }
+    chord_a : FlSteel { Position: {fix / 2, 7, 0}; Box: {fix, 1, 1} }
+    chord_b : FlSteel { Position: {fix / 2, -7, 0}; Box: {fix, 1, 1} }
+    for i in 0..n {
+      "frame_{i}" : FlSteel { Position: {(i + 0.5) * fix / n, 0, 0}; Box: {1, 15, 7} }
+      "lamp_{i}" : FlLampW { Position: {(i + 0.5) * fix / n, -8, 0}; Box: {0.8, 0.5, 0.8} }
+    }
+    head : FlHull { Position: {fix - 3, 0, 0}; Box: {6, 14, 40}; Bevel: {radius: 2, segments: 1}; Rgb: hull }
+    head_stripe { Position: {fix + 0.1, -4.6, 0}; Box: {0.4, 1.6, 40}; Rgb: accent; PbrMaterial: {metallic: 0.3, roughness: 0.4} }
+    head_lamp_a : FlLampW { Position: {fix + 0.2, 6, 14}; Box: {0.5, 0.7, 2.2} }
+    head_lamp_b : FlLampW { Position: {fix + 0.2, 6, -14}; Box: {0.5, 0.7, 2.2} }
+    head_strobe : FlStrobe { Position: {fix - 3, 8, 19}; Sphere: {radius: 0.8, segments: 8} }
+    gang : FlWhite { Position: {fix + (2 + 16 * g) / 2, 0, 0}; Rotation: {0, 0, PI / 2}; Cylinder: {length: 2 + 16 * g, radius: 3.5, segments: 16, smooth: true} }
+    ring { Position: {fix + 2 + 16 * g, 0, 0}; Rotation: {0, 0, PI / 2}; Torus: {radius: 3.9, tube: 0.36, segments: 20, rings: 4}; Rgb: {20, 20, 10}; Emissive: {strength: 8, color: g > 0.97 ? {70, 255, 110} : {255, 168, 40}}; NoShadow }
+  }
+}

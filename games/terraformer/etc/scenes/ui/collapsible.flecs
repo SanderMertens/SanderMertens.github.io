@@ -1,0 +1,175 @@
+// Collapsible: a section whose header shows or hides its content.
+
+module box.widgets
+
+using flecs.script
+using box.ui
+using box.input
+using box.picking
+using box.layout
+using box.geometry
+using box.material
+using box.text
+using box.transform
+using box.transition
+
+// Behavior of a collapsible section: current is whether it is open. The section takes the focus
+// for its header, the child head, which comes before the content, the children of the instance:
+// a click on the header, or Enter and Space while the section has the focus, toggle current and
+// report the change. While closed the section is only as tall as its header, header points, and
+// clips its content away entirely, so the content is not drawn, picked or reached with Tab. The
+// pointer shows a hand over the header, a crossed circle while the section is disabled.
+template HeadlessCollapsible {
+  prop title: string = ""
+  prop value: bool = false
+  prop disabled: bool = false
+  prop width: f32 = 0
+  prop header: f32 = 0
+
+  mut current = value
+  mut last_value = value
+  mut hover = false
+  mut down = false
+  mut focused = false
+
+  ClipChildren
+  if !disabled {
+    Focusable
+  } else {
+    Cursor: {CursorNotAllowed}
+  }
+  if current {
+    LayoutItem: {width: {min: width, max: width}, height: {mode: Fit, value: 1}}
+  } else {
+    LayoutItem: {width: {min: width, max: width}, height: {mode: Fixed, value: header}}
+  }
+
+  head {
+    if !disabled {
+      Cursor: {CursorPointer}
+    }
+  }
+
+  async {
+    if value != last_value {
+      last_value = value
+      current = value
+    }
+  }
+
+  // A disabled section ignores the pointer, so it never shows as hovered or pressed
+  async {
+    while true {
+      await on.enter(head)
+      hover = !disabled
+    }
+  }
+
+  async {
+    while true {
+      await on.leave(head)
+      hover = false
+    }
+  }
+
+  async {
+    while true {
+      await on.press(head)
+      down = !disabled
+    }
+  }
+
+  async {
+    while true {
+      await on.release(head)
+      down = false
+    }
+  }
+
+  async {
+    while true {
+      const e = await on.focus(this)
+      if e.target == this {
+        focused = true
+      }
+    }
+  }
+
+  async {
+    while true {
+      const e = await on.blur(this)
+      if e.target == this {
+        focused = false
+        down = false
+      }
+    }
+  }
+
+  async {
+    while true {
+      const e = await on.key_down(this)
+      if focused && e.key == " " && !e.repeat {
+        down = true
+      }
+    }
+  }
+
+  async {
+    while true {
+      const e = await on.key_up(this)
+      if focused && e.key == " " {
+        down = false
+      }
+    }
+  }
+
+  // The activations of the widgets in the content and the clicks on it bubble up and do nothing
+  async {
+    while true {
+      const e = await on.activate(this)
+      if ui.activation(e) == this {
+        down = false
+        if !disabled && (e.keyboard || hover) {
+          current = !current
+          await ui.changed(this)
+        }
+      }
+    }
+  }
+}
+
+// A collapsible section: a header with a chevron, pointing down while open and right while
+// closed, and the title, above the content laid out in a column. A width fixes it, 0 fits it.
+template Collapsible : HeadlessCollapsible {
+  prop header: f32 = 32
+
+  const t = box.ui.theme[UiTheme]
+  const ring = focused && FocusStatus[FocusStatus].visible
+  const edge = ring ? t.focus : t.border
+
+  Layout: {direction: Column, spacing: t.spacing, padding: {0, t.padding, 0, 0}}
+
+  head {
+    Layout: {direction: Row, spacing: t.spacing, padding: {0, 0, t.padding, t.padding}, v: Middle}
+    LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: header}}
+    Rect: {1, 1}
+
+    Rgb: down ? t.pressed : hover ? t.hover : t.surface_alt
+    Transition: [Rgb: WidgetFade]
+    Border: {
+      width: ring ? t.focus_width : 1, radius: t.radius,
+      color: {edge.r, edge.g, edge.b, 255}
+    }
+
+    Chevron chevron(direction: current ? "down" : "right", color: t.text_muted)
+
+    caption {
+      Text: {value: title, size: t.font_size}
+      Rgb: t.text
+    }
+  }
+
+  if disabled {
+    Opacity: {t.disabled_opacity}
+  }
+}

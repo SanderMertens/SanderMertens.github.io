@@ -1,0 +1,357 @@
+include state
+
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.layout
+using box.text
+using box.picking
+using box.transition
+using box.input
+using box.ui
+using box.widgets
+using state
+
+box {
+  ui {
+    theme {
+      UiTheme: {
+        background: {9, 12, 17},
+        surface: {17, 21, 29},
+        surface_alt: {26, 31, 42},
+        border: {52, 62, 80},
+        text: {226, 232, 240},
+        text_muted: {136, 148, 166},
+        accent: {255, 170, 40},
+        accent_text: {20, 14, 4},
+        hover: {34, 41, 56},
+        pressed: {12, 15, 21},
+        focus: {255, 206, 120},
+        danger: {240, 96, 80},
+        selection: {84, 62, 24},
+        caret: {226, 232, 240},
+        disabled_opacity: 0.4,
+        font_size: 13,
+        small_font_size: 11,
+        heading_font_size: 15,
+        radius: 4,
+        padding: 8,
+        spacing: 6,
+        control_height: 28,
+        focus_width: 2,
+        caret_blink: 0.5
+      }
+    }
+  }
+}
+
+terra {
+  export const T_BG: Rgb = {9, 12, 17}
+  export const T_PANEL: Rgb = {17, 21, 29}
+  export const T_PANEL_ALT: Rgb = {26, 31, 42}
+  export const T_HOVER: Rgb = {34, 41, 56}
+  export const T_LINE: Rgb = {52, 62, 80}
+  export const T_TEXT: Rgb = {226, 232, 240}
+  export const T_MUTED: Rgb = {136, 148, 166}
+  export const T_FAINT: Rgb = {84, 94, 112}
+  export const T_ACCENT: Rgb = {255, 170, 40}
+  export const T_ACCENT_INK: Rgb = {20, 14, 4}
+  export const T_GOOD: Rgb = {110, 210, 140}
+  export const T_WARN: Rgb = {250, 200, 80}
+  export const T_BAD: Rgb = {240, 96, 80}
+  export const T_INFO: Rgb = {110, 180, 255}
+
+  export const F_TINY: f32 = 11
+  export const F_SMALL: f32 = 12
+  export const F_BODY: f32 = 14
+  export const F_HEAD: f32 = 16
+  export const F_TITLE: f32 = 22
+  export const F_BIG: f32 = 30
+
+  export const TONE_TEXT: i32 = 0
+  export const TONE_MUTED: i32 = 1
+  export const TONE_ACCENT: i32 = 2
+  export const TONE_GOOD: i32 = 3
+  export const TONE_WARN: i32 = 4
+  export const TONE_BAD: i32 = 5
+  export const TONE_INFO: i32 = 6
+
+  export const BTN_PLAIN: i32 = 0
+  export const BTN_PRIMARY: i32 = 1
+  export const BTN_DANGER: i32 = 2
+  export const BTN_QUIET: i32 = 3
+
+  fn tone_rgb(t: i32) -> Rgb {
+    match t {
+      1: T_MUTED
+      2: T_ACCENT
+      3: T_GOOD
+      4: T_WARN
+      5: T_BAD
+      6: T_INFO
+      _: T_TEXT
+    }
+  }
+
+  fn btn_fill(kind: i32, look: i32) -> Rgb {
+    look == 3 ? T_ACCENT : match kind {
+      1: match look { 1: {255, 190, 84}; 2: {214, 138, 24}; _: T_ACCENT }
+      2: match look { 1: {120, 44, 38}; 2: {70, 24, 20}; _: {92, 34, 30} }
+      3: match look { 1: T_HOVER; 2: T_BG; _: T_PANEL }
+      _: match look { 1: T_HOVER; 2: T_BG; _: T_PANEL_ALT }
+    }
+  }
+
+  fn btn_ink(kind: i32, look: i32) -> Rgb {
+    look == 3 || kind == 1 ? T_ACCENT_INK : kind == 3 && look == 0 ? T_MUTED : T_TEXT
+  }
+
+  fn btn_line(kind: i32, look: i32) -> box.types.rgba {
+    look == 3 || kind == 1 ? {255, 206, 120, 255} : kind == 2 ? {240, 96, 80, 255} : kind == 3 ? {52, 62, 80, 0} : look == 1 ? {110, 124, 150, 255} : {52, 62, 80, 255}
+  }
+
+  template Txt {
+    prop text: string = ""
+    prop size: f32 = 14
+    prop tone: i32 = 0
+    prop width: f32 = 0
+    prop align: Align = Left
+
+    Text: {value: text, size: size, width: width, align: align}
+    Rgb: tone_rgb(tone)
+    box.spatial.SpatialIgnore
+  }
+
+  template Rule {
+    LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: 1}}
+    Rect: {1, 1}
+    Rgb: T_LINE
+    box.spatial.SpatialIgnore
+  }
+
+  template Gap {
+    prop size: f32 = 0
+
+    if size == 0 {
+      LayoutItem: {width: {mode: Grow}, height: {mode: Grow}}
+    } else {
+      LayoutItem: {width: {mode: Fixed, value: size}, height: {mode: Fixed, value: size}}
+    }
+  }
+
+  template KeyHint {
+    prop key: string = "E"
+
+    Layout: {direction: Row, padding: {2, 2, 6, 6}, h: Center, v: Middle}
+    Rect: {1, 1}
+    Rgb: T_BG
+    Border: {width: 1, radius: 4, color: {255, 170, 40, 255}}
+    box.spatial.SpatialIgnore
+    glyph {
+      Text: {value: key, size: 12}
+      Rgb: T_ACCENT
+      box.spatial.SpatialIgnore
+    }
+  }
+
+  template OpButton : HeadlessButton {
+    prop op: i32 = 0
+    prop a: i32 = 0
+    prop b: i32 = 0
+    prop kind: i32 = 0
+    prop selected: bool = false
+    prop grow: bool = false
+    prop height: f32 = 30
+    prop size: f32 = 13
+
+    const look = selected ? 3 : down ? 2 : hover ? 1 : 0
+
+    Layout: {direction: Row, padding: {0, 0, 14, 14}, h: Center, v: Middle}
+    LayoutItem: {
+      width: {mode: grow ? Grow : width > 0 ? Fixed : Fit, value: width > 0 ? width : 1},
+      height: {mode: Fixed, value: height}
+    }
+    Rect: {1, 1}
+    Rgb: btn_fill(kind, look)
+    Border: {width: 1, radius: 4, color: btn_line(kind, look)}
+    Opacity: {disabled ? 0.4 : 1}
+    Transition: [Rgb: {duration: 0.08}]
+
+    name {
+      Text: {value: label, size: size}
+      Rgb: btn_ink(kind, look)
+      box.spatial.SpatialIgnore
+    }
+
+    async {
+      while true {
+        const e = await on.activate(this)
+        if ui.activation(e) == this && !disabled {
+          emit Request(op: op, a: a, b: b)
+        }
+      }
+    }
+  }
+
+  template Frame {
+    prop title: string = ""
+    prop width: f32 = 0
+    prop pad: f32 = 16
+    prop spacing: f32 = 10
+    prop tone: i32 = 2
+
+    Layout: {direction: Column, padding: {pad, pad, pad, pad}, spacing: spacing}
+    if width == 0 {
+      LayoutItem: {width: {mode: Fit}}
+    } else {
+      LayoutItem: {width: {min: width, max: width}}
+    }
+    Rect: {1, 1}
+    Rgb: T_PANEL
+    Border: {width: 1, radius: 6, color: {52, 62, 80, 255}}
+    BoxShadow: {offset_y: -6, blur: 24, color: {0, 0, 0, 150}}
+    InputBlocker
+
+    if title != "" {
+      head {
+        Layout: {direction: Row, spacing: 8, v: Middle}
+        LayoutItem: {width: {mode: Grow}}
+        tick {
+          LayoutItem: {width: {mode: Fixed, value: 3}, height: {mode: Fixed, value: 14}}
+          Rect: {1, 1}
+          Rgb: tone_rgb(tone)
+        }
+        name {
+          Text: {value: title, size: 13}
+          Rgb: T_TEXT
+        }
+        line {
+          LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: 1}}
+          Rect: {1, 1}
+          Rgb: T_LINE
+        }
+      }
+    }
+  }
+
+  template Row {
+    prop label: string = ""
+    prop value: string = ""
+    prop tone: i32 = 0
+    prop size: f32 = 13
+
+    Layout: {direction: Row, spacing: 12, v: Middle}
+    LayoutItem: {width: {mode: Grow}}
+    name {
+      Text: {value: label, size: size}
+      Rgb: T_MUTED
+    }
+    gap {
+      LayoutItem: {width: {mode: Grow}}
+    }
+    amount {
+      Text: {value: value, size: size}
+      Rgb: tone_rgb(tone)
+    }
+  }
+
+  template Chip {
+    prop label: string = ""
+    prop value: string = ""
+    prop tone: i32 = 0
+
+    Layout: {direction: Row, padding: {5, 5, 10, 10}, spacing: 7, v: Middle}
+    Rect: {1, 1}
+    Rgb: T_PANEL_ALT
+    Border: {width: 1, radius: 12, color: {52, 62, 80, 255}}
+    if label != "" {
+      name {
+        Text: {value: label, size: 11}
+        Rgb: T_MUTED
+      }
+    }
+    amount {
+      Text: {value: value, size: 13}
+      Rgb: tone_rgb(tone)
+    }
+  }
+
+  template Bar {
+    prop value: f32 = 0
+    prop width: f32 = 160
+    prop height: f32 = 6
+    prop tone: i32 = 2
+    prop mark: f32 = -1
+
+    const ratio = clamp(value, 0, 1)
+
+    Layout: {}
+    LayoutItem: {width: {mode: Fixed, value: width}, height: {mode: Fixed, value: height}}
+    Rect: {1, 1}
+    Rgb: T_PANEL_ALT
+    Border: {radius: height / 2}
+    box.spatial.SpatialIgnore
+
+    fill {
+      LayoutItem: {h: Left, v: Middle, width: {mode: Fixed, value: ratio * width + 0.01}, height: {mode: Fixed, value: height}}
+      Rect: {1, 1}
+      Rgb: tone_rgb(tone)
+      Border: {radius: height / 2}
+      box.spatial.SpatialIgnore
+    }
+    if mark >= 0 {
+      pin {
+        LayoutItem: {h: Left, v: Middle, x: clamp(mark, 0, 1) * width - 1, width: {mode: Fixed, value: 2}, height: {mode: Fixed, value: height + 6}}
+        Rect: {1, 1}
+        Rgb: T_TEXT
+        box.spatial.SpatialIgnore
+      }
+    }
+  }
+
+  template TabBar {
+    Layout: {direction: Row, spacing: 6, padding: {6, 6, 6, 6}, v: Middle}
+    Rect: {1, 1}
+    Rgb: T_PANEL
+    Border: {width: 1, radius: 6, color: {52, 62, 80, 255}}
+    InputBlocker
+
+    OpButton tab_nav(label: "NAV", op: OP_TAB, a: TAB_NAV, kind: 3, selected: tab == TAB_NAV, width: 110)
+    OpButton tab_jobs(label: "JOBS", op: OP_TAB, a: TAB_JOBS, kind: 3, selected: tab == TAB_JOBS, width: 110)
+    OpButton tab_assets(label: "ASSETS", op: OP_TAB, a: TAB_ASSETS, kind: 3, selected: tab == TAB_ASSETS, width: 110)
+    OpButton tab_close(label: "X", op: OP_CLOSE, kind: 3, width: 34)
+  }
+
+  template Dim {
+    prop alpha: f32 = 0.6
+
+    LayoutItem: {h: Center, v: Middle, width: {mode: Fixed, value: 8000}, height: {mode: Fixed, value: 8000}}
+    Rect: {1, 1}
+    Rgb: {4, 6, 9}
+    Opacity: {alpha}
+    InputBlocker
+  }
+
+  template Placeholder {
+    prop text: string = ""
+    prop tone: i32 = 6
+    prop width: f32 = 420
+
+    Layout: {direction: Column, padding: {14, 14, 18, 18}, spacing: 6}
+    LayoutItem: {width: {min: width, max: width}}
+    Rect: {1, 1}
+    Rgb: T_PANEL
+    Border: {width: 1, radius: 6, color: {110, 180, 255, 255}}
+    InputBlocker
+    tag {
+      Text: {value: "PLACEHOLDER", size: 11}
+      Rgb: tone_rgb(tone)
+    }
+    name {
+      Text: {value: text, size: 16}
+      Rgb: T_TEXT
+    }
+  }
+}

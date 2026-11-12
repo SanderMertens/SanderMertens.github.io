@@ -1,0 +1,706 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.layout
+using box.text
+using box.picking
+using box.transition
+using box.input
+using box.ui
+using box.widgets
+using state
+using terra
+
+state {
+  export const HUD_BAR_H: f32 = 56
+  export const HUD_DELTA_MIN: f64 = 500
+  export const HUD_LOW_FUNDS: f64 = 5000
+  export const HUD_THIN_FUNDS: f64 = 15000
+  export const HUD_FOOT_Y: f32 = 44
+  export const HUD_TALK_TOP: f32 = 164
+
+  export mut hud_delta: f64 = 0
+  export mut hud_delta_show: bool = false
+  export mut hud_flash: i32 = 0
+  export mut hud_leg: i32 = 0
+  export mut hud_legs: i32 = 0
+  export mut hud_leg_from: i32 = -1
+  export mut hud_leg_to: i32 = -1
+  export mut hud_trav_dest: i32 = -1
+  export mut hud_trav_eta: i32 = 0
+
+  fn hud_cash(v: f64) -> string {
+    const a = floor(abs(v) + 0.5)
+    const sign = v < 0 ? "-" : ""
+    const m = floor(a / 1000000)
+    const k = floor(a / 1000) - m * 1000
+    const u = a - floor(a / 1000) * 1000
+    a >= 1000000 ? "{sign}\${m:.0},{k:03.0},{u:03.0}" : a >= 1000 ? "{sign}\${k:.0},{u:03.0}" : "{sign}\${u:.0}"
+  }
+
+  fn hud_delta_text(v: f64) -> string {
+    v >= 0 ? "+{hud_cash(v)}" : hud_cash(v)
+  }
+
+  fn hud_kind_caps(kind: i32) -> string {
+    match kind {
+      0: "ORBIT"
+      1: "DOZER CAMP"
+      2: "SPACE PORT"
+      3: "COMPANY PORT"
+      4: "GATE STATION"
+      5: "MINING RIG"
+      _: "ODDITY"
+    }
+  }
+
+  fn hud_purpose_caps(i: i32) -> string {
+    match i {
+      0: "EXPANSION"
+      1: "LEISURE"
+      2: "GAMBLING"
+      3: "AGRICULTURE"
+      4: "CORRECTIONS"
+      5: "RESEARCH"
+      6: "PRESERVATION"
+      _: "SECURITY"
+    }
+  }
+
+  fn hud_struct_caps(k: i32, purpose: i32) -> string {
+    match k {
+      0: "SPACE PORT"
+      1: "BAR"
+      2: "TRADE HUB"
+      3: "PASSENGER TERMINAL"
+      4: "DEPOT EXPANSION"
+      5: "FUSION PLANT"
+      6: "ATMOSPHERE PROCESSOR"
+      7: "COMET LASSO"
+      8: "THERMAL REGULATOR"
+      9: "BIOSPHERE SEEDER"
+      10: "GREENHOUSE DOME"
+      11: "AIR PLANT"
+      12: match purpose {
+        0: "COLONY HUB"
+        1: "RESORT COMPLEX"
+        2: "CASINO"
+        3: "AGRI-COMBINE"
+        4: "PENITENTIARY"
+        5: "RESEARCH CAMPUS"
+        6: "SANCTUARY"
+        _: "GARRISON"
+      }
+      _: "RESERVED"
+    }
+  }
+
+  fn hud_purpose_rgb(i: i32) -> Rgb {
+    match i {
+      0: {110, 180, 255}
+      1: {255, 140, 190}
+      2: {255, 206, 92}
+      3: {150, 214, 96}
+      4: {214, 130, 90}
+      5: {110, 220, 220}
+      6: {90, 200, 140}
+      _: {240, 96, 80}
+    }
+  }
+
+  fn hud_struct_state(site: i32, k: i32) -> i32 {
+    site >= 0 && site < N_SITES && k >= 0 && k < N_STRUCT ? site_struct[site * 16 + k] : 0
+  }
+
+  fn hud_struct_part(site: i32, k: i32) -> f32 {
+    site >= 0 && site < N_SITES && k >= 0 && k < N_STRUCT ? site_progress[site * 16 + k] : 0
+  }
+
+  fn hud_job_tone(status: i32, left: i32, span: i32) -> i32 {
+    status == 2 ? 3 : status == 3 ? 5 : left <= 7 || left * 8 <= span ? 5 : left * 3 <= span ? 4 : 0
+  }
+
+  fn hud_days_text(left: i32) -> string {
+    left < 0 ? "LATE" : left == 0 ? "TODAY" : "{left} d"
+  }
+}
+
+terra {
+  template HudCap {
+    prop text: string = ""
+    prop tone: i32 = 1
+
+    Text: {value: text, size: 10}
+    Rgb: tone_rgb(tone)
+    box.spatial.SpatialIgnore
+  }
+
+  template HudSep {
+    prop height: f32 = 30
+
+    LayoutItem: {width: {mode: Fixed, value: 1}, height: {mode: Fixed, value: height}}
+    Rect: {1, 1}
+    Rgb: T_LINE
+    box.spatial.SpatialIgnore
+  }
+
+  template HudMeter {
+    prop value: f32 = 0
+    prop width: f32 = 160
+    prop height: f32 = 4
+    prop tone: i32 = 2
+
+    Layout: {}
+    LayoutItem: {width: {mode: Fixed, value: width}, height: {mode: Fixed, value: height}}
+    Rect: {1, 1}
+    Rgb: T_BG
+    Border: {radius: height / 2}
+    box.spatial.SpatialIgnore
+
+    fill {
+      LayoutItem: {h: Left, v: Middle, width: {mode: Fixed, value: clamp(value, 0, 1) * width + 0.01}, height: {mode: Fixed, value: height}}
+      Rect: {1, 1}
+      Rgb: tone_rgb(tone)
+      Border: {radius: height / 2}
+      box.spatial.SpatialIgnore
+    }
+  }
+
+  template HudFunds {
+    const tone = hud_flash > 0 ? TONE_GOOD : hud_flash < 0 ? TONE_BAD : money < HUD_LOW_FUNDS ? TONE_BAD : money < HUD_THIN_FUNDS ? TONE_WARN : TONE_TEXT
+
+    Layout: {direction: Column, spacing: 2}
+    HudCap cap(text: "TERRAFORMING? SURE. LLC", tone: TONE_ACCENT)
+    line {
+      Layout: {direction: Row, spacing: 10, v: Middle}
+      amount {
+        Text: {value: hud_cash(money), size: 22}
+        Rgb: tone_rgb(tone)
+        Transition: [Rgb: {duration: 0.35, timing_function: EaseOut}]
+        box.spatial.SpatialIgnore
+      }
+      change {
+        Layout: {direction: Row, padding: {2, 2, 0, 0}, v: Middle}
+        LayoutItem: {width: {mode: Fixed, value: 84}}
+        Opacity: {hud_delta_show ? 1 : 0}
+        Transition: [Opacity: {duration: 0.3, timing_function: EaseOut}]
+        box.spatial.SpatialIgnore
+        amount {
+          Text: {value: hud_delta_text(hud_delta), size: 13}
+          Rgb: tone_rgb(hud_delta >= 0 ? TONE_GOOD : TONE_BAD)
+          box.spatial.SpatialIgnore
+        }
+      }
+    }
+  }
+
+  template HudDate {
+    Layout: {direction: Column, spacing: 2}
+    HudCap cap(text: "DAY")
+    amount {
+      Text: {value: "{today}", size: 22}
+      Rgb: T_TEXT
+      box.spatial.SpatialIgnore
+    }
+  }
+
+  template HudPlace {
+    const away = mode == MODE_TRAVEL
+    const sys = away ? trav_sys : poi_sys(at_poi)
+
+    Layout: {direction: Column, spacing: 5}
+    HudCap cap(text: away ? "IN TRANSIT  ·  {sys_name(sys)}" : "{hud_kind_caps(poi_kind(at_poi))}  ·  {sys_name(sys)}")
+    name {
+      Text: {value: away ? "→  {poi_name(hud_trav_dest)}" : poi_name(at_poi), size: 15}
+      Rgb: T_TEXT
+      box.spatial.SpatialIgnore
+    }
+  }
+
+  template HudSpeedButton : HeadlessButton {
+    prop to: i32 = 0
+
+    const look = speed == to ? 3 : down ? 2 : hover ? 1 : 0
+
+    Layout: {direction: Row, spacing: 3, h: Center, v: Middle}
+    LayoutItem: {width: {mode: Fixed, value: 36}, height: {mode: Fixed, value: 28}}
+    Rect: {1, 1}
+    Rgb: btn_fill(BTN_PLAIN, look)
+    Border: {width: 1, radius: 4, color: btn_line(BTN_PLAIN, look)}
+    Opacity: {disabled ? 0.35 : 1}
+    Transition: [Rgb: {duration: 0.08}]
+
+    if to == 0 {
+      left {
+        LayoutItem: {width: {mode: Fixed, value: 3}, height: {mode: Fixed, value: 11}}
+        Rect: {1, 1}
+        Rgb: btn_ink(BTN_PLAIN, look)
+        box.spatial.SpatialIgnore
+      }
+      right {
+        LayoutItem: {width: {mode: Fixed, value: 3}, height: {mode: Fixed, value: 11}}
+        Rect: {1, 1}
+        Rgb: btn_ink(BTN_PLAIN, look)
+        box.spatial.SpatialIgnore
+      }
+    } else {
+      glyph {
+        Text: {value: to == 1 ? "▶" : "▶▶", size: 16}
+        Rgb: btn_ink(BTN_PLAIN, look)
+        box.spatial.SpatialIgnore
+      }
+    }
+
+    async {
+      while true {
+        const e = await on.activate(this)
+        if ui.activation(e) == this && !disabled {
+          emit Request(op: OP_SPEED, a: to, b: 0)
+        }
+      }
+    }
+  }
+
+  template HudJobChip : HeadlessButton {
+    prop idx: i32 = 0
+
+    const j = jobs[clamp(idx, 0, 3)]
+    const left = j.deadline - today
+    const tone = hud_job_tone(j.status, left, j.deadline - j.accepted)
+    const closed = j.status >= 2
+    const part = job_progress(idx)
+
+    Layout: {direction: Column, spacing: 3, padding: {5, 6, 9, 9}}
+    LayoutItem: {width: {mode: Fixed, value: 168}}
+    Rect: {1, 1}
+    Rgb: hover ? T_HOVER : T_PANEL_ALT
+    Border: {width: 1, radius: 4, color: tone == TONE_BAD ? {240, 96, 80, 255} : tone == TONE_WARN ? {250, 200, 80, 150} : {52, 62, 80, 255}}
+    Transition: [Rgb: {duration: 0.08}]
+
+    top {
+      Layout: {direction: Row, spacing: 6, v: Middle}
+      LayoutItem: {width: {mode: Grow}}
+      pip {
+        LayoutItem: {width: {mode: Fixed, value: 7}, height: {mode: Fixed, value: 7}}
+        Rect: {1, 1}
+        Rgb: hud_purpose_rgb(j.purpose)
+        Border: {radius: 2}
+        box.spatial.SpatialIgnore
+      }
+      who {
+        Text: {value: hud_purpose_caps(j.purpose), size: 10}
+        Rgb: T_MUTED
+        box.spatial.SpatialIgnore
+      }
+      Gap flex()
+      due {
+        Text: {value: j.status == 2 ? "DONE" : j.status == 3 ? "FAILED" : hud_days_text(left), size: 13}
+        Rgb: tone_rgb(tone)
+        box.spatial.SpatialIgnore
+      }
+    }
+    where {
+      Text: {value: pl_name(j.planet), size: 12}
+      Rgb: closed ? T_MUTED : T_TEXT
+      box.spatial.SpatialIgnore
+    }
+    HudMeter meter(value: part, width: 150, height: 3, tone: j.status == 3 ? TONE_BAD : part >= 1 ? TONE_GOOD : TONE_ACCENT)
+
+    async {
+      while true {
+        const e = await on.activate(this)
+        if ui.activation(e) == this {
+          emit Request(op: OP_TAB, a: TAB_JOBS, b: 0)
+          emit Request(op: OP_OPEN, a: SCREEN_PANEL, b: 0)
+        }
+      }
+    }
+  }
+
+  template HudBar {
+    LayoutItem: {h: Center, v: Top, width: {mode: Grow}, height: {mode: Fixed, value: HUD_BAR_H}}
+    Layout: {direction: Row, spacing: 16, padding: {0, 0, 18, 14}, v: Middle}
+    Rect: {1, 1}
+    Rgb: T_PANEL
+    BoxShadow: {offset_y: -4, blur: 18, color: {0, 0, 0, 140}}
+    InputBlocker
+
+    HudFunds funds()
+    HudSep sep_a()
+    HudDate date()
+    HudSep sep_b()
+    HudPlace place()
+    Gap flex()
+    chips {
+      Layout: {direction: Row, spacing: 0, v: Middle}
+      for i in 0..N_JOBS {
+        "slot_{i}" {
+          Layout: {direction: Row, padding: {0, 0, 0, 8}}
+          if jobs[i].status != JOB_EMPTY {
+            HudJobChip chip(idx: i)
+          }
+        }
+      }
+    }
+    HudSep sep_c()
+    speeds {
+      Layout: {direction: Row, spacing: 4, v: Middle}
+      HudSpeedButton pause(to: 0, disabled: mode == MODE_TRAVEL)
+      HudSpeedButton play(to: 1, disabled: mode == MODE_TRAVEL)
+      HudSpeedButton fast(to: 4, disabled: mode == MODE_TRAVEL)
+    }
+  }
+
+  template HudEdge {
+    LayoutItem: {h: Center, v: Top, y: 0 - HUD_BAR_H, width: {mode: Grow}, height: {mode: Fixed, value: 1}}
+    Rect: {1, 1}
+    Rgb: T_LINE
+    box.spatial.SpatialIgnore
+  }
+
+  template HudToast {
+    const on = toast_show && toast_text != ""
+    const tone = toast_kind == 0 ? TONE_ACCENT : toast_kind
+
+    LayoutItem: {h: Center, v: Top, y: on ? 0 - HUD_BAR_H - 8 : 0 - HUD_BAR_H + 14, width: {max: 780}}
+    Layout: {direction: Row, spacing: 10, padding: {6, 6, 12, 14}, v: Middle}
+    Rect: {1, 1}
+    Rgb: T_PANEL_ALT
+    Border: {width: 1, radius: 4, color: {52, 62, 80, 255}}
+    Opacity: {on ? 1 : 0}
+    Transition: [Opacity: {duration: 0.25, timing_function: EaseOut}, Position: {duration: 0.25, timing_function: EaseOut}]
+    box.spatial.SpatialIgnore
+
+    tick {
+      LayoutItem: {width: {mode: Fixed, value: 3}, height: {mode: Fixed, value: 14}}
+      Rect: {1, 1}
+      Rgb: tone_rgb(tone)
+      box.spatial.SpatialIgnore
+    }
+    line {
+      Text: {value: toast_text, size: 14}
+      Rgb: T_TEXT
+      box.spatial.SpatialIgnore
+    }
+  }
+
+  template HudOffer {
+    prop away: bool = false
+
+    mut shown = false
+    mut pulse = false
+
+    const p = offer.planet
+    const left = offer_expires - today
+    const block = offer_block()
+    const free = block == 0
+    const jumps = sys_dist(poi_sys(at_poi), pl_sys(p))
+    const unit = jumps == 1 ? "jump" : "jumps"
+
+    LayoutItem: {h: Right, v: Top, x: shown && !away ? -16 : 330, y: 0 - HUD_BAR_H - 12, width: {mode: Fixed, value: 300}}
+    Layout: {direction: Column, spacing: 9, padding: {14, 14, 16, 16}}
+    Rect: {1, 1}
+    Rgb: T_PANEL
+    Border: {width: 1, radius: 6, color: pulse ? {255, 170, 40, 255} : {150, 104, 36, 255}}
+    BoxShadow: {offset_y: -6, blur: 24, color: {0, 0, 0, 150}}
+    Opacity: {shown && !away ? 1 : 0}
+    Transition: [Opacity: {duration: 0.3, timing_function: EaseOut}, Position: {duration: 0.35, timing_function: EaseOut}, Border: {duration: 0.9, timing_function: EaseInOut}]
+    InputBlocker
+
+    head {
+      Layout: {direction: Row, spacing: 8, v: Middle}
+      LayoutItem: {width: {mode: Grow}}
+      tick {
+        LayoutItem: {width: {mode: Fixed, value: 3}, height: {mode: Fixed, value: 14}}
+        Rect: {1, 1}
+        Rgb: T_ACCENT
+      }
+      name {
+        Text: {value: "OFFER", size: 13}
+        Rgb: T_TEXT
+      }
+      line {
+        LayoutItem: {width: {mode: Grow}, height: {mode: Fixed, value: 1}}
+        Rect: {1, 1}
+        Rgb: T_LINE
+      }
+      lapse {
+        Text: {value: left <= 0 ? "LAPSES TODAY" : "LAPSES IN {left} d", size: 10}
+        Rgb: tone_rgb(left <= 1 ? TONE_BAD : TONE_MUTED)
+      }
+    }
+    who {
+      Layout: {direction: Column, spacing: 4}
+      LayoutItem: {width: {mode: Grow}}
+      client {
+        Text: {value: client_name(offer.client), size: 16, width: 268}
+        Rgb: T_TEXT
+      }
+      what {
+        Layout: {direction: Row, spacing: 6, v: Middle}
+        pip {
+          LayoutItem: {width: {mode: Fixed, value: 7}, height: {mode: Fixed, value: 7}}
+          Rect: {1, 1}
+          Rgb: hud_purpose_rgb(offer.purpose)
+          Border: {radius: 2}
+        }
+        name {
+          Text: {value: hud_purpose_caps(offer.purpose), size: 11}
+          Rgb: T_ACCENT
+        }
+      }
+    }
+    target {
+      Layout: {direction: Column, spacing: 3}
+      LayoutItem: {width: {mode: Grow}}
+      planet {
+        Text: {value: pl_name(p), size: 14}
+        Rgb: T_TEXT
+      }
+      about {
+        Text: {value: "{pl_type_name(pl_type(p))}  ·  {jumps} {unit}", size: 12}
+        Rgb: T_MUTED
+      }
+      region {
+        Text: {value: planet_region_name(p), size: 12}
+        Rgb: T_MUTED
+      }
+    }
+    brief {
+      Text: {value: purpose_brief(offer.purpose), size: 12, width: 268}
+      Rgb: T_MUTED
+    }
+    Rule rule()
+    Row fee(label: "Fee", value: hud_cash(offer.fee), tone: TONE_GOOD)
+    Row term(label: "Time allowed", value: "{offer.deadline} d")
+    buttons {
+      Layout: {direction: Row, spacing: 6}
+      LayoutItem: {width: {mode: Grow}}
+      OpButton accept(label: free ? "ACCEPT" : offer_block_tag(block), op: OP_OFFER_ACCEPT, kind: BTN_PRIMARY, disabled: !free, grow: true)
+      OpButton decline(label: "DECLINE", op: OP_OFFER_DECLINE, width: 96)
+    }
+
+    async {
+      await next_frame()
+      await next_frame()
+      shown = true
+      while true {
+        pulse = true
+        await delay(0.9)
+        pulse = false
+        await delay(0.9)
+      }
+    }
+  }
+
+  template HudPrompt {
+    const who = near_text != ""
+    const hit = who || near != 0
+
+    LayoutItem: {h: Center, v: Bottom, y: say_on ? HUD_TALK_TOP : HUD_FOOT_Y}
+    Layout: {direction: Row, spacing: 9, padding: {6, 6, 8, 12}, v: Middle}
+    Transition: [Position: {duration: 0.2, timing_function: EaseOut}]
+    box.spatial.SpatialIgnore
+
+    if hit {
+      Rect: {1, 1}
+      Rgb: T_PANEL
+      Border: {width: 1, radius: 6, color: {52, 62, 80, 255}}
+      KeyHint key(key: "E")
+      name {
+        Text: {value: who ? near_text : fac_name(near), size: 15}
+        Rgb: T_TEXT
+        box.spatial.SpatialIgnore
+      }
+    } else {
+      idle {
+        Layout: {direction: Row}
+        Opacity: {0.55}
+        box.spatial.SpatialIgnore
+        KeyHint key(key: "E")
+      }
+    }
+  }
+
+  template HudTravel {
+    const jump = poi_sys(hud_leg_from) != poi_sys(hud_leg_to)
+    const routed = hud_legs > 0
+    const verb = jump ? "JUMP" : "SHUTTLE"
+    const goal = jump ? sys_name(poi_sys(hud_leg_to)) : poi_name(hud_leg_to)
+
+    LayoutItem: {h: Center, v: Bottom, y: say_on ? HUD_TALK_TOP : 36}
+    Layout: {direction: Column, spacing: 8, padding: {12, 12, 18, 18}, h: Center}
+    Rect: {1, 1}
+    Rgb: T_PANEL
+    Border: {width: 1, radius: 6, color: {52, 62, 80, 255}}
+    BoxShadow: {offset_y: -6, blur: 24, color: {0, 0, 0, 150}}
+    box.spatial.SpatialIgnore
+
+    head {
+      Layout: {direction: Row, spacing: 10, v: Middle}
+      HudCap cap(text: "EN ROUTE", tone: TONE_ACCENT)
+      origin {
+        Text: {value: poi_name(at_poi), size: 13}
+        Rgb: T_MUTED
+        box.spatial.SpatialIgnore
+      }
+      arrow {
+        Text: {value: "→", size: 13}
+        Rgb: T_ACCENT
+        box.spatial.SpatialIgnore
+      }
+      dest {
+        Text: {value: poi_name(hud_trav_dest), size: 15}
+        Rgb: T_TEXT
+        box.spatial.SpatialIgnore
+      }
+    }
+    legs {
+      Layout: {direction: Row, spacing: 3, v: Middle}
+      for i in 0..12 {
+        "leg_{i}" {
+          Layout: {direction: Row}
+          if i < hud_legs {
+            pip {
+              LayoutItem: {width: {mode: Fixed, value: hud_legs > 8 ? 18 : 28}, height: {mode: Fixed, value: 3}}
+              Rect: {1, 1}
+              Rgb: i + 1 < hud_leg ? T_GOOD : i + 1 == hud_leg ? T_ACCENT : T_LINE
+              box.spatial.SpatialIgnore
+            }
+          }
+        }
+      }
+    }
+    foot {
+      Layout: {direction: Row, spacing: 12, v: Middle}
+      step {
+        Layout: {direction: Row}
+        if routed {
+          HudCap cap(text: "LEG {hud_leg} / {hud_legs}")
+        }
+      }
+      leg {
+        Text: {value: "{verb}  ·  {poi_name(hud_leg_from)} → {goal}", size: 12}
+        Rgb: T_MUTED
+        box.spatial.SpatialIgnore
+      }
+      eta {
+        Layout: {direction: Row}
+        HudCap cap(text: "DAY {today}  ·  ETA DAY {hud_trav_eta > today ? hud_trav_eta : today}")
+      }
+    }
+  }
+
+  template HudStrip {
+    LayoutItem: {h: Center, v: Middle, width: {mode: Grow}, height: {mode: Grow}}
+    Layout: {}
+    PickThrough
+
+    HudToast toast()
+    HudBar bar()
+    HudEdge edge()
+    if offer.status == 1 && screen != SCREEN_GAMEOVER {
+      HudOffer card(away: screen == SCREEN_TRADE || screen == SCREEN_FREIGHT || screen == SCREEN_SITE || (screen == SCREEN_PANEL && tab == TAB_JOBS))
+    }
+    if mode == MODE_TRAVEL {
+      if !flight_on {
+        HudTravel travel()
+      }
+    } else if screen == SCREEN_NONE {
+      HudPrompt prompt()
+    }
+  }
+}
+
+async {
+  mut last: f64 = money
+  mut hold: f64 = 0
+  mut flash: f64 = 0
+  while true {
+    await next_frame()
+    if money != last {
+      const d = money - last
+      const fresh = today == 0 && money == START_MONEY
+      last = money
+      if fresh {
+        hold = 0
+        flash = 0
+        hud_delta_show = false
+        hud_flash = 0
+      } else if abs(d) >= HUD_DELTA_MIN {
+        const sum = hold > 0 ? hud_delta + d : d
+        hud_delta = sum
+        hud_delta_show = abs(sum) >= 1
+        hud_flash = d >= 0 ? 1 : -1
+        hold = 2.6
+        flash = 0.7
+      }
+    }
+    if flash > 0 {
+      flash -= dt
+      if flash <= 0 {
+        hud_flash = 0
+      }
+    }
+    if hold > 0 {
+      hold -= dt
+      if hold <= 0 {
+        hud_delta_show = false
+      }
+    }
+  }
+}
+
+async {
+  mut was: bool = false
+  mut sig_from: i32 = -2
+  mut sig_to: i32 = -2
+  mut sig_jump: bool = false
+  mut sig_n: i32 = -1
+  while true {
+    await next_frame()
+    const away = mode == MODE_TRAVEL
+    if away && !was {
+      hud_trav_dest = route_n >= 2 && route_n <= ROUTE_MAX ? route_poi[route_n - 1] : nav_dest >= 0 ? nav_dest : trav_to
+      hud_trav_eta = today + floor(route_days + 0.5)
+      sig_from = -2
+    }
+    was = away
+    if away && (sig_from != trav_from || sig_to != trav_to || sig_jump != trav_jump || sig_n != route_n) {
+      sig_from = trav_from
+      sig_to = trav_to
+      sig_jump = trav_jump
+      sig_n = route_n
+      mut at: i32 = -1
+      if route_n >= 2 && route_n <= ROUTE_MAX {
+        for i in 1..route_n {
+          if at < 0 && route_poi[i] == trav_to {
+            at = i
+          }
+        }
+      }
+      if at >= 1 {
+        const split = poi_sys(trav_from) != poi_sys(trav_to)
+        const ahead = at + 1 < route_n && poi_sys(route_poi[min(at + 1, ROUTE_MAX - 1)]) != poi_sys(route_poi[at])
+        const leg = trav_jump && !split && ahead ? at + 1 : at
+        hud_legs = route_n - 1
+        hud_leg = leg
+        hud_leg_from = route_poi[leg - 1]
+        hud_leg_to = route_poi[leg]
+      } else {
+        hud_legs = 0
+        hud_leg = 0
+        hud_leg_from = trav_from
+        hud_leg_to = trav_to
+      }
+    }
+  }
+}
+
+hud {
+  back { PickThrough }
+  main { PickThrough }
+  top { PickThrough }
+}
