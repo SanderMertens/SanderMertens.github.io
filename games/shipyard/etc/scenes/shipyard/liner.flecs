@@ -1,0 +1,360 @@
+using flecs.script
+using flecs.script.math
+using state
+
+state {
+  export const LANES: i32 = 5
+  export const SLOTS: i32 = 18
+  export const LCELLS: i32 = 90
+  export const SEG: f32 = 4
+  export const R_CORE: f32 = 2.4
+  export const R_OUT: f32 = 1.7
+  export const OUT_D: f32 = 8.5
+  export const AXIS_Y: f32 = 6
+  export const RING_R: f32 = 14
+
+  export const LANE_CORE: i32 = 0
+  export const LANE_PORT: i32 = 1
+  export const LANE_STBD: i32 = 2
+  export const LANE_DORSAL: i32 = 3
+  export const LANE_VENTRAL: i32 = 4
+
+  export const L_BASE: i32 = 40
+  export const L_BRIDGE: i32 = 40
+  export const L_SENSOR: i32 = 41
+  export const L_QUARTERS: i32 = 42
+  export const L_HABRING: i32 = 43
+  export const L_PARKRING: i32 = 44
+  export const L_REACTOR: i32 = 45
+  export const L_RADIATOR: i32 = 46
+  export const L_JUMP: i32 = 47
+  export const L_DRIVE: i32 = 48
+  export const L_TANKS: i32 = 49
+  export const L_CARGO: i32 = 50
+  export const L_HANGAR: i32 = 51
+  export const L_REFINERY: i32 = 52
+  export const L_FAB: i32 = 53
+  export const L_TRUSS: i32 = 54
+  export const L_YOKE: i32 = 55
+  export const L_ARMOR: i32 = 56
+  export const L_TURRET: i32 = 57
+  export const L_END: i32 = 58
+  export const LKINDS: i32 = 18
+
+  event SlotClick(slot: i32)
+
+  export mut lane: i32 = 0
+  export mut lhover: i32 = -1
+  export mut lgrid: i32[90] = {}
+  export mut lstatus: i32[90] = {}
+  export mut lcounts: i32[18] = {}
+  export mut lmodules: i32 = 0
+  export mut lproblems: i32 = 0
+  export mut lspan: i32 = 0
+  export mut lloaded: bool = false
+
+  export const LPLAN_ROWS: i32 = 105
+  export const liner_plan: i32[525] = [
+    OP_PASSENGER, 0, 0, 0, L_DRIVE,
+    OP_PASSENGER, 0, 1, 1, L_YOKE,
+    OP_PASSENGER, 0, 2, 3, L_TANKS,
+    OP_PASSENGER, 0, 4, 4, L_REACTOR,
+    OP_PASSENGER, 0, 5, 5, L_RADIATOR,
+    OP_PASSENGER, 0, 6, 6, L_JUMP,
+    OP_PASSENGER, 0, 7, 7, L_RADIATOR,
+    OP_PASSENGER, 0, 8, 9, L_TRUSS,
+    OP_PASSENGER, 0, 10, 10, L_HABRING,
+    OP_PASSENGER, 0, 11, 11, L_QUARTERS,
+    OP_PASSENGER, 0, 12, 12, L_PARKRING,
+    OP_PASSENGER, 0, 13, 13, L_QUARTERS,
+    OP_PASSENGER, 0, 14, 14, L_HABRING,
+    OP_PASSENGER, 0, 15, 15, L_HANGAR,
+    OP_PASSENGER, 0, 16, 16, L_SENSOR,
+    OP_PASSENGER, 0, 17, 17, L_BRIDGE,
+    OP_PASSENGER, 1, 0, 0, L_DRIVE,
+    OP_PASSENGER, 1, 1, 2, L_TANKS,
+    OP_PASSENGER, 2, 0, 0, L_DRIVE,
+    OP_PASSENGER, 2, 1, 2, L_TANKS,
+
+    OP_FREIGHTER, 0, 0, 0, L_DRIVE,
+    OP_FREIGHTER, 0, 1, 1, L_YOKE,
+    OP_FREIGHTER, 0, 2, 2, L_TANKS,
+    OP_FREIGHTER, 0, 3, 3, L_REACTOR,
+    OP_FREIGHTER, 0, 4, 4, L_RADIATOR,
+    OP_FREIGHTER, 0, 5, 5, L_JUMP,
+    OP_FREIGHTER, 0, 6, 6, L_RADIATOR,
+    OP_FREIGHTER, 0, 7, 7, L_YOKE,
+    OP_FREIGHTER, 0, 8, 10, L_CARGO,
+    OP_FREIGHTER, 0, 11, 11, L_YOKE,
+    OP_FREIGHTER, 0, 12, 14, L_CARGO,
+    OP_FREIGHTER, 0, 15, 15, L_YOKE,
+    OP_FREIGHTER, 0, 16, 16, L_QUARTERS,
+    OP_FREIGHTER, 0, 17, 17, L_BRIDGE,
+    OP_FREIGHTER, 1, 0, 0, L_DRIVE,
+    OP_FREIGHTER, 1, 1, 1, L_TANKS,
+    OP_FREIGHTER, 1, 7, 15, L_CARGO,
+    OP_FREIGHTER, 2, 0, 0, L_DRIVE,
+    OP_FREIGHTER, 2, 1, 1, L_TANKS,
+    OP_FREIGHTER, 2, 7, 15, L_CARGO,
+    OP_FREIGHTER, 3, 7, 15, L_CARGO,
+    OP_FREIGHTER, 4, 7, 15, L_CARGO,
+
+    OP_TENDER, 0, 0, 0, L_DRIVE,
+    OP_TENDER, 0, 1, 1, L_YOKE,
+    OP_TENDER, 0, 2, 2, L_TANKS,
+    OP_TENDER, 0, 3, 3, L_REACTOR,
+    OP_TENDER, 0, 4, 4, L_RADIATOR,
+    OP_TENDER, 0, 5, 5, L_JUMP,
+    OP_TENDER, 0, 6, 6, L_RADIATOR,
+    OP_TENDER, 0, 7, 7, L_YOKE,
+    OP_TENDER, 0, 8, 9, L_REFINERY,
+    OP_TENDER, 0, 10, 10, L_YOKE,
+    OP_TENDER, 0, 11, 11, L_TRUSS,
+    OP_TENDER, 0, 12, 12, L_PARKRING,
+    OP_TENDER, 0, 13, 14, L_QUARTERS,
+    OP_TENDER, 0, 15, 15, L_BRIDGE,
+    OP_TENDER, 4, 7, 10, L_CARGO,
+    OP_TENDER, 1, 0, 0, L_DRIVE,
+    OP_TENDER, 1, 1, 1, L_TANKS,
+    OP_TENDER, 1, 7, 7, L_HANGAR,
+    OP_TENDER, 1, 8, 9, L_FAB,
+    OP_TENDER, 1, 10, 10, L_HANGAR,
+    OP_TENDER, 2, 0, 0, L_DRIVE,
+    OP_TENDER, 2, 1, 1, L_TANKS,
+    OP_TENDER, 2, 7, 7, L_HANGAR,
+    OP_TENDER, 2, 8, 9, L_FAB,
+    OP_TENDER, 2, 10, 10, L_HANGAR,
+
+    OP_BATTLESHIP, 0, 0, 0, L_DRIVE,
+    OP_BATTLESHIP, 0, 1, 1, L_YOKE,
+    OP_BATTLESHIP, 0, 2, 2, L_TANKS,
+    OP_BATTLESHIP, 0, 3, 3, L_REACTOR,
+    OP_BATTLESHIP, 0, 4, 4, L_RADIATOR,
+    OP_BATTLESHIP, 0, 5, 5, L_REACTOR,
+    OP_BATTLESHIP, 0, 6, 6, L_RADIATOR,
+    OP_BATTLESHIP, 0, 7, 7, L_JUMP,
+    OP_BATTLESHIP, 0, 8, 8, L_RADIATOR,
+    OP_BATTLESHIP, 0, 9, 9, L_YOKE,
+    OP_BATTLESHIP, 0, 10, 10, L_ARMOR,
+    OP_BATTLESHIP, 0, 11, 11, L_TURRET,
+    OP_BATTLESHIP, 0, 12, 12, L_QUARTERS,
+    OP_BATTLESHIP, 0, 13, 13, L_TURRET,
+    OP_BATTLESHIP, 0, 14, 14, L_YOKE,
+    OP_BATTLESHIP, 0, 15, 15, L_TURRET,
+    OP_BATTLESHIP, 0, 16, 17, L_ARMOR,
+    OP_BATTLESHIP, 1, 0, 0, L_DRIVE,
+    OP_BATTLESHIP, 1, 1, 2, L_TANKS,
+    OP_BATTLESHIP, 1, 9, 9, L_ARMOR,
+    OP_BATTLESHIP, 1, 10, 10, L_TURRET,
+    OP_BATTLESHIP, 1, 11, 11, L_ARMOR,
+    OP_BATTLESHIP, 1, 12, 12, L_TURRET,
+    OP_BATTLESHIP, 1, 13, 14, L_ARMOR,
+    OP_BATTLESHIP, 2, 0, 0, L_DRIVE,
+    OP_BATTLESHIP, 2, 1, 2, L_TANKS,
+    OP_BATTLESHIP, 2, 9, 9, L_ARMOR,
+    OP_BATTLESHIP, 2, 10, 10, L_TURRET,
+    OP_BATTLESHIP, 2, 11, 11, L_ARMOR,
+    OP_BATTLESHIP, 2, 12, 12, L_TURRET,
+    OP_BATTLESHIP, 2, 13, 14, L_ARMOR,
+    OP_BATTLESHIP, 3, 9, 9, L_ARMOR,
+    OP_BATTLESHIP, 3, 10, 10, L_TURRET,
+    OP_BATTLESHIP, 3, 11, 11, L_QUARTERS,
+    OP_BATTLESHIP, 3, 12, 12, L_TURRET,
+    OP_BATTLESHIP, 3, 13, 13, L_SENSOR,
+    OP_BATTLESHIP, 3, 14, 14, L_BRIDGE,
+    OP_BATTLESHIP, 4, 9, 11, L_HANGAR
+  ]
+
+  fn lane_of(i: i32) -> i32 { (i - i % SLOTS) / SLOTS }
+  fn slot_of(i: i32) -> i32 { i % SLOTS }
+  fn lcell(l: i32, z: i32) -> i32 { l * SLOTS + z }
+
+  fn lkind(l: i32, z: i32) -> i32 {
+    const k = lgrid[lcell(clamp(l, 0, LANES - 1), clamp(z, 0, SLOTS - 1))]
+    z >= 0 && z < SLOTS && l >= 0 && l < LANES ? k : 0
+  }
+
+  fn lc(k: i32) -> i32 { lcounts[clamp(k - L_BASE, 0, LKINDS - 1)] }
+
+  fn lane_angle(l: i32) -> f32 {
+    match l { 1: PI; 3: HALF_PI; 4: 0 - HALF_PI; _: 0 }
+  }
+
+  fn lane_x(l: i32) -> f32 { l == 0 ? 0 : cos(lane_angle(l)) * OUT_D }
+  fn lane_y(l: i32) -> f32 { l == 0 ? 0 : sin(lane_angle(l)) * OUT_D }
+  fn lane_r(l: i32) -> f32 { l == 0 ? R_CORE : R_OUT }
+  fn slot_z(z: i32) -> f32 { (z - SLOTS / 2.0 + 0.5) * SEG }
+
+  fn ringed(k: i32) -> bool { k == L_HABRING || k == L_PARKRING }
+  fn housed(k: i32) -> bool { k == L_QUARTERS || ringed(k) }
+  fn core_only(k: i32) -> bool { ringed(k) || k == L_JUMP || k == L_YOKE }
+
+  fn outriggers_at(z: i32) -> i32 {
+    (lkind(1, z) != 0 ? 1 : 0) + (lkind(2, z) != 0 ? 1 : 0) + (lkind(3, z) != 0 ? 1 : 0) + (lkind(4, z) != 0 ? 1 : 0)
+  }
+
+  fn open_ahead(l: i32, z: i32) -> bool {
+    match z >= SLOTS - 1 {
+      true: true
+      _: lkind(l, z + 1) == 0 && open_ahead(l, z + 1)
+    }
+  }
+
+  fn open_behind(l: i32, z: i32) -> bool {
+    match z <= 0 {
+      true: true
+      _: lkind(l, z - 1) == 0 && open_behind(l, z - 1)
+    }
+  }
+
+  fn lrule(l: i32, z: i32, k: i32) -> i32 {
+    l != 0 && core_only(k) ? 1 :
+    k == L_BRIDGE && !open_ahead(l, z) ? 2 :
+    k == L_DRIVE && !open_behind(l, z) ? 3 :
+    ringed(k) && outriggers_at(z) > 0 ? 4 :
+    k == L_YOKE && outriggers_at(z) == 0 ? 5 :
+    housed(k) && (lkind(l, z - 1) == L_REACTOR || lkind(l, z + 1) == L_REACTOR) ? 6 :
+    k == L_HANGAR && l == 0 && lkind(LANE_VENTRAL, z) != 0 ? 7 :
+    0
+  }
+
+  fn rule_text(code: i32) -> string {
+    match code {
+      1: "Rings, yokes and jump drives sit on the core"
+      2: "A bridge needs open space ahead"
+      3: "A drive needs open space behind"
+      4: "A ring needs the outriggers clear beside it"
+      5: "A yoke needs an outrigger to hold"
+      6: "Living space too close to a reactor"
+      7: "The hangar opens onto the ventral spine"
+      8: "Cut off from the rest of the core"
+      9: "This outrigger has no yoke to the core"
+      _: ""
+    }
+  }
+
+  fn lvalidate() {
+    mut st: i32[90] = {}
+    mut tally: i32[18] = {}
+    mut front: i32 = SLOTS
+    mut back: i32 = -1
+    mut total: i32 = 0
+
+    for i in 0..LCELLS {
+      const k = lgrid[i]
+      if k != 0 {
+        total += 1
+        tally[clamp(k - L_BASE, 0, LKINDS - 1)] += 1
+        front = min(front, slot_of(i))
+        back = max(back, slot_of(i))
+        st[i] = lrule(lane_of(i), slot_of(i), k)
+      }
+    }
+
+    mut run: i32 = 0
+    mut best: i32 = 0
+    mut best_end: i32 = 0
+    for z in 0..SLOTS + 1 {
+      if lkind(0, z) != 0 {
+        run += 1
+      } else {
+        if run > best {
+          best = run
+          best_end = z
+        }
+        run = 0
+      }
+    }
+    const best_start = best_end - best
+
+    for z in 0..SLOTS {
+      if lgrid[z] != 0 && st[z] == 0 && (z < best_start || z >= best_end) {
+        st[z] = 8
+      }
+    }
+
+    for l in 1..LANES {
+      mut start: i32 = -1
+      for z in 0..SLOTS + 1 {
+        const on = lkind(l, z) != 0
+        if on && start < 0 {
+          start = z
+        }
+        if !on && start >= 0 {
+          mut tied = false
+          for q in start..z {
+            if lkind(0, q) == L_YOKE && q >= best_start && q < best_end {
+              tied = true
+            }
+          }
+          if !tied {
+            for q in start..z {
+              if st[lcell(l, q)] == 0 {
+                st[lcell(l, q)] = 9
+              }
+            }
+          }
+          start = -1
+        }
+      }
+    }
+
+    mut bad: i32 = 0
+    for i in 0..LCELLS {
+      if st[i] != 0 {
+        bad += 1
+      }
+    }
+
+    lstatus = st
+    lcounts = tally
+    lmodules = total
+    lproblems = bad
+    lspan = max(back - front + 1, 0)
+  }
+
+  fn load_liner(design: i32) {
+    mut g: i32[90] = {}
+    for b in 0..LPLAN_ROWS {
+      const o = b * 5
+      if liner_plan[o] == design {
+        for z in liner_plan[o + 2]..liner_plan[o + 3] + 1 {
+          g[lcell(liner_plan[o + 1], z)] = liner_plan[o + 4]
+        }
+      }
+    }
+    lgrid = g
+    lvalidate()
+  }
+
+  fn lkind_mass(k: i32) -> f32 {
+    match k {
+      40: 18; 41: 8; 42: 10; 43: 30; 44: 34; 45: 26; 46: 6; 47: 34; 48: 24
+      49: 18; 50: 14; 51: 12; 52: 22; 53: 16; 54: 3; 55: 8; 56: 20; 57: 18
+      _: 0
+    }
+  }
+
+  fn lkind_power(k: i32) -> f32 {
+    match k {
+      40: 2; 41: 4; 42: 1; 43: 6; 44: 4; 47: 30; 48: 10; 49: 0.2; 50: 0.2; 51: 2; 52: 8; 53: 6; 57: 6
+      _: 0
+    }
+  }
+
+  fn liner_mass() -> f32 {
+    mut m: f32 = 0
+    for k in L_BASE..L_END {
+      m += lc(k) * lkind_mass(k)
+    }
+    m
+  }
+
+  fn liner_power() -> f32 {
+    mut w: f32 = 0
+    for k in L_BASE..L_END {
+      w += lc(k) * lkind_power(k)
+    }
+    w
+  }
+}

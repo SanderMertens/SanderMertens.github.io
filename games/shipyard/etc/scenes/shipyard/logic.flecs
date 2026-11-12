@@ -1,0 +1,162 @@
+using flecs.script
+using flecs.script.math
+using box.input
+using state
+
+state {
+  actions {
+    Deck1 { Action: {description: "Work on deck 1, or on the core spine of a liner"}; Binding: {key: Num1} }
+    Deck2 { Action: {description: "Work on deck 2, or on the port spine of a liner"}; Binding: {key: Num2} }
+    Deck3 { Action: {description: "Work on deck 3, or on the starboard spine of a liner"}; Binding: {key: Num3} }
+    Deck4 { Action: {description: "Work on deck 4, or on the dorsal spine of a liner"}; Binding: {key: Num4} }
+    Deck5 { Action: {description: "Work on deck 5, or on the ventral spine of a liner"}; Binding: {key: Num5} }
+    Deck6 { Action: {description: "Work on deck 6"}; Binding: {key: Num6} }
+    Remove { Action: {description: "Pick the remove tool"}; Binding: {key: X} }
+    Cancel { Action: {description: "Put the tool away"}; Binding: {key: Escape} }
+    DeckUp { Action: {description: "Work on the deck above, or on the next spine of a liner"}; Binding: {key: PageUp} }
+    DeckDown { Action: {description: "Work on the deck below, or on the previous spine of a liner"}; Binding: {key: PageDown} }
+  }
+
+  fn load(design: i32) {
+    mut g: i32[1080] = {}
+    mut order: i32[1080] = {}
+    mut top: i32 = 0
+    for i in 0..PLAN_CELLS {
+      const k = design == OP_FRIGATE ? frigate_plan[i] : design == OP_SCOUT ? scout_plan[i] : design == OP_MINER ? miner_plan[i] : 0
+      if k != 0 {
+        const py = (i - i % PLAN_LAYER) / PLAN_LAYER
+        g[cell_at(i % PLAN_X + PLAN_OX, py, ((i - i % PLAN_X) / PLAN_X) % PLAN_Z + PLAN_OZ)] = k
+        top = max(top, py)
+      }
+    }
+    grid = g
+    placed = order
+    stamp = 0
+    deck = top
+    validate()
+  }
+
+  fn switch_class(big: bool) {
+    if big != liner {
+      liner = big
+      tool = 0
+      hover = -1
+      lhover = -1
+      if big && !lloaded {
+        lloaded = true
+        load_liner(OP_PASSENGER)
+      }
+    }
+  }
+}
+
+assets {
+  template HotKey {
+    prop action: entity = 0
+    prop op: i32 = 0
+
+    async {
+      while true {
+        await on.pressed(action)
+        emit Request(op: op)
+      }
+    }
+  }
+}
+
+state {
+  hotkeys {
+    assets.HotKey d1(action: actions.Deck1, op: OP_DECK + 0)
+    assets.HotKey d2(action: actions.Deck2, op: OP_DECK + 1)
+    assets.HotKey d3(action: actions.Deck3, op: OP_DECK + 2)
+    assets.HotKey d4(action: actions.Deck4, op: OP_DECK + 3)
+    assets.HotKey d5(action: actions.Deck5, op: OP_DECK + 4)
+    assets.HotKey d6(action: actions.Deck6, op: OP_DECK + 5)
+    assets.HotKey kx(action: actions.Remove, op: T_REMOVE)
+    assets.HotKey kc(action: actions.Cancel, op: OP_CANCEL)
+    assets.HotKey ku(action: actions.DeckUp, op: OP_DECK_UP)
+    assets.HotKey kd(action: actions.DeckDown, op: OP_DECK_DOWN)
+  }
+}
+
+async {
+  load(OP_FRIGATE)
+}
+
+async {
+  while true {
+    const e = await Click
+    const i = e.cell
+    const k = grid[i]
+    if tool > 0 && tool != T_REMOVE {
+      if k != tool {
+        const built = tool
+        emit Built(cell: i)
+        await next_frame()
+        grid[i] = built
+        stamp += 1
+        placed[i] = stamp
+        validate()
+      }
+    } else if tool == T_REMOVE && k != K_EMPTY {
+      grid[i] = K_EMPTY
+      validate()
+    }
+  }
+}
+
+async {
+  while true {
+    const e = await SlotClick
+    const i = e.slot
+    const k = lgrid[i]
+    if tool > 0 && tool != T_REMOVE {
+      if k != tool {
+        const built = tool
+        emit Built(cell: i)
+        await next_frame()
+        lgrid[i] = built
+        lvalidate()
+      }
+    } else if tool == T_REMOVE && k != 0 {
+      lgrid[i] = 0
+      lvalidate()
+    }
+  }
+}
+
+async {
+  while true {
+    const e = await Request
+    const op = e.op
+    if (op > 0 && op <= T_REMOVE) || (op >= L_BASE && op < L_END) {
+      tool = tool == op ? 0 : op
+    } else if op == OP_CANCEL {
+      tool = 0
+    } else if liner && op >= OP_DECK && op < OP_DECK + LANES {
+      lhover = -1
+      lane = op - OP_DECK
+    } else if liner && op == OP_DECK_UP {
+      lhover = -1
+      lane = (lane + 1) % LANES
+    } else if liner && op == OP_DECK_DOWN {
+      lhover = -1
+      lane = (lane + LANES - 1) % LANES
+    } else if !liner && op >= OP_DECK && op < OP_DECK + GY {
+      hover = -1
+      deck = op - OP_DECK
+    } else if !liner && op == OP_DECK_UP {
+      hover = -1
+      deck = min(deck + 1, GY - 1)
+    } else if !liner && op == OP_DECK_DOWN {
+      hover = -1
+      deck = max(deck - 1, 0)
+    } else if op == OP_FRIGATE || op == OP_SCOUT || op == OP_MINER || (op == OP_CLEAR && !liner) {
+      load(op)
+    } else if op == OP_PASSENGER || op == OP_FREIGHTER || op == OP_TENDER || op == OP_BATTLESHIP || (op == OP_CLEAR && liner) {
+      load_liner(op)
+    } else if op == OP_RIGS || op == OP_LINERS {
+      switch_class(op == OP_LINERS)
+    }
+  }
+}

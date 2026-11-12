@@ -1,0 +1,109 @@
+include shipyard/state
+include shipyard/materials
+include shipyard/hull
+include shipyard/exterior
+include shipyard/liner
+include shipyard/segments
+include shipyard/cell
+include shipyard/stage
+include shipyard/logic
+include shipyard/camera
+include ui/widgets
+include shipyard/hud
+
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.camera
+using box.view
+using box.light
+using box.effects
+using box.surface
+using box.texture
+using state
+using assets
+
+assets {
+  yard_stars { EnvironmentImage: {path: "etc/scenes/shipyard/assets/space.hdr"}; Environment: {resolution: 1024} }
+}
+
+$ {
+  box.app.FpsTarget: {60}
+  Scene: {reflections: true, environment: true, blend_modes: true, transmission: true,
+    clear_coat: true, sheen: true, diffuse_transmission: true, fresnel: true}
+  AmbientLight: {sky: {120, 140, 180}, ground: {50, 60, 84}, intensity: 0.4}
+}
+
+window { Surface: {width: 1600, height: 1000, vsync: true} }
+
+rig {
+  Position: {cam_x, cam_y, cam_z}
+  Rotation: {0, cam_yaw, 0}
+  arm {
+    Rotation: {0 - cam_pitch, 0, 0}
+    eye {
+      Position: {0, 0, cam_dist}
+      Camera: {fov: 38, near_: 0.3, far_: 3000}
+    }
+  }
+}
+
+sun {
+  Rotation: {0.7, 0.42, 0}
+  DirectionalLight: {intensity: 6}
+  Rgb: {255, 244, 226}
+}
+
+rim {
+  Rotation: {0.35, 3.7, 0}
+  DirectionalLight: {intensity: 1.8}
+  Rgb: {110, 160, 255}
+}
+
+view {
+  yard_contact { Gtao: {radius: 0.9, final_value_power: 2.2} }
+  yard_bloom { Bloom: {intensity: 0.2, threshold: 1.1, threshold_softness: 0.45} }
+  yard_film { Tonemap: {operator_: TonyMcMapface} }
+  yard_edges { Smaa: {} }
+
+  View: {
+    camera: rig.arm.eye,
+    clear: {enabled: true, color: {3, 5, 10, 255}},
+    shadows: {enabled: true, resolution: 4096, max_distance: 200},
+    lighting: {reflections: true, baked: false, environment: {source: assets.yard_stars, intensity: 0.7, background: true}},
+    effects: [{effect: yard_contact}, {effect: yard_bloom}, {effect: yard_film}, {effect: yard_edges}]
+  }
+}
+
+yard {
+  if liner {
+    Drydock dock()
+  } else {
+    Slipway slipway()
+  }
+  if !liner {
+    BuildFrame frame()
+  }
+  if tool > 0 && liner {
+    SpineGuide spine_guide(l: lane)
+  } else if tool > 0 {
+    DeckGrid deck_grid(level: deck)
+  }
+  YardPlanet planet() { Position: {-1100, -760, -1500} }
+}
+
+ship {
+  if liner {
+    for i in 0..LCELLS {
+      LinerSlot "slot_{i}"(idx: i)
+    }
+  } else {
+    for i in 0..CELLS {
+      ShipCell "cell_{i}"(idx: i)
+    }
+  }
+}
+
+ShipyardHud hud()

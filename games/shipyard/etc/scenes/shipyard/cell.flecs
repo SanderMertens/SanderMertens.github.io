@@ -1,0 +1,242 @@
+using flecs.script
+using flecs.script.math
+using box.transform
+using box.geometry
+using box.material
+using box.picking
+using box.input
+using box.spatial
+using box.transition
+using box.movement
+using box.particle
+using box.light
+using state
+
+assets {
+  template CursorEdge {
+    prop len: f32 = 4
+    prop color: Rgb = {255, 255, 255}
+
+    Box: {len, 0.05, 0.05}
+    Rgb: color
+    Emissive: {strength: 3, color: color}
+    NoShadow
+    SpatialIgnore
+  }
+
+  template CellCursor {
+    prop color: Rgb = {255, 255, 255}
+
+    const h = CH
+    for i in 0..4 {
+      const sx = i % 2 == 0 ? -1 : 1
+      const sz = i < 2 ? -1 : 1
+      CursorEdge "v_{i}"(len: h, color: color) { Position: {sx * 2, h / 2, sz * 2}; Rotation: {0, 0, HALF_PI} }
+    }
+    for i in 0..2 {
+      const y = i * h
+      CursorEdge "xa_{i}"(len: 4, color: color) { Position: {0, y, -2} }
+      CursorEdge "xb_{i}"(len: 4, color: color) { Position: {0, y, 2} }
+      CursorEdge "za_{i}"(len: 4, color: color) { Position: {-2, y, 0}; Rotation: {0, HALF_PI, 0} }
+      CursorEdge "zb_{i}"(len: 4, color: color) { Position: {2, y, 0}; Rotation: {0, HALF_PI, 0} }
+    }
+  }
+
+  // One module and the hull around it, with the faces and edges that its visible neighbors
+  // decide. The same template draws a built module and the see-through preview of a tool.
+  template ModuleView {
+    prop k: i32 = 0
+    prop x: i32 = 0
+    prop y: i32 = 0
+    prop z: i32 = 0
+    prop seed: i32 = 0
+
+    const px = !shown_at(x + 1, y, z)
+    const nx = !shown_at(x - 1, y, z)
+    const py = !shown_at(x, y + 1, z)
+    const ny = !shown_at(x, y - 1, z)
+    const pz = !shown_at(x, y, z + 1)
+    const nz = !shown_at(x, y, z - 1)
+
+    if k == K_WEAPON {
+      WeaponMount mount(side: mount_at(x, y, z))
+    } else if k == K_DOCK {
+      DockMount mount(side: dock_at(x, y, z), seed: seed)
+    } else if k == K_ENGINE {
+      EngineMount mount(seed: seed, mounted: kind_at(x, y, z + 1) != 0)
+    } else if k == K_RADIATOR {
+      RadiatorMount mount(side: cool_at(x, y, z))
+    } else if k == K_DATA {
+      Datacenter racks(pz: kind_at(x, y, z + 1) != K_DATA, nz: kind_at(x, y, z - 1) != K_DATA, roof: shown_at(x, y + 1, z), seed: seed)
+    } else if k == K_DRILL {
+      DrillMount mount(side: drill_at(x, y, z))
+    } else if k == K_BUILDER {
+      BuilderMount mount(side: mount_at(x, y, z), seed: seed)
+    } else if shaped(k) && hull_drawn(x, y, z) != 0 {
+      HullFairing fairing(shape: hull_drawn(x, y, z), sx: hull_sx(x, y, z), sy: hull_sy(x, y, z), sz: hull_sz(x, y, z))
+    } else if k == K_CARGO {
+      CargoRack rack(px: px, nx: nx, py: py, pz: !rack_at(x, y, z + 1), nz: !rack_at(x, y, z - 1), belly: y == 0, seed: seed)
+    } else if k == K_FUEL {
+      FuelRack rack(
+        px: !rack_at(x + 1, y, z), nx: !rack_at(x - 1, y, z), pz: !rack_at(x, y, z + 1), nz: !rack_at(x, y, z - 1),
+        tp: kind_at(x, y, z + 1) == K_FUEL, tn: kind_at(x, y, z - 1) == K_FUEL
+      )
+    } else if k == K_POWER {
+      PowerPlant plant(pz: kind_at(x, y, z + 1) != K_POWER, nz: kind_at(x, y, z - 1) != K_POWER, roof: shown_at(x, y + 1, z))
+    } else if k == K_LIFE {
+      LifePlant plant(pz: kind_at(x, y, z + 1) != K_LIFE, nz: kind_at(x, y, z - 1) != K_LIFE, roof: shown_at(x, y + 1, z), seed: seed)
+    } else if k == K_BIOME {
+      BiomeHouse house(
+        px: kind_at(x + 1, y, z) != K_BIOME, nx: kind_at(x - 1, y, z) != K_BIOME,
+        pz: kind_at(x, y, z + 1) != K_BIOME, nz: kind_at(x, y, z - 1) != K_BIOME, seed: seed
+      )
+    } else {
+      HullShell skin(
+        px: !skin_at(x + 1, y, z, -1, 0), nx: !skin_at(x - 1, y, z, 1, 0), py: !skin_y(x, y + 1, z, -1),
+        ny: !skin_y(x, y - 1, z, 1), pz: !skin_at(x, y, z + 1, 0, -1) && !piloted(k), nz: !skin_at(x, y, z - 1, 0, 1),
+        xy_pp: solid_at(x + 1, y + 1, z), xy_pn: solid_at(x + 1, y - 1, z),
+        xy_np: solid_at(x - 1, y + 1, z), xy_nn: solid_at(x - 1, y - 1, z),
+        xz_pp: solid_at(x + 1, y, z + 1), xz_pn: solid_at(x + 1, y, z - 1),
+        xz_np: solid_at(x - 1, y, z + 1), xz_nn: solid_at(x - 1, y, z - 1),
+        yz_pp: solid_at(x, y + 1, z + 1), yz_pn: solid_at(x, y + 1, z - 1),
+        yz_np: solid_at(x, y - 1, z + 1), yz_nn: solid_at(x, y - 1, z - 1)
+      )
+      ModuleExterior outfit(
+        k: k, px: px, nx: nx, py: py, ny: ny, pz: pz, nz: nz, seed: seed,
+        fpx: faired(x + 1, y, z, -1, 0), fnx: faired(x - 1, y, z, 1, 0)
+      )
+    }
+  }
+
+  template ShipCell {
+    prop idx: i32 = 0
+    mut rising = false
+    mut sparking = false
+
+    const x = cell_x(idx)
+    const y = cell_y(idx)
+    const z = cell_z(idx)
+    const k = grid[idx]
+    const shown = y <= deck
+    const active = y == deck
+    const hovered = hover == idx
+    const t = tool
+    const placing = t > 0 && t != T_REMOVE
+    const swap = placing && k != t
+    const fault = status[idx]
+
+
+    Position: {wx(idx), wy(idx), wz(idx)}
+
+    if active {
+      Interactive
+      Cursor: {CursorPointer}
+    }
+
+    if shown && k != 0 {
+      body {
+        Position: {0, rising ? 2.5 : 0, 0}
+        Transition: [Position: {duration: 0.45, timing_function: EaseOut}]
+        if hovered && t == T_REMOVE {
+          Tint: {255, 70, 50, 150}
+        } else if hovered && swap {
+          Tint: {90, 255, 160, 120}
+        }
+        ModuleView view(k: k, x: x, y: y, z: z, seed: idx)
+      }
+
+      if fault != 0 {
+        warning {
+          Position: {0, CH + 0.9, 0}
+          AngularVelocity: {0, 1.6, 0}
+          SpatialIgnore
+          NoShadow
+          gem : ShipWarning { Position: {0, 0, 0}; Rotation: {0.7854, 0, 0.7854}; Box: {0.45, 0.45, 0.45} }
+          glow { Position: {0, 0, 0}; PointLight: {intensity: 3, range: 4}; Rgb: {255, 60, 40} }
+        }
+      }
+    }
+
+    if active && k == 0 && t > 0 {
+      pad {
+        Position: {0, 0.02, 0}
+        Box: {3.9, 0.04, 3.9}
+        Rgb: {60, 180, 255}
+        Emissive: {strength: hovered ? 0.6 : 0.08, color: {60, 180, 255}}
+        Opacity: {hovered ? 0.18 : 0.04}
+        NoShadow
+      }
+    }
+
+    if hovered {
+      const color: Rgb = match swap {
+        true: {90, 255, 140}
+        _: match t == T_REMOVE && k != 0 { true: {255, 110, 60}; _: {140, 220, 255} }
+      }
+      CellCursor cursor(color: color)
+
+      if placing && k == 0 {
+        ghost {
+          Opacity: {0.55}
+          Tint: {90, 255, 160, 120}
+          SpatialIgnore
+          NoShadow
+          ModuleView view(k: t, x: x, y: y, z: z, seed: idx)
+        }
+      }
+    }
+
+    if sparking {
+      sparks {
+        Position: {0, 0.2, 0}
+        ParticleEmitter: {
+          max: 200, rate: 220, shape: EmitterBox, extents: {1.8, 0.05, 1.8},
+          direction: {0, 1, 0}, spread: 50, speed: {1.5, 5},
+          lifetime: {0.25, 0.7}, size: {0.03, 0.08}, opacity: {0.6, 1},
+          acceleration: {0, -4, 0}, color: {140, 220, 255}, seed: 30 + idx
+        }
+        ParticleAppearance: {blend: ParticleAdditive, stretch: 0.06}
+        ParticleCurves: {opacity: {keys: [{0, 1}, {0.7, 0.8}, {1, 0}]}}
+      }
+    }
+
+    async {
+      while true {
+        await on.enter(this)
+        hover = idx
+      }
+    }
+
+    async {
+      while true {
+        await on.leave(this)
+        if hover == idx {
+          hover = -1
+        }
+      }
+    }
+
+    async {
+      while true {
+        const ev = await on.click(this)
+        if ev.button == 0 {
+          emit Click(cell: idx)
+        }
+      }
+    }
+
+    async {
+      while true {
+        const e = await Built
+        if e.cell == idx {
+          rising = true
+          sparking = true
+          await delay(0.12)
+          rising = false
+          await delay(0.7)
+          sparking = false
+        }
+      }
+    }
+  }
+}

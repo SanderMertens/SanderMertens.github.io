@@ -1,0 +1,131 @@
+using flecs.script
+using box.material
+using box.texture
+using box.light
+using box.animation
+
+assets {
+  yard_tex_hull { TexturePath: {path: "etc/scenes/shipyard/assets/hull.jpg"} }
+  yard_tex_hull_normal { TexturePath: {path: "etc/scenes/shipyard/assets/hull_normal.jpg"} }
+  yard_tex_hull_orm { TexturePath: {path: "etc/scenes/shipyard/assets/hull_orm.jpg"} }
+  yard_tex_floor { TexturePath: {path: "etc/scenes/shipyard/assets/floor.jpg"} }
+  yard_tex_floor_normal { TexturePath: {path: "etc/scenes/shipyard/assets/floor_normal.jpg"} }
+  yard_tex_floor_orm { TexturePath: {path: "etc/scenes/shipyard/assets/floor_orm.jpg"} }
+  yard_tex_screen { TexturePath: {path: "etc/scenes/shipyard/assets/screen.svg", width: 512} }
+  yard_tex_hazard { TexturePath: {path: "etc/scenes/shipyard/assets/hazard.svg", width: 256} }
+  yard_tex_plume_core { TexturePath: {path: "etc/scenes/shipyard/assets/plume_core.png"} }
+  yard_tex_windows { TexturePath: {path: "etc/scenes/shipyard/assets/windows.png"} }
+  yard_tex_windows_albedo { TexturePath: {path: "etc/scenes/shipyard/assets/windows_albedo.png"} }
+  yard_tex_containers { TexturePath: {path: "etc/scenes/shipyard/assets/containers.jpg"} }
+  yard_tex_heat_fins { TexturePath: {path: "etc/scenes/shipyard/assets/heat_fins.png"} }
+  yard_tex_dots { TexturePath: {path: "etc/scenes/shipyard/assets/dots.png"} }
+
+  prefab ShipHull { Rgb: {222, 226, 232}; PbrMaterial: {metallic: 0.5, roughness: 0.5}; PbrTextures: {albedo: yard_tex_hull, normal: yard_tex_hull_normal, orm: yard_tex_hull_orm}; TextureMapping: {MappingWorld, size: 7, blend: 0.3}; ClearCoat: {strength: 0.25, roughness: 0.3} }
+  prefab ShipHullDark { Rgb: {92, 100, 112}; PbrMaterial: {metallic: 0.7, roughness: 0.5}; PbrTextures: {albedo: yard_tex_hull, normal: yard_tex_hull_normal, orm: yard_tex_hull_orm}; TextureMapping: {MappingWorld, size: 5, blend: 0.3} }
+  prefab ShipTrim { Rgb: {52, 58, 68}; PbrMaterial: {metallic: 0.8, roughness: 0.42} }
+  prefab ShipRecess { Rgb: {16, 19, 24}; PbrMaterial: {metallic: 0.5, roughness: 0.8} }
+  prefab ShipSteel { Rgb: {150, 158, 168}; PbrMaterial: {metallic: 0.92, roughness: 0.34} }
+  prefab ShipChrome { Rgb: {214, 220, 228}; PbrMaterial: {metallic: 1, roughness: 0.14} }
+  prefab ShipGold { Rgb: {232, 178, 78}; PbrMaterial: {metallic: 1, roughness: 0.26} }
+  prefab ShipCopper { Rgb: {204, 122, 72}; PbrMaterial: {metallic: 1, roughness: 0.32} }
+  prefab ShipStripe { Rgb: {30, 74, 138}; PbrMaterial: {metallic: 0.3, roughness: 0.36}; ClearCoat: {strength: 0.6, roughness: 0.15} }
+  prefab ShipRed { Rgb: {178, 46, 36}; PbrMaterial: {metallic: 0.3, roughness: 0.4}; ClearCoat: {strength: 0.6, roughness: 0.15} }
+  prefab ShipOrange { Rgb: {222, 112, 36}; PbrMaterial: {metallic: 0.3, roughness: 0.4}; ClearCoat: {strength: 0.6, roughness: 0.15} }
+  prefab ShipYellow { Rgb: {232, 176, 40}; PbrMaterial: {metallic: 0.25, roughness: 0.45}; ClearCoat: {strength: 0.4, roughness: 0.25} }
+  prefab ShipTeal { Rgb: {40, 128, 130}; PbrMaterial: {metallic: 0.3, roughness: 0.42}; ClearCoat: {strength: 0.5, roughness: 0.2} }
+  prefab ShipWhite { Rgb: {238, 240, 244}; PbrMaterial: {metallic: 0.1, roughness: 0.38}; ClearCoat: {strength: 0.5, roughness: 0.2} }
+  prefab ShipHazard { Rgb: {255, 255, 255}; PbrMaterial: {metallic: 0.2, roughness: 0.5}; PbrTextures: {albedo: yard_tex_hazard}; TextureMapping: {MappingWorld, size: 1.2} }
+  prefab ShipCrate { Rgb: {164, 70, 44}; PbrMaterial: {metallic: 0.45, roughness: 0.58} }
+  prefab ShipRubber { Rgb: {26, 28, 32}; PbrMaterial: {metallic: 0, roughness: 0.9} }
+  prefab ShipFabric { Rgb: {58, 84, 120}; PbrMaterial: {roughness: 0.9}; Sheen: {color: {180, 210, 255}, roughness: 0.5} }
+  prefab ShipLeaf { Rgb: {64, 158, 72}; PbrMaterial: {roughness: 0.8}; DiffuseTransmission: {factor: 0.4, color: {200, 255, 120}} }
+  prefab ShipLeafDark { Rgb: {36, 112, 58}; PbrMaterial: {roughness: 0.85}; DiffuseTransmission: {factor: 0.35, color: {170, 240, 110}} }
+  prefab ShipSoil { Rgb: {62, 44, 32}; PbrMaterial: {roughness: 0.95} }
+  prefab ShipBark { Rgb: {84, 60, 42}; PbrMaterial: {roughness: 0.9} }
+  prefab ShipMoss { Rgb: {52, 120, 58}; PbrMaterial: {roughness: 0.95}; Sheen: {color: {170, 230, 140}, roughness: 0.6} }
+  prefab ShipWater { Rgb: {34, 96, 120}; PbrMaterial: {metallic: 0.2, roughness: 0.04}; ClearCoat: {strength: 1, roughness: 0.02}; Emissive: {strength: 0.2, color: {60, 170, 200}} }
+  prefab ShipAlgae { Rgb: {70, 200, 110}; PbrMaterial: {roughness: 0.25}; Emissive: {strength: 1.3, color: {90, 255, 140}} }
+  prefab ShipLounge { Rgb: {70, 54, 40}; Emissive: {strength: 0.7, color: {255, 186, 120}} }
+  prefab ShipCanopy { Rgb: {40, 70, 96}; PbrMaterial: {metallic: 0.4, roughness: 0.04}; ClearCoat: {strength: 1, roughness: 0.02}; Emissive: {strength: 0.25, color: {60, 150, 210}} }
+  prefab ShipGlass { Rgb: {176, 220, 238}; PbrMaterial: {metallic: 0.1, roughness: 0.05}; ClearCoat: {strength: 1, roughness: 0.03}; Transmission: {transmission_factor: 0.9, ior: 1.45, thickness_factor: 0.04, attenuation_distance: 6, attenuation_color: {200, 235, 250}} }
+  prefab ShipWindow { Rgb: {255, 222, 168}; Emissive: {strength: 3.2, color: {255, 204, 136}} }
+  prefab ShipCyanLight { Rgb: {96, 220, 240}; Emissive: {strength: 4, color: {80, 214, 255}} }
+  prefab ShipGreenLight { Rgb: {110, 240, 130}; Emissive: {strength: 4, color: {90, 255, 110}} }
+  prefab ShipRedLight { Rgb: {255, 80, 60}; Emissive: {strength: 5, color: {255, 60, 40}} }
+  prefab ShipAmberLight { Rgb: {255, 180, 70}; Emissive: {strength: 4, color: {255, 160, 50}} }
+  prefab ShipWhiteLight { Rgb: {230, 240, 255}; Emissive: {strength: 4, color: {220, 236, 255}} }
+  prefab ShipGrowLight { Rgb: {255, 150, 220}; Emissive: {strength: 4, color: {255, 110, 210}} }
+  prefab ShipPlasma { Rgb: {170, 220, 255}; Emissive: {strength: 10, color: {110, 190, 255}} }
+  prefab ShipHeat { Rgb: {255, 140, 60}; Emissive: {strength: 5, color: {255, 110, 40}} }
+  prefab ShipRadiant { Rgb: {255, 130, 60}; Emissive: {strength: 1.8, color: {255, 96, 36}} }
+  prefab ShipScreen { Rgb: {0, 0, 0}; Emissive: {strength: 1.8, color: {90, 210, 255}}; PbrTextures: {emissive: yard_tex_screen} }
+
+  prefab yard_blink {
+    AnimationClip: {duration: 1.4}
+    strength { AnimationTrack: {component: Emissive, member: "strength", curve: {keys: [{0, 0.3}, {0.05, 9}, {0.22, 9}, {0.3, 0.3}, {1.4, 0.3}]}} }
+  }
+  prefab ShipBeaconRed { Rgb: {255, 70, 50}; Emissive: {strength: 1, color: {255, 50, 30}}; Animator: {clip: yard_blink} }
+  prefab ShipBeaconGreen { Rgb: {80, 255, 110}; Emissive: {strength: 1, color: {60, 255, 90}}; Animator: {clip: yard_blink} }
+  prefab ShipBeaconWhite { Rgb: {240, 248, 255}; Emissive: {strength: 1, color: {230, 240, 255}}; Animator: {clip: yard_blink} }
+
+  prefab yard_pulse {
+    AnimationClip: {duration: 1}
+    strength { AnimationTrack: {component: Emissive, member: "strength", curve: {keys: [{0, 1.5}, {0.5, 6}, {1, 1.5}]}} }
+  }
+  prefab yard_flicker {
+    AnimationClip: {duration: 2.4}
+    strength { AnimationTrack: {component: Emissive, member: "strength", curve: {keys: [{0, 6}, {0.35, 9}, {0.7, 5.5}, {1.2, 10}, {1.7, 6.5}, {2.0, 8}, {2.4, 6}]}} }
+  }
+  prefab ShipFusion { Rgb: {236, 176, 255}; Emissive: {strength: 7, color: {200, 110, 255}}; Animator: {clip: yard_flicker} }
+  prefab ShipFusionHot { Rgb: {255, 236, 255}; Emissive: {strength: 14, color: {246, 196, 255}} }
+
+  prefab yard_drive_flicker {
+    AnimationClip: {duration: 0.6}
+    strength { AnimationTrack: {component: Emissive, member: "strength", curve: {keys: [{0, 16}, {0.09, 20}, {0.17, 14}, {0.3, 19}, {0.41, 14.5}, {0.52, 18}, {0.6, 16}]}} }
+  }
+  prefab ShipPlumeCore { Rgb: {0, 0, 0}; PbrMaterial: {metallic: 1, roughness: 1}; Opacity: {0.2}; BlendMode: Additive; Emissive: {strength: 16, color: {255, 255, 255}}; PbrTextures: {emissive: yard_tex_plume_core}; Animator: {clip: yard_drive_flicker} }
+
+  prefab yard_weld_flicker {
+    AnimationClip: {duration: 0.5}
+    strength { AnimationTrack: {component: Emissive, member: "strength", curve: {keys: [{0, 12}, {0.06, 30}, {0.1, 4}, {0.18, 26}, {0.27, 8}, {0.33, 34}, {0.42, 6}, {0.5, 12}]}} }
+  }
+  prefab ShipWeld { Rgb: {220, 240, 255}; Emissive: {strength: 12, color: {170, 220, 255}}; Animator: {clip: yard_weld_flicker} }
+
+  prefab ShipVisor { Rgb: {12, 14, 20}; PbrMaterial: {metallic: 0.3, roughness: 0.06}; ClearCoat: {strength: 1, roughness: 0.02} }
+  prefab ShipScanner { Rgb: {255, 70, 50}; Emissive: {strength: 8, color: {255, 40, 24}} }
+  prefab yard_scan {
+    AnimationClip: {duration: 1.2}
+    x { AnimationTrack: {component: box.transform.Position, member: "x", curve: {keys: [{0, -0.95}, {1.2, 0.95}]}} }
+  }
+
+  prefab yard_data_blink {
+    AnimationClip: {duration: 1}
+    strength { AnimationTrack: {component: Emissive, member: "strength", curve: {keys: [{0, 5}, {0.18, 5}, {0.2, 0.4}, {0.45, 0.4}, {0.47, 5}, {0.62, 5}, {0.64, 0.4}, {0.7, 0.4}, {0.72, 5}, {1, 5}]}} }
+  }
+  prefab ShipDataCyan { Rgb: {96, 220, 240}; Emissive: {strength: 5, color: {80, 214, 255}} }
+  prefab ShipDataAmber { Rgb: {255, 180, 70}; Emissive: {strength: 5, color: {255, 160, 50}} }
+
+  prefab ShipWarning { Rgb: {255, 70, 50}; Emissive: {strength: 3, color: {255, 50, 30}}; Animator: {clip: yard_pulse} }
+
+  prefab ShipHullFine { Rgb: {236, 240, 246}; PbrMaterial: {metallic: 0.45, roughness: 0.45}; PbrTextures: {normal: yard_tex_hull_normal, orm: yard_tex_hull_orm}; TextureMapping: {MappingWorld, size: 1.6, blend: 0.3}; ClearCoat: {strength: 0.25, roughness: 0.3} }
+  prefab ShipHullDarkFine { Rgb: {92, 100, 112}; PbrMaterial: {metallic: 0.7, roughness: 0.5}; PbrTextures: {albedo: yard_tex_hull, normal: yard_tex_hull_normal, orm: yard_tex_hull_orm}; TextureMapping: {MappingWorld, size: 0.8, blend: 0.3} }
+  prefab ShipHullSpin { Rgb: {236, 240, 246}; PbrMaterial: {metallic: 0.45, roughness: 0.45}; PbrTextures: {normal: yard_tex_hull_normal, orm: yard_tex_hull_orm}; TextureMapping: {MappingObject, size: 1.6, blend: 0.3}; ClearCoat: {strength: 0.25, roughness: 0.3} }
+  prefab ShipHullDarkSpin { Rgb: {92, 100, 112}; PbrMaterial: {metallic: 0.7, roughness: 0.5}; PbrTextures: {albedo: yard_tex_hull, normal: yard_tex_hull_normal, orm: yard_tex_hull_orm}; TextureMapping: {MappingObject, size: 0.8, blend: 0.3} }
+  prefab ShipCabins { Rgb: {255, 255, 255}; PbrMaterial: {metallic: 0.3, roughness: 0.3}; ClearCoat: {strength: 0.5, roughness: 0.1}; Emissive: {strength: 3.5, color: {255, 255, 255}}; PbrTextures: {albedo: yard_tex_windows_albedo, emissive: yard_tex_windows}; TextureMapping: {MappingObject, size: 1} }
+  prefab ShipContainers { Rgb: {255, 255, 255}; PbrMaterial: {metallic: 0.45, roughness: 0.6}; PbrTextures: {albedo: yard_tex_containers}; TextureMapping: {MappingObject, size: 1.1} }
+  prefab ShipHeatFin { Rgb: {58, 62, 70}; PbrMaterial: {metallic: 0.8, roughness: 0.35}; Emissive: {strength: 2.2, color: {255, 255, 255}}; PbrTextures: {emissive: yard_tex_heat_fins}; TextureMapping: {MappingObject, size: 1} }
+  prefab ShipRunLights { Rgb: {40, 44, 52}; PbrMaterial: {metallic: 0.5, roughness: 0.5}; Emissive: {strength: 6, color: {255, 196, 120}}; PbrTextures: {emissive: yard_tex_dots}; TextureMapping: {MappingObject, size: 0.5} }
+  prefab ShipRunLightsCyan { Rgb: {40, 44, 52}; PbrMaterial: {metallic: 0.5, roughness: 0.5}; Emissive: {strength: 6, color: {90, 214, 255}}; PbrTextures: {emissive: yard_tex_dots}; TextureMapping: {MappingObject, size: 0.5} }
+
+  prefab yard_jump_pulse {
+    AnimationClip: {duration: 2.2}
+    strength { AnimationTrack: {component: Emissive, member: "strength", curve: {keys: [{0, 3}, {0.4, 12}, {0.8, 4}, {2.2, 3}]}} }
+  }
+  prefab ShipJump { Rgb: {170, 250, 255}; Emissive: {strength: 6, color: {110, 236, 255}}; Animator: {clip: yard_jump_pulse} }
+  prefab ShipJumpField { Rgb: {90, 220, 255}; Emissive: {strength: 1.6, color: {90, 220, 255}}; Opacity: {0.1}; BlendMode: Additive; NoShadow; Animator: {clip: yard_jump_pulse} }
+
+  prefab YardDeck { Rgb: {62, 66, 76}; PbrMaterial: {metallic: 0.5, roughness: 0.7}; PbrTextures: {albedo: yard_tex_floor, normal: yard_tex_floor_normal, orm: yard_tex_floor_orm}; TextureMapping: {MappingWorld, size: 4} }
+  prefab YardDeckFine { Rgb: {62, 66, 76}; PbrMaterial: {metallic: 0.5, roughness: 0.7}; PbrTextures: {albedo: yard_tex_floor, normal: yard_tex_floor_normal, orm: yard_tex_floor_orm}; TextureMapping: {MappingWorld, size: 0.6} }
+  prefab YardGirder { Rgb: {64, 70, 80}; PbrMaterial: {metallic: 0.85, roughness: 0.45} }
+  prefab YardHolo { Rgb: {70, 200, 255}; Emissive: {strength: 1.6, color: {60, 190, 255}} }
+}

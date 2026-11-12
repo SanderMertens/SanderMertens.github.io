@@ -1,0 +1,578 @@
+using flecs.script
+using flecs.script.math
+
+state {
+  export const GX: i32 = 10
+  export const GZ: i32 = 18
+  export const GY: i32 = 6
+  export const LAYER: i32 = 180
+  export const CELLS: i32 = 1080
+  export const PLAN_X: i32 = 5
+  export const PLAN_Z: i32 = 9
+  export const PLAN_LAYER: i32 = 45
+  export const PLAN_CELLS: i32 = 135
+  export const PLAN_OX: i32 = 2
+  export const PLAN_OZ: i32 = 4
+  export const CW: f32 = 4
+  export const CH: f32 = 3
+  export const RAD: f32 = 0.42
+  export const SKIN: f32 = 0.12
+  export const HALF_PI: f32 = 1.5707963
+
+  export const K_EMPTY: i32 = 0
+  export const K_COCKPIT: i32 = 1
+  export const K_HAB: i32 = 2
+  export const K_LIFE: i32 = 3
+  export const K_POWER: i32 = 4
+  export const K_CARGO: i32 = 5
+  export const K_FUEL: i32 = 6
+  export const K_WEAPON: i32 = 7
+  export const K_ENGINE: i32 = 8
+  export const K_BIOME: i32 = 9
+  export const K_OBS: i32 = 10
+  export const K_DOCK: i32 = 11
+  export const K_HULL: i32 = 12
+  export const K_RADIATOR: i32 = 13
+  export const K_DRILL: i32 = 14
+  export const K_BUILDER: i32 = 15
+  export const K_DATA: i32 = 16
+  export const K_AUTO: i32 = 17
+  export const T_REMOVE: i32 = 18
+
+  export const KINDS: i32 = 18
+
+  export const H_WEDGE: i32 = 1
+  export const H_SLOPE: i32 = 2
+  export const H_BLOCK: i32 = 3
+  export const H_VALLEY: i32 = 4
+  export const H_HIP: i32 = 5
+
+  export const OP_CANCEL: i32 = 100
+  export const OP_DECK: i32 = 110
+  export const OP_DECK_UP: i32 = 120
+  export const OP_DECK_DOWN: i32 = 121
+  export const OP_FRIGATE: i32 = 130
+  export const OP_SCOUT: i32 = 131
+  export const OP_CLEAR: i32 = 132
+  export const OP_MINER: i32 = 133
+  export const OP_RIGS: i32 = 140
+  export const OP_LINERS: i32 = 141
+  export const OP_PASSENGER: i32 = 150
+  export const OP_FREIGHTER: i32 = 151
+  export const OP_TENDER: i32 = 152
+  export const OP_BATTLESHIP: i32 = 153
+
+  event Click(cell: i32)
+  event Built(cell: i32)
+  event Request(op: i32)
+
+  export const frigate_plan: i32[135] = [
+    0, 0, 0, 0, 0,
+    0, 8, 0, 8, 0,
+    0, 6, 0, 6, 0,
+    0, 5, 5, 5, 0,
+    7, 5, 5, 5, 7,
+    0, 5, 5, 5, 0,
+    0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0,
+    0, 8, 8, 8, 0,
+    0, 6, 6, 6, 0,
+    13, 4, 6, 4, 13,
+    0, 6, 6, 6, 0,
+    7, 3, 3, 3, 7,
+    11, 2, 3, 2, 11,
+    0, 2, 2, 2, 0,
+    0, 12, 1, 12, 0,
+    0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0,
+    0, 9, 7, 9, 0,
+    0, 9, 10, 9, 0,
+    0, 0, 0, 0, 0
+  ]
+
+  export const scout_plan: i32[135] = [
+    0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0,
+    0, 0, 5, 0, 0,
+    0, 0, 5, 0, 0,
+    0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0,
+    0, 8, 8, 8, 0,
+    0, 6, 6, 6, 0,
+    0, 13, 4, 13, 0,
+    0, 7, 3, 7, 0,
+    0, 0, 2, 0, 0,
+    0, 0, 1, 0, 0,
+    0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0,
+    0, 0, 10, 0, 0,
+    0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0
+  ]
+
+  export const miner_plan: i32[135] = [
+    0, 8, 0, 8, 0,
+    0, 6, 6, 6, 0,
+    13, 4, 5, 4, 13,
+    0, 5, 5, 5, 0,
+    0, 5, 5, 5, 0,
+    0, 5, 17, 5, 0,
+    0, 14, 0, 14, 0,
+    0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0,
+    0, 13, 16, 0, 0,
+    0, 0, 0, 0, 0,
+    0, 15, 0, 15, 0,
+    0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0
+  ]
+
+  export mut grid: i32[1080] = {}
+  export mut status: i32[1080] = {}
+  export mut counts: i32[18] = {}
+  export mut modules: i32 = 0
+  export mut problems: i32 = 0
+  export mut air: bool[1080] = {}
+  export mut placed: i32[1080] = {}
+  export mut stamp: i32 = 0
+  export mut fshape: i32[1080] = {}
+  export mut fsx: i32[1080] = {}
+  export mut fsy: i32[1080] = {}
+  export mut fsz: i32[1080] = {}
+
+  export mut liner: bool = false
+  export mut span: i32 = 0
+
+  export mut tool: i32 = 0
+  export mut deck: i32 = 2
+  export mut hover: i32 = -1
+
+  fn cell_x(i: i32) -> i32 { i % GX }
+  fn cell_z(i: i32) -> i32 { ((i - i % GX) / GX) % GZ }
+  fn cell_y(i: i32) -> i32 { (i - i % LAYER) / LAYER }
+  fn cell_at(x: i32, y: i32, z: i32) -> i32 { y * LAYER + z * GX + x }
+
+  fn inside(x: i32, y: i32, z: i32) -> bool {
+    x >= 0 && x < GX && y >= 0 && y < GY && z >= 0 && z < GZ
+  }
+
+  fn kind_at(x: i32, y: i32, z: i32) -> i32 {
+    const k = grid[cell_at(clamp(x, 0, GX - 1), clamp(y, 0, GY - 1), clamp(z, 0, GZ - 1))]
+    inside(x, y, z) ? k : 0
+  }
+
+  fn shown_at(x: i32, y: i32, z: i32) -> bool {
+    kind_at(x, y, z) != 0 && y <= deck
+  }
+
+  fn boxy(k: i32) -> bool {
+    k == K_HAB || k == K_LIFE || k == K_POWER || k == K_CARGO || k == K_DATA
+  }
+
+  fn crewed(k: i32) -> bool {
+    k == K_COCKPIT || k == K_HAB || k == K_OBS || k == K_BIOME
+  }
+
+  fn hulled(k: i32) -> bool {
+    k == K_COCKPIT || k == K_HAB || k == K_OBS || k == K_AUTO
+  }
+
+  fn piloted(k: i32) -> bool {
+    k == K_COCKPIT || k == K_AUTO
+  }
+
+  fn shaped(k: i32) -> bool {
+    k == K_HULL
+  }
+
+  fn fairable(k: i32) -> bool {
+    k != K_EMPTY && k != K_WEAPON && k != K_ENGINE && k != K_DOCK && k != K_HULL && k != K_RADIATOR &&
+    k != K_DRILL && k != K_BUILDER
+  }
+
+  fn slot(x: i32, y: i32, z: i32) -> i32 {
+    cell_at(clamp(x, 0, GX - 1), clamp(y, 0, GY - 1), clamp(z, 0, GZ - 1))
+  }
+
+  fn propped(x: i32, y: i32, z: i32) -> bool {
+    fairable(kind_at(x, y, z)) || (shaped(kind_at(x, y, z)) && fshape[slot(x, y, z)] == H_BLOCK)
+  }
+
+  fn fair_sx(x: i32, y: i32, z: i32) -> i32 {
+    propped(x + 1, y, z) ? 1 : propped(x - 1, y, z) ? -1 : 0
+  }
+
+  fn fair_sz(x: i32, y: i32, z: i32) -> i32 {
+    propped(x, y, z + 1) ? 1 : propped(x, y, z - 1) ? -1 : 0
+  }
+
+  fn fair_n(x: i32, y: i32, z: i32) -> i32 {
+    (propped(x + 1, y, z) ? 1 : 0) + (propped(x - 1, y, z) ? 1 : 0) +
+    (propped(x, y, z + 1) ? 1 : 0) + (propped(x, y, z - 1) ? 1 : 0)
+  }
+
+  fn fair_sy(x: i32, y: i32, z: i32) -> i32 {
+    propped(x, y - 1, z) ? -1 : fairable(kind_at(x, y + 1, z)) ? 1 : 0
+  }
+
+  fn fair_dx(x: i32, y: i32, z: i32) -> i32 {
+    propped(x + 1, y, z + 1) || propped(x + 1, y, z - 1) ? 1 :
+    propped(x - 1, y, z + 1) || propped(x - 1, y, z - 1) ? -1 : 0
+  }
+
+  fn fair_dz(x: i32, y: i32, z: i32) -> i32 {
+    const dx = fair_dx(x, y, z)
+    dx == 0 ? 0 : propped(x + dx, y, z + 1) ? 1 : -1
+  }
+
+  fn fair_shape(x: i32, y: i32, z: i32) -> i32 {
+    const n = fair_n(x, y, z)
+    const sy = fair_sy(x, y, z)
+    n == 2 && fair_sx(x, y, z) != 0 && fair_sz(x, y, z) != 0 ? (sy != 0 ? H_VALLEY : H_WEDGE) :
+    n == 1 && sy != 0 ? H_SLOPE :
+    n > 0 ? H_BLOCK :
+    sy != 0 && fair_dx(x, y, z) != 0 ? H_HIP :
+    0
+  }
+
+  fn hull_shape(x: i32, y: i32, z: i32) -> i32 {
+    match shaped(kind_at(x, y, z)) {
+      true: fshape[slot(x, y, z)]
+      _: fair_shape(x, y, z)
+    }
+  }
+
+  fn hull_sx(x: i32, y: i32, z: i32) -> i32 {
+    match shaped(kind_at(x, y, z)) {
+      true: fsx[slot(x, y, z)]
+      _: match fair_shape(x, y, z) == H_HIP { true: fair_dx(x, y, z); _: fair_sx(x, y, z) }
+    }
+  }
+
+  fn hull_sz(x: i32, y: i32, z: i32) -> i32 {
+    match shaped(kind_at(x, y, z)) {
+      true: fsz[slot(x, y, z)]
+      _: match fair_shape(x, y, z) == H_HIP { true: fair_dz(x, y, z); _: fair_sz(x, y, z) }
+    }
+  }
+
+  fn hull_sy(x: i32, y: i32, z: i32) -> i32 {
+    match shaped(kind_at(x, y, z)) {
+      true: fsy[slot(x, y, z)]
+      _: fair_sy(x, y, z)
+    }
+  }
+
+  fn hull_drawn(x: i32, y: i32, z: i32) -> i32 {
+    const shape = hull_shape(x, y, z)
+    shape == H_BLOCK || (hull_sy(x, y, z) > 0 && y + 1 > deck) ? 0 : shape
+  }
+
+  fn roofed(x: i32, y: i32, z: i32) -> bool {
+    const shape = hull_drawn(x, y, z)
+    shape == H_SLOPE || shape == H_VALLEY || shape == H_HIP
+  }
+
+  fn solid_at(x: i32, y: i32, z: i32) -> bool {
+    (hulled(kind_at(x, y, z)) || (shaped(kind_at(x, y, z)) && hull_drawn(x, y, z) == 0)) && y <= deck
+  }
+
+  fn faired(x: i32, y: i32, z: i32, dx: i32, dz: i32) -> bool {
+    const shape = match shaped(kind_at(x, y, z)) { true: hull_drawn(x, y, z); _: 0 }
+    shape != 0 && shape != H_HIP &&
+    ((dx != 0 && hull_sx(x, y, z) == dx) || (dz != 0 && hull_sz(x, y, z) == dz))
+  }
+
+  fn skin_at(x: i32, y: i32, z: i32, dx: i32, dz: i32) -> bool {
+    solid_at(x, y, z) || faired(x, y, z, dx, dz)
+  }
+
+  fn skin_y(x: i32, y: i32, z: i32, dy: i32) -> bool {
+    solid_at(x, y, z) || (y <= deck && shaped(kind_at(x, y, z)) && roofed(x, y, z) && hull_sy(x, y, z) == dy)
+  }
+
+  fn rack_at(x: i32, y: i32, z: i32) -> bool {
+    (kind_at(x, y, z) == K_CARGO || kind_at(x, y, z) == K_FUEL) && y <= deck
+  }
+
+  fn open_side(x: i32, y: i32, z: i32) -> bool {
+    kind_at(x - 1, y, z) == 0 || kind_at(x + 1, y, z) == 0 || kind_at(x, y, z - 1) == 0 || kind_at(x, y, z + 1) == 0
+  }
+
+  fn dockable(k: i32) -> bool {
+    boxy(k) || piloted(k) || k == K_OBS
+  }
+
+  fn dock_at(x: i32, y: i32, z: i32) -> i32 {
+    dockable(kind_at(x - 1, y, z)) ? 2 :
+    dockable(kind_at(x + 1, y, z)) ? 3 :
+    dockable(kind_at(x, y - 1, z)) ? 1 :
+    dockable(kind_at(x, y, z - 1)) ? 5 :
+    dockable(kind_at(x, y, z + 1)) ? 4 :
+    dockable(kind_at(x, y + 1, z)) ? 6 :
+    0
+  }
+
+  fn hot(k: i32) -> bool {
+    k == K_POWER || k == K_DATA
+  }
+
+  fn cooled(k: i32) -> bool {
+    hot(k) || k == K_RADIATOR
+  }
+
+  fn bay_at(x: i32, y: i32, z: i32) -> i32 {
+    kind_at(x - 1, y, z) == 0 ? 2 :
+    kind_at(x + 1, y, z) == 0 ? 3 :
+    kind_at(x, y, z - 1) == 0 ? 5 :
+    kind_at(x, y, z + 1) == 0 ? 4 :
+    0
+  }
+
+  fn cool_at(x: i32, y: i32, z: i32) -> i32 {
+    hot(kind_at(x - 1, y, z)) ? 2 :
+    hot(kind_at(x + 1, y, z)) ? 3 :
+    hot(kind_at(x, y, z - 1)) ? 5 :
+    hot(kind_at(x, y, z + 1)) ? 4 :
+    cooled(kind_at(x - 1, y, z)) ? 2 :
+    cooled(kind_at(x + 1, y, z)) ? 3 :
+    cooled(kind_at(x, y, z - 1)) ? 5 :
+    cooled(kind_at(x, y, z + 1)) ? 4 :
+    0
+  }
+
+  fn mount_at(x: i32, y: i32, z: i32) -> i32 {
+    boxy(kind_at(x, y - 1, z)) ? 1 :
+    boxy(kind_at(x - 1, y, z)) ? 2 :
+    boxy(kind_at(x + 1, y, z)) ? 3 :
+    0
+  }
+
+  fn drill_at(x: i32, y: i32, z: i32) -> i32 {
+    boxy(kind_at(x, y, z - 1)) ? 5 :
+    boxy(kind_at(x - 1, y, z)) ? 2 :
+    boxy(kind_at(x + 1, y, z)) ? 3 :
+    boxy(kind_at(x, y + 1, z)) ? 6 :
+    boxy(kind_at(x, y - 1, z)) ? 1 :
+    0
+  }
+
+  fn wx(i: i32) -> f32 { (cell_x(i) - GX / 2.0 + 0.5) * CW }
+  fn wy(i: i32) -> f32 { cell_y(i) * CH }
+  fn wz(i: i32) -> f32 { (cell_z(i) - GZ / 2.0 + 0.5) * CW }
+
+  fn touches(x: i32, y: i32, z: i32, k: i32) -> bool {
+    kind_at(x - 1, y, z) == k || kind_at(x + 1, y, z) == k || kind_at(x, y - 1, z) == k ||
+    kind_at(x, y + 1, z) == k || kind_at(x, y, z - 1) == k || kind_at(x, y, z + 1) == k
+  }
+
+  fn touches_any(x: i32, y: i32, z: i32) -> bool {
+    kind_at(x - 1, y, z) != 0 || kind_at(x + 1, y, z) != 0 || kind_at(x, y - 1, z) != 0 ||
+    kind_at(x, y + 1, z) != 0 || kind_at(x, y, z - 1) != 0 || kind_at(x, y, z + 1) != 0
+  }
+
+  fn clear_ahead(x: i32, y: i32, z: i32) -> bool {
+    match z >= GZ - 1 {
+      true: true
+      _: kind_at(x, y, z + 1) == 0 && clear_ahead(x, y, z + 1)
+    }
+  }
+
+  fn clear_behind(x: i32, y: i32, z: i32) -> bool {
+    match z <= 0 {
+      true: true
+      _: kind_at(x, y, z - 1) == 0 && clear_behind(x, y, z - 1)
+    }
+  }
+
+  fn rule_code(x: i32, y: i32, z: i32, k: i32) -> i32 {
+    !touches_any(x, y, z) ? 0 :
+    piloted(k) && kind_at(x, y, z - 1) == 0 ? 3 :
+    piloted(k) && !clear_ahead(x, y, z) ? 4 :
+    k == K_ENGINE && kind_at(x, y, z + 1) == 0 ? 5 :
+    k == K_ENGINE && !clear_behind(x, y, z) ? 6 :
+    k == K_WEAPON && mount_at(x, y, z) == 0 ? 7 :
+    k == K_FUEL && !touches(x, y, z, K_ENGINE) && !touches(x, y, z, K_FUEL) ? 9 :
+    k == K_POWER && (touches(x, y, z, K_HAB) || touches(x, y, z, K_COCKPIT)) ? 10 :
+    k == K_BIOME && kind_at(x, y + 1, z) != 0 ? 18 :
+    k == K_OBS && !open_side(x, y, z) ? 20 :
+    k == K_DOCK && dock_at(x, y, z) == 0 ? 21 :
+    shaped(k) && fshape[cell_at(x, y, z)] == 0 ? 22 :
+    k == K_RADIATOR && cool_at(x, y, z) == 0 ? 23 :
+    k == K_DRILL && drill_at(x, y, z) == 0 ? 24 :
+    k == K_BUILDER && mount_at(x, y, z) == 0 ? 25 :
+    k == K_DATA && !touches(x, y, z, K_RADIATOR) ? 26 :
+    0
+  }
+
+  fn kind_mass(k: i32) -> f32 {
+    match k {
+      1: 14; 2: 10; 3: 12; 4: 24; 5: 9; 6: 16; 7: 15; 8: 20; 9: 11; 10: 9; 11: 4; 12: 3; 13: 5; 14: 12; 15: 8; 16: 14; 17: 10
+      _: 0
+    }
+  }
+
+  fn kind_power(k: i32) -> f32 {
+    match k { 1: 2; 2: 1; 3: 2; 4: -30; 5: 0.5; 7: 3; 8: 3; 9: 1; 10: 1; 14: 4; 15: 2; 16: 12; 17: 2; _: 0 }
+  }
+
+  fn validate() {
+    mut st: i32[1080] = {}
+    mut aired: bool[1080] = {}
+    mut queue: i32[1080] = {}
+    mut tally: i32[18] = {}
+    mut front: i32 = GZ
+    mut back: i32 = -1
+    mut total: i32 = 0
+
+    for i in 0..CELLS {
+      const k = grid[i]
+      if k != 0 {
+        total += 1
+        tally[k] += 1
+        front = min(front, cell_z(i))
+        back = max(back, cell_z(i))
+      }
+    }
+
+    mut head: i32 = 0
+    mut tail: i32 = 0
+    for i in 0..CELLS {
+      if grid[i] == K_LIFE || grid[i] == K_OBS {
+        aired[i] = true
+        queue[tail] = i
+        tail += 1
+      }
+    }
+    while head < tail {
+      const c = queue[head]
+      head += 1
+      const x = cell_x(c)
+      const y = cell_y(c)
+      const z = cell_z(c)
+      if x > 0 && crewed(grid[c - 1]) && !aired[c - 1] {
+        aired[c - 1] = true
+        queue[tail] = c - 1
+        tail += 1
+      }
+      if x < GX - 1 && crewed(grid[c + 1]) && !aired[c + 1] {
+        aired[c + 1] = true
+        queue[tail] = c + 1
+        tail += 1
+      }
+      if z > 0 && crewed(grid[c - GX]) && !aired[c - GX] {
+        aired[c - GX] = true
+        queue[tail] = c - GX
+        tail += 1
+      }
+      if z < GZ - 1 && crewed(grid[c + GX]) && !aired[c + GX] {
+        aired[c + GX] = true
+        queue[tail] = c + GX
+        tail += 1
+      }
+      if y > 0 && crewed(grid[c - LAYER]) && !aired[c - LAYER] {
+        aired[c - LAYER] = true
+        queue[tail] = c - LAYER
+        tail += 1
+      }
+      if y < GY - 1 && crewed(grid[c + LAYER]) && !aired[c + LAYER] {
+        aired[c + LAYER] = true
+        queue[tail] = c + LAYER
+        tail += 1
+      }
+    }
+
+    mut cleared: i32[1080] = {}
+    fshape = cleared
+    fsx = cleared
+    fsy = cleared
+    fsz = cleared
+    for y in 0..GY {
+      mut list: i32[180] = {}
+      mut m: i32 = 0
+      for j in 0..LAYER {
+        const i = y * LAYER + j
+        if shaped(grid[i]) {
+          mut p = m
+          while p > 0 && placed[list[max(p - 1, 0)]] > placed[i] {
+            list[p] = list[p - 1]
+            p -= 1
+          }
+          list[p] = i
+          m += 1
+        }
+      }
+      mut more = true
+      while more {
+        more = false
+        for q in 0..m {
+          const i = list[q]
+          if fshape[i] == 0 {
+            const x = cell_x(i)
+            const z = cell_z(i)
+            const shape = fair_shape(x, y, z)
+            if shape != 0 {
+              fshape[i] = shape
+              fsx[i] = shape == H_HIP ? fair_dx(x, y, z) : fair_sx(x, y, z)
+              fsy[i] = fair_sy(x, y, z)
+              fsz[i] = shape == H_HIP ? fair_dz(x, y, z) : fair_sz(x, y, z)
+              more = true
+            }
+          }
+        }
+      }
+    }
+
+    mut bad: i32 = 0
+    for i in 0..CELLS {
+      const k = grid[i]
+      if k != 0 {
+        const own = rule_code(cell_x(i), cell_y(i), cell_z(i), k)
+        if own != 0 {
+          st[i] = own
+        } else if k == K_HAB && !aired[i] && touches_any(cell_x(i), cell_y(i), cell_z(i)) {
+          st[i] = 17
+        }
+        if st[i] != 0 {
+          bad += 1
+        }
+      }
+    }
+
+    status = st
+    air = aired
+    counts = tally
+    modules = total
+    problems = bad
+    span = max(back - front + 1, 0)
+  }
+}

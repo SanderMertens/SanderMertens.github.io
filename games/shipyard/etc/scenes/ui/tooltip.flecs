@@ -1,0 +1,116 @@
+// Tooltip: a floating text box that explains its parent after the pointer rests on it.
+
+module box.widgets
+
+using flecs.script
+using box.ui
+using box.input
+using box.picking
+using box.layout
+using box.geometry
+using box.material
+using box.text
+using box.spatial
+
+// Behavior of a tooltip, a child of the element it explains. shown is whether it shows: it does
+// after the pointer has rested on the parent for delay seconds, and hides when the pointer leaves
+// the parent or presses it; after a press it waits for the pointer to leave and come back. It
+// hides and does not show while the parent is disabled (its Cursor is CursorNotAllowed), and goes
+// with the parent when the parent is deleted. ui.delay counts the seconds in world time.
+//
+// It is a LayoutFloat below the parent, centered on it, that flips above it when it does not fit
+// below; like the list of a Dropdown it draws over the other widgets and outside the clips of its
+// ancestors, and hides while a scroll view clips the parent out of view. It is SpatialIgnore, so
+// neither it nor its children are picked: the pointer reaches what lies under it and the parent
+// keeps its hover while the tooltip covers it. over is whether the pointer is over the parent and
+// leaves counts the times it left or pressed it.
+template HeadlessTooltip {
+  prop text: string = ""
+  prop delay: f32 = 0.5
+  prop width: f32 = 240
+
+  mut shown = false
+  mut over = false
+  mut leaves: i32 = 0
+  mut waiting = false
+
+  const owner = this.parent()
+  const not_allowed: PointerCursor = CursorNotAllowed
+  const blocked = owner?[Cursor] && owner[Cursor].shape == not_allowed
+
+  SpatialIgnore
+  LayoutFloat: {
+    h: Center, v: Top, anchor_h: Center, anchor_v: Bottom, y: -4, flip: true, hide_clipped: true
+  }
+
+  async {
+    while true {
+      await on.enter(owner)
+      over = true
+    }
+  }
+
+  async {
+    while true {
+      await on.leave(owner)
+      over = false
+      shown = false
+      leaves = leaves + 1
+    }
+  }
+
+  async {
+    while true {
+      await on.press(owner)
+      over = false
+      shown = false
+      leaves = leaves + 1
+    }
+  }
+
+  // Reads the Cursor of the parent, so it runs again when the parent is disabled
+  async {
+    if blocked {
+      shown = false
+    }
+  }
+
+  // An enter starts the wait. When the pointer left during it and is back, it waits again.
+  async {
+    while true {
+      await on.enter(owner)
+      waiting = true
+      while waiting {
+        const left = leaves
+        await ui.delay(delay)
+        if leaves == left {
+          waiting = false
+          shown = over && !blocked
+        } else if !over {
+          waiting = false
+        }
+      }
+    }
+  }
+}
+
+// A tooltip: the text in the caption style of the theme on a surface with a border, the corner
+// radius of the theme and a shadow. Its text wraps where the box would get wider than width points.
+template Tooltip : HeadlessTooltip {
+  const t = box.ui.theme[UiTheme]
+  const pad = t.padding * 0.75
+
+  if shown {
+    Layout: {direction: Row, padding: {pad, pad, t.padding, t.padding}, v: Middle}
+    LayoutItem: {width: {max: width}}
+    Rect: {1, 1}
+    Rgb: t.surface
+    Border: {width: 1, radius: t.radius, color: {t.border.r, t.border.g, t.border.b, 255}}
+    BoxShadow: {offset_y: -4, blur: 12, color: {0, 0, 0, 120}}
+
+    caption {
+      Text: {value: text, size: t.small_font_size}
+      Rgb: t.text_muted
+    }
+  }
+}

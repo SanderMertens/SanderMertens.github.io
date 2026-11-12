@@ -1,0 +1,212 @@
+// RadioGroup and RadioButton: one string value chosen from the labels of the buttons of a group.
+
+module box.widgets
+
+using flecs.script
+using box.ui
+using box.input
+using box.picking
+using box.layout
+using box.geometry
+using box.material
+using box.text
+using box.transition
+
+// A group of radio buttons in a column, which owns the value: current is the label of the
+// checked button, "" for none. A disabled group disables its buttons. The group only lays its
+// buttons out and is not split: its buttons read and assign its muts, which flecs script only
+// follows reactively when the parent is an instance of the template the constraint names.
+template RadioGroup {
+  prop value: string = ""
+  prop disabled: bool = false
+  prop width: f32 = 0
+
+  mut current: string = value
+  mut last_value: string = value
+  mut first: entity = 0   // First enabled button, the Tab stop while none is checked
+  mut pending: entity = 0 // Button the arrow keys move the focus to, checked when focused
+
+  const t = box.ui.theme[UiTheme]
+
+  Layout: {direction: Column, spacing: t.spacing / 2}
+  LayoutItem: {width: {min: width, max: width}}
+
+  if disabled {
+    Opacity: {t.disabled_opacity}
+  }
+
+  async {
+    if value != last_value {
+      last_value = value
+      current = value
+    }
+  }
+}
+
+// Behavior of a radio button, a child of a radio group. The group is one Tab stop: only the
+// checked button (or the first one while none is) is Focusable. A click, Enter or Space checks
+// the button; the arrow keys check and focus the next or previous enabled button of the group,
+// wrapping around. The group reports the change. The pointer shows a hand over the button, a
+// crossed circle while it or its group is disabled.
+template HeadlessRadioButton : parent RadioGroup {
+  prop label: string = ""
+  prop disabled: bool = false
+
+  mut hover = false
+  mut down = false
+  mut focused = false
+
+  const none: entity = 0
+  const off = disabled || parent.disabled
+  const checked = current == label
+
+  if !off {
+    Interactive
+    Cursor: {CursorPointer}
+    if checked || focused || pending == this || (current == "" && first == this) {
+      Focusable
+    }
+  } else {
+    Cursor: {CursorNotAllowed}
+  }
+
+  // A disabled button ignores the pointer, so it never shows as hovered or pressed
+  async {
+    if !off && first == 0 {
+      first = this
+    }
+
+    while true {
+      await on.enter(this)
+      hover = !off
+      await on.leave(this)
+      hover = false
+    }
+  }
+
+  async {
+    while true {
+      await on.press(this)
+      down = !off
+      await on.release(this)
+      down = false
+    }
+  }
+
+  async {
+    while true {
+      const e = await on.focus(this)
+      if e.target == this {
+        focused = true
+        if pending == this {
+          pending = none
+          if current != label {
+            current = label
+            await ui.changed(this.parent())
+          }
+        }
+      }
+    }
+  }
+
+  async {
+    while true {
+      const e = await on.blur(this)
+      if e.target == this {
+        focused = false
+        down = false
+      }
+    }
+  }
+
+  async {
+    while true {
+      const e = await on.key_down(this)
+      if e.key == " " && !e.repeat {
+        down = true
+      }
+
+      const step = match e.key {
+        "ArrowDown", "ArrowRight": 1
+        "ArrowUp", "ArrowLeft": -1
+        _: 0
+      }
+      if !off && step != 0 {
+        const next = ui.sibling(this, step, Interactive)
+        if next != this {
+          pending = next
+          await focus(next)
+        }
+      }
+    }
+  }
+
+  async {
+    while true {
+      const e = await on.key_up(this)
+      if e.key == " " {
+        down = false
+      }
+    }
+  }
+
+  async {
+    while true {
+      const e = await on.activate(this)
+      if ui.activation(e) == this {
+        down = false
+        if !off && current != label {
+          current = label
+          pending = none
+          await ui.changed(this.parent())
+          await focus(this)
+        }
+      }
+    }
+  }
+}
+
+// A radio button: a round indicator with a dot when checked and a label to its right
+template RadioButton : HeadlessRadioButton {
+  const t = box.ui.theme[UiTheme]
+  const ring = focused && FocusStatus[FocusStatus].visible
+  const checked = current == label
+  const size = 16
+  const edge = ring ? t.focus : checked ? t.accent : t.border
+
+  Layout: {direction: Row, spacing: t.spacing, v: Middle}
+  LayoutItem: {height: {mode: Fixed, value: t.control_height}}
+
+  indicator {
+    Layout: {}
+    LayoutItem: {width: {mode: Fixed, value: size}, height: {mode: Fixed, value: size}}
+    Rect: {1, 1}
+    Rgb: down ? t.pressed : hover ? t.hover : t.surface_alt
+    Transition: [Rgb: WidgetFade]
+    Border: {
+      width: ring ? t.focus_width : 1, radius: size / 2,
+      color: {edge.r, edge.g, edge.b, 255}
+    }
+
+    if checked {
+      dot {
+        LayoutItem: {
+          h: Center, v: Middle,
+          width: {mode: Fixed, value: 8}, height: {mode: Fixed, value: 8}
+        }
+        Rect: {1, 1}
+        Rgb: t.accent
+        Border: {radius: 4}
+      }
+    }
+  }
+
+  caption {
+    Text: {value: label, size: t.font_size}
+    Rgb: t.text
+  }
+
+  if disabled && !parent.disabled {
+    Opacity: {t.disabled_opacity}
+  }
+}
