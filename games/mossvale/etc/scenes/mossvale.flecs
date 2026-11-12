@@ -9,6 +9,7 @@ include mossvale/player
 include mossvale/quests
 include mossvale/fx
 include mossvale/world
+include mossvale/tiles
 include mossvale/hud
 include mossvale/dev
 include mossvale/music
@@ -28,6 +29,7 @@ using state
 using assets
 
 $ {
+  box.app.FpsTarget: {60}
   Scene: {environment: true, alpha_cutout: true, blend_modes: true, texture_blend: true, sheen: true}
   if hour > 19 || hour < 5.5 {
     AmbientLight: {sky: {90, 110, 190}, ground: {40, 40, 60}, intensity: 1.1}

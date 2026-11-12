@@ -7,11 +7,22 @@ assets {
   template CanopyRoof {
     prop style: i32 = 0
     prop variant: i32 = 0
+    prop sx: f32 = 1
+    prop sy: f32 = 1
+    prop sz: f32 = 1
     CanopyRoofKit(variant: variant) {}
     if style == 0 {
+      const tilt = 0.2
+      const lift = 0.45
       CanopyTree(height: 3.5, variant: variant) { Position: {-1, 0, -0.5} }
       for i in 0..3 {
-        { (IsA, CanopySolar); Position: {1.5, 0.7, -1.5 + i * 1.3}; Rotation: {0, 0, -0.2}; Box: {1.6, 0.1, 1.1} }
+        const z = -1.5 + i * 1.3
+        { (IsA, CanopySolar); Position: {1.5, lift, z}; Rotation: {0, 0, tilt}; Box: {1.6, 0.1, 1.1} }
+        for leg in 0..2 {
+          const lx = (leg - 0.5) * 1.3
+          const lh = lift + lx * math.tan(tilt) - 0.05 / math.cos(tilt)
+          { (IsA, CanopyMetal); Position: {1.5 + lx, lh / 2, z}; Box: {0.05, lh, 0.9} }
+        }
       }
     } else if style == 1 {
       for x in 0..2 {
@@ -26,35 +37,48 @@ assets {
         CanopyFern(size: 0.9) { Position: {-1.5 + i * 1.5, 0, 0} }
       }
     } else if style == 2 {
-      dome : CanopyGlass { Position: {0, 0.1, 0}; Scale: {1, 0.8, 1}; HemiSphere: {radius: 2.3, segments: 8} }
-      for i in 0..6 {
-        { (IsA, CanopyIvory); Position: {0, 0.1, 0}; Rotation: {-math.PI / 2, i * math.PI / 6, 0}; Scale: {1, 1, 0.8}; Tube: {radius: 2.34, thickness: 0.06, length: 0.06, arc: math.PI, segments: 8} }
+      const k = math.min(sx, sz)
+      dome {
+        Scale: {k / sx, k / sy, k / sz}
+        glass : CanopyGlass { Position: {0, 0, 0}; HemiSphere: {radius: 2.3, segments: 8} }
+        for i in 0..6 {
+          { (IsA, CanopyIvory); Rotation: {-math.PI / 2, i * math.PI / 6, 0}; Tube: {radius: 2.34, thickness: 0.06, length: 0.06, arc: math.PI, segments: 8} }
+        }
       }
     } else if style == 3 {
       for i in 0..3 {
-        { (IsA, CanopyIvory); Position: {-1.7 + i * 1.7, 1.1 + i * 0.3, 0}; Cylinder: {radius: 0.06, length: 2.2 + i * 0.6, segments: 3} }
-        { (IsA, CanopySolar); Position: {-1.7 + i * 1.7, 2.2 + i * 0.3, 0}; Rotation: {0, 0, -0.22}; Box: {1.5, 0.12, 4.1} }
+        const x = -1.7 + i * 1.7
+        const y = 2.2 + i * 0.3
+        { (IsA, CanopyIvory); Position: {x, (y - 0.06) / 2, 0}; Cylinder: {radius: 0.06, length: y - 0.06, segments: 3} }
+        { (IsA, CanopySolar); Position: {x, y, 0}; Rotation: {0, 0, 0.22}; Box: {1.5, 0.12, 4.1} }
       }
     } else if style == 4 {
-      basin : CanopyIvory { Position: {0, 0.18, 0}; RoundedBox: {4.6, 0.36, 3.8, 0.5} }
-      water : CanopyWater { Position: {0, 0.38, 0}; RoundedBox: {4.1, 0.08, 3.3, 0.4} }
+      basin : CanopyIvory { Position: {0, 0.18, 0}; Box: {4.6, 0.36, 3.8}; Bevel: {top: 0.18, front_left: 0.18, front_right: 0.18, back_left: 0.18, back_right: 0.18} }
+      water : CanopyWater { Position: {0, 0.38, 0}; Box: {4.1, 0.08, 3.3} }
       for side in 0..2 {
         CanopyFern(size: 1.1) { Position: {(side - 0.5) * 5.2, 0, 0} }
-        { (IsA, CanopyWindow); Position: {(side - 0.5) * 4.3, 0.4, 0}; Box: {0.06, 0.06, 2.8} }
+        { (IsA, CanopyWindow); Position: {(side - 0.5) * 4.3, 0.39, 0}; Box: {0.06, 0.06, 2.8} }
       }
     } else {
+      const tilt = 0.12
       for side in 0..2 {
-        { (IsA, CanopyWood); Position: {(side - 0.5) * 4.5, 1.4, 0}; Box: {0.16, 2.8, 0.16} }
+        const x = (side - 0.5) * 4.5
+        const h = 2.8 + x * math.tan(tilt) - 0.06 / math.cos(tilt)
+        { (IsA, CanopyWood); Position: {x, h / 2, 0}; Box: {0.16, h, 0.16} }
         CanopyFern(size: 1.2) { Position: {(side - 0.5) * 3.8, 0, 1.4} }
       }
-      sail : CanopyIvory { Position: {0, 2.8, 0}; Rotation: {0, 0, 0.12}; Box: {5.4, 0.12, 4.4} }
-      for i in 0..6 {
-        { (IsA, CanopyWood); Position: {-2.3 + i * 0.92, 2.87 - (-2.3 + i * 0.92) * 0.12, 0}; Rotation: {0, 0, 0.12}; Box: {0.12, 0.06, 4.4} }
-        if i % 2 == 0 {
-          { (IsA, CanopySolar); Position: {-1.84 + i * 0.92, 2.89 - (-1.84 + i * 0.92) * 0.12, 0}; Rotation: {0, 0, 0.12}; Box: {0.74, 0.03, 3.8} }
+      sail {
+        Position: {0, 2.8, 0}
+        Rotation: {0, 0, tilt}
+        canvas : CanopyIvory { Position: {0, 0, 0}; Box: {5.4, 0.12, 4.4} }
+        for i in 0..6 {
+          { (IsA, CanopyWood); Position: {-2.3 + i * 0.92, 0.09, 0}; Box: {0.12, 0.06, 4.4} }
+          if i % 2 == 0 {
+            { (IsA, CanopySolar); Position: {-1.84 + i * 0.92, 0.075, 0}; Box: {0.74, 0.03, 3.8} }
+          }
         }
+        soffit : CanopyWindow { Position: {0, -0.09, 0}; Box: {2.8, 0.06, 0.35} }
       }
-      soffit : CanopyWindow { Position: {0, 2.65, 0}; Box: {2.8, 0.06, 0.35} }
     }
   }
 }

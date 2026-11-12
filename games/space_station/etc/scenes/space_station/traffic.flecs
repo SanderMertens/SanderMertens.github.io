@@ -15,7 +15,7 @@ state {
   export const SHIP_LEAVING: i32 = 7
   export const st_ship_count: i32 = 10
 
-  proc st_ship_go(s: i32, state: i32, timer: i32) {
+  fn st_ship_go(s: i32, state: i32, timer: i32) {
     st_ships[s].state = state
     st_ships[s].timer = timer
   }

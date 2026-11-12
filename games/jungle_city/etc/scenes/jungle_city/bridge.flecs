@@ -61,7 +61,7 @@ assets {
       const far_from_opening = !has_opening || side == 1 || x < opening - 2 || x > opening + 2
       if far_from_opening {
         if kind < 3 {
-          CanopyPlanter(length: 1.5, seed: seed + i, bloom: kind == 0) { Position: {x, -0.16, z_sign * (width + 0.52)} }
+          CanopyPlanter(length: 1.5, seed: seed + i, bloom: kind == 0) { Position: {x, -0.16, z_sign * (width + 0.46)} }
           CanopyVine(length: 1.2 + stuff.f(1.4), phase: seed + i) { Position: {x, -0.1, z_sign * (width + 0.92)} }
         } else if kind == 3 {
           CanopyBench() { Position: {x, 0, z_sign * (width - 0.8)}; Rotation: {0, math.PI * (0.5 - side), 0} }
@@ -95,6 +95,12 @@ assets {
     prop length: f32 = 10
     prop width: f32 = 2.4
     prop seed: i32 = 0
+    prop clearance: f32 = 4.52
+    prop bank: f32 = 0.13
+    const a = length / 2 + 0.5
+    const b = a * 0.85
+    const y0 = bank - clearance + 0.25
+    const c = (-0.4 - 0.25 * y0) / 0.75
     CanopyWalk(length: length, width: width, seed: seed, piers: false) {}
     for side in 0..2 {
       const z = (side - 0.5) * (width - 0.1)
@@ -102,17 +108,21 @@ assets {
         Position: {0, 0, z}
         rib {
           Path3D: {
-            start: {-length / 2 - 0.02, -1.9, 0},
-            segments: [{kind: CubicBezier, end: {length / 2 + 0.02, -1.9, 0}, control1: {-length / 6, 0.1, 0}, control2: {length / 6, 0.1, 0}}]
+            start: {-a, y0, 0},
+            segments: [{kind: CubicBezier, end: {a, y0, 0}, control1: {-b, c, 0}, control2: {b, c, 0}}]
           }
         }
         Sweep: {path: rib, profile: CanopyRibProfile, scale: {0.14, 0.16}, rings: 32}
       }
+      for end in 0..2 {
+        { (IsA, CanopyAshlar); Position: {(end - 0.5) * 2 * a, bank - clearance + 0.15, z}; Box: {0.8, 0.3, 0.5} }
+      }
       for i in 1..8 {
-        const t0 = i / 8.0
-        const x0 = (t0 - 0.5) * length
-        const y0 = 1.5 * (1 - 4 * (t0 - 0.5) * (t0 - 0.5)) - 1.9
-        { (IsA, CanopyIron); Position: {x0, (y0 - 0.24) / 2, z}; Box: {0.06, -y0 - 0.24, 0.06} }
+        const t = i / 8.0
+        const u = 1 - t
+        const hx = -a * u * u * u - 3 * b * u * u * t + 3 * b * u * t * t + a * t * t * t
+        const hy = y0 * (u * u * u + t * t * t) + 3 * c * t * u
+        { (IsA, CanopyIron); Position: {hx, (hy - 0.24) / 2, z}; Box: {0.06, -hy - 0.24, 0.06} }
       }
     }
   }
@@ -154,7 +164,7 @@ assets {
     const half = size / 2
     const stub = (size - width) / 2
     const stuff: math.Rng = {seed: seed + 4099}
-    plate : CanopyPaver { Position: {0, -0.06, 0}; RoundedBox: {size, 0.12, size, 0.05, segments: 1} }
+    plate : CanopyPaver { Position: {0, -0.06, 0}; Box: {size, 0.12, size}; Bevel: {front_left: 0.05, front_right: 0.05, back_left: 0.05, back_right: 0.05, segments: 1} }
     fascia : CanopyTimberDark { Position: {0, -0.22, 0}; Box: {size - 0.1, 0.24, size - 0.1} }
     for i in 0..2 {
       { (IsA, CanopyTimberDark); Position: {0, -0.42, 0}; Rotation: {0, i * math.PI / 2 + 0.78, 0}; Box: {size * 1.1, 0.24, 0.22} }
@@ -197,8 +207,8 @@ assets {
       if feature == 1 {
         CanopyTree(height: 4.4, variant: seed, species: 0) { Position: {0, 0.48, 0} }
       } else if feature == 2 {
-        CanopyBanana(height: 2.8, seed: seed) { Position: {0, 0.48, 0} }
-        CanopyFern(size: 0.7) { Position: {0.35, 0.48, -0.3} }
+        CanopyBamboo(height: 3.4, seed: seed) { Position: {0, 0.48, 0} }
+        CanopyFern(size: 0.55) { Position: {0, 0.48, 0} }
       } else {
         CanopyTree(height: 3.6, variant: seed, species: 7) { Position: {0, 0.48, 0} }
       }
@@ -253,7 +263,7 @@ assets {
     for i in 0..math.floor(tall / 2.2) + 1 {
       { (IsA, CanopyTrim); Position: {0, 0.1 + i * 2.2, 0}; Box: {1.3, 0.06, 1.3} }
     }
-    roof : CanopyTrim { Position: {0, tall + 0.08, 0}; RoundedBox: {1.5, 0.16, 1.5, 0.05, segments: 1} }
+    roof : CanopyTrim { Position: {0, tall + 0.08, 0}; Box: {1.5, 0.16, 1.5}; Bevel: {top: 0.05, front_left: 0.05, front_right: 0.05, back_left: 0.05, back_right: 0.05, segments: 1} }
     motor : CanopyMetal { Position: {0, tall + 0.32, 0}; Box: {0.8, 0.34, 0.7} }
     cab : CanopyTimberDark { Position: {0, 1.5 + variant % 3 * 1.6, 0}; Box: {0.98, 2, 0.98} }
     cab_glow : CanopyLampGlow { Position: {0, 2.42 + variant % 3 * 1.6, 0}; Box: {0.8, 0.04, 0.8} }

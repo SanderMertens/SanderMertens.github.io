@@ -81,7 +81,7 @@ state {
   export const CAM_FOV: f32 = 40
   export const CAST_RANGE: f32 = 9
 
-  proc pick_target() {
+  fn pick_target() {
     mut best: f64 = CAST_RANGE * CAST_RANGE
     mut bi: i32 = -1
     for i in 0..TARGETS {
@@ -517,6 +517,7 @@ async {
         casting = true
         mana -= cost
         const s = spell
+        emit CastStart(spell: s)
         const ddx = e.x - px
         const ddz = e.z - pz
         const dl = max(sqrt(ddx * ddx + ddz * ddz), 0.01)

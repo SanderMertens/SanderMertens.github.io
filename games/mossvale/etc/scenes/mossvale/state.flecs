@@ -77,6 +77,7 @@ state {
   event Mote(i: i32)
   event Impact(spell: i32, x: f32, z: f32)
   event Fizzle(x: f32, z: f32)
+  event CastStart(spell: i32)
 
   fn fract(v: f64) -> f64 {
     v - floor(v)
@@ -266,7 +267,7 @@ state {
   export mut track_s: string[4] = {}
   export mut track_n: i32 = 0
 
-  proc block_rect(x0: f32, z0: f32, x1: f32, z1: f32) {
+  fn block_rect(x0: f32, z0: f32, x1: f32, z1: f32) {
     for z in floor(z0)..ceil(z1) {
       for x in floor(x0)..ceil(x1) {
         if x >= -GRID_HALF && x < GRID_HALF && z >= -GRID_HALF && z < GRID_HALF {
@@ -276,7 +277,7 @@ state {
     }
   }
 
-  proc unblock_rect(x0: f32, z0: f32, x1: f32, z1: f32) {
+  fn unblock_rect(x0: f32, z0: f32, x1: f32, z1: f32) {
     for z in floor(z0)..ceil(z1) {
       for x in floor(x0)..ceil(x1) {
         if x >= -GRID_HALF && x < GRID_HALF && z >= -GRID_HALF && z < GRID_HALF {
@@ -286,7 +287,7 @@ state {
     }
   }
 
-  proc block_disc(cx: f32, cz: f32, r: f32) {
+  fn block_disc(cx: f32, cz: f32, r: f32) {
     for z in floor(cz - r)..ceil(cz + r) {
       for x in floor(cx - r)..ceil(cx + r) {
         if (x + 0.5 - cx) * (x + 0.5 - cx) + (z + 0.5 - cz) * (z + 0.5 - cz) <= r * r {
@@ -298,12 +299,12 @@ state {
     }
   }
 
-  proc say(text: string) {
+  fn say(text: string) {
     toast = text
     toast_until = clock + 4.5
   }
 
-  proc announce(title: string, sub: string) {
+  fn announce(title: string, sub: string) {
     banner = title
     banner_sub = sub
     banner_until = clock + 4.5

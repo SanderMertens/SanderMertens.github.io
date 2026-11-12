@@ -30,9 +30,11 @@ assets {
       await next_frame()
       flowing = true
     }
-    bedrock : CanopyStrata { Position: {0, -3.1, 0}; RoundedBox: {width, 4.4, depth, 2, segments: 2}; TextureTransform: {scale_x: width / 36, scale_y: 1} }
+    bedrock : CanopyStrata { Position: {0, -3.1, 0}; Box: {width, 4.4, depth}; Bevel: {bottom: 2, front_left: 2, front_right: 2, back_left: 2, back_right: 2, segments: 2}; TextureTransform: {scale_x: width / 36, scale_y: 1} }
     for side in 0..2 {
-      { (IsA, CanopyGround); Position: {(side - 0.5) * 2 * bank_x, -0.35, 0}; RoundedBox: {bank, 1.1, depth - 0.3, 1.2, segments: 2} }
+      const outer = side == 0 ? 0.55 : 0.0
+      const corner = side == 0 ? 2.0 : 0.0
+      { (IsA, CanopyGround); Position: {(side - 0.5) * 2 * bank_x, -0.35, 0}; Box: {bank, 1.1, depth - 0.3}; Bevel: {top_front: 0.55, top_back: 0.55, top_left: outer, top_right: 0.55 - outer, front_left: corner, back_left: corner, front_right: 2 - corner, back_right: 2 - corner, segments: 2} }
       { (IsA, CanopyAshlar); Position: {(side - 0.5) * 11.6, -0.31, 0}; Box: {1.6, 1.16, depth - 0.2} }
       { (IsA, CanopyPaver); Rgb: {150, 146, 124}; Position: {(side - 0.5) * 11.6, 0.3, 0}; Box: {1.64, 0.06, depth - 0.2} }
       for i in 0..math.floor(depth / 6) {
@@ -53,16 +55,16 @@ assets {
       }
     }
     bed : CanopySoil { Position: {0, -0.86, 0}; Box: {10.3, 0.06, depth - 0.2} }
-    canal_water : CanopyWater {
+    canal_water : CanopyCanalWater {
       Position: {0, -0.35, 0}
       Box: {10.3, 0.04, depth - 0.08}
-      TextureTransform: {scale_x: 2, scale_y: depth / 5, offset_x: flowing ? 180 : 0, offset_y: flowing ? 840 : 0}
+      TextureTransform: {scale_x: depth / 5, scale_y: 2, offset_x: flowing ? -1700 : 0, offset_y: flowing ? 120 : 0}
       Transition: [TextureTransform: {duration: 14400, timing_function: Linear}]
     }
     spill : CanopyFoam {
       Position: {0, -2.4, depth / 2 + 0.03}
       Box: {10, 4.1, 0.06}
-      TextureTransform: {scale_x: 2, scale_y: 1, offset_y: flowing ? 3600 : 0}
+      TextureTransform: {scale_x: 2, scale_y: 0.82, offset_y: flowing ? -3600 : 0}
       Transition: [TextureTransform: {duration: 14400, timing_function: Linear}]
       Opacity: {0.85}
     }

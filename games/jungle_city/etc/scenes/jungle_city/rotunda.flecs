@@ -11,10 +11,14 @@ assets {
     prop timber: Rgb = {143, 91, 48}
     prop roof_style: i32 = 0
     prop facade_style: i32 = 0
+    prop sx: f32 = 1
+    prop sz: f32 = 1
     const windows: math.Rng = {seed: variant + 314159}
     const height = floors * 3.2
+    const bays = math.max(1, math.round(math.PI * 2.8 * (sx + sz) / 3.2))
+    Scale: {sx, 1, sz}
     CanopyPlinth(round: true, radius: 3.6, variant: variant) {}
-    core : CanopyFacade { Position: {0, height / 2 + 1.2, 0}; Cylinder: {radius: 2.8, length: height, segments: 12, smooth: true}; TextureTransform: {scale_x: 1.375, scale_y: floors / 8.0, offset_x: variant % 8 / 8.0, offset_y: variant % 13 / 8.0} }
+    core : CanopyFacade { Position: {0, height / 2 + 1.2, 0}; Cylinder: {radius: 2.8, length: height, segments: 12, smooth: true}; TextureTransform: {scale_x: bays / 8.0, scale_y: floors / 8.0, offset_x: variant % 8 / 8.0, offset_y: variant % 13 / 8.0} }
     for f in 0..floors + 1 {
       const y = 1.2 + f * 3.2
       const radius = 3.8 + math.sin(f * 1.2 + variant) * 0.45
@@ -44,7 +48,7 @@ assets {
       }
     }
     roof_garden : CanopyLeaf { Position: {0, height + 1.4, 0}; Cylinder: {radius: 3.1, length: 0.15, segments: 12} }
-    CanopyRoof(style: roof_style, variant: variant) { Position: {0, height + 1.5, 0} }
+    CanopyRoof(style: roof_style, variant: variant, sx: sx, sz: sz) { Position: {0, height + 1.5, 0} }
     CanopyDownpipe(length: height) { Position: {2.86, height + 1.2, 0} }
   }
 }

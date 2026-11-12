@@ -39,6 +39,7 @@ using state
 using assets
 
 $ {
+  box.app.FpsTarget: {60}
   Scene: {texture_blend: true}
   AmbientLight: {sky: {150, 170, 200}, ground: {90, 80, 60}, intensity: 0.35}
 }

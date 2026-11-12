@@ -8,11 +8,11 @@ assets {
     prop width: f32 = 10
     prop depth: f32 = 8
     prop variant: i32 = 0
-    { Position: {0, 0, 0}; (IsA, CanopyIvory); RoundedBox: {width, 0.55, depth, 0.65} }
-    { (IsA, CanopyWood); Position: {0, -0.36, 0}; RoundedBox: {width - 0.3, 0.2, depth - 0.3, 0.5} }
+    { Position: {0, 0, 0}; (IsA, CanopyIvory); Box: {width, 0.55, depth}; Bevel: {top: 0.275, front_left: 0.275, front_right: 0.275, back_left: 0.275, back_right: 0.275} }
+    { (IsA, CanopyWood); Position: {0, -0.36, 0}; Box: {width - 0.3, 0.2, depth - 0.3}; Bevel: {front_left: 0.1, front_right: 0.1, back_left: 0.1, back_right: 0.1} }
     for side in 0..2 {
       const z = (side - 0.5) * (depth - 0.9)
-      { (IsA, CanopyLeaf); Position: {0, 0.5, z}; RoundedBox: {width - 0.8, 0.65, 1, 0.3} }
+      { (IsA, CanopyLeaf); Position: {0, 0.5, z}; Box: {width - 0.8, 0.65, 1}; Bevel: {top: 0.3, front_left: 0.3, front_right: 0.3, back_left: 0.3, back_right: 0.3} }
       { (IsA, CanopyGlow); Position: {0, -0.48, z}; Box: {width - 1.5, 0.05, 0.06} }
       { (IsA, CanopyMetal); Position: {0, 1.2, (side - 0.5) * depth * 0.98}; Box: {width - 0.4, 0.04, 0.04} }
       for p in 0..4 {
@@ -38,8 +38,8 @@ assets {
     const windows: math.Rng = {seed: variant + 314159}
     for f in 0..floors {
       const y = f * 3.2
-      { (IsA, CanopyFacade); Position: {0, y + 1.6, 0}; Box: {width - 0.45, 3.2, depth - 0.45}; TextureTransform: {scale_x: (width - 0.45) / 12.8, scale_y: 0.125, offset_x: windows.f(1), offset_y: windows.u(8) / 8.0} }
-      { (IsA, CanopyIvory); Rgb: wall; Position: {0, y, 0}; RoundedBox: {width, 0.35, depth, 0.35} }
+      { (IsA, CanopyFacade); Position: {0, y + 1.6, 0}; Box: {width - 0.45, 3.2, depth - 0.45}; TextureMapping: {mode: MappingObject, size: 25.6}; TextureTransform: {scale_x: 1, scale_y: 1, offset_x: windows.f(1), offset_y: windows.u(8) / 8.0 + 0.0625} }
+      { (IsA, CanopyIvory); Rgb: wall; Position: {0, y, 0}; Box: {width, 0.35, depth}; Bevel: {top: 0.175, front_left: 0.175, front_right: 0.175, back_left: 0.175, back_right: 0.175} }
       for side in 0..4 {
         const horizontal = side % 2 == 0 ? width : depth
         const reach = side % 2 == 0 ? depth : width
@@ -67,8 +67,11 @@ assets {
     prop timber: Rgb = {143, 91, 48}
     prop roof_style: i32 = 0
     prop facade_style: i32 = 0
+    prop sx: f32 = 1
+    prop sz: f32 = 1
     const height = floors * 3.2
     const windows: math.Rng = {seed: variant + 314159}
+    Scale: {sx, 1, sz}
     if floorplan == 0 {
       for wing in 0..2 {
         const levels = floors - wing * 7
@@ -79,7 +82,7 @@ assets {
           CanopySkyDeck(width: 5.3, depth: 7.4, variant: variant + wing * 31 + garden) { Position: {x, 1.2 + garden * 16, 0} }
         }
         CanopySkyDeck(width: 5.2, depth: 7, variant: variant + wing) { Position: {x, 1.2 + levels * 3.2, 0} }
-        CanopyRoof(style: 1, variant: variant) { Position: {x, 1.9 + levels * 3.2, 0}; Scale: {0.65, 1.4, 0.8} }
+        CanopyRoof(style: 1, variant: variant) { Position: {x, 1.475 + levels * 3.2, 0}; Scale: {0.65, 1.4, 0.8} }
       }
       for tier in 0..2 {
         const y = height * (0.32 + tier * 0.27)
@@ -100,10 +103,10 @@ assets {
         CanopySkyBlock(floors: levels, width: width, depth: depth, variant: variant + tier, wall: wall, timber: timber) { Position: {0, y, z} }
         CanopySkyDeck(width: width + 0.8, depth: depth + 0.8, variant: variant + tier * 31) { Position: {0, y + levels * 3.2, z} }
       }
-      CanopyRoof(style: 3, variant: variant) { Position: {0, 2 + height, -1.8}; Scale: {0.75, 1.4, 0.75} }
+      CanopyRoof(style: 3, variant: variant) { Position: {0, 1.475 + height, -1.8}; Scale: {0.75, 1.4, 0.75} }
     } else if floorplan == 2 {
       CanopyPlinth(width: 10.8, depth: 6.6, variant: variant) { Position: {0, 0, 1.2} }
-      core : CanopyIvory { Rgb: wall; Position: {0, height / 2 + 1.2, 0}; RoundedBox: {2.4, height, 2.4, 0.3} }
+      core : CanopyIvory { Rgb: wall; Position: {0, height / 2 + 1.2, 0}; Box: {2.4, height, 2.4}; Bevel: {front_left: 0.3, front_right: 0.3, back_left: 0.3, back_right: 0.3} }
       for tier in 0..5 {
         const start: i32 = math.floor(floors * tier / 5.0)
         const levels: i32 = math.floor(floors * (tier + 1) / 5.0) - start
@@ -116,10 +119,11 @@ assets {
           CanopySkyDeck(width: 11 - tier * 0.35, depth: 7.5, variant: variant + tier * 19) { Position: {0, levels * 3.2, 0} }
         }
       }
-      CanopyGreenhouse() { Position: {0, 1.8 + height, 0}; Scale: {0.5, 0.65, 0.5} }
+      CanopyGreenhouse(sx: sx * 0.5, sy: 0.65, sz: sz * 0.5) { Position: {0, 1.475 + height, 1.2}; Scale: {0.5, 0.65, 0.5} }
     } else if floorplan == 3 {
+      const bays = math.max(1, math.round(math.PI * 2.3 * (sx + sz) / 3.2))
       CanopyPlinth(round: true, radius: 4.4, variant: variant) {}
-      core : CanopyFacade { Position: {0, height / 2 + 1.2, 0}; Frustum: {radius_bottom: 3.7, radius_top: 0.9, length: height, segments: 8, smooth: true}; TextureTransform: {scale_x: 1, scale_y: floors / 8.0, offset_x: variant % 8 / 8.0, offset_y: variant % 13 / 8.0} }
+      core : CanopyFacade { Position: {0, height / 2 + 1.2, 0}; Frustum: {radius_bottom: 3.7, radius_top: 0.9, length: height, segments: 8, smooth: true}; TextureTransform: {scale_x: bays / 8.0, scale_y: floors / 8.0, offset_x: variant % 8 / 8.0, offset_y: variant % 13 / 8.0} }
       for rib in 0..8 {
         const a = rib * math.PI / 4
         {
@@ -141,7 +145,7 @@ assets {
       }
       for petal in 0..5 {
         const a = petal * math.PI * 2 / 5
-        { (IsA, CanopySolar); Position: {math.sin(a) * 3.2, height + 1.8, math.cos(a) * 3.2}; Rotation: {-0.45, a, 0}; RoundedBox: {2.8, 0.18, 7.5, 0.7} }
+        { (IsA, CanopySolar); Position: {math.sin(a) * 3.2, height + 1.8, math.cos(a) * 3.2}; Rotation: {0.45, a, 0}; Box: {2.8, 0.18, 7.5}; Bevel: {front_left: 0.09, front_right: 0.09, back_left: 0.09, back_right: 0.09} }
       }
       mast : CanopyIvory { Position: {0, height + 5, 0}; Frustum: {radius_bottom: 0.28, radius_top: 0.06, length: 10, segments: 4} }
       for b in 0..4 {
@@ -154,13 +158,13 @@ assets {
         CanopyPlinth(width: 3.4, depth: 7.8, variant: variant + side) { Position: {x, 0, 0} }
         CanopySkyBlock(floors: levels, width: 2.8, depth: 7.2, variant: variant + side, wall: wall, timber: timber) { Position: {x, 1.2, 0} }
         for tier in 1..3 {
-          CanopySkyDeck(width: 3.8, depth: 8.2, variant: variant + tier + side) { Position: {x, 1.2 + levels * 3.2 * tier / 3, 0} }
+          CanopySkyDeck(width: 3.8, depth: 8.2, variant: variant + tier + side) { Position: {x, 1.2 + math.floor(levels * tier / 3.0) * 3.2, 0} }
         }
       }
       const y = 1.2 + levels * 3.2
       CanopySkyDeck(width: 12.4, depth: 9, variant: variant) { Position: {0, y, 0} }
-      CanopySkyBlock(floors: 2, width: 10.5, depth: 6.2, variant: variant, wall: wall, timber: timber) { Position: {0, y + 0.6, 0} }
-      CanopyGreenhouse() { Position: {0, y + 7.2, 0}; Scale: {0.9, 1.25, 0.65} }
+      CanopySkyBlock(floors: 2, width: 10.5, depth: 6.2, variant: variant, wall: wall, timber: timber) { Position: {0, y + 0.45, 0} }
+      CanopyGreenhouse(sx: sx * 0.48, sy: 0.65, sz: sz * 0.48) { Position: {0, y + 6.85, 0}; Scale: {0.48, 0.65, 0.48} }
       for side in 0..2 {
         { (IsA, CanopyWood); Rgb: timber; Position: {(side - 0.5) * 4.6, y - 3, 0}; Rotation: {0, 0, (side - 0.5) * 1.35}; Box: {0.45, 7.5, 0.65} }
       }
@@ -172,7 +176,8 @@ assets {
         const z = math.cos(a) * 1.1
         const y = 1.2 + f * 3.2
         const radius = 4.5 - f / (floors - 1.0) * 1.5
-        { (IsA, CanopyFacade); Position: {x, y + 1.6, z}; Cylinder: {radius: radius - 0.65, length: 3.2, segments: 12}; TextureTransform: {scale_x: 1.5, scale_y: 0.125, offset_x: windows.f(1), offset_y: windows.u(8) / 8.0} }
+        const bays = math.max(1, math.round(math.PI * (radius - 0.65) * (sx + sz) / 3.2))
+        { (IsA, CanopyFacade); Position: {x, y + 1.6, z}; Cylinder: {radius: radius - 0.65, length: 3.2, segments: 12}; TextureTransform: {scale_x: bays / 8.0, scale_y: 0.125, offset_x: windows.f(1), offset_y: windows.u(8) / 8.0} }
         { (IsA, CanopyIvory); Rgb: wall; Position: {x, y, z}; Cylinder: {radius: radius + 0.3, length: 0.4, segments: 12} }
         { (IsA, CanopyLeaf); Position: {x, y + 0.45, z}; Tube: {radius: radius, thickness: 0.7, length: 0.55, segments: 12} }
         { (IsA, CanopyMetal); Position: {x, y + 1.3, z}; Torus: {radius: radius + 0.15, tube: 0.025, segments: 12, rings: 4} }
@@ -181,7 +186,10 @@ assets {
           CanopyVine(length: 4.5, phase: a) { Position: {x - math.sin(a) * radius, y + 0.7, z - math.cos(a) * radius} }
         }
       }
-      CanopyRoof(style: 1, variant: variant) { Position: {math.sin((floors - 1) * 0.34) * 1.1, height + 1.2, math.cos((floors - 1) * 0.34) * 1.1} }
+      const top_x = math.sin((floors - 1) * 0.34) * 1.1
+      const top_z = math.cos((floors - 1) * 0.34) * 1.1
+      { (IsA, CanopyIvory); Rgb: wall; Position: {top_x, height + 1.2, top_z}; Cylinder: {radius: 3.3, length: 0.4, segments: 12} }
+      CanopyRoof(style: 1, variant: variant) { Position: {top_x, height + 1.4, top_z} }
     }
   }
 }

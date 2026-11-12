@@ -11,7 +11,7 @@ using state
 using assets
 
 state {
-  proc refresh_ready() {
+  fn refresh_ready() {
     for i in 0..CELLS {
       const r = kind[i] == K_HOUSE && !abandoned[i] && level[i] < max_level(K_HOUSE) && keep_level > level[i] && points[i] >= protect_need(level[i])
       if ready[i] != r {
@@ -20,7 +20,7 @@ state {
     }
   }
 
-  proc recompute() {
+  fn recompute() {
     mut seen: bool[196] = {}
     mut queue: i32[196] = {}
     mut head: i32 = 0
@@ -153,7 +153,7 @@ state {
     rank = r
   }
 
-  proc clear_cell(i: i32) {
+  fn clear_cell(i: i32) {
     kind[i] = K_EMPTY
     level[i] = 0
     abandoned[i] = false
@@ -163,7 +163,7 @@ state {
     }
   }
 
-  proc new_realm() {
+  fn new_realm() {
     mut k: i32[196] = {}
     mut l: i32[196] = {}
     mut a: bool[196] = {}
@@ -211,7 +211,7 @@ state {
     recompute()
   }
 
-  proc raid_one() {
+  fn raid_one() {
     mut exposed: i32 = 0
     for i in 0..CELLS {
       if kind[i] == K_HOUSE && !inside[i] && !abandoned[i] {
@@ -249,7 +249,7 @@ state {
     }
   }
 
-  proc demolish_cell(c: i32) {
+  fn demolish_cell(c: i32) {
     const i = kind[c] == K_FARM ? farm_origin[c] : c
     const k = kind[i]
     const lvl = level[i]
@@ -284,7 +284,7 @@ state {
     }
   }
 
-  proc abandon_one() {
+  fn abandon_one() {
     mut best: i32 = -1
     mut best_score: i32 = 999
     for i in 0..CELLS {
@@ -342,7 +342,7 @@ async {
 }
 
 state {
-  proc build_at(i: i32, painting: bool) {
+  fn build_at(i: i32, painting: bool) {
     const k = kind[i]
     const lvl = level[i]
     const t = tool
@@ -440,7 +440,7 @@ state {
     }
   }
 
-  proc build_line() {
+  fn build_line() {
     const t = tool
     const sx = drag_start % GRID
     const sz = (drag_start - sx) / GRID

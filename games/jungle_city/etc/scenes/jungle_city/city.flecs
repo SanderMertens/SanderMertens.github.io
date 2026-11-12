@@ -46,7 +46,7 @@ assets {
     CanopyTerrain terrain(width: width, depth: depth, seed: seed)
     CanopyDistricts(rows: rows, columns: columns, spacing: spacing, seed: seed,
       base_floors: base_floors, floor_variation: floor_variation, center_floors: center_floors, skyscraper_floors: skyscraper_floors, trees_per_block: trees_per_block, plaza_radius: plaza_radius,
-      downtown_columns: downtown_columns, downtown_rows: downtown_rows, midrise: midrise) {}
+      downtown_columns: downtown_columns, downtown_rows: downtown_rows, midrise: midrise) { Position: {0, 0.2, 0} }
     civic_island {
       Position: {0, 0.2, civic_z}
       CanopyCivicPlaza(radius: plaza_radius, height: 4.52) {}

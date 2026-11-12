@@ -11,20 +11,23 @@ assets {
     prop timber: Rgb = {143, 91, 48}
     prop roof_style: i32 = 0
     prop facade_style: i32 = 0
+    prop sx: f32 = 1
+    prop sz: f32 = 1
     const windows: math.Rng = {seed: variant + 314159}
     const height = floors * 3.2
+    Scale: {sx, 1, sz}
     CanopyPlinth(width: 8, depth: 8, variant: variant) {}
-    shell : CanopyFacade { Position: {0, height / 2 + 1.2, 0}; RoundedBox: {6.2, height, 6.2, 0.2, segments: 1}; TextureTransform: {scale_x: 0.5, scale_y: floors / 8.0, offset_x: variant % 8 / 8.0, offset_y: variant % 13 / 8.0} }
+    shell : CanopyFacade { Position: {0, height / 2 + 1.2, 0}; Box: {6.2, height, 6.2}; Bevel: {front_left: 0.2, front_right: 0.2, back_left: 0.2, back_right: 0.2, segments: 1}; TextureMapping: {mode: MappingObject, size: 25.6}; TextureTransform: {scale_x: 1, scale_y: 1, offset_x: variant % 8 / 8.0, offset_y: floors % 2 / 16.0 + variant % 13 / 8.0} }
     for f in 0..floors {
       const y = 1.2 + f * 3.2
       const w = 8.8 - f * 0.23
-      { (IsA, CanopyIvory); Rgb: wall; Position: {0, y, 0}; RoundedBox: {w, 0.34, w, 0.7, segments: 2} }
-      { (IsA, CanopyWood); Rgb: timber; Position: {0, y - 0.22, 0}; RoundedBox: {w - 0.25, 0.12, w - 0.25, 0.5} }
+      { (IsA, CanopyIvory); Rgb: wall; Position: {0, y, 0}; Box: {w, 0.34, w}; Bevel: {top: 0.17, front_left: 0.17, front_right: 0.17, back_left: 0.17, back_right: 0.17, segments: 2} }
+      { (IsA, CanopyWood); Rgb: timber; Position: {0, y - 0.22, 0}; Box: {w - 0.25, 0.12, w - 0.25}; Bevel: {front_left: 0.06, front_right: 0.06, back_left: 0.06, back_right: 0.06} }
       for side in 0..4 {
         {
           Rotation: {0, side * math.PI / 2, 0}
-          { (IsA, CanopyIvory); Rgb: wall; Position: {0, y + 0.34, w / 2 - 0.28}; RoundedBox: {w - 1.4, 0.5, 0.5, 0.12} }
-          { (IsA, CanopyLeaf); Position: {0, y + 0.65, w / 2 - 0.28}; RoundedBox: {w - 1.5, 0.35, 0.65, 0.16} }
+          { (IsA, CanopyIvory); Rgb: wall; Position: {0, y + 0.34, w / 2 - 0.28}; Box: {w - 1.4, 0.5, 0.5}; Bevel: {top: 0.12, front_left: 0.12, front_right: 0.12, back_left: 0.12, back_right: 0.12} }
+          { (IsA, CanopyLeaf); Position: {0, y + 0.65, w / 2 - 0.28}; Box: {w - 1.5, 0.35, 0.65}; Bevel: {top: 0.16, front_left: 0.16, front_right: 0.16, back_left: 0.16, back_right: 0.16} }
           for c in 0..3 {
             { (IsA, CanopyLeafCard); Rgb: {72 + (f + c) % 3 * 12, 128, 56}; Position: {(c - 1) * (w - 2.6) / 2.4, y + 0.98, w / 2 - 0.28}; Rotation: {-0.2, f + c, 0}; Quad: {1.5, 0.9} }
           }
@@ -42,10 +45,10 @@ assets {
         }
       }
     }
-    { (IsA, CanopyIvory); Rgb: wall; Position: {0, height + 1.2, 0}; RoundedBox: {7.5, 0.35, 7.5, 0.6} }
-    { (IsA, CanopyLeaf); Position: {0, height + 1.42, 0}; RoundedBox: {6.8, 0.16, 6.8, 0.5} }
-    CanopyRoof(style: roof_style, variant: variant) { Position: {0, height + 1.5, 0} }
-    CanopyDownpipe(length: height) { Position: {3.14, height + 1.2, 3.14} }
-    CanopyDownpipe(length: height) { Position: {-3.14, height + 1.2, -3.14} }
+    { (IsA, CanopyIvory); Rgb: wall; Position: {0, height + 1.2, 0}; Box: {7.5, 0.35, 7.5}; Bevel: {top: 0.175, front_left: 0.175, front_right: 0.175, back_left: 0.175, back_right: 0.175} }
+    { (IsA, CanopyLeaf); Position: {0, height + 1.42, 0}; Box: {6.8, 0.16, 6.8}; Bevel: {top: 0.08, front_left: 0.08, front_right: 0.08, back_left: 0.08, back_right: 0.08} }
+    CanopyRoof(style: roof_style, variant: variant, sx: sx, sz: sz) { Position: {0, height + 1.5, 0} }
+    CanopyDownpipe(length: height) { Position: {3.07, height + 1.2, 3.07} }
+    CanopyDownpipe(length: height) { Position: {-3.07, height + 1.2, -3.07} }
   }
 }

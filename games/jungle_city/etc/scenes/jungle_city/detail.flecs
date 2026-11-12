@@ -108,7 +108,7 @@ assets {
 
   template CanopyCondenser {
     prop size: f32 = 0.7
-    body : CanopyTrim { Position: {0, size * 0.42, 0}; RoundedBox: {size * 1.3, size * 0.84, size * 0.5, 0.03, segments: 1}; Rgb: {186, 188, 178} }
+    body : CanopyTrim { Position: {0, size * 0.42, 0}; Box: {size * 1.3, size * 0.84, size * 0.5}; Bevel: {top: 0.03, front_left: 0.03, front_right: 0.03, back_left: 0.03, back_right: 0.03, segments: 1}; Rgb: {186, 188, 178} }
     fan : CanopyMetal { Position: {size * 0.24, size * 0.42, size * 0.26}; Rotation: {math.PI / 2, 0, 0}; Cylinder: {radius: size * 0.31, length: 0.02, segments: 6} }
     hub : CanopyTrim { Position: {size * 0.24, size * 0.42, size * 0.28}; Rotation: {math.PI / 2, 0, 0}; Cylinder: {radius: size * 0.07, length: 0.02, segments: 4} }
     pipe : CanopyCopper { Position: {-size * 0.55, size * 0.08, 0.12}; Box: {0.03, size * 0.5, 0.03} }
@@ -118,6 +118,9 @@ assets {
     prop length: f32 = 2.2
     prop seed: i32 = 0
     line : CanopyTrim { Position: {0, 1.8, 0}; Box: {length, 0.012, 0.012} }
+    for side in 0..2 {
+      { (IsA, CanopyMetal); Position: {(side - 0.5) * length, 0.91, 0}; Box: {0.035, 1.82, 0.035} }
+    }
     for i in 0..4 {
       const shade = (seed + i * 3) % 4
       const x = -length * 0.36 + i * length * 0.24
@@ -277,7 +280,7 @@ assets {
     arm : CanopyMetal { Position: {0.32, 3.28, 0}; Box: {0.68, 0.04, 0.05} }
     lamp : CanopyLampGlow { Position: {0.56, 3.2, 0}; Box: {0.34, 0.05, 0.16} }
     hood : CanopyTrim { Position: {0.56, 3.26, 0}; Box: {0.42, 0.03, 0.22} }
-    cap : CanopySolar { Position: {0, 3.44, 0}; Rotation: {0, 0, -0.18}; Box: {0.5, 0.03, 0.44} }
+    cap : CanopySolar { Position: {0, 3.32, 0}; Rotation: {0, 0, -0.18}; Box: {0.5, 0.03, 0.44} }
   }
 
   template CanopyBollard {

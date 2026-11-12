@@ -199,7 +199,7 @@ state {
     match s { 0: "Blade"; 1: "Relic"; 2: "Crown"; _: "Band" }
   }
 
-  proc show_banner(title: string, sub: string) {
+  fn show_banner(title: string, sub: string) {
     banner_text = title
     banner_sub = sub
     banner_on = true
@@ -207,7 +207,7 @@ state {
     emit BannerShown(serial: banner_serial, until: AppStatus[AppStatus].elapsed + 2.8)
   }
 
-  proc check_afford() {
+  fn check_afford() {
     for i in 0..6 {
       const can = hero_mp >= spell_cost(i) && hero_hp > spell_blood(i)
       if spell_afford[i] != can {
@@ -216,7 +216,7 @@ state {
     }
   }
 
-  proc check_level() {
+  fn check_level() {
     while hero_xp >= xp_needed(hero_level) {
       hero_xp -= xp_needed(hero_level)
       hero_level += 1

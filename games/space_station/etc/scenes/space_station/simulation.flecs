@@ -5,7 +5,7 @@ using flecs.script.math
 using state
 
 state {
-  proc st_step() {
+  fn st_step() {
     st_beat += 1
 
     const people = st_residents + st_visitors

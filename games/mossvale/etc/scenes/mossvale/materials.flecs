@@ -6,10 +6,6 @@ using state
 
 state {
   export const GROUND_SPAN: f32 = 700
-  export const TERRAIN_X0: f32 = -64
-  export const TERRAIN_X1: f32 = 96
-  export const TERRAIN_Z0: f32 = -92
-  export const TERRAIN_Z1: f32 = 94
 }
 
 assets {
@@ -74,69 +70,38 @@ assets {
   prefab MvDeepWater { Rgb: {28, 70, 98}; PbrMaterial: {roughness: 0.04}; ClearCoat: {strength: 1, roughness: 0.02}; PbrTextures: {normal: mv_tex_water_n}; TextureTransform: {3, 3, 0, 0} }
   prefab MvIce { Rgb: {210, 236, 250}; PbrMaterial: {roughness: 0.15}; ClearCoat: {strength: 1, roughness: 0.05}; Transmission: {transmission_factor: 0.6, ior: 1.31, thickness_factor: 0.25, attenuation_distance: 0.6, attenuation_color: {170, 214, 240}} }
 
-  mv_ground_mask { TexturePath: {path: "etc/scenes/mossvale/textures/ground_mask.png"} }
-  mv_tone_ground_dark { TextureGen: {width: 4, layers: [{amount: 0}], output: GenAlbedo, colors: [{0, {148, 165, 144}}, {1, {148, 165, 144}}]} }
-  mv_tone_ground_light { TextureGen: {width: 4, layers: [{amount: 0}], output: GenAlbedo, colors: [{0, {204, 195, 174}}, {1, {204, 195, 174}}]} }
-  mv_tone_meadow_dark { TextureGen: {width: 4, layers: [{amount: 0}], output: GenAlbedo, colors: [{0, {98, 143, 114}}, {1, {98, 143, 114}}]} }
-  mv_tone_meadow_light { TextureGen: {width: 4, layers: [{amount: 0}], output: GenAlbedo, colors: [{0, {162, 174, 145}}, {1, {162, 174, 145}}]} }
-  mv_tone_forest { TextureGen: {width: 4, layers: [{amount: 0}], output: GenAlbedo, colors: [{0, {85, 100, 49}}, {1, {85, 100, 49}}]} }
-  mv_tone_hills { TextureGen: {width: 4, layers: [{amount: 0}], output: GenAlbedo, colors: [{0, {211, 187, 184}}, {1, {211, 187, 184}}]} }
-
-  mv_ground_layers {
-    grass { PbrTextures: {albedo: mv_tex_grass, normal: mv_tex_grass_n}; TextureTransform: {GROUND_SPAN / 9, GROUND_SPAN / 9, 0, 0} }
-    forest { PbrTextures: {albedo: mv_tex_forest, normal: mv_tex_forest_n}; TextureTransform: {GROUND_SPAN / 10, GROUND_SPAN / 10, 0, 0} }
-    ground_dark { PbrTextures: {albedo: mv_tone_ground_dark, normal: mv_tex_grass_n}; TextureTransform: {GROUND_SPAN / 9, GROUND_SPAN / 9, 0, 0} }
-    ground_light { PbrTextures: {albedo: mv_tone_ground_light, normal: mv_tex_grass_n}; TextureTransform: {GROUND_SPAN / 9, GROUND_SPAN / 9, 0, 0} }
-    meadow_dark { PbrTextures: {albedo: mv_tone_meadow_dark, normal: mv_tex_grass_n}; TextureTransform: {GROUND_SPAN / 9, GROUND_SPAN / 9, 0, 0} }
-    meadow_light { PbrTextures: {albedo: mv_tone_meadow_light, normal: mv_tex_grass_n}; TextureTransform: {GROUND_SPAN / 9, GROUND_SPAN / 9, 0, 0} }
-    forest_patch { PbrTextures: {albedo: mv_tone_forest, normal: mv_tex_forest_n}; TextureTransform: {GROUND_SPAN / 10, GROUND_SPAN / 10, 0, 0} }
-    hills_patch { PbrTextures: {albedo: mv_tone_hills, normal: mv_tex_grass_n}; TextureTransform: {GROUND_SPAN / 9, GROUND_SPAN / 9, 0, 0} }
-  }
-
-  prefab MvGrassGround : MvGrass {
-    TextureBlend: {mask: mv_ground_mask, layers: [mv_ground_layers.grass, mv_ground_layers.ground_dark, mv_ground_layers.ground_light, 0]}
-  }
-  prefab MvMeadowGround : MvMeadow {
-    TextureBlend: {mask: mv_ground_mask, layers: [mv_ground_layers.grass, mv_ground_layers.meadow_dark, mv_ground_layers.meadow_light, 0]}
-  }
-  prefab MvForestGround : MvForestFloor {
-    TextureBlend: {mask: mv_ground_mask, layers: [mv_ground_layers.forest, mv_ground_layers.forest_patch, mv_ground_layers.forest, 0]}
-  }
-  prefab MvHillGround : MvHillGrass {
-    TextureBlend: {mask: mv_ground_mask, layers: [mv_ground_layers.grass, mv_ground_layers.grass, mv_ground_layers.hills_patch, 0]}
-  }
-
-  mv_tex_terrain_mask { TexturePath: {path: "etc/scenes/mossvale/textures/terrain_mask.png"} }
-  mv_tex_terrain_clear { TexturePath: {path: "etc/scenes/mossvale/textures/terrain_clear.png"} }
-  mv_tex_terrain_dirt { TexturePath: {path: "etc/scenes/mossvale/textures/terrain_dirt.jpg"} }
-  mv_tex_terrain_cobble { TexturePath: {path: "etc/scenes/mossvale/textures/terrain_cobble.jpg"} }
-  mv_tex_terrain_rubble { TexturePath: {path: "etc/scenes/mossvale/textures/terrain_rubble.jpg"} }
-  mv_tex_grass_h { TexturePath: {path: "etc/scenes/mossvale/textures/grass_height.jpg", single_channel: true} }
-  mv_tex_dirt_h { TexturePath: {path: "etc/scenes/mossvale/textures/dirt_height.jpg", single_channel: true} }
-  mv_tex_cobble_h { TexturePath: {path: "etc/scenes/mossvale/textures/cobble_height.jpg", single_channel: true} }
-  mv_tex_rubble_h { TexturePath: {path: "etc/scenes/mossvale/textures/rubble_height.jpg", single_channel: true} }
-
-  mv_terrain_layers {
-    const tw = TERRAIN_Z1 - TERRAIN_Z0
-    const th = TERRAIN_X1 - TERRAIN_X0
-    clear { PbrTextures: {albedo: mv_tex_terrain_clear, normal: mv_tex_grass_n}; TextureTransform: {tw / 9, th / 9, 0, 0} }
-    dirt { PbrTextures: {albedo: mv_tex_terrain_dirt, normal: mv_tex_dirt_n}; TextureTransform: {tw / 4.5, th / 4.5, 0, 0} }
-    cobble { PbrTextures: {albedo: mv_tex_terrain_cobble, normal: mv_tex_cobble_n}; TextureTransform: {tw / 3.2, th / 3.2, 0, 0} }
-    rubble { PbrTextures: {albedo: mv_tex_terrain_rubble, normal: mv_tex_rubble_n}; TextureTransform: {tw / 3.0, th / 3.0, 0, 0} }
-  }
-
-  prefab MvTerrain {
-    Rgb: {255, 255, 255}
-    PbrMaterial: {roughness: 0.95}
-    AlphaCutoff: {0.5}
-    NoShadow
-    TextureBlend: {
-      mask: mv_tex_terrain_mask,
-      layers: [mv_terrain_layers.clear, mv_terrain_layers.dirt, mv_terrain_layers.cobble, mv_terrain_layers.rubble],
-      heights: [mv_tex_grass_h, mv_tex_dirt_h, mv_tex_cobble_h, mv_tex_rubble_h],
-      contrast: 16
-    }
-  }
+  mv_tile_grass_a { TexturePath: {path: "etc/scenes/mossvale/textures/tiles/grass.png"} }
+  mv_tile_grass_n { TexturePath: {path: "etc/scenes/mossvale/textures/tiles/grass_normal.jpg"} }
+  mv_tile_grass { PbrTextures: {albedo: mv_tile_grass_a, normal: mv_tile_grass_n} }
+  mv_tile_meadow_a { TexturePath: {path: "etc/scenes/mossvale/textures/tiles/meadow.png"} }
+  mv_tile_meadow_n { TexturePath: {path: "etc/scenes/mossvale/textures/tiles/meadow_normal.jpg"} }
+  mv_tile_meadow { PbrTextures: {albedo: mv_tile_meadow_a, normal: mv_tile_meadow_n} }
+  mv_tile_hills_a { TexturePath: {path: "etc/scenes/mossvale/textures/tiles/hills.png"} }
+  mv_tile_hills_n { TexturePath: {path: "etc/scenes/mossvale/textures/tiles/hills_normal.jpg"} }
+  mv_tile_hills { PbrTextures: {albedo: mv_tile_hills_a, normal: mv_tile_hills_n} }
+  mv_tile_forest_a { TexturePath: {path: "etc/scenes/mossvale/textures/tiles/forest.png"} }
+  mv_tile_forest_n { TexturePath: {path: "etc/scenes/mossvale/textures/tiles/forest_normal.jpg"} }
+  mv_tile_forest { PbrTextures: {albedo: mv_tile_forest_a, normal: mv_tile_forest_n} }
+  mv_tile_sand_a { TexturePath: {path: "etc/scenes/mossvale/textures/tiles/sand.png"} }
+  mv_tile_sand_n { TexturePath: {path: "etc/scenes/mossvale/textures/tiles/sand_normal.jpg"} }
+  mv_tile_sand { PbrTextures: {albedo: mv_tile_sand_a, normal: mv_tile_sand_n} }
+  mv_tile_dirt_a { TexturePath: {path: "etc/scenes/mossvale/textures/tiles/dirt.png"} }
+  mv_tile_dirt_n { TexturePath: {path: "etc/scenes/mossvale/textures/tiles/dirt_normal.jpg"} }
+  mv_tile_dirt { PbrTextures: {albedo: mv_tile_dirt_a, normal: mv_tile_dirt_n} }
+  mv_tile_ash_a { TexturePath: {path: "etc/scenes/mossvale/textures/tiles/ash.png"} }
+  mv_tile_ash_n { TexturePath: {path: "etc/scenes/mossvale/textures/tiles/ash_normal.jpg"} }
+  mv_tile_ash { PbrTextures: {albedo: mv_tile_ash_a, normal: mv_tile_ash_n} }
+  mv_tile_rubble_a { TexturePath: {path: "etc/scenes/mossvale/textures/tiles/rubble.png"} }
+  mv_tile_rubble_n { TexturePath: {path: "etc/scenes/mossvale/textures/tiles/rubble_normal.jpg"} }
+  mv_tile_rubble { PbrTextures: {albedo: mv_tile_rubble_a, normal: mv_tile_rubble_n} }
+  mv_tile_cobble_a { TexturePath: {path: "etc/scenes/mossvale/textures/tiles/cobble.png"} }
+  mv_tile_cobble_n { TexturePath: {path: "etc/scenes/mossvale/textures/tiles/cobble_normal.jpg"} }
+  mv_tile_cobble { PbrTextures: {albedo: mv_tile_cobble_a, normal: mv_tile_cobble_n} }
+  mv_tile_flags_a { TexturePath: {path: "etc/scenes/mossvale/textures/tiles/flags.png"} }
+  mv_tile_flags_n { TexturePath: {path: "etc/scenes/mossvale/textures/tiles/flags_normal.jpg"} }
+  mv_tile_flags { PbrTextures: {albedo: mv_tile_flags_a, normal: mv_tile_flags_n} }
+  mv_tex_ground { TexturePath: {path: "etc/scenes/mossvale/textures/tiles/grass_tile.jpg"} }
+  mv_tex_ground_n { TexturePath: {path: "etc/scenes/mossvale/textures/tiles/grass_tile_normal.jpg"} }
 
   prefab MvStone { Rgb: {196, 188, 172}; PbrMaterial: {roughness: 0.9}; PbrTextures: {albedo: mv_tex_ashlar, normal: mv_tex_ashlar_n} }
   prefab MvDarkStone { Rgb: {140, 134, 124}; PbrMaterial: {roughness: 0.95}; PbrTextures: {albedo: mv_tex_rubble, normal: mv_tex_rubble_n} }

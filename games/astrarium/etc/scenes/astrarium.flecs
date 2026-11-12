@@ -20,5 +20,6 @@ include astrarium/fx
 include astrarium/ui
 
 $ {
+  box.app.FpsTarget: {60}
   box.view.Scene: {blend_modes: true, sheen: true, clear_coat: true, anisotropy: true}
 }

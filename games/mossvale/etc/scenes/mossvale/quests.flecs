@@ -344,7 +344,7 @@ state {
     n == N_DORN || n == N_ROSA || n == N_TAM
   }
 
-  proc refresh() {
+  fn refresh() {
     mut m: i32[16] = {}
     for q in 0..QUESTS {
       const g = quest_giver(q)
@@ -395,7 +395,7 @@ state {
     track_n = count
   }
 
-  proc find_objective() {
+  fn find_objective() {
     mut q: i32 = -1
     for i in 0..QUESTS {
       const k = QUESTS - 1 - i
@@ -468,14 +468,14 @@ state {
     }
   }
 
-  proc learn(sp: i32) {
+  fn learn(sp: i32) {
     known[sp] = true
     spell = sp
     emit Learn(sp: sp)
     announce("New spell: {spell_name(sp)}", "Press {sp} to choose it. {spell_blurb(sp)}")
   }
 
-  proc open_quest(q: i32) {
+  fn open_quest(q: i32) {
     if qs[q] == QS_LOCKED {
       if quest_giver(q) < 0 {
         qs[q] = QS_ACTIVE
@@ -486,7 +486,7 @@ state {
     }
   }
 
-  proc complete(q: i32) {
+  fn complete(q: i32) {
     qs[q] = QS_DONE
     if q != Q_MOTES {
       done_count += 1
@@ -563,7 +563,7 @@ state {
     }
   }
 
-  proc goal_met(q: i32) {
+  fn goal_met(q: i32) {
     if quest_turnin(q) >= 0 {
       qs[q] = QS_RETURN
       say("{quest_name(q)}: done! Return to {npc_name(quest_turnin(q))}.")
@@ -572,7 +572,7 @@ state {
     }
   }
 
-  proc pick_topic(n: i32) {
+  fn pick_topic(n: i32) {
     mut t: i32 = 3000 + n
     mut found = false
     for q in 0..QUESTS {
@@ -606,7 +606,7 @@ state {
     talk_topic = t
   }
 
-  proc finish_topic(n: i32, t: i32) {
+  fn finish_topic(n: i32, t: i32) {
     if t >= 1000 && t < 2000 {
       const q = floor((t - 1000) / 10)
       const kind = t % 10

@@ -36,10 +36,6 @@ state {
   export const TILE_VERGE: f32 = 6
   export const TILE_GRASS: f32 = 9
   export const TILE_FOREST: f32 = 10
-
-  fn area_top(kind: i32) -> f32 {
-    match kind { 0: 0.006; 1: 0.012; 2: 0.012; 3: 0.012; 4: 0.024; 5: 0.024; 6: 0.024; 7: 0.0215; 8: 0.064; 9: 0.061; _: 0.024 }
-  }
 }
 
 assets {
@@ -141,45 +137,8 @@ state {
   }
 }
 
-assets {
-  template Area {
-    prop a: MvArea = {}
-    const top = area_top(a.kind)
-    const round = a.r * 2 >= a.w - 0.01
-    const k = a.kind
-    Position: {a.x, top - 0.01, a.z}
-    if round {
-      if k == AR_ASH {
-        floor_ : MvAsh { Position: {0, 0, 0}; Cylinder: {length: 0.02, radius: a.r, segments: 40}; TextureTransform: {a.w / TILE_DIRT, a.w / TILE_DIRT, 0, 0} }
-      } else if k == AR_STONE {
-        floor_ : MvStone { Position: {0, 0, 0}; Cylinder: {length: 0.02, radius: a.r, segments: 40}; TextureTransform: {a.w / TILE_FLAGS, a.w / TILE_FLAGS, 0, 0} }
-      } else if k == AR_PASTURE {
-        floor_ : MvMeadow { Position: {0, 0, 0}; Cylinder: {length: 0.02, radius: a.r, segments: 40}; TextureTransform: {a.w / TILE_GRASS, a.w / TILE_GRASS, 0, 0} }
-      }
-    } else if k == AR_MEADOW {
-      floor_ : MvMeadowGround { Position: {0, 0, 0}; Box: {a.w, 0.02, a.d}; TextureTransform: {a.d / GROUND_SPAN, a.w / GROUND_SPAN, (a.z - a.d / 2 + GROUND_SPAN / 2) / GROUND_SPAN, (GROUND_SPAN / 2 - a.x - a.w / 2) / GROUND_SPAN} }
-    } else if k == AR_FOREST {
-      floor_ : MvForestGround { Position: {0, 0, 0}; Box: {a.w, 0.02, a.d}; TextureTransform: {a.d / GROUND_SPAN, a.w / GROUND_SPAN, (a.z - a.d / 2 + GROUND_SPAN / 2) / GROUND_SPAN, (GROUND_SPAN / 2 - a.x - a.w / 2) / GROUND_SPAN} }
-    } else if k == AR_HILLS {
-      floor_ : MvHillGround { Position: {0, 0, 0}; Box: {a.w, 0.02, a.d}; TextureTransform: {a.d / GROUND_SPAN, a.w / GROUND_SPAN, (a.z - a.d / 2 + GROUND_SPAN / 2) / GROUND_SPAN, (GROUND_SPAN / 2 - a.x - a.w / 2) / GROUND_SPAN} }
-    } else if k == AR_FARM {
-      floor_ : MvMeadowGround { Position: {0, 0, 0}; Box: {a.w, 0.02, a.d}; TextureTransform: {a.d / GROUND_SPAN, a.w / GROUND_SPAN, (a.z - a.d / 2 + GROUND_SPAN / 2) / GROUND_SPAN, (GROUND_SPAN / 2 - a.x - a.w / 2) / GROUND_SPAN} }
-    }
-  }
-}
-
 mossvale {
   mv_town {
-    terrain : MvTerrain { Position: {(TERRAIN_X0 + TERRAIN_X1) / 2, 0.03, (TERRAIN_Z0 + TERRAIN_Z1) / 2}; Box: {TERRAIN_X1 - TERRAIN_X0, 0.02, TERRAIN_Z1 - TERRAIN_Z0} }
-
-    areas {
-      for (i, a) in MV_AREAS {
-        if a.kind != AR_CLEARING && a.kind != AR_YARD && a.kind != AR_SQUARE && a.kind != AR_COURT {
-          Area "area_{i}"(a: a)
-        }
-      }
-    }
-
     houses {
       for h in MV_HOUSES {
         House "{h.name}"(x: h.x, z: h.z, w: h.w, d: h.d, h: h.h, face: h.face, wall: h.wall, roof: h.roof, floors: h.floors, sign: h.sign, chimney: h.chimney)

@@ -54,7 +54,7 @@ assets {
     for i in 0..6 {
       const a = i * 2.399963 + seed
       const r = 0.25 + (i % 3) * 0.3
-      { (IsA, CanopyLeaf); Rgb: {70, 128, 58}; Position: {math.sin(a) * r, 0, math.cos(a) * r}; Cylinder: {radius: 0.16 + (i % 2) * 0.07, length: 0.012, segments: 5}; TextureTransform: {scale_x: 0.3, scale_y: 0.3} }
+      { (IsA, CanopyLeaf); Rgb: {70, 128, 58}; Position: {math.sin(a) * r, 0, math.cos(a) * r}; Cylinder: {radius: 0.16 + (i % 2) * 0.07, length: 0.012, segments: 5} }
     }
     { Position: {0.2, 0.05, 0.14}; IcoSphere: {radius: 0.06, segments: 1}; Rgb: {252, 214, 228}; PbrMaterial: {roughness: 0.8} }
   }
@@ -155,8 +155,8 @@ assets {
     prop radius: f32 = 11
     prop height: f32 = 4.52
     canal_mist {
-      Position: {0, 0.9, 0}
-      FogVolume: {extent: {5.2, 1.4, depth / 2 - 3}, density: 0.035, color: {226, 238, 232}, asymmetry: 0.45, edge_fade: 1.1, noise_strength: 0.75, noise_scale: 6, wind: {0.1, 0.03, 0.35}, light_inscatter: 0}
+      Position: {0, 0.4, 0}
+      FogVolume: {extent: {5.2, 1.9, depth / 2 - 3}, density: 0.035, color: {226, 238, 232}, asymmetry: 0.45, edge_fade: 1.1, noise_strength: 0.75, noise_scale: 6, wind: {0.1, 0.03, 0.35}, light_inscatter: 0}
     }
     spill_lip {
       Position: {0, -0.42, depth / 2 + 0.08}

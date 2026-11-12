@@ -58,6 +58,7 @@ assets {
 }
 
 $ {
+  box.app.FpsTarget: {60}
   Scene: {reflections: true, environment: true, blend_modes: true, transmission: true,
     triplanar: true, clear_coat: true, diffuse_transmission: true}
   AmbientLight: {sky: {128, 150, 190}, ground: {66, 96, 150}, intensity: 0.55}

@@ -219,7 +219,7 @@ async {
 }
 
 state {
-  proc select_view(v: i32) {
+  fn select_view(v: i32) {
     state.view = v
     look_yaw = 0
     look_pitch = 0

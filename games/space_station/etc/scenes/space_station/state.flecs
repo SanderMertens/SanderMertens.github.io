@@ -205,13 +205,13 @@ state {
     (x > 0 && st_occupied(i - 1)) || (x < st_grid_w - 1 && st_occupied(i + 1)) || (y > 0 && st_occupied(i - st_grid_w)) || (y < st_grid_h - 1 && st_occupied(i + st_grid_w))
   }
 
-  proc st_notify(message: string, seconds: f64) {
+  fn st_notify(message: string, seconds: f64) {
     st_alert = message
     st_alert_seconds = seconds
     st_alert_seq += 1
   }
 
-  proc st_retally() {
+  fn st_retally() {
     mut supply: f64 = 0
     mut demand: f64 = 0
     mut housing: i32 = 0

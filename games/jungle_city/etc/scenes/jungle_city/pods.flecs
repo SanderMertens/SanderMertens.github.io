@@ -11,23 +11,30 @@ assets {
     prop timber: Rgb = {143, 91, 48}
     prop roof_style: i32 = 0
     prop facade_style: i32 = 0
+    prop sx: f32 = 1
+    prop sz: f32 = 1
     const windows: math.Rng = {seed: variant + 314159}
     const height = floors * 3.2
+    const deck = height + 0.875
+    Scale: {sx, 1, sz}
     CanopyPlinth(width: 8.4, depth: 8, variant: variant) {}
-    spine : CanopyWood { Position: {0, height / 2 + 1.2, 0}; Box: {1.5, height, 2}; Rgb: timber }
+    spine : CanopyWood { Position: {0, (deck + 1.2) / 2, 0}; Box: {1.5, deck - 1.2, 2}; Rgb: timber }
     for f in 0..floors {
       for side in 0..2 {
         const x = (side - 0.5) * 4.2
         const z = (f % 2 - 0.5) * 1.8
         { (IsA, CanopyIvory); Position: {x, 2.6 + f * 3.2, z}; RoundedBox: {3.8, 2.7, 5.8, 0.4, segments: 2}; Rgb: wall }
-        { (IsA, CanopyFacade); Position: {x, 2.6 + f * 3.2, z + 2.91}; RoundedBox: {3.1, 2.1, 0.07, 0.03, segments: 1}; TextureTransform: {scale_x: 0.25, scale_y: 0.125 * 0.75, offset_x: windows.f(1), offset_y: windows.u(8) / 8.0 + 0.01} }
+        { (IsA, CanopyFacade); Position: {x, 2.6 + f * 3.2, z + 2.91}; Box: {3.1, 2.1, 0.07}; TextureMapping: {mode: MappingObject, size: 16.8}; TextureTransform: {scale_x: 1, scale_y: 1, offset_x: windows.f(1), offset_y: windows.u(8) / 8.0 + 0.0625} }
         { (IsA, CanopyTrim); Position: {x, 1.47 + f * 3.2, z + 3.2}; Box: {3.3, 0.06, 0.62} }
         { (IsA, CanopyMetal); Position: {x, 2.3 + f * 3.2, z + 3.48}; Box: {3.3, 0.04, 0.04} }
+        for p in 0..2 {
+          { (IsA, CanopyMetal); Position: {x + (p - 0.5) * 3.26, 1.9 + f * 3.2, z + 3.48}; Box: {0.04, 0.8, 0.04} }
+        }
         if windows.f(1) > 0.5 {
           CanopyBalconyProp(kind: windows.u(5), seed: variant + f) { Position: {x, 1.5 + f * 3.2, z + 3.2} }
         }
-        { (IsA, CanopyLeaf); Position: {x, 4 + f * 3.2, z}; RoundedBox: {3.5, 0.15, 5.4, 0.6} }
-        { (IsA, CanopyFacade); Position: {x + (side - 0.5) * 3.8, 2.6 + f * 3.2, z}; Box: {0.06, 2, 3.8}; TextureTransform: {scale_x: 0.3, scale_y: 0.09, offset_x: windows.f(1), offset_y: windows.u(8) / 8.0 + 0.012} }
+        { (IsA, CanopyLeaf); Position: {x, 4 + f * 3.2, z}; Box: {3.5, 0.15, 5.4}; Bevel: {top: 0.075, front_left: 0.075, front_right: 0.075, back_left: 0.075, back_right: 0.075} }
+        { (IsA, CanopyFacade); Position: {x + (side - 0.5) * 3.8, 2.6 + f * 3.2, z}; Box: {0.06, 2, 3.8}; TextureMapping: {mode: MappingObject, size: 16}; TextureTransform: {scale_x: 1, scale_y: 1, offset_x: windows.f(1), offset_y: windows.u(8) / 8.0 + 0.0625} }
         for fin in 0..4 {
           { (IsA, CanopyWood); Rgb: timber; Position: {x + (side - 0.5) * 3.86, 2.6 + f * 3.2, z - 1.8 + fin * 1.2}; Box: {0.12, 2.1, 0.1} }
         }
@@ -39,6 +46,6 @@ assets {
         }
       }
     }
-    CanopyRoof(style: roof_style, variant: variant) { Position: {0, height + 1.3, 0} }
+    CanopyRoof(style: roof_style, variant: variant, sx: sx, sz: sz) { Position: {0, deck, ((floors - 1) % 2 - 0.5) * 1.8} }
   }
 }

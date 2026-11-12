@@ -70,6 +70,7 @@ sky {
 }
 
 $ {
+  box.app.FpsTarget: {60}
   Scene: {
     baked: true, 
     reflections: false, 

@@ -5,7 +5,7 @@ using flecs.script.math
 using state
 
 state {
-  proc st_reset() {
+  fn st_reset() {
     st_tool = 0
     st_speed = 1
     st_lost = false

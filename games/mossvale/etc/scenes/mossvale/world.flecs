@@ -10,13 +10,10 @@ using state
 using assets
 
 mossvale {
-  ground : MvGrassGround { Position: {0, -0.5, 0}; Box: {GROUND_SPAN, 1, GROUND_SPAN} }
+  ground { Position: {0, -0.05, 0}; Rotation: {0 - PI / 2, 0, 0}; Quad: {GROUND_SPAN, GROUND_SPAN}; Rgb: {255, 255, 255}; PbrMaterial: {roughness: 0.95}; PbrTextures: {albedo: mv_tex_ground, normal: mv_tex_ground_n}; TextureTransform: {GROUND_SPAN / 2, GROUND_SPAN / 2, 0.5, 0.5}; NoShadow }
 
   water {
-    river_bank : MvSand { Position: {0, 0, 0}; Sweep: {path: MV_RIVER, profile: MvRoadProfile, scale: {8.8, 0.03}, rings: 256}; TextureMapping: {mode: MappingObject, size: 5}; TextureTransform: {1, 1, 0, 0} }
     river : MvWater { Position: {0, 0, 0}; Sweep: {path: MV_RIVER, profile: MvRoadProfile, scale: {6.2, 0.06}, rings: 256}; TextureMapping: {mode: MappingObject, size: 8}; TextureTransform: {1, 1, 0, 0} }
-    lake_bank : MvSand { Position: {LAKE_X, 0.019, LAKE_Z}; Cylinder: {length: 0.01, radius: LAKE_R + 1.8, segments: 48}; TextureTransform: {(LAKE_R + 1.8) * 2 / 5, (LAKE_R + 1.8) * 2 / 5, 0, 0} }
-    lake_shallow : MvSand { Position: {LAKE_X, 0.031, LAKE_Z}; Cylinder: {length: 0.01, radius: LAKE_R + 0.6, segments: 48}; Rgb: {200, 196, 150}; TextureTransform: {(LAKE_R + 0.6) * 2 / 5, (LAKE_R + 0.6) * 2 / 5, 0, 0} }
     lake : MvWater { Position: {LAKE_X, 0.047, LAKE_Z}; Cylinder: {length: 0.01, radius: LAKE_R, segments: 48}; TextureTransform: {LAKE_R * 2 / 5, LAKE_R * 2 / 5, 0, 0} }
     lake_deep : MvDeepWater { Position: {LAKE_X, 0.052, LAKE_Z}; Cylinder: {length: 0.01, radius: LAKE_R - 5, segments: 40}; TextureTransform: {(LAKE_R - 5) * 2 / 5, (LAKE_R - 5) * 2 / 5, 0, 0} }
     lake_glints {

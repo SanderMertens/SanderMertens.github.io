@@ -179,9 +179,9 @@ assets {
       AudioSpatial: {min_distance: 4, max_distance: 80, cutoff: 700}
     }
     fountain {
-      Position: {0, height + 2.9, civic_z}
-      AudioSource: {sound: CanopyFountain, loop: true, volume: 0.45}
-      AudioSpatial: {min_distance: 3, max_distance: 90, cutoff: 700}
+      Position: {0, 0.2 + height + 2.9, civic_z}
+      AudioSource: {sound: CanopyFountain, loop: true, volume: 0.25}
+      AudioSpatial: {min_distance: 1.5, max_distance: 13, rolloff: 1.5, cutoff: 700}
     }
     for side in 0..2 {
       {
