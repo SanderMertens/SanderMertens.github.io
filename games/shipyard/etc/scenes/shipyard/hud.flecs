@@ -103,6 +103,7 @@ assets {
   yard_icon_refinery { TexturePath: {path: "etc/scenes/shipyard/assets/icons/refinery.svg", width: 96} }
   yard_icon_armor { TexturePath: {path: "etc/scenes/shipyard/assets/icons/armor.svg", width: 96} }
   yard_icon_battery { TexturePath: {path: "etc/scenes/shipyard/assets/icons/battery.svg", width: 96} }
+  yard_icon_farm { TexturePath: {path: "etc/scenes/shipyard/assets/icons/farm.svg", width: 96} }
 }
 
 
@@ -159,6 +160,7 @@ state {
       55: assets.yard_icon_yoke
       56: assets.yard_icon_armor
       57: assets.yard_icon_battery
+      58: assets.yard_icon_farm
       _: assets.yard_icon_remove
     }
   }
@@ -177,11 +179,11 @@ state {
 
   fn liner_ready() -> bool {
     const souls = lc(L_QUARTERS) * 60 + lc(L_HABRING) * 900 + lc(L_BRIDGE) * 40 + lc(L_HANGAR) * 30 + lc(L_REFINERY) * 30 + lc(L_FAB) * 30 + lc(L_TURRET) * 15
-    const breath = lc(L_QUARTERS) * 200 + lc(L_HABRING) * 300 + lc(L_PARKRING) * 2400
+    const food = lc(L_QUARTERS) * 200 + lc(L_ESTATE) * 400 + lc(L_FARM) * 2400
     const use = liner_power()
     lc(L_BRIDGE) > 0 && lc(L_DRIVE) > 0 && lc(L_JUMP) > 0 && lc(L_TANKS) > 0 &&
     lc(L_REACTOR) * 120 >= use && use > 0 && lc(L_RADIATOR) >= lc(L_REACTOR) + lc(L_JUMP) &&
-    souls > 0 && breath >= souls && (lc(L_REFINERY) == 0 || lc(L_HANGAR) > 0) &&
+    souls > 0 && food >= souls && (lc(L_REFINERY) == 0 || lc(L_HANGAR) > 0) &&
     (lc(L_FAB) == 0 || lc(L_REFINERY) + lc(L_CARGO) > 0) && lproblems == 0 && lmodules > 0
   }
 
@@ -190,7 +192,8 @@ state {
   }
 
   fn op_selected(op: i32, d: i32) -> bool {
-    op == OP_DECK + d || (op == OP_LINERS && liner) || (op == OP_RIGS && !liner)
+    op == OP_DECK + d || (op == OP_LINERS && liner) || (op == OP_RIGS && !liner) ||
+    (op == OP_SHOW_UI && show_ui) || (op == OP_SHOW_GANTRY && show_gantry)
   }
 }
 
@@ -595,9 +598,9 @@ assets {
         YardTile life(label: liner ? "Hab Ring" : "Life Support", op: liner ? L_HABRING : K_LIFE)
       }
       YardTileRow row_b {
-        YardTile biome(label: liner ? "Park Ring" : "Biome", op: liner ? L_PARKRING : K_BIOME)
+        YardTile biome(label: liner ? "Estate Ring" : "Biome", op: liner ? L_ESTATE : K_BIOME)
         if liner {
-          YardFiller filler()
+          YardTile farm(label: "Agri Ring", op: L_FARM)
         } else {
           YardTile obs(label: "Observation", op: K_OBS)
         }
@@ -685,7 +688,8 @@ assets {
     const l_bridge = lc(L_BRIDGE)
     const l_quarters = lc(L_QUARTERS)
     const l_habring = lc(L_HABRING)
-    const l_parkring = lc(L_PARKRING)
+    const l_estate = lc(L_ESTATE)
+    const l_farm = lc(L_FARM)
     const l_reactor = lc(L_REACTOR)
     const l_radiator = lc(L_RADIATOR)
     const l_jump = lc(L_JUMP)
@@ -697,16 +701,17 @@ assets {
     const l_fab = lc(L_FAB)
     const l_turret = lc(L_TURRET)
     const souls = l_quarters * 60 + l_habring * 900 + l_bridge * 40 + l_hangar * 30 + l_refinery * 30 + l_fab * 30 + l_turret * 15
-    const breath = l_quarters * 200 + l_habring * 300 + l_parkring * 2400
+    const food = l_quarters * 200 + l_estate * 400 + l_farm * 2400
     const l_gen: f32 = l_reactor * 120
     const l_use: f32 = liner_power()
     const l_heat = l_reactor + l_jump
     const l_mass = liner_mass()
     const l_accel: f32 = l_drive * 60.0 / max(l_mass, 1)
     const l_range: f32 = l_jump * (8000.0 + l_tanks * 2500) / max(l_mass, 1)
+    const l_reach: f32 = l_tanks * 2000.0 / max(l_mass, 1)
     const l_power_ok = l_gen >= l_use && l_use > 0
     const l_cool_ok = l_radiator >= l_heat
-    const l_air_ok = souls > 0 && breath >= souls
+    const l_food_ok = souls > 0 && food >= souls
     const l_mine_ok = l_refinery == 0 || l_hangar > 0
     const l_stock_ok = l_fab == 0 || l_refinery + l_cargo > 0
     const l_sound = lproblems == 0 && lmodules > 0
@@ -721,18 +726,28 @@ assets {
       value: liner ? "{l_heat} / {l_radiator}" : "{cuse:.0} / {cgen:.0} PF",
       ratio: liner ? l_heat / max(l_radiator, 1.0) : cuse / max(cgen, 1),
       state: liner ? (l_heat == 0 ? UI_MUTED : l_cool_ok ? UI_OK : UI_BAD) : (cgen == 0 && cuse == 0 ? UI_MUTED : compute_ok ? UI_OK : UI_BAD))
-    YardStat crew_stat(icon: yard_icon_crew, label: liner ? "SOULS / AIR" : "CREW / AIR",
-      value: liner ? "{souls} / {breath}" : "{crew} / {air}",
-      ratio: liner ? souls / max(breath, 1.0) : crew / max(air, 1.0),
-      state: liner ? (souls == 0 ? UI_MUTED : breath >= souls ? UI_OK : UI_BAD) : (crew == 0 ? UI_MUTED : air >= crew ? UI_OK : UI_BAD))
+    YardStat crew_stat(icon: yard_icon_crew, label: liner ? "SOULS / FOOD" : "CREW / AIR",
+      value: liner ? "{souls} / {food}" : "{crew} / {air}",
+      ratio: liner ? souls / max(food, 1.0) : crew / max(air, 1.0),
+      state: liner ? (souls == 0 ? UI_MUTED : food >= souls ? UI_OK : UI_BAD) : (crew == 0 ? UI_MUTED : air >= crew ? UI_OK : UI_BAD))
     YardStat thrust(icon: yard_icon_thrust, label: "ACCELERATION",
       value: liner ? "{l_accel:.2} g" : "{accel:.1} g",
       ratio: liner ? l_accel / 0.5 : accel / 4,
       state: liner ? (l_drive == 0 ? UI_MUTED : l_accel >= 0.15 ? UI_GOOD : UI_WARN) : (c8 == 0 ? UI_MUTED : accel >= 1 ? UI_GOOD : UI_WARN))
-    YardStat range(icon: liner ? yard_icon_jump : yard_icon_range, label: liner ? "JUMP RANGE" : "RANGE",
-      value: liner ? "{l_range:.1} ly" : "{reach:.1} ly",
-      ratio: liner ? l_range / 40 : reach / 25,
-      state: (liner ? l_jump : c6) == 0 ? UI_MUTED : UI_OK)
+    ranges {
+      Layout: {direction: Column, spacing: spacing}
+      LayoutItem: {width: {mode: Grow}}
+      YardStat range(icon: liner ? yard_icon_jump : yard_icon_range, label: liner ? "JUMP RANGE" : "RANGE",
+        value: liner ? "{l_range:.1} ly" : "{reach:.1} ly",
+        ratio: liner ? l_range / 40 : reach / 25,
+        state: (liner ? l_jump : c6) == 0 ? UI_MUTED : UI_OK)
+      if liner {
+        YardStat reach_stat(icon: yard_icon_range, label: "RANGE",
+          value: "{l_reach:.1} AU",
+          ratio: l_reach / 40,
+          state: l_tanks == 0 ? UI_MUTED : UI_OK)
+      }
+    }
     YardStat hold(icon: liner ? yard_icon_freight : yard_icon_cargo, label: "CARGO",
       value: liner ? "{l_cargo * 60} kt" : "{c5 * 120} t",
       ratio: liner ? l_cargo / 45.0 : c5 / 12.0,
@@ -759,7 +774,7 @@ assets {
       YardCheck chk_fuel(label: liner ? "Propellant for the drives" : "Fuel for the engines", ok: liner ? l_tanks > 0 : fuel_ok)
       YardCheck chk_power(label: "Enough power", ok: liner ? l_power_ok : power_ok)
       YardCheck chk_cool(label: liner ? "A radiator per reactor and jump drive" : c16 > 0 ? "A radiator per power plant and datacenter" : "A radiator for every power plant", ok: liner ? l_cool_ok : cool_ok)
-      YardCheck chk_air(label: liner ? "Air for every soul aboard" : crewless ? "No crew, no air needed" : "Air for every crew member", ok: liner ? l_air_ok : air_ok)
+      YardCheck chk_air(label: liner ? "Food for every soul aboard" : crewless ? "No crew, no air needed" : "Air for every crew member", ok: liner ? l_food_ok : air_ok)
       YardCheck chk_rules(label: liner ? (lproblems == 0 ? "Every segment fits" : lproblems == 1 ? "One segment breaks a rule" : "{lproblems} segments break a rule") : (problems == 0 ? "Every module fits" : problems == 1 ? "One module breaks a rule" : "{problems} modules break a rule"), ok: liner ? l_sound : sound)
       if liner {
         YardCheck chk_jump(label: "A jump drive to cross between stars", ok: l_jump > 0)
@@ -801,75 +816,103 @@ assets {
 
     screen {
       LayoutFill: {surface: window}
-      Layout: {direction: Column, padding: {12, 12, 12, 12}, spacing: 10}
+      Layout: {direction: Column, padding: {12, 12, 12, 12}}
       FocusScope
 
-      top {
-        Layout: {direction: Row, spacing: 10, v: Middle}
-        LayoutItem: {width: {mode: Grow}}
-
-        YardStrip class_switch {
-          LayoutItem: {width: {min: 320, max: 320}}
-          YardSegment b_rigs(label: "Rigs", icon: yard_icon_ship, op: OP_RIGS, grow: true)
-          YardSegment b_liners(label: "Liners", icon: yard_icon_liner, op: OP_LINERS, grow: true)
+      content {
+        Layout: {direction: Column, spacing: 10}
+        if show_ui {
+          LayoutItem: {width: {mode: Grow}, height: {mode: Grow}}
+        } else {
+          LayoutItem: {width: {mode: Fixed, value: 0}, height: {mode: Fixed, value: 0}}
+          ClipChildren
         }
 
-        spacer_a {
+        top {
+          Layout: {direction: Row, spacing: 10, v: Middle}
           LayoutItem: {width: {mode: Grow}}
-        }
 
-        YardStrip layer_picker {
-          YardStripLabel caption(text: liner ? "SPINE" : "DECK")
-          for d in 0..(liner ? LANES : GY) {
-            YardSegment "b_d{d}"(label: liner ? lane_name(d) : "{d + 1}", op: OP_DECK + d)
+          YardStrip class_switch {
+            LayoutItem: {width: {min: 320, max: 320}}
+            YardSegment b_rigs(label: "Rigs", icon: yard_icon_ship, op: OP_RIGS, grow: true)
+            YardSegment b_liners(label: "Liners", icon: yard_icon_liner, op: OP_LINERS, grow: true)
           }
-        }
 
-        spacer_b {
-          LayoutItem: {width: {mode: Grow}}
-        }
+          spacer_a {
+            LayoutItem: {width: {mode: Grow}}
+          }
 
-        gap_right {
-          LayoutItem: {width: {mode: Fixed, value: 320}}
-        }
-      }
-
-      middle {
-        Layout: {direction: Row}
-        LayoutItem: {width: {mode: Grow}, height: {mode: Grow}}
-
-        ModulesCard modules_card(title: liner ? "SEGMENTS" : "MODULES", width: 320, spacing: 10)
-
-        spacer {
-          LayoutItem: {width: {mode: Grow}}
-        }
-
-        SystemsCard systems_card(title: "SYSTEMS",
-          note: liner ? "{lspan * 40} m  ·  {lmass:.0} kt" : "{span * 4} m  ·  {rig_mass:.0} t",
-          width: 280, spacing: 10)
-      }
-
-      bottom {
-        Layout: {direction: Row, h: Center}
-        LayoutItem: {width: {mode: Grow}}
-
-        YardStrip presets {
-          YardStripLabel caption(text: "PRESETS")
-          designs {
-            Layout: {direction: Row, spacing: 2, v: Middle}
-            if liner {
-              YardGhost b_passenger(label: "Passenger", op: OP_PASSENGER)
-              YardGhost b_freighter(label: "Freighter", op: OP_FREIGHTER)
-              YardGhost b_tender(label: "Tender", op: OP_TENDER)
-              YardGhost b_battleship(label: "Battleship", op: OP_BATTLESHIP)
-            } else {
-              YardGhost b_frigate(label: "Frigate", op: OP_FRIGATE)
-              YardGhost b_scout(label: "Scout", op: OP_SCOUT)
-              YardGhost b_miner(label: "Miner", op: OP_MINER)
+          YardStrip layer_picker {
+            YardStripLabel caption(text: liner ? "SPINE" : "DECK")
+            for d in 0..(liner ? LANES : GY) {
+              YardSegment "b_d{d}"(label: liner ? lane_name(d) : "{d + 1}", op: OP_DECK + d)
             }
           }
-          YardDivider divider()
-          YardGhost b_clear(label: "Clear", icon: yard_icon_remove, op: OP_CLEAR, danger: true)
+
+          spacer_b {
+            LayoutItem: {width: {mode: Grow}}
+          }
+
+          gap_right {
+            LayoutItem: {width: {mode: Fixed, value: 320}}
+          }
+        }
+
+        middle {
+          Layout: {direction: Row}
+          LayoutItem: {width: {mode: Grow}, height: {mode: Grow}}
+
+          ModulesCard modules_card(title: liner ? "SEGMENTS" : "MODULES", width: 320, spacing: 10)
+
+          spacer {
+            LayoutItem: {width: {mode: Grow}}
+          }
+
+          SystemsCard systems_card(title: "SYSTEMS",
+            note: liner ? "{lspan * 40} m  ·  {lmass:.0} kt" : "{span * 4} m  ·  {rig_mass:.0} t",
+            width: 280, spacing: 10)
+        }
+
+        bottom {
+          Layout: {direction: Row, h: Center}
+          LayoutItem: {width: {mode: Grow}}
+
+          YardStrip presets {
+            YardStripLabel caption(text: "PRESETS")
+            designs {
+              Layout: {direction: Row, spacing: 2, v: Middle}
+              if liner {
+                YardGhost b_passenger(label: "Passenger", op: OP_PASSENGER)
+                YardGhost b_freighter(label: "Freighter", op: OP_FREIGHTER)
+                YardGhost b_tender(label: "Tender", op: OP_TENDER)
+                YardGhost b_battleship(label: "Battleship", op: OP_BATTLESHIP)
+              } else {
+                YardGhost b_frigate(label: "Frigate", op: OP_FRIGATE)
+                YardGhost b_scout(label: "Scout", op: OP_SCOUT)
+                YardGhost b_miner(label: "Miner", op: OP_MINER)
+              }
+            }
+            YardDivider divider()
+            YardGhost b_clear(label: "Clear", icon: yard_icon_remove, op: OP_CLEAR, danger: true)
+          }
+        }
+      }
+    }
+
+    toggles {
+      LayoutFill: {surface: window}
+      Layout: {direction: Row, padding: {12, 12, 12, 12}, v: Top}
+
+      spacer {
+        LayoutItem: {width: {mode: Grow}}
+      }
+
+      YardStrip view_switch {
+        LayoutItem: {width: {min: 320, max: 320}}
+        YardStripLabel caption(text: "SHOW")
+        YardSegment b_ui(label: "Interface", op: OP_SHOW_UI, grow: true)
+        if liner {
+          YardSegment b_gantry(label: "Gantry", op: OP_SHOW_GANTRY, grow: true)
         }
       }
     }

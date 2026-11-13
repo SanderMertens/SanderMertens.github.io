@@ -157,6 +157,10 @@ async {
       load_liner(op)
     } else if op == OP_RIGS || op == OP_LINERS {
       switch_class(op == OP_LINERS)
+    } else if op == OP_SHOW_UI {
+      show_ui = !show_ui
+    } else if op == OP_SHOW_GANTRY {
+      show_gantry = !show_gantry
     }
   }
 }

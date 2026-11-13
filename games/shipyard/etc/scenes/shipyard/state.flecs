@@ -61,6 +61,8 @@ state {
   export const OP_FREIGHTER: i32 = 151
   export const OP_TENDER: i32 = 152
   export const OP_BATTLESHIP: i32 = 153
+  export const OP_SHOW_UI: i32 = 160
+  export const OP_SHOW_GANTRY: i32 = 161
 
   event Click(cell: i32)
   event Built(cell: i32)
@@ -170,6 +172,8 @@ state {
   export mut fsz: i32[1080] = {}
 
   export mut liner: bool = false
+  export mut show_ui: bool = true
+  export mut show_gantry: bool = true
   export mut span: i32 = 0
 
   export mut tool: i32 = 0

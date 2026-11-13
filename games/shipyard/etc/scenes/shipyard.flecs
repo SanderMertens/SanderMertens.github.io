@@ -31,8 +31,7 @@ assets {
 
 $ {
   box.app.FpsTarget: {60}
-  Scene: {reflections: true, environment: true, blend_modes: true, transmission: true,
-    clear_coat: true, sheen: true, diffuse_transmission: true, fresnel: true}
+  Scene: {environment: true, blend_modes: true, transmission: true}
   AmbientLight: {sky: {120, 140, 180}, ground: {50, 60, 84}, intensity: 0.4}
 }
 
@@ -71,7 +70,7 @@ view {
   View: {
     camera: rig.arm.eye,
     clear: {enabled: true, color: {3, 5, 10, 255}},
-    shadows: {enabled: true, resolution: 4096, max_distance: 200},
+    shadows: {enabled: true, cascades: 3, resolution: 1024, max_distance: 200, filter_size: 2},
     lighting: {reflections: true, baked: false, environment: {source: assets.yard_stars, intensity: 0.7, background: true}},
     effects: [{effect: yard_contact}, {effect: yard_bloom}, {effect: yard_film}, {effect: yard_edges}]
   }
@@ -79,7 +78,9 @@ view {
 
 yard {
   if liner {
-    Drydock dock()
+    if show_gantry {
+      Drydock dock()
+    }
   } else {
     Slipway slipway()
   }
@@ -95,6 +96,7 @@ yard {
 }
 
 ship {
+  TextureFrame
   if liner {
     for i in 0..LCELLS {
       LinerSlot "slot_{i}"(idx: i)

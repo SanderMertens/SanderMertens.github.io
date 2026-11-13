@@ -24,7 +24,7 @@ state {
   export const L_SENSOR: i32 = 41
   export const L_QUARTERS: i32 = 42
   export const L_HABRING: i32 = 43
-  export const L_PARKRING: i32 = 44
+  export const L_ESTATE: i32 = 44
   export const L_REACTOR: i32 = 45
   export const L_RADIATOR: i32 = 46
   export const L_JUMP: i32 = 47
@@ -38,8 +38,9 @@ state {
   export const L_YOKE: i32 = 55
   export const L_ARMOR: i32 = 56
   export const L_TURRET: i32 = 57
-  export const L_END: i32 = 58
-  export const LKINDS: i32 = 18
+  export const L_FARM: i32 = 58
+  export const L_END: i32 = 59
+  export const LKINDS: i32 = 19
 
   event SlotClick(slot: i32)
 
@@ -47,14 +48,14 @@ state {
   export mut lhover: i32 = -1
   export mut lgrid: i32[90] = {}
   export mut lstatus: i32[90] = {}
-  export mut lcounts: i32[18] = {}
+  export mut lcounts: i32[19] = {}
   export mut lmodules: i32 = 0
   export mut lproblems: i32 = 0
   export mut lspan: i32 = 0
   export mut lloaded: bool = false
 
-  export const LPLAN_ROWS: i32 = 105
-  export const liner_plan: i32[525] = [
+  export const LPLAN_ROWS: i32 = 107
+  export const liner_plan: i32[535] = [
     OP_PASSENGER, 0, 0, 0, L_DRIVE,
     OP_PASSENGER, 0, 1, 1, L_YOKE,
     OP_PASSENGER, 0, 2, 3, L_TANKS,
@@ -62,10 +63,11 @@ state {
     OP_PASSENGER, 0, 5, 5, L_RADIATOR,
     OP_PASSENGER, 0, 6, 6, L_JUMP,
     OP_PASSENGER, 0, 7, 7, L_RADIATOR,
-    OP_PASSENGER, 0, 8, 9, L_TRUSS,
+    OP_PASSENGER, 0, 8, 8, L_FARM,
+    OP_PASSENGER, 0, 9, 9, L_TRUSS,
     OP_PASSENGER, 0, 10, 10, L_HABRING,
     OP_PASSENGER, 0, 11, 11, L_QUARTERS,
-    OP_PASSENGER, 0, 12, 12, L_PARKRING,
+    OP_PASSENGER, 0, 12, 12, L_ESTATE,
     OP_PASSENGER, 0, 13, 13, L_QUARTERS,
     OP_PASSENGER, 0, 14, 14, L_HABRING,
     OP_PASSENGER, 0, 15, 15, L_HANGAR,
@@ -109,9 +111,10 @@ state {
     OP_TENDER, 0, 7, 7, L_YOKE,
     OP_TENDER, 0, 8, 9, L_REFINERY,
     OP_TENDER, 0, 10, 10, L_YOKE,
-    OP_TENDER, 0, 11, 11, L_TRUSS,
-    OP_TENDER, 0, 12, 12, L_PARKRING,
-    OP_TENDER, 0, 13, 14, L_QUARTERS,
+    OP_TENDER, 0, 11, 11, L_FARM,
+    OP_TENDER, 0, 12, 12, L_TRUSS,
+    OP_TENDER, 0, 13, 13, L_ESTATE,
+    OP_TENDER, 0, 14, 14, L_QUARTERS,
     OP_TENDER, 0, 15, 15, L_BRIDGE,
     OP_TENDER, 4, 7, 10, L_CARGO,
     OP_TENDER, 1, 0, 0, L_DRIVE,
@@ -185,7 +188,7 @@ state {
   fn lane_r(l: i32) -> f32 { l == 0 ? R_CORE : R_OUT }
   fn slot_z(z: i32) -> f32 { (z - SLOTS / 2.0 + 0.5) * SEG }
 
-  fn ringed(k: i32) -> bool { k == L_HABRING || k == L_PARKRING }
+  fn ringed(k: i32) -> bool { k == L_HABRING || k == L_ESTATE || k == L_FARM }
   fn housed(k: i32) -> bool { k == L_QUARTERS || ringed(k) }
   fn core_only(k: i32) -> bool { ringed(k) || k == L_JUMP || k == L_YOKE }
 
@@ -235,7 +238,7 @@ state {
 
   fn lvalidate() {
     mut st: i32[90] = {}
-    mut tally: i32[18] = {}
+    mut tally: i32[19] = {}
     mut front: i32 = SLOTS
     mut back: i32 = -1
     mut total: i32 = 0
@@ -330,14 +333,14 @@ state {
   fn lkind_mass(k: i32) -> f32 {
     match k {
       40: 18; 41: 8; 42: 10; 43: 30; 44: 34; 45: 26; 46: 6; 47: 34; 48: 24
-      49: 18; 50: 14; 51: 12; 52: 22; 53: 16; 54: 3; 55: 8; 56: 20; 57: 18
+      49: 18; 50: 14; 51: 12; 52: 22; 53: 16; 54: 3; 55: 8; 56: 20; 57: 18; 58: 32
       _: 0
     }
   }
 
   fn lkind_power(k: i32) -> f32 {
     match k {
-      40: 2; 41: 4; 42: 1; 43: 6; 44: 4; 47: 30; 48: 10; 49: 0.2; 50: 0.2; 51: 2; 52: 8; 53: 6; 57: 6
+      40: 2; 41: 4; 42: 1; 43: 6; 44: 4; 47: 30; 48: 10; 49: 0.2; 50: 0.2; 51: 2; 52: 8; 53: 6; 57: 6; 58: 2
       _: 0
     }
   }
